@@ -130,7 +130,7 @@ class ObjectRepository implements ObjectRepositoryInterface
      * child object, but make sure the property you use has a unique value in the result set, otherwise some records
      * will be lost).
      * @param boolean $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
-     * set(for streaming large amounts of data).
+     * set (for streaming large amounts of data).
      * @return array|object|null
      */
     public function findBy(

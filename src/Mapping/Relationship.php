@@ -1,6 +1,6 @@
 <?php
 
-namespace Objectiphy\Objectiphy\Annotation;
+namespace Objectiphy\Objectiphy\Mapping;
 
 /**
  * An alternative to the various Doctrine relationship annotations (if specified, this will take precedence over 

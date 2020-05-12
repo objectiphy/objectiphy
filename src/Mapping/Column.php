@@ -1,6 +1,6 @@
 <?php
 
-namespace Objectiphy\Objectiphy\Annotation;
+namespace Objectiphy\Objectiphy\Mapping;
 
 /**
  * An alternative to the Doctrine column annotation (if specified, this will take precedence over Doctrine).
@@ -9,6 +9,9 @@ class Column
 {
     /** @var string Name of column. */
     public string $name = '';
+    
+    /** @var string Fully qualified column name, including table prefix. */
+    public string $fullyQualifiedName = '';
     
     /** @var string Data type (doctrine compatible). */
     public string $type = '';

@@ -23,16 +23,6 @@ class PropertyMapping
     public string $alias = '';
 
     /**
-     * @var string Unqualified column name (ie. not aliased, and without table name prefix).
-     */
-    public string $columnShortName = '';
-
-    /**
-     * @var string Qualified column name (ie. including table name prefix).
-     */
-    public string $columnFullName = '';
-
-    /**
      * @var array Indexed array of parent property names.
      */
     public array $parentProperties = [];
@@ -54,13 +44,22 @@ class PropertyMapping
     public ?Column $column = null;
 
     /**
+     * @var string Locally cached fully qualified property path using dot notation.
+     */
+    private string $propertyPath = '';
+
+    /**
      * @param bool $includingPropertyName
-     * @return string Fully qualified propert path using dot notation.
+     * @return string Fully qualified property path using dot notation.
      */
     public function getPropertyPath(bool $includingPropertyName = true): string
     {
-        $pathParts = array_merge($this->parentProperties, ($includingPropertyName ? [$this->propertyName] : []));
-        return implode('.', $pathParts);
+        if (!$this->propertyPath) {
+            $pathParts = array_merge($this->parentProperties, ($includingPropertyName ? [$this->propertyName] : []));
+            $this->propertyPath = implode('.', $pathParts);
+        }
+        
+        return $this->propertyPath;
     }
 
     /**

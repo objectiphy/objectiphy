@@ -1,6 +1,6 @@
 <?php
 
-namespace Objectiphy\Objectiphy\Annotation;
+namespace Objectiphy\Objectiphy\Mapping;
 
 /**
  * An alternative to the Doctrine table annotation (if specified, this will take precedence over Doctrine).
