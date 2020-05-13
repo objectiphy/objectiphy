@@ -2,6 +2,8 @@
 
 namespace Objectiphy\Objectiphy\Mapping;
 
+use Objectiphy\Objectiphy\Orm\ConfigOptions;
+
 /**
  * An alternative to the various Doctrine relationship annotations (if specified, this will take precedence over 
  * Doctrine).
@@ -73,5 +75,25 @@ class Relationship
     public function __construct($relationshipType)
     {
         $this->relationshipType = $relationshipType;
+    }
+
+    public function isToOne(): bool
+    {
+        return in_array($this->relationshipType, [self::ONE_TO_ONE, self::MANY_TO_ONE]);
+    }
+
+    public function isToMany(): bool
+    {
+        return in_array($this->relationshipType, [self::ONE_TO_MANY, self::MANY_TO_MANY]);
+    }
+
+    public function isEager(ConfigOptions $config): bool
+    {
+        $eager = !$this->lazyLoad;
+        if ($this->lazyLoad === null) {
+            $eager = ($config->eagerLoadToOne && $this->isToOne()) || ($config->eagerLoadToMany && $this->isToMany());
+        }
+
+        return $eager;
     }
 }
