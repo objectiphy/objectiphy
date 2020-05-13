@@ -39,10 +39,15 @@ class MappingCollection
         return $this->entityClassName;
     }
 
-     public function addMapping(PropertyMapping $propertyMapping)
+    public function getColumns()
+    {
+        return $this->columns;
+    }
+    
+    public function addMapping(PropertyMapping $propertyMapping)
     {
         $propertyMapping->parentCollection = $this;
-        $this->columns[$propertyMapping->getShortColumn()] = $propertyMapping;
+        $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
         $this->properties[$propertyMapping->getPropertyPath()] = $propertyMapping;
         $relationshipKey = end($propertyMapping->parentProperties) . ':' . $propertyMapping->className;
         $this->relationships[$relationshipKey][] = $propertyMapping->propertyName;

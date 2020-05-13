@@ -18,11 +18,6 @@ class PropertyMapping
     public string $propertyName;
 
     /**
-     * @var string Alias used to refer to the value in the data set, if applicable.
-     */
-    public string $alias = '';
-
-    /**
      * @var array Indexed array of parent property names.
      */
     public array $parentProperties = [];
@@ -49,25 +44,36 @@ class PropertyMapping
     private string $propertyPath = '';
 
     /**
-     * @param bool $includingPropertyName
-     * @return string Fully qualified property path using dot notation.
+     * @var string Locally cached alias for this property's value in the data set.
      */
-    public function getPropertyPath(bool $includingPropertyName = true): string
-    {
-        if (!$this->propertyPath) {
-            $pathParts = array_merge($this->parentProperties, ($includingPropertyName ? [$this->propertyName] : []));
-            $this->propertyPath = implode('.', $pathParts);
-        }
-        
-        return $this->propertyPath;
-    }
+    private string $alias = '';
 
     /**
-     * @param bool $useShortName
-     * @return string Alias or unqualified column name, (ie. as it appears in the returned data set)
+     * @param bool $includingPropertyName
+     * @return string Fully qualified property path using dot notation by default.
      */
-    public function getShortColumn(bool $useAlias = true)
+    public function getPropertyPath(bool $includingPropertyName = true, $separator = '.'): string
     {
-        return $useAlias && $this->alias ? $this->alias : $this->columnShortName; 
+        if (!$this->propertyPath) {
+            $this->propertyPath = implode('.', $this->parentProperties);
+        }
+
+        $result = $separator == '.' ? $this->propertyPath : str_replace('.', $separator, $this->propertyPath);
+        $result .= $includingPropertyName ? $separator . $this->propertyName : '';
+        
+        return $result;
+    }
+
+    public function getAlias(): string
+    {
+        //Try to use a nice alias with underscores. If there are clashes, get ugly.
+        if (!isset($this->alias)) {
+            $this->alias = $this->getPropertyPath(true, '_');
+            if (array_key_exists($this->parentCollection->getColumns(), $this->alias)) {
+                $this->alias = $this->getPropertyPath(true, '_-_');
+            }
+        }
+        
+        return $this->alias;
     }
 }

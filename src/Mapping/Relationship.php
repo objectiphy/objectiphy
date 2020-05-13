@@ -14,7 +14,10 @@ class Relationship
     const ONE_TO_MANY = 'one_to_many';
     const MANY_TO_ONE = 'many_to_one';
     const MANY_TO_MANY = 'many_to_many';
-    
+
+    /** @var bool Whether this relationship is part of the primary key. */
+    public bool $isPrimaryKey = false;
+
     /** @var string One of the class constant values (eg. "one_to_one"). */
     public string $relationshipType;
 
@@ -52,7 +55,7 @@ class Relationship
     public string $joinSql = '';
     
     /** @var bool Whether this is actually an embedded (value) object that maps to several columns */
-    public bool $embedded = false;
+    public bool $isEmbedded = false;
     
     /** @var string Prefix to apply to embedded object column names */
     public string $embeddedColumnPrefix = '';
