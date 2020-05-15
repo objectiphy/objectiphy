@@ -16,30 +16,33 @@ class MappingProviderAnnotation implements MappingProviderInterface
         $this->annotationReader = $annotationReader;
     }
 
+    /**
+     * Populate a Table mapping class based on annotations.
+     * @param \ReflectionClass $reflectionClass
+     * @return object|null
+     */
     public function getTableMapping(\ReflectionClass $reflectionClass)
     {
-        $table = $this->annotationReader->getClassAnnotation($reflectionClass, Table::class);
-        if (!$table) {
-            //Try Doctrine annotation
-
-        }
-
-        return $table;
+        return $this->annotationReader->getClassAnnotation($reflectionClass, Table::class);
     }
 
+    /**
+     * Populate a Column mapping class based on annotations.
+     * @param \ReflectionProperty $reflectionProperty
+     * @return object|null
+     */
     public function getColumnMapping(\ReflectionProperty $reflectionProperty)
     {
-        $column = $this->annotationReader->getPropertyAnnotation($reflectionProperty, Column::class);
-        //Anything missing? Try filling in with Doctrine annotations...
-
-        return $column;
+        return $this->annotationReader->getPropertyAnnotation($reflectionProperty, Column::class);
     }
 
+    /**
+     * Populate a Relationship mapping class based on annotations.
+     * @param \ReflectionProperty $reflectionProperty
+     * @return object|null
+     */
     public function getRelationshipMapping(\ReflectionProperty $reflectionProperty)
     {
-        $relationship = $this->annotationReader->getPropertyAnnotation($reflectionProperty, Relationship::class);
-        //Anything missing? Try filling in with Doctrine annotations...
-
-        return $relationship;
+        return $this->annotationReader->getPropertyAnnotation($reflectionProperty, Relationship::class);
     }
 }
