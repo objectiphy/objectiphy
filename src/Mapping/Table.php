@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Objectiphy\Objectiphy\Mapping;
 
 /**
- * An alternative to the Doctrine table annotation (if specified, this will take precedence over Doctrine).
+ * Mapping information to describe which database table and/or custom repository class to use for storage of the data
+ * relating to the properties of the class.
  */
 class Table
 {

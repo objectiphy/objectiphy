@@ -1,7 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Objectiphy\Objectiphy\MappingProvider;
 
+use Doctrine\ORM\Mapping\OrderBy;
+use Objectiphy\Annotations\AnnotationReaderInterface;
 use Objectiphy\Objectiphy\Mapping\Column;
 use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Mapping\Table;
@@ -12,21 +16,26 @@ use Objectiphy\Objectiphy\Mapping\Table;
 class MappingProviderDoctrineAnnotation implements MappingProviderInterface
 {
     private MappingProviderInterface $delegate;
+    private AnnotationReaderInterface $annotationReader;
 
-    public function __construct(MappingProviderInterface $delegate)
+    public function __construct(MappingProviderInterface $delegate, AnnotationReaderInterface $annotationReader)
     {
         $this->delegate = $delegate;
+        $this->annotationReader = $annotationReader;
     }
 
     public function getTableMapping(\ReflectionClass $reflectionClass)
     {
         $table = $this->delegate->getTableMapping($reflectionClass);
-        if (empty($table->name) && class_exists('\Doctrine\ORM\Mapping\Table')) {
+        if (!isset($table->name) && class_exists('\Doctrine\ORM\Mapping\Table')) {
             $doctrineTable = $this->annotationReader->getClassAnnotation(
                 $reflectionClass,
                 \Doctrine\ORM\Mapping\Table::class
             );
-            $table->name = $doctrineTable->name ?? null;
+            if ($doctrineTable) {
+                $table = $table ?? new Table();
+                $table->name = $doctrineTable->name;
+            }
         }
 
         return $table;
@@ -41,13 +50,12 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         return $column;
     }
 
-    public function getRelationshipMapping(\ReflectionProperty $reflectionProperty)
+    public function getRelationshipMapping(\ReflectionProperty $reflectionProperty): ?Relationship
     {
         $relationship = $this->delegate->getRelationshipMapping($reflectionProperty);
-        $this->populateFromDoctrineOneToOne($reflectionProperty, $relationship);
-        $this->populateFromDoctrineManyToOne($reflectionProperty, $relationship);
-        $this->populateFromDoctrineOneToMany($reflectionProperty, $relationship);
-        $this->populateFromDoctrineManyToMany($reflectionProperty, $relationship);
+        foreach (Relationship::getRelationshipTypes() as $relationshipType) {
+            $this->populateFromDoctrineRelationship($reflectionProperty, $relationship, $relationshipType);
+        }
         $this->populateFromDoctrineJoinColumn($reflectionProperty, $relationship);
         $this->populateFromDoctrineOrderBy($reflectionProperty, $relationship);
         $this->populateFromDoctrineEmbedded($reflectionProperty, $relationship);
@@ -56,61 +64,75 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
 
     }
 
-    private function populateFromDoctrineColumn(\ReflectionProperty $reflectionProperty, Column &$column)
+    private function populateFromDoctrineColumn(\ReflectionProperty $reflectionProperty, Column &$column): void
     {
         if (class_exists('\Doctrine\ORM\Mapping\Column')) {
-            if (!($column->name ?? false) || !($column->type ?? false)) {
+            if (!isset($column->name) || !isset($column->type)) {
                 $doctrineColumn = $this->annotationReader->getPropertyAnnotation(
                     $reflectionProperty,
                     \Doctrine\ORM\Mapping\Column::class
                 );
-                $column->name = $column->name ?? $doctrineColumn->name ?? null;
-                $column->type = $column->type ?? $doctrineColumn->type ?? null;
+                if ($doctrineColumn) {
+                    $column = $column ?? new Column();
+                    $column->name = isset($column->name) ? $column->name : $doctrineColumn->name;
+                    $column->type = isset($column->type) ? $column->type : $doctrineColumn->type;
+                }
             }
         }
     }
 
-    private function populateFromDoctrineId(\ReflectionProperty $reflectionProperty, Column &$column)
+    private function populateFromDoctrineId(\ReflectionProperty $reflectionProperty, Column &$column): void
     {
         if (class_exists('\Doctrine\ORM\Mapping\Id')) {
-            if (!($column->isPrimaryKey ?? false)) {
+            if (($column->isPrimaryKey ?? null) === null) {
                 $doctrineId = $this->annotationReader->getPropertyAnnotation(
                     $reflectionProperty,
                     \Doctrine\ORM\Mapping\Id::class
                 );
-                $column->isPrimaryKey = $doctrineId ?? false;
+                if ($doctrineId) {
+                    $column = $column ?? new Column();
+                    $column->isPrimaryKey = true;
+                }
             }
         }
     }
 
-    private function populateFromDoctrineOrderBy(\ReflectionProperty $reflectionProperty, Relationship &$relationship)
-    {
-        
+    private function populateFromDoctrineOrderBy(
+        \ReflectionProperty $reflectionProperty,
+        Relationship &$relationship
+    ): void {
+        if (class_exists('\Doctrine\ORM\Mapping\OrderBy')) {
+            if (!isset($relationship->orderBy)) {
+                $doctrineOrderBy = $this->annotationReader->getPropertyAnnotation(
+                    $reflectionProperty,
+                    \Doctrine\ORM\Mapping\OrderBy::class
+                );
+                if ($doctrineOrderBy) {
+                    $relationship = $relationship ?? new Relationship();
+                    $relationship->orderBy = $doctrineOrderBy->value;
+                }
+            }
+        }
     }
 
-    private function populateFromDoctrineOneToOne(\ReflectionProperty $reflectionProperty, Relationship &$relationship)
-    {
-
-    }
-
-    private function populateFromDoctrineOneToMany(\ReflectionProperty $reflectionProperty, Relationship &$relationship)
-    {
-
-    }
-
-    private function populateFromDoctrineManyToOne(\ReflectionProperty $reflectionProperty, Relationship &$relationship)
-    {
-
-    }
-
-    private function populateFromDoctrineManyToMany(\ReflectionProperty $reflectionProperty, Relationship &$relationship)
-    {
-
+    private function populateFromDoctrineRelationship(
+        \ReflectionProperty $reflectionProperty,
+        Relationship &$relationship,
+        string $relationshipType
+    ): void {
+        $doctrineClass = '\Doctrine\ORM\Mapping\\' .  str_replace('_', '', ucwords($relationshipType, '_'));
+        if (class_exists($doctrineClass) && !isset($relationship->relationshipType)) {
+            $doctrineRelationship = $this->annotationReader->getPropertyAnnotation($reflectionProperty, $doctrineClass);
+            if ($doctrineRelationship) {
+                $relationship = $relationship ?? new Relationship();
+                $relationship->relationshipType = $relationshipType;
+            }
+        }
     }
 
     private function populateFromDoctrineJoinColumn(\ReflectionProperty $reflectionProperty, Relationship &$relationship)
     {
-
+        
     }
 
     private function populateFromDoctrineEmbedded(\ReflectionProperty $reflectionProperty, Relationship &$relationship)

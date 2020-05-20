@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Objectiphy\Objectiphy\MappingProvider;
 
 use Objectiphy\Annotations\AnnotationReader;
@@ -49,8 +51,8 @@ class ObjectMapper
         $table = $this->mappingProvider->getTableMapping($reflectionClass);
         $this->resolveTableName($reflectionClass, $table);
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-            $column = $this->mappingProvider->getColumnMapping($reflectionProperty);
-            $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty);
+            $column = $this->getColumn($reflectionProperty);
+            $relationship = $this->getRelationship($reflectionProperty);
             $this->resolveColumnName($reflectionProperty, $column, $relationship);
             if ($column || $relationship) {
                 $propertyMapping = new PropertyMapping();
@@ -66,6 +68,26 @@ class ObjectMapper
                 }
             }
         }
+    }
+
+    private function getColumn(\ReflectionProperty $reflectionProperty)
+    {
+        $column = $this->mappingProvider->getColumnMapping($reflectionProperty);
+        if ($column) {
+            $column->populateDefaultValues(); //Use defaults for anything we could not get mapping information for
+        }
+
+        return $column;
+    }
+
+    private function getRelationship(\ReflectionProperty $reflectionProperty)
+    {
+        $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty);
+        if ($relationship) {
+            $relationship->populateDefaultValues(); //Use defaults for anything we could not get mapping information for
+        }
+
+        return $relationship;
     }
 
     /**
@@ -110,8 +132,6 @@ class ObjectMapper
     private function resolveColumnName(\ReflectionProperty $reflectionProperty, Column $column, Relationship $relationship)
     {
         //If name is IGNORE, we need to remove the mapping completely
-        
-        //Maybe we should be allowing for private properties with getters and setters on classes used for annotations?
         
     }
 }

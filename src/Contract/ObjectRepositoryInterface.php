@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Objectiphy\Objectiphy\Contract;
 
 use Objectiphy\Objectiphy\ConfigOptions;

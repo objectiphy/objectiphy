@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Objectiphy\Objectiphy\MappingProvider;
 
 use Objectiphy\Annotations\AnnotationReaderInterface;
@@ -21,7 +23,7 @@ class MappingProviderAnnotation implements MappingProviderInterface
      * @param \ReflectionClass $reflectionClass
      * @return object|null
      */
-    public function getTableMapping(\ReflectionClass $reflectionClass)
+    public function getTableMapping(\ReflectionClass $reflectionClass): ?Table
     {
         return $this->annotationReader->getClassAnnotation($reflectionClass, Table::class);
     }
@@ -31,7 +33,7 @@ class MappingProviderAnnotation implements MappingProviderInterface
      * @param \ReflectionProperty $reflectionProperty
      * @return object|null
      */
-    public function getColumnMapping(\ReflectionProperty $reflectionProperty)
+    public function getColumnMapping(\ReflectionProperty $reflectionProperty): ?Column
     {
         return $this->annotationReader->getPropertyAnnotation($reflectionProperty, Column::class);
     }
@@ -41,7 +43,7 @@ class MappingProviderAnnotation implements MappingProviderInterface
      * @param \ReflectionProperty $reflectionProperty
      * @return object|null
      */
-    public function getRelationshipMapping(\ReflectionProperty $reflectionProperty)
+    public function getRelationshipMapping(\ReflectionProperty $reflectionProperty): ?Relationship
     {
         return $this->annotationReader->getPropertyAnnotation($reflectionProperty, Relationship::class);
     }
