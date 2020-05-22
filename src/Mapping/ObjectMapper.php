@@ -54,7 +54,7 @@ class ObjectMapper
             $column = $this->getColumn($reflectionProperty);
             $relationship = $this->getRelationship($reflectionProperty);
             $this->resolveColumnName($reflectionProperty, $column, $relationship);
-            if ($column || $relationship) {
+            if ($column->name || $relationship->relationshipType) {
                 $propertyMapping = new PropertyMapping();
                 $propertyMapping->className = $className;
                 $propertyMapping->propertyName = $reflectionProperty->getName();
@@ -64,7 +64,7 @@ class ObjectMapper
                 $this->mappingCollection->addMapping($propertyMapping);
                 if ($this->shouldAddChildMappings($propertyMapping)) {
                     $parentProperties[] = $reflectionProperty->getName();
-                    $this->populateMappingCollection($relationship->childClass, $parentProperties);
+                    $this->populateMappingCollection($relationship->childClassName, $parentProperties);
                 }
             }
         }
@@ -100,7 +100,7 @@ class ObjectMapper
         $result = false;
         $relationship = $propertyMapping->relationship;
         $parentProperty = end($propertyMapping->parentProperties);
-        if ($relationship->childClass ?? false && $relationship->isEager($this->config)) {
+        if ($relationship->childClassName ?? false && $relationship->isEager($this->config)) {
             $result = !$this->mappingCollection->isRelationshipMapped(
                 $parentProperty, 
                 $propertyMapping->className, 
