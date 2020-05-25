@@ -7,6 +7,7 @@ namespace Objectiphy\Objectiphy\Orm;
 use Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\EntityFactoryInterface;
+use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
 
 /**
  * @property bool $productionMode
@@ -200,8 +201,8 @@ class ConfigOptions
     public function __construct(string $configFile = '', array $options = ['cacheDirectory' => '', 'productionMode' => false])
     {
         $this->setCacheDirectory($options['cacheDirectory'] ?? '');
-        $this->parseConfigFile($configFile);
         $this->setInitialOptions($options);
+        $this->parseConfigFile($configFile);
     }
 
     /**
@@ -347,6 +348,14 @@ class ConfigOptions
     {
         foreach ($options ?? [] as $key => $value) {
             $this->setConfigOption($key, $value);
+        }
+        
+        if (!array_key_exists('tableNamingStrategy', $options) && empty($this->tableNamingStrategy)) {
+            $this->tableNamingStrategy = new PascalCamelToSnake();
+        }
+        
+        if (!array_key_exists('columnNamingStrategy', $options) && empty($this->columnNamingStrategy)) {
+            $this->columnNamingStrategy = new PascalCamelToSnake();
         }
     }
 

@@ -35,7 +35,13 @@ class PropertyMapping
     public ?Relationship $relationship = null;
 
     /**
-     * @var Column|null If the value of this property is stored in a column on the entity's table, the column 
+     * @var Table | null If the value of this property is stored in a column on the entity's table, the table 
+     * annotation.
+     */
+    public ?Table $table = null;
+    
+    /**
+     * @var Column | null If the value of this property is stored in a column on the entity's table, the column 
      * annotation.
      */
     public ?Column $column = null;

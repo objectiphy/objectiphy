@@ -13,24 +13,27 @@ use Objectiphy\Objectiphy\Mapping\Table;
 use Objectiphy\Objectiphy\MappingCollection;
 use Objectiphy\Objectiphy\Orm\ConfigOptions;
 
+/**
+ * Loads mapping information from the supplied mapping provider (typically annotations, but the mapping information 
+ * could come from anywhere as long as there is a provider for it).
+ */
 class ObjectMapper
 {
     private MappingProviderInterface $mappingProvider;
     private ConfigOptions $config;
     private MappingCollection $mappingCollection;
-    private NamingStrategyInterface $namingStrategy;
     
-    public function __construct(
-        MappingProviderInterface $mappingProvider, 
-        ConfigOptions $config,
-        NamingStrategyInterface $namingStrategy
-    ) {
+    public function __construct(MappingProviderInterface $mappingProvider, ConfigOptions $config) 
+    {
         $this->mappingProvider = $mappingProvider;
         $this->config = $config;
-        $this->namingStrategy = $namingStrategy;
     }
 
-    public function getMappingCollectionForClass(string $className)
+    /**
+     * Returns a collection of property mappings for the object hierarchy of the given parent class.
+     * @throws \ReflectionException
+     */
+    public function getMappingCollectionForClass(string $className): MappingCollection
     {
         $this->mappingCollection = new MappingCollection($className);
         $this->populateMappingCollection($className);
@@ -51,13 +54,14 @@ class ObjectMapper
         $table = $this->mappingProvider->getTableMapping($reflectionClass);
         $this->resolveTableName($reflectionClass, $table);
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-            $column = $this->getColumn($reflectionProperty);
-            $relationship = $this->getRelationship($reflectionProperty);
+            $column = $this->mappingProvider->getColumnMapping($reflectionProperty);
+            $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty);
             $this->resolveColumnName($reflectionProperty, $column, $relationship);
-            if ($column->name || $relationship->relationshipType) {
+            if ($column != 'IGNORE' && ($column->name || $relationship->relationshipType)) {
                 $propertyMapping = new PropertyMapping();
                 $propertyMapping->className = $className;
                 $propertyMapping->propertyName = $reflectionProperty->getName();
+                $propertyMapping->table = $table;
                 $propertyMapping->column = $column;
                 $propertyMapping->relationship = $relationship;
                 $propertyMapping->parentProperties = $parentProperties;
@@ -68,26 +72,6 @@ class ObjectMapper
                 }
             }
         }
-    }
-
-    private function getColumn(\ReflectionProperty $reflectionProperty)
-    {
-        $column = $this->mappingProvider->getColumnMapping($reflectionProperty);
-        if ($column) {
-            $column->populateDefaultValues(); //Use defaults for anything we could not get mapping information for
-        }
-
-        return $column;
-    }
-
-    private function getRelationship(\ReflectionProperty $reflectionProperty)
-    {
-        $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty);
-        if ($relationship) {
-            $relationship->populateDefaultValues(); //Use defaults for anything we could not get mapping information for
-        }
-
-        return $relationship;
     }
 
     /**
@@ -118,20 +102,39 @@ class ObjectMapper
      */
     private function resolveTableName(\ReflectionClass $reflectionClass, Table $table)
     {
-        
+        if ($this->config->guessMappings && empty($table->name)) {
+            $table->name = $this->config->tableNamingStrategy->convertName(
+                $reflectionClass->getName(), 
+                NamingStrategyInterface::TYPE_CLASS_NAME
+            );
+        }
     }
 
     /**
      * If we have a column mapping but without a name, use naming strategy to convert property name, or if we have a 
-     * relationship mapping but without a source or target column name (and withou deferral of mapping to the other side 
-     * of the relationship), use naming strategy to convert property name.
+     * relationship mapping but without a source column name (and without deferral of mapping to the other side of the 
+     * relationship), use naming strategy to convert property name.
      * @param \ReflectionProperty $reflectionProperty
      * @param Column $column
      * @param Relationship $relationship
      */
     private function resolveColumnName(\ReflectionProperty $reflectionProperty, Column $column, Relationship $relationship)
     {
-        //If name is IGNORE, we need to remove the mapping completely
-        
+        $parentClassName= $reflectionProperty->getDeclaringClass()->getName();
+        if ($this->config->guessMappings && 
+            (empty($column->name) || (!$relationship->sourceJoinColumn && !$relationship->mappedBy))
+        ) {
+            $guessedName = $this->config->columnNamingStrategy->convertName(
+                $reflectionProperty->getName(),
+                null,
+                $reflectionProperty
+            );
+            
+            if (empty($column->name) && !$relationship->relationshipType) {
+                $column->name = $guessedName;
+            } elseif (!$relationship->sourceJoinColumn && !$relationship->mappedBy) {
+                $relationship->sourceJoinColumn = $guessedName;
+            }
+        }
     }
 }
