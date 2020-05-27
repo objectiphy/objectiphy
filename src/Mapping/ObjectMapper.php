@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\MappingProvider;
 
 use Objectiphy\Annotations\AnnotationReader;
-use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
+use Objectiphy\Objectiphy\Contract\NamingStrategyInterface as NSI;
 use Objectiphy\Objectiphy\Mapping\Column;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Relationship;
@@ -56,16 +56,17 @@ class ObjectMapper
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
             $column = $this->mappingProvider->getColumnMapping($reflectionProperty);
             $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty);
-            $this->resolveColumnName($reflectionProperty, $column, $relationship);
-            if ($column != 'IGNORE' && ($column->name || $relationship->relationshipType)) {
-                $propertyMapping = new PropertyMapping();
-                $propertyMapping->className = $className;
-                $propertyMapping->propertyName = $reflectionProperty->getName();
-                $propertyMapping->table = $table;
-                $propertyMapping->column = $column;
-                $propertyMapping->relationship = $relationship;
-                $propertyMapping->parentProperties = $parentProperties;
+            if ($column->name != 'IGNORE' && ($column->name || $relationship->relationshipType)) {
+                $propertyMapping = new PropertyMapping(
+                    $className,
+                    $reflectionProperty->getName(),
+                    $table,
+                    $column,
+                    $relationship,
+                    $parentProperties
+                );
                 $this->mappingCollection->addMapping($propertyMapping);
+                $this->resolveColumnName($propertyMapping);
                 if ($this->shouldAddChildMappings($propertyMapping)) {
                     $parentProperties[] = $reflectionProperty->getName();
                     $this->populateMappingCollection($relationship->childClassName, $parentProperties);
@@ -105,7 +106,7 @@ class ObjectMapper
         if ($this->config->guessMappings && empty($table->name)) {
             $table->name = $this->config->tableNamingStrategy->convertName(
                 $reflectionClass->getName(), 
-                NamingStrategyInterface::TYPE_CLASS_NAME
+                NSI::TYPE_CLASS
             );
         }
     }
@@ -113,27 +114,32 @@ class ObjectMapper
     /**
      * If we have a column mapping but without a name, use naming strategy to convert property name, or if we have a 
      * relationship mapping but without a source column name (and without deferral of mapping to the other side of the 
-     * relationship), use naming strategy to convert property name.
-     * @param \ReflectionProperty $reflectionProperty
-     * @param Column $column
-     * @param Relationship $relationship
+     * relationship), use naming strategy to convert property name - but all that only if config says we should guess.
+     * @param PropertyMapping $propertyMapping
      */
-    private function resolveColumnName(\ReflectionProperty $reflectionProperty, Column $column, Relationship $relationship)
+    private function resolveColumnName(PropertyMapping $propertyMapping)
     {
-        $parentClassName= $reflectionProperty->getDeclaringClass()->getName();
-        if ($this->config->guessMappings && 
-            (empty($column->name) || (!$relationship->sourceJoinColumn && !$relationship->mappedBy))
-        ) {
-            $guessedName = $this->config->columnNamingStrategy->convertName(
-                $reflectionProperty->getName(),
-                null,
-                $reflectionProperty
-            );
-            
+        //Local variables make the code that follows more readable
+        $propertyName = $propertyMapping->propertyName;
+        $parentClassName = $propertyMapping->className;
+        $relationship = $propertyMapping->relationship;
+        $column = $propertyMapping->column;
+        $strategy = $this->config->columnNamingStrategy ?? null;
+
+        if ($this->config->guessMappings && $strategy) {
             if (empty($column->name) && !$relationship->relationshipType) {
-                $column->name = $guessedName;
-            } elseif (!$relationship->sourceJoinColumn && !$relationship->mappedBy) {
-                $relationship->sourceJoinColumn = $guessedName;
+                //Resolve column name for scalar value property
+                $column->name = $strategy->convertName(
+                    $propertyName,
+                    NSI::TYPE_SCALAR_PROPERTY,
+                    $propertyMapping);
+            } elseif ((!$relationship->sourceJoinColumn && !$relationship->mappedBy)) {
+                //Resolve source join column name (foreign key) for relationship property
+                $relationship->sourceJoinColumn = $strategy->convertName(
+                    $propertyName,
+                    NSI::TYPE_RELATIONSHIP_PROPERTY,
+                    $propertyMapping
+                );
             }
         }
     }

@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Mapping;
 
-use Objectiphy\Objectiphy\Annotation\Relationship;
-use Objectiphy\Objectiphy\Annotation\Column;
-
 class PropertyMapping
 {
     /**
@@ -25,26 +22,26 @@ class PropertyMapping
     public array $parentProperties = [];
     
     /** 
-     * @var MappingCollection|null Collection to which this mapping belongs 
+     * @var MappingCollection Collection to which this mapping belongs 
      */
-    public ?MappingCollection $parentCollection = null;
+    public MappingCollection $parentCollection;
     
     /** 
-     * @var Relationship|null If this property represents a relationship to a child entity, the relationship annotation.
+     * @var Relationship If this property represents a relationship to a child entity, the relationship annotation.
      */
-    public ?Relationship $relationship = null;
+    public Relationship $relationship;
 
     /**
-     * @var Table | null If the value of this property is stored in a column on the entity's table, the table 
+     * @var Table If the value of this property is stored in a column on the entity's table, the table 
      * annotation.
      */
-    public ?Table $table = null;
+    public Table $table;
     
     /**
-     * @var Column | null If the value of this property is stored in a column on the entity's table, the column 
+     * @var Column If the value of this property is stored in a column on the entity's table, the column 
      * annotation.
      */
-    public ?Column $column = null;
+    public Column $column;
 
     /**
      * @var string Locally cached fully qualified property path using dot notation.
@@ -56,6 +53,22 @@ class PropertyMapping
      */
     private string $alias = '';
 
+    public function __construct(
+        string $className, 
+        string $propertyName, 
+        Table $table, 
+        Column $column, 
+        Relationship $relationship, 
+        array $parentProperties = []
+    ) {
+        $this->className = $className;
+        $this->propertyName = $reflectionProperty->getName();
+        $this->table = $table;
+        $this->column = $column;
+        $this->relationship = $relationship;
+        $this->parentProperties = $parentProperties;
+    }
+    
     /**
      * @param bool $includingPropertyName
      * @return string Fully qualified property path using dot notation by default.
@@ -72,9 +85,13 @@ class PropertyMapping
         return $result;
     }
 
+    /**
+     * Try to use a nice alias with underscores. If there are clashes (due to property names that already contain 
+     * underscores), we have to get ugly and use an alternative separator.
+     * @return string
+     */
     public function getAlias(): string
     {
-        //Try to use a nice alias with underscores. If there are clashes, get ugly.
         if (!isset($this->alias)) {
             $this->alias = $this->getPropertyPath(true, '_');
             if (array_key_exists($this->parentCollection->getColumns(), $this->alias)) {

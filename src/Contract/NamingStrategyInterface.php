@@ -4,22 +4,30 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Contract;
 
+use Objectiphy\Objectiphy\Mapping\PropertyMapping;
+
 /**
  * Interface for a class that implements a naming strategy when converting property names to column names or class 
  * names to table names (eg. to convert from camelCase or PascalCase to snake_case).
  */
 interface NamingStrategyInterface
 {
+    public const TYPE_CLASS = 1;
+    public const TYPE_SCALAR_PROPERTY = 2;
+    public const TYPE_RELATIONSHIP_PROPERTY = 3;
+    public const TYPE_STRING = 100;
+
     /**
      * Convert value of $name from property name to column name or class name to table name
-     * @param string $name Property or class name to convert.
-     * @param \ReflectionClass | null $reflectionClass If $name belongs to a class, this is the class.
-     * @param \ReflectionProperty | null $reflectionProperty If $name belongs to a property, this is the property.
-     * @return string The converted name.
+     * @param string $name Value to convert.
+     * @param int $type Type of thing the value represents (based on NamingStrategyInterface constants).
+     * @param PropertyMapping | null $propertyMapping If $type is TYPE_SCALAR_PROPERTY or TYPE_RELATIONSHIP_PROPERTY, 
+     * the mapping details are provided here which can be used for making decisions about the conversion. 
+     * @return string The converted value.
      */
     public function convertName(
-        string $name, 
-        ?\ReflectionClass $reflectionClass = null, 
-        ?\ReflectionProperty $reflectionProperty = null
+        string $name,
+        int $type,
+        ?PropertyMapping $propertyMapping
     ): string;
 }

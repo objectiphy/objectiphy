@@ -14,8 +14,11 @@ class Unseparated implements NamingStrategyInterface
         ?\ReflectionProperty $reflectionProperty = null
     ): string {
         $converted = strtolower($name);
-        $converted = $isChildClass && substr($converted, -2) != 'id' ? $converted . 'id' : $converted;
-
+        if ($type == self::TYPE_RELATIONSHIP_PROPERTY) {
+            $targetColumnName = $propertyMapping->relationship->targetJoinColumn ?? 'id';
+            $converted .= substr($converted, -2) != $targetColumnName ? $targetColumnName : '';
+        }
+        
         return $converted;
     }
 }
