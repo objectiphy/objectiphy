@@ -12,6 +12,8 @@ use Objectiphy\Objectiphy\Mapping\Table;
 /**
  * Reads Objectiphy annotations, which take precedence over any Doctrine ones supplied by the component we are 
  * decorating.
+ * @package Objectiphy\Objectiphy
+ * @author Russell Walker <rwalker.php@gmail.com>
  */
 class MappingProviderAnnotation implements MappingProviderInterface
 {

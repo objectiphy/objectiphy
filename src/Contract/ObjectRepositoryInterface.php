@@ -13,11 +13,10 @@ if (interface_exists('Doctrine\Common\Persistence\ObjectRepository')) {
 }
 
 /**
- * Interface ObjectRepositoryInterface
- * @package Marmalade\Objectiphy
- * @author Russell Walker <russell.walker@marmalade.co.uk>
  * Objectiphy repository interface, compatible with Doctrine Repository interface, with additional methods for
  * persistence and other features.
+ * @package Objectiphy\Objectiphy
+ * @author Russell Walker <rwalker.php@gmail.com>
  */
 interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
 {

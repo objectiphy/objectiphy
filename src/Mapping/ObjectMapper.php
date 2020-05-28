@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy\MappingProvider;
+namespace Objectiphy\Objectiphy\Mapping;
 
 use Objectiphy\Annotations\AnnotationReader;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface as NSI;
@@ -16,6 +16,8 @@ use Objectiphy\Objectiphy\Orm\ConfigOptions;
 /**
  * Loads mapping information from the supplied mapping provider (typically annotations, but the mapping information 
  * could come from anywhere as long as there is a provider for it).
+ * @package Objectiphy\Objectiphy
+ * @author Russell Walker <rwalker.php@gmail.com>
  */
 class ObjectMapper
 {

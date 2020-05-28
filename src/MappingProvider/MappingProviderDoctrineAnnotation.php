@@ -14,6 +14,8 @@ use Objectiphy\Objectiphy\Mapping\Table;
 
 /**
  * A mapping provider decorator, which populates mapping information using Doctrine annotations.
+ * @package Objectiphy\Objectiphy
+ * @author Russell Walker <rwalker.php@gmail.com>
  */
 class MappingProviderDoctrineAnnotation implements MappingProviderInterface
 {

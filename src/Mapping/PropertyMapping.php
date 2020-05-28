@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Mapping;
 
+/**
+ * Mapping information for a particular property.
+ * @package Objectiphy\Objectiphy
+ * @author Russell Walker <rwalker.php@gmail.com>
+ */
 class PropertyMapping
 {
     /**

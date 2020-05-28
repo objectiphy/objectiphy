@@ -9,6 +9,8 @@ use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 /**
  * Interface for a class that implements a naming strategy when converting property names to column names or class 
  * names to table names (eg. to convert from camelCase or PascalCase to snake_case).
+ * @package Objectiphy\Objectiphy
+ * @author Russell Walker <rwalker.php@gmail.com>
  */
 interface NamingStrategyInterface
 {

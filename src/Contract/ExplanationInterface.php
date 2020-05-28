@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Contract;
 
+/**
+ * Used to obtain information about how a request was handled (in particular, database queries that were executed).
+ * @package Objectiphy\Objectiphy
+ * @author Russell Walker <rwalker.php@gmail.com>
+ */
 interface ExplanationInterface
 {
     /**
@@ -13,7 +18,7 @@ interface ExplanationInterface
      * into a database GUI and executed without having to replace values manually (when Objectiphy executes the query,
      * it does NOT use this exact string, it uses prepared statements).
      */
-    public function getQuery($parameterise = true): string;
+    public function getQuery(bool $parameterise = true): string;
 
     /**
      * Get all the queries that were executed, including counts.
@@ -22,7 +27,7 @@ interface ExplanationInterface
      * can be pasted into a database GUI and executed without having to replace values manually (when Objectiphy
      * executes the query, it does NOT use this exact string, it uses prepared statements).
      */
-    public function getQueryHistory($parameterise = true): array;
+    public function getQueryHistory(bool $parameterise = true): array;
 
     /**
      * @return array The parameters used in the last query as an associative array

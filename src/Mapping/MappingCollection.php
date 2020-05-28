@@ -2,13 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy;
+namespace Objectiphy\Objectiphy\Mapping;
 
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Orm\ConfigOptions;
 
+/**
+ * Represents the full mapping information for the entire object hierarchy of a given parent class.
+ * @package Objectiphy\Objectiphy
+ * @author Russell Walker <rwalker.php@gmail.com>
+ */
 class MappingCollection
 {
     /**

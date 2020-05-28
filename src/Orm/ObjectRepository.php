@@ -9,6 +9,11 @@ use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 
+/**
+ * Main entry point for all ORM operations
+ * @package Objectiphy\Objectiphy
+ * @author Russell Walker <rwalker.php@gmail.com>
+ */
 class ObjectRepository implements ObjectRepositoryInterface
 {
     protected ConfigOptions $configOptions;

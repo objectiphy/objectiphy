@@ -9,7 +9,9 @@ use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Mapping\Table;
 
 /**
- * This is just a base delegate that other providers can decorate depending on how they get their mapping information.
+ * This is just a base component that other providers can decorate depending on how they get their mapping information.
+ * @package Objectiphy\Objectiphy
+ * @author Russell Walker <rwalker.php@gmail.com>
  */
 class MappingProvider implements MappingProviderInterface
 {

@@ -9,6 +9,8 @@ use Objectiphy\Objectiphy\Orm\ConfigOptions;
 /**
  * Mapping information to describe how a property relates to a property on another class, or a value from a table other
  * than the one associated with the class it belongs to.
+ * @package Objectiphy\Objectiphy
+ * @author Russell Walker <rwalker.php@gmail.com>
  */
 class Relationship
 {

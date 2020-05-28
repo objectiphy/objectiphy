@@ -31,8 +31,8 @@ use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
  * @property bool $bindToEntities
  * @property array $queryOverrides
  * @property array $entityFactories
- * Class ConfigOptions
- * @package Objectiphy\Objectiphy\Orm
+ * @package Objectiphy\Objectiphy
+ * @author Russell Walker <rwalker.php@gmail.com>
  */
 class ConfigOptions
 {

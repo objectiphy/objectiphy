@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Contract;
 
 /**
- * Interface PaginationInterface
-  * Interface for a pagination class. You can use the simple implementation provided with Objectiphy, or create your own
+ * Interface for a pagination class. You can use the simple implementation provided with Objectiphy, or create your own
  * pagination class.
+ * @package Objectiphy\Objectiphy
+ * @author Russell Walker <rwalker.php@gmail.com>
  */
 interface PaginationInterface
 {

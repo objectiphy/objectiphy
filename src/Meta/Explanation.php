@@ -7,9 +7,11 @@ namespace Objectiphy\Objectiphy\Meta;
 use Objectiphy\Objectiphy\Contract\ExplanationInterface;
 
 /**
- * THIS IS FOR DEBUGGING/PROFILING PURPOSES ONLY!
- * Class Explanation
- * @package Objectiphy\Objectiphy\Meta
+ * THIS IS FOR DEBUGGING/PROFILING PURPOSES ONLY! Do not ever use the output of this class to execute database queries 
+ * via code or in production, as it deliberately does not sanitise user input. It is ONLY to be used to help you 
+ * understand what is going on under the hood.
+ * @package Objectiphy\Objectiphy
+ * @author Russell Walker <rwalker.php@gmail.com>
  */
 class Explanation implements ExplanationInterface
 {

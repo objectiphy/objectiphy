@@ -7,6 +7,12 @@ namespace Objectiphy\Objectiphy\NamingStrategy;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 
+/**
+ * Converts PascalCase or camelCase to snake_case. For foreign keys, the target join column name is used as a suffix if 
+ * known, otherwise, '_id' is assumed.
+ * @package Objectiphy\Objectiphy
+ * @author Russell Walker <rwalker.php@gmail.com>
+ */
 class PascalCamelToSnake implements NamingStrategyInterface
 {
     /**
