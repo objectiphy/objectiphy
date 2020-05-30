@@ -50,32 +50,54 @@ class MappingCollection
     {
         return $this->columns;
     }
-    
+
+    /**
+     * Add the mapping information for a property to the collection and index it by both column and property names.
+     * @param PropertyMapping $propertyMapping
+     */
     public function addMapping(PropertyMapping $propertyMapping)
     {
         $propertyMapping->parentCollection = $this;
         $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
         $this->properties[$propertyMapping->getPropertyPath()] = $propertyMapping;
-        $relationshipKey = end($propertyMapping->parentProperties) . ':' . $propertyMapping->className;
+        $relationshipKey = (end($propertyMapping->parentProperties) ?: '') . ':' . $propertyMapping->className;
         $this->relationships[$relationshipKey][] = $propertyMapping->propertyName;
     }
 
+    /**
+     * Return the true, short, column name for this property (not an alias).
+     * @param string $propertyName
+     * @param array $parentProperties
+     * @return string | null
+     */
     public function getColumnForProperty(string $propertyName, array $parentProperties): ?string
     {
         $propertyPath = implode('.', array_merge($parentProperties, [$propertyName]));
         if (isset($this->properties[$propertyPath])) {
-            return $this->properties[$propertyPath]->getShortColumn();
+            return $this->properties[$propertyPath]->column->name;
         }
 
         return null;
     }
-    
-    public function getPropertyForColumn(string $columnName): ?string
+
+    /**
+     * Return the property mapping that matches the given column alias
+     * @param string $columnAlias
+     * @return string
+     */
+    public function getPropertyForColumn(string $columnAlias): string
     {
-        return $this->columns[$columnName] ?? null;
+        return $this->columns[$columnAlias] ?? '';
     }
 
-    public function isRelationshipMapped(string $parentPropertyName, string $className, string $propertyName)
+    /**
+     * Whether or not a relationship between two classes has already been added (prevents infinite recursion).
+     * @param string $parentPropertyName
+     * @param string $className
+     * @param string $propertyName
+     * @return bool
+     */
+    public function isRelationshipMapped(string $parentPropertyName, string $className, string $propertyName): bool
     {
         $relationships = $this->relationships[$parentPropertyName . ':' . $className] ?? [];
         return in_array($propertyName, $relationships);

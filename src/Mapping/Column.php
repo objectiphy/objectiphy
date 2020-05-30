@@ -18,7 +18,7 @@ class Column
     public string $fullyQualifiedName = '';
     
     /** @var string Data type (doctrine compatible). */
-    public string $type = 'string';
+    public string $type = '';
     
     /**
      * @var string If type is string, and format is present, sprintf will be used. If type is datetimestring, the

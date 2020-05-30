@@ -4,16 +4,11 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Contract;
 
-//TODO: Come back and explain this better! It is not immediately obvious what these methods are for, and the
-//explanations given are inadequate.
-
 /**
- * Interface for a reference to an object which has not yet been saved, or has not been hydrated. So if you want to
- * save an object and associated one of its properties with a child object that already exists in the database, but
- * which you don't actually have a concrete instance of, instead of loading the child object from the database just so
- * that you can populate the property and save the relationship, you can create an object reference which just contains
- * the class name and primary key value. Objectiphy can then use this to save the relationship without ever having to
- * load the child object.
+ * Interface for an object that represents an instance of an entity to use either as a placeholder before the object 
+ * has been persisted, so that the foreign key can be populated after persistence, or as a way of representing a child
+ * object without having to actually hydrate the child object (where you just want to store a new association, but
+ * are not updating the child entity).
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
@@ -27,8 +22,7 @@ interface ObjectReferenceInterface
     public function getPrimaryKeyValue();
 
     /**
-     * When creating a proxy object, we could be extending any old object, which might have its own constructor
-     * arguments. In that case, we have to call this method separately.
+     * Set either the class name and primary key value, or an instance of the entity that does not yet have a key value.
      * @param string | object $classNameOrObject
      * @param mixed | null $primaryKeyValue
      * @param string $primaryKeyPropertyName

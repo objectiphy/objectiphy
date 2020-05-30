@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Mapping;
 
+use Objectiphy\Objectiphy\Contract\CollectionFactoryInterface;
+use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Orm\ConfigOptions;
 
 /**
@@ -39,10 +41,17 @@ class Relationship
      * - if null, defaults to false for -to-one associations, and true for -to-many associations.
      */
     public ?bool $lazyLoad = null;
+
+    /**
+     * @var bool Whether or not this relationship is just to grab a single scalar value from another table, rather than 
+     * a child entity.
+     */
+    public bool $isScalarJoin = false;
     
     /**
      * @var string Name of target table (child entity) - defaults to the Objectiphy table annotation value on the
-     * child class, if applicable. Also used to join to another table for scalar values that are not child objects.
+     * child class, if applicable. Also used to join to another table for scalar values that are not child objects
+     * (scalar joins).
      */
     public string $joinTable = '';
     
@@ -55,7 +64,10 @@ class Relationship
     /** @var string "INNER" or "LEFT". */
     public string $joinType = 'LEFT';
     
-    /** @var string Custom SQL for join (eg. "vehicle.policy_id = policy.id"). */
+    /**
+     * @var string Custom SQL for join (eg. "vehicle.policy_id = policy.id"). Not usually required, as it will be
+     * generated automatically, but if you have special requirements you can specify something to use instead.
+     */
     public string $joinSql = '';
     
     /** @var bool Whether this is actually an embedded (value) object that maps to several columns */
@@ -64,41 +76,86 @@ class Relationship
     /** @var string Prefix to apply to embedded object column names */
     public string $embeddedColumnPrefix = '';
     
-    /** @var array Properties to order children by */
+    /** @var array Properties to order children by (eg. ['modifiedDateTime' => 'DESC', 'id' => 'ASC']) */
     public array $orderBy = [];
-    
-    /**
-     * @var string Class to use for collections of entities (must be traversable and take an array in constructor) -
-     * applies to properties with a to-many relationship only.
-     */
-    public string $collectionType = 'array';
-    
+
     /** @var bool Cascade deletes (if parent object is deleted, delete any children also) */
     public bool $cascadeDeletes = false;
     
     /** @var bool Orphan control (if child is removed from parent, delete the child, not just the relationship) */
     public bool $orphanRemoval = false;
-    
-    public function __construct($relationshipType)
+
+    /**
+     * @var string Name of a factory class that can be used to create custom collection classes for collections of
+     * entities (for properties with a to-many relationship only). If supplied, this must be the fully qualified class
+     * name of a class that implements CollectionFactoryInterface. Defaults to a plain old PHP array for collections
+     * if no factory class supplied.
+     */
+    private string $collectionFactoryClass = '';
+
+    public function __construct(string $relationshipType)
     {
         $this->relationshipType = $relationshipType;
     }
 
+    /**
+     * Static method to get an array of all of the relationship types.
+     * @return string[]
+     */
     public static function getRelationshipTypes(): array
     {
         return [self::ONE_TO_ONE, self::ONE_TO_MANY, self::MANY_TO_ONE, self::MANY_TO_MANY];
     }
-    
+
+    /**
+     * Setter for custom collection class factory (ensures the value supplied implements the correct interface).
+     * @param string $factoryClassName
+     * @throws ObjectiphyException
+     */
+    public function setCollectionFactoryClass(string $factoryClassName)
+    {
+        if ($factoryClassName 
+            && $factoryClassName != 'array' 
+            && !is_a($factoryClassName, CollectionFactoryInterface::class, true)
+        ) {
+            $message = 'Value of collectionFactoryClass (%1$s) is not valid - it must be the fully qualified class name of a class that implements %2$s.'
+            throw new ObjectiphyException(sprintf($message, $factoryClassName, CollectionFactoryInterface::class));
+        }
+        
+        $this->collectionFactoryClass = $factoryClassName;
+    }
+
+    /**
+     * Getter for custom collection class factory.
+     * @return string
+     */
+    public function getCollectionFactoryClass()
+    {
+        return $this->collectionFactoryClass;
+    }
+
+    /**
+     * Convenience method for checking relationship type.
+     * @return bool
+     */
     public function isToOne(): bool
     {
         return in_array($this->relationshipType, [self::ONE_TO_ONE, self::MANY_TO_ONE]);
     }
 
+    /**
+     * Convenience method for checking relationship type.
+     * @return bool
+     */
     public function isToMany(): bool
     {
         return in_array($this->relationshipType, [self::ONE_TO_MANY, self::MANY_TO_MANY]);
     }
 
+    /**
+     * Determines whether or not to eager load the child.
+     * @return bool
+     */
     public function isEager(ConfigOptions $config): bool
     {
         $eager = !$this->lazyLoad;

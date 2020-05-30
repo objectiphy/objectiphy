@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\MappingProvider;
 
+use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Mapping\Column;
 use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Mapping\Table;
@@ -15,18 +16,21 @@ use Objectiphy\Objectiphy\Mapping\Table;
  */
 class MappingProvider implements MappingProviderInterface
 {
-    public function getTableMapping(\ReflectionClass $reflectionClass): Table
+    public function getTableMapping(\ReflectionClass $reflectionClass, bool &$wasMapped): Table
     {
+        $wasMapped = false;
         return new Table();
     }
     
-    public function getColumnMapping(\ReflectionProperty $reflectionProperty): Column
+    public function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped): Column
     {
+        $wasMapped = false;
         return new Column();
     }
 
-    public function getRelationshipMapping(\ReflectionProperty $reflectionProperty): Relationship
+    public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped): Relationship
     {
+        $wasMapped = false;
         return new Relationship();
     }
 }

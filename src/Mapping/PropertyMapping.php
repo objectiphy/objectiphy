@@ -75,8 +75,9 @@ class PropertyMapping
     }
     
     /**
+     * Get the fully qualified property path using dot notation by default.
      * @param bool $includingPropertyName
-     * @return string Fully qualified property path using dot notation by default.
+     * @return string
      */
     public function getPropertyPath(bool $includingPropertyName = true, $separator = '.'): string
     {
@@ -92,7 +93,8 @@ class PropertyMapping
 
     /**
      * Try to use a nice alias with underscores. If there are clashes (due to property names that already contain 
-     * underscores), we have to get ugly and use an alternative separator.
+     * underscores), we have to get ugly and use an alternative separator that is never likely to appear in a property 
+     * name.
      * @return string
      */
     public function getAlias(): string

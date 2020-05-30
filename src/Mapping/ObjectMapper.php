@@ -6,6 +6,7 @@ namespace Objectiphy\Objectiphy\Mapping;
 
 use Objectiphy\Annotations\AnnotationReader;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface as NSI;
+use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\Column;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Relationship;
@@ -53,12 +54,13 @@ class ObjectMapper
     private function populateMappingCollection(string $className, array $parentProperties = [])
     {
         $reflectionClass = new \ReflectionClass($className);
-        $table = $this->mappingProvider->getTableMapping($reflectionClass);
-        $this->resolveTableName($reflectionClass, $table);
+        $table = $this->getTableMapping($reflectionClass, true);
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-            $column = $this->mappingProvider->getColumnMapping($reflectionProperty);
-            $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty);
-            if ($column->name != 'IGNORE' && ($column->name || $relationship->relationshipType)) {
+            $columnIsMapped = false;
+            $relationshipIsMapped = false;
+            $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $columnIsMapped);
+            $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $relationshipIsMapped);
+            if (($columnIsMapped || $relationshipIsMapped) && $column->name != 'IGNORE') {
                 $propertyMapping = new PropertyMapping(
                     $className,
                     $reflectionProperty->getName(),
@@ -68,6 +70,7 @@ class ObjectMapper
                     $parentProperties
                 );
                 $this->mappingCollection->addMapping($propertyMapping);
+                //Resolve name *after* adding to collection so that naming strategies have access to the collection.
                 $this->resolveColumnName($propertyMapping);
                 if ($this->shouldAddChildMappings($propertyMapping)) {
                     $parentProperties[] = $reflectionProperty->getName();
@@ -75,6 +78,26 @@ class ObjectMapper
                 }
             }
         }
+    }
+
+    /**
+     * Get the table mapping for the parent entity.
+     * @param \ReflectionClass $reflectionClass
+     * @param bool $exceptionIfUnmapped Whether or not to throw an exception if table mapping not found (parent only).
+     * @return Table
+     * @throws ObjectiphyException
+     */
+    private function getTableMapping(\ReflectionClass $reflectionClass, bool $exceptionIfUnmapped = false): Table
+    {
+        $tableIsMapped = false;
+        $table = $this->mappingProvider->getTableMapping($reflectionClass, $tableIsMapped);
+        if ($exceptionIfUnmapped && !$tableIsMapped) {
+            $message = 'Cannot populate mapping collection for class %1$s as there is no table mapping specified. Did you forget to add a Table annotation to your entity class?';
+            throw new ObjectiphyException(sprintf($message, $reflectionClass->getName()));
+        }
+        $this->resolveTableName($reflectionClass, $table);
+        
+        return $table;
     }
 
     /**
@@ -135,7 +158,7 @@ class ObjectMapper
                     $propertyName,
                     NSI::TYPE_SCALAR_PROPERTY,
                     $propertyMapping);
-            } elseif ((!$relationship->sourceJoinColumn && !$relationship->mappedBy)) {
+            } elseif ($relationship->relationshipType && (!$relationship->sourceJoinColumn && !$relationship->mappedBy)) {
                 //Resolve source join column name (foreign key) for relationship property
                 $relationship->sourceJoinColumn = $strategy->convertName(
                     $propertyName,

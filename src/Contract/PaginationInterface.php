@@ -6,7 +6,7 @@ namespace Objectiphy\Objectiphy\Contract;
 
 /**
  * Interface for a pagination class. You can use the simple implementation provided with Objectiphy, or create your own
- * pagination class.
+ * pagination class and implement this interface.
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
