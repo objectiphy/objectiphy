@@ -29,6 +29,12 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         $this->annotationReader = $annotationReader;
     }
 
+    /**
+     * Populate a Table mapping class based on Doctrine annotations.
+     * @param \ReflectionClass $reflectionClass
+     * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
+     * @return Table
+     */
     public function getTableMapping(\ReflectionClass $reflectionClass, bool &$wasMapped): Table
     {
         $table = $this->mappingProvider->getTableMapping($reflectionClass, $wasMapped);
@@ -44,6 +50,12 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         return $table;
     }
 
+    /**
+     * Populate a Column mapping class based on Doctrine annotations.
+     * @param \ReflectionProperty $reflectionProperty
+     * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
+     * @return Column
+     */
     public function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped): Column
     {
         $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $wasMapped);
@@ -53,6 +65,12 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         return $column;
     }
 
+    /**
+     * Populate a Relationship mapping class based on Doctrine annotations.
+     * @param \ReflectionProperty $reflectionProperty
+     * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
+     * @return Relationship
+     */
     public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped): Relationship
     {
         $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $wasMapped);
@@ -67,6 +85,12 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
 
     }
 
+    /**
+     * Read a Doctrine Column annotation.
+     * @param \ReflectionProperty $reflectionProperty
+     * @param Column $column
+     * @param bool $wasMapped
+     */
     private function populateFromDoctrineColumn(
         \ReflectionProperty $reflectionProperty, 
         Column &$column, 
@@ -83,6 +107,12 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         }
     }
 
+    /**
+     * Read a Doctrine Id annotation.
+     * @param \ReflectionProperty $reflectionProperty
+     * @param Column $column
+     * @param bool $wasMapped
+     */
     private function populateFromDoctrineId(
         \ReflectionProperty $reflectionProperty, 
         Column &$column,
@@ -98,6 +128,12 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         }
     }
 
+    /**
+     * Read a Doctrine OrderBy annotation.
+     * @param \ReflectionProperty $reflectionProperty
+     * @param Relationship $relationship
+     * @param bool $wasMapped
+     */
     private function populateFromDoctrineOrderBy(
         \ReflectionProperty $reflectionProperty,
         Relationship &$relationship,
@@ -113,6 +149,13 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         }
     }
 
+    /**
+     * Read a Doctrine relationship annotation (eg. OneToOne, OneToMany, etc.)
+     * @param \ReflectionProperty $reflectionProperty
+     * @param Relationship $relationship
+     * @param string $relationshipType
+     * @param bool $wasMapped
+     */
     private function populateFromDoctrineRelationship(
         \ReflectionProperty $reflectionProperty,
         Relationship &$relationship,
@@ -127,6 +170,12 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         }
     }
 
+    /**
+     * Read a Doctrine JoinColumn annotation.
+     * @param \ReflectionProperty $reflectionProperty
+     * @param Relationship $relationship
+     * @param bool $wasMapped
+     */
     private function populateFromDoctrineJoinColumn(
         \ReflectionProperty $reflectionProperty,
         Relationship &$relationship,
@@ -140,6 +189,12 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         }
     }
 
+    /**
+     * Read a Doctrine Embedded annotation.
+     * @param \ReflectionProperty $reflectionProperty
+     * @param Relationship $relationship
+     * @param bool $wasMapped
+     */
     private function populateFromDoctrineEmbedded(
         \ReflectionProperty $reflectionProperty,
         Relationship &$relationship,

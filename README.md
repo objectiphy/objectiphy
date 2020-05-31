@@ -1,2 +1,2 @@
-# objectiphy
-A simple and easy to use ORM for PHP
+# Objectiphy
+An easy-to-use ORM for PHP

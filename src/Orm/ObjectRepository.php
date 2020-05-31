@@ -18,8 +18,28 @@ class ObjectRepository implements ObjectRepositoryInterface
 {
     protected ConfigOptions $configOptions;
     protected string $className;
+    protected ObjectFetcher $objectFetcher;
+    protected ObjectPersister $objectPersister;
+    protected ObjectRemover $objectRemover;
     protected PaginationInterface $pagination;
     protected array $orderBy;
+
+    public function __construct(
+        ObjectFetcher $objectFetcher,
+        ObjectPersister $objectPersister,
+        ObjectRemover $objectRemover,
+        string $entityClassName = '',
+        ConfigOptions $configOptions = null
+    ) {
+        $this->objectFetcher = $objectFetcher;
+        $this->objectPersister = $objectPersister;
+        $this->objectRemover = $objectRemover;
+        $this->setEntityClassName($entityClassName);
+        if (!$configOptions) {
+            $configOptions = new ConfigOptions();
+        }
+        $this->setConfiguration($configOptions);
+    }
 
     /**
      * @param ConfigOptions $configOptions

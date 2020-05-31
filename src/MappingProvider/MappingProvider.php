@@ -16,18 +16,36 @@ use Objectiphy\Objectiphy\Mapping\Table;
  */
 class MappingProvider implements MappingProviderInterface
 {
+    /**
+     * Just return a new Table mapping object without populating it.
+     * @param \ReflectionClass $reflectionClass
+     * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
+     * @return Table
+     */
     public function getTableMapping(\ReflectionClass $reflectionClass, bool &$wasMapped): Table
     {
         $wasMapped = false;
         return new Table();
     }
-    
+
+    /**
+     * Just return a new Column mapping object without populating it.
+     * @param \ReflectionProperty $reflectionProperty
+     * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
+     * @return Column
+     */
     public function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped): Column
     {
         $wasMapped = false;
         return new Column();
     }
 
+    /**
+     * Just return a new Relationship mapping object without populating it.
+     * @param \ReflectionProperty $reflectionProperty
+     * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
+     * @return Relationship
+     */
     public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped): Relationship
     {
         $wasMapped = false;

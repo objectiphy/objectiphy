@@ -71,22 +71,15 @@ class MappingProviderAnnotation implements MappingProviderInterface
 
     /**
      * Takes a mapping object (Table, Column, Relationship), and replaces property values with the properties of an 
-     * equivalent object, overriding the base implementation. If the decorator does not hold a value for a property,
-     * the original value of the component is preserved.
+     * equivalent object, overriding the base implementation. If the decorator's annotation did not specify a value for 
+     * a property, the original value of the component is preserved.
      * @param object $component The object whose values may be overridden.
      * @param object $decorator The object which holds the values that take priority.
      */
     private function decorate(object $component, object $decorator)
     {
         if (get_class($component) == get_class($decorator)) {
-            foreach (get_object_vars($decorator) as $property => $value) {
-
-                //TODO: We need to know if each individual attribute was mapped, and only decorate
-                //where an overridden value was supplied (even if the value was just reverting to
-                //the default). At present, all we know is that *something* was mapped, but that is
-                //not good enough. :(
-                //Maybe return an array of attributes that were mapped instead of just a bool?
-                //Or keep track on the mapping class itself? (no way to hint/enforce it then though)
+            foreach ($this->annotationReader->getAttributesRead(get_class($decorator)) as $property => $value) {
                 $component->$property = $value;
             }
         }
