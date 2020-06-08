@@ -198,7 +198,7 @@ class ConfigOptions
      * @param array $options Array of config options to set
      * @throws ObjectiphyException
      */
-    public function __construct(string $configFile = '', array $options = ['cacheDirectory' => '', 'productionMode' => false])
+    public function __construct(array $options = ['cacheDirectory' => '', 'productionMode' => false], string $configFile = '')
     {
         $this->setCacheDirectory($options['cacheDirectory'] ?? '');
         $this->setInitialOptions($options);
