@@ -28,13 +28,11 @@ class ObjectRepository implements ObjectRepositoryInterface
         ObjectFetcher $objectFetcher,
         ObjectPersister $objectPersister,
         ObjectRemover $objectRemover,
-        string $entityClassName = '',
         ConfigOptions $configOptions = null
     ) {
         $this->objectFetcher = $objectFetcher;
         $this->objectPersister = $objectPersister;
         $this->objectRemover = $objectRemover;
-        $this->setEntityClassName($entityClassName);
         if (!$configOptions) {
             $configOptions = new ConfigOptions();
         }
