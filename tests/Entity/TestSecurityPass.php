@@ -2,10 +2,10 @@
 
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
-use Objectiphy\Objectiphy;
+use Objectiphy\Objectiphy\Mapping;
 
 /**
- * @Objectiphy\Table(name="objectiphy_test.security_pass")
+ * @Mapping\Table(name="objectiphy_test.security_pass")
  * @property int $id
  * @property string $serialNo
  * @property TestEmployee $employee
@@ -14,17 +14,17 @@ class TestSecurityPass
 {
     /**
      * @var int
-     * @Objectiphy\Column(name="id",isPrimaryKey=true)
+     * @Mapping\Column(name="id",isPrimaryKey=true)
      */
     public $id;
     /**
      * @var string
-     * @Objectiphy\Column(type="string")
+     * @Mapping\Column(type="string")
      */
     public $serialNo;
     /**
      * @var TestEmployee
-     * @Objectiphy\Column(relationshipType="one_to_one", type="TestEmployee")
+     * @Mapping\Relationship(relationshipType="one_to_one", childClassName="TestEmployee")
      */
     public $employee;
 }

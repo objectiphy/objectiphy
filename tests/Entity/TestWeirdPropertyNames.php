@@ -2,10 +2,10 @@
 
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
-use Objectiphy\Objectiphy;
+use Objectiphy\Objectiphy\Mapping;
 
 /**
- * @Objectiphy\Table(name="objectiphy_test.anomalies")
+ * @Mapping\Table(name="objectiphy_test.anomalies")
  * @property int $primary_key
  * @property string $firstName
  * @property string $last_name
@@ -17,36 +17,36 @@ class TestWeirdPropertyNames
 {
     /**
      * @var int
-     * @Objectiphy\Column(isPrimaryKey=true,name="id")
+     * @Mapping\Column(isPrimaryKey=true,name="id")
      */
     protected $primary_key;
     /**
      * @var string
-     * @Objectiphy\Column(type="string", name="first_name")
+     * @Mapping\Column(type="string", name="first_name")
      */
     protected $firstName;
     /**
      * @var string
-     * @Objectiphy\Column(type="string", name="lastname")
+     * @Mapping\Column(type="string", name="lastname")
      */
     protected $last_name;
     /**
      * @var \DateTime
-     * @Objectiphy\Column(type="datetime", name="event_date_time")
+     * @Mapping\Column(type="datetime", name="event_date_time")
      */
     protected $some_random_event_dateTime;
     /**
      * @var string
-     * @Objectiphy\Column(type="string", name="veryInconsistent_naming_Conventionhere")
+     * @Mapping\Column(type="string", name="veryInconsistent_naming_Conventionhere")
      */
     protected $a_VERY_Very_InconsistentnamingConvention_here;
     /**
-     * @Objectiphy\Column(type="TestAddress", relationshipType="one_to_one", embedded=true)
+     * @Mapping\Relationship(childClassName="TestAddress", relationshipType="one_to_one", isEmbedded=true)
      */
     protected $address_with_underscores;
     /**
      * @var TestUser
-     * @Objectiphy\Column(type="TestUser", name="user_id", relationshipType="one_to_one")
+     * @Mapping\Relationship(childClassName="TestUser", sourceJoinColumn="user_id", relationshipType="one_to_one")
      */
     protected $test_user;
 

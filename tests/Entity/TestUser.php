@@ -3,11 +3,11 @@
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-use Objectiphy\Objectiphy;
+use Objectiphy\Objectiphy\Mapping;
 
 /**
  * Class TestUser
- * @Objectiphy\Table(name="objectiphy_test.user")
+ * @Mapping\Table(name="objectiphy_test.user")
  * @property int $id
  * @property string $type
  * @property string $email

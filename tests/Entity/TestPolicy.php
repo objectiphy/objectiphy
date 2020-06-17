@@ -2,7 +2,7 @@
 
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
-use Objectiphy\Objectiphy;
+use Objectiphy\Objectiphy\Mapping;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 
@@ -31,7 +31,7 @@ class TestPolicy
     protected $id;
     /**
      * @var TestUnderwriter
-     * @Objectiphy\Column(name="underwriter_id",type="TestUnderwriter",relationshipType="one_to_one")
+     * @Mapping\Relationship(sourceJoinColumn="underwriter_id",childClassName="TestUnderwriter",relationshipType="one_to_one")
      */
     protected $underwriter;
     /**
@@ -64,7 +64,7 @@ class TestPolicy
     protected $modification;
     /**
      * @var TestContact
-     * @Objectiphy\Column(name="contact_id",type="TestContact",relationshipType="one_to_one")
+     * @Mapping\Relationship(sourceJoinColumn="contact_id",childClassName="TestContact",relationshipType="one_to_one")
      */
     protected $contact;
     /**

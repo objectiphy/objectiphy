@@ -5,13 +5,9 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Mapping;
 
 use Objectiphy\Annotations\AnnotationReader;
+use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface as NSI;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
-use Objectiphy\Objectiphy\Mapping\Column;
-use Objectiphy\Objectiphy\Mapping\PropertyMapping;
-use Objectiphy\Objectiphy\Mapping\Relationship;
-use Objectiphy\Objectiphy\Mapping\Table;
-use Objectiphy\Objectiphy\MappingCollection;
 use Objectiphy\Objectiphy\Orm\ConfigOptions;
 
 /**
@@ -69,12 +65,13 @@ class ObjectMapper
                     $relationship,
                     $parentProperties
                 );
+                $childrenAlreadyMapped = $this->childrenAlreadyMapped($propertyMapping); //Check this before adding!
                 $this->mappingCollection->addMapping($propertyMapping);
                 //Resolve name *after* adding to collection so that naming strategies have access to the collection.
                 $this->resolveColumnName($propertyMapping);
-                if ($this->shouldAddChildMappings($propertyMapping)) {
-                    $parentProperties[] = $reflectionProperty->getName();
-                    $this->populateMappingCollection($relationship->childClassName, $parentProperties);
+                if ($childrenAlreadyMapped) {
+                    $childParentProperties = array_merge($parentProperties, [$reflectionProperty->getName()]);
+                    $this->populateMappingCollection($relationship->childClassName, $childParentProperties);
                 }
             }
         }
@@ -105,14 +102,14 @@ class ObjectMapper
      * @param PropertyMapping $propertyMapping
      * @return bool
      */
-    private function shouldAddChildMappings(PropertyMapping $propertyMapping)
+    private function childrenAlreadyMapped(PropertyMapping $propertyMapping)
     {
         $result = false;
         $relationship = $propertyMapping->relationship;
         $parentProperty = end($propertyMapping->parentProperties);
         if ($relationship->childClassName ?? false && $relationship->isEager($this->config)) {
             $result = !$this->mappingCollection->isRelationshipMapped(
-                $parentProperty, 
+                $parentProperty ?: '',
                 $propertyMapping->className, 
                 $propertyMapping->propertyName
             );
@@ -152,13 +149,13 @@ class ObjectMapper
         $strategy = $this->config->columnNamingStrategy ?? null;
 
         if ($this->config->guessMappings && $strategy) {
-            if (empty($column->name) && !$relationship->relationshipType) {
+            if (empty($column->name) && !$relationship->isDefined()) {
                 //Resolve column name for scalar value property
                 $column->name = $strategy->convertName(
                     $propertyName,
                     NSI::TYPE_SCALAR_PROPERTY,
                     $propertyMapping);
-            } elseif ($relationship->relationshipType && (!$relationship->sourceJoinColumn && !$relationship->mappedBy)) {
+            } elseif ($relationship->isDefined() && (!$relationship->sourceJoinColumn && !$relationship->mappedBy)) {
                 //Resolve source join column name (foreign key) for relationship property
                 $relationship->sourceJoinColumn = $strategy->convertName(
                     $propertyName,

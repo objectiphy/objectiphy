@@ -1,6 +1,6 @@
 <?php
 
-namespace Objectiphy\Objectiphy\Binding;
+namespace Objectiphy\Objectiphy;
 
 /**
  * This class only contains static methods. In order to prevent hidden dependencies and brittle code, the only methods

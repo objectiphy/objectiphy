@@ -3,7 +3,7 @@
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
 use Doctrine\ORM\Mapping AS ORM;
-use Objectiphy\Objectiphy;
+use Objectiphy\Objectiphy\Mapping;
 
 /**
  * @ORM\Entity
@@ -35,7 +35,7 @@ class TestPet
      */
     protected $name;
     /**
-     * @Objectiphy\Column(type="integer")
+     * @Mapping\Column(type="integer")
      */
     protected $weightInGrams;
 

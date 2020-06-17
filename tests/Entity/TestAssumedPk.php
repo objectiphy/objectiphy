@@ -2,25 +2,32 @@
 
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
-use Objectiphy\Objectiphy;
+use Objectiphy\Objectiphy\Mapping;
 
 /**
- * @Objectiphy\Table(name="objectiphy_test.assumed_pk")
+ * @Mapping\Table(name="objectiphy_test.assumed_pk")
  */
 class TestAssumedPk
 {
     /**
      * @var int
-     * @Objectiphy\Column(name="id")
+     * @Mapping\Column(name="id")
      */
     public $id;
     /**
      * @var string
-     * @Objectiphy\Column(type="string", name="name")
+     * @Mapping\Column(type="string", name="name")
      */
     public $name;
     /**
-     * @Objectiphy\Column(type="TestPet", mappedBy="parent", relationshipType="one_to_many", orderBy={"name"="ASC","type"="DESC"}, cascadeDeletes=true, orphanRemoval=true)
+     * @Mapping\Relationship(
+     *     childClassName="TestPet", 
+     *     mappedBy="parent", 
+     *     relationshipType="one_to_many", 
+     *     orderBy={"name"="ASC","type"="DESC"}, 
+     *     cascadeDeletes=true, 
+     *     orphanRemoval=true
+     * )
      */
     public $pets;
 }

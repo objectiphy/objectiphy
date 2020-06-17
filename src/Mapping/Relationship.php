@@ -16,6 +16,8 @@ use Objectiphy\Objectiphy\Orm\ConfigOptions;
  */
 class Relationship
 {
+    const UNDEFINED = 'undefined';
+    const SCALAR = 'scalar';
     const ONE_TO_ONE = 'one_to_one';
     const ONE_TO_MANY = 'one_to_many';
     const MANY_TO_ONE = 'many_to_one';
@@ -26,6 +28,9 @@ class Relationship
 
     /** @var string One of the class constant values (eg. "one_to_one"). */
     public string $relationshipType = '';
+    
+    /** @var string Data type (applicable to scalar joins only) */
+    public string $type = '';
 
     /** @var string Child entity class name. */
     public string $childClassName = '';
@@ -43,23 +48,20 @@ class Relationship
     public ?bool $lazyLoad = null;
 
     /**
-     * @var bool Whether or not this relationship is just to grab a single scalar value from another table, rather than 
-     * a child entity.
-     */
-    public bool $isScalarJoin = false;
-    
-    /**
      * @var string Name of target table (child entity) - defaults to the Objectiphy table annotation value on the
      * child class, if applicable. Also used to join to another table for scalar values that are not child objects
      * (scalar joins).
      */
     public string $joinTable = '';
-    
+
+    /** @var string Name of column to join with on the source table (parent entity). */
+    public string $sourceJoinColumn = '';
+
     /** @var string Name of column to join with on the target table (child entity). */
     public string $targetJoinColumn = '';
     
-    /** @var string Name of column to join with on the source table (parent entity). */
-    public string $sourceJoinColumn = '';
+    /** @var string Name of column that holds the value for a scalar join. */
+    public string $targetScalarValueColumn = '';
     
     /** @var string "INNER" or "LEFT". */
     public string $joinType = 'LEFT';
@@ -95,6 +97,15 @@ class Relationship
 
     public function __construct(string $relationshipType)
     {
+        if (!in_array($relationshipType, self::getRelationshipTypes())) {
+            $errorMessage = sprintf(
+                'Invalid relationship type: %1$s. Valid types are: %2$s',
+                $relationshipType,
+                implode(', ', self::getRelationshipTypes())
+            );
+            throw new ObjectiphyException($errorMessage);
+        }
+        
         $this->relationshipType = $relationshipType;
     }
 
@@ -104,9 +115,14 @@ class Relationship
      */
     public static function getRelationshipTypes(): array
     {
-        return [self::ONE_TO_ONE, self::ONE_TO_MANY, self::MANY_TO_ONE, self::MANY_TO_MANY];
+        return [self::ONE_TO_ONE, self::ONE_TO_MANY, self::MANY_TO_ONE, self::MANY_TO_MANY, self::SCALAR, self::UNDEFINED];
     }
 
+    public function isDefined(): bool 
+    {
+        return $this->relationshipType != self::UNDEFINED;
+    }
+    
     /**
      * Setter for custom collection class factory (ensures the value supplied implements the correct interface).
      * @param string $factoryClassName
@@ -118,7 +134,7 @@ class Relationship
             && $factoryClassName != 'array' 
             && !is_a($factoryClassName, CollectionFactoryInterface::class, true)
         ) {
-            $message = 'Value of collectionFactoryClass (%1$s) is not valid - it must be the fully qualified class name of a class that implements %2$s.'
+            $message = 'Value of collectionFactoryClass (%1$s) is not valid - it must be the fully qualified class name of a class that implements %2$s.';
             throw new ObjectiphyException(sprintf($message, $factoryClassName, CollectionFactoryInterface::class));
         }
         

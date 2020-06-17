@@ -32,6 +32,12 @@ class MappingCollection
     private array $properties = [];
 
     /**
+     * @var array Property mappings for primary keys - indexed arrays of property mappings, keyed on class name, eg.
+     * ['My\Class' => [0 => PropertyMapping, 1 => PropertyMapping], 'My\Child\Class' => [0 => PropertyMapping]
+     */
+    private array $primaryKeyProperties = [];
+
+    /**
      * @var array Relationship mappings keyed by parent property name and class 
      */
     private array $relationships = [];
@@ -60,8 +66,13 @@ class MappingCollection
         $propertyMapping->parentCollection = $this;
         $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
         $this->properties[$propertyMapping->getPropertyPath()] = $propertyMapping;
-        $relationshipKey = (end($propertyMapping->parentProperties) ?: '') . ':' . $propertyMapping->className;
-        $this->relationships[$relationshipKey][] = $propertyMapping->propertyName;
+        if ($propertyMapping->column->isPrimaryKey ?? false) {
+            $this->primaryKeyProperties[$propertyMapping->className][$propertyMapping->propertyName] = $propertyMapping;
+        }
+        if ($propertyMapping->relationship->isDefined()) {
+            $relationshipKey = (end($propertyMapping->parentProperties) ?: '') . ':' . $propertyMapping->className;
+            $this->relationships[$relationshipKey][] = $propertyMapping->propertyName;
+        }
     }
 
     /**
@@ -101,5 +112,20 @@ class MappingCollection
     {
         $relationships = $this->relationships[$parentPropertyName . ':' . $className] ?? [];
         return in_array($propertyName, $relationships);
+    }
+
+    /**
+     * Return list of properties that are marked as being part of the primary key.
+     * @param bool $namesOnly Whether or not to just return a list of property names as strings (defaults to returning
+     * a list of PropertyMapping objects).
+     * @param string $className Optionally specify a child class name (defaults to parent entity).
+     * @return array
+     */
+    public function getPrimaryKeyProperties($namesOnly = false, ?string $className = null): array
+    {
+        $className = $className ?? $this->entityClassName;
+        $pkProperties = $this->primaryKeyProperties[$className] ?? [];
+
+        return $namesOnly ? array_keys($pkProperties) : $pkProperties;
     }
 }

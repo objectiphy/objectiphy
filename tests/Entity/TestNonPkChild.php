@@ -2,10 +2,10 @@
 
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
-use Objectiphy\Objectiphy;
+use Objectiphy\Objectiphy\Mapping;
 
 /**
- * @Objectiphy\Table(name="objectiphy_test.non_pk_child")
+ * @Mapping\Table(name="objectiphy_test.non_pk_child")
  * @property TestUser $user
  * @property string $nebulousIdentifier
  * @property TestParentOfNonPkChild $parent
@@ -14,31 +14,30 @@ class TestNonPkChild
 {
     /**
      * @var TestUser
-     * @Objectiphy\Column(type="TestUser", name="user_id", relationshipType="one_to_one")
+     * @Mapping\Relationship(childClassName="TestUser", sourceJoinColumn="user_id", relationshipType="one_to_one")
      */
     protected $user;
     /**
      * @var string
-     * @Objectiphy\Column(type="string")
+     * @Mapping\Column(type="string")
      */
     protected $nebulousIdentifier;
     /**
      * @var TestParentOfNonPkChild
-     * @Objectiphy\Column(type="TestParentOfNonPkChild", name="parent_id", relationshipType="one_to_one")
+     * @Mapping\Relationship(childClassName="TestParentOfNonPkChild", sourceJoinColumn="parent_id", relationshipType="one_to_one")
      */
     protected $parent;
     /**
      * @var TestParentOfNonPkChild
-     * @Objectiphy\Column(type="TestParentOfNonPkChild", name="second_parent_id", relationshipType="one_to_one")
+     * @Mapping\Relationship(childClassName="TestParentOfNonPkChild", sourceJoinColumn="second_parent_id", relationshipType="one_to_one")
      */
     protected $secondParent;
     /**
      * @var TestParentOfNonPkChild
-     * @Objectiphy\Column(type="TestParentOfNonPkChild", name="foster_parent_name", relationshipType="many_to_one", joinColumn="name")
+     * @Mapping\Relationship(childClassName="TestParentOfNonPkChild", sourceJoinColumn="foster_parent_name", relationshipType="many_to_one", targetJoinColumn="name")
      */
     public $fosterParent;
-
-
+    
     public function getUser()
     {
         return $this->user;

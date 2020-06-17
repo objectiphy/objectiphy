@@ -2,59 +2,59 @@
 
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
-use Objectiphy\Objectiphy;
+use Objectiphy\Objectiphy\Mapping;
 
 /**
- * @Objectiphy\Table(name="objectiphy_test.parent")
+ * @Mapping\Table(name="objectiphy_test.parent")
  */
 class TestParent
 {
     /**
      * @var int
      * @Objectiphy\Groups({"Default"})
-     * @Objectiphy\Column(isPrimaryKey=true)
+     * @Mapping\Column(isPrimaryKey=true)
      */
     protected $id;
     /**
      * @var TestUser
      * @Objectiphy\Groups({"Default"})
-     * @Objectiphy\Column(type="TestUser", name="user_id", relationshipType="one_to_one", cascadeDeletes=true)
+     * @Mapping\Relationship(childClassName="TestUser", sourceJoinColumn="user_id", relationshipType="one_to_one", cascadeDeletes=true)
      */
     protected $user;
     /**
      * @var string
      * @Objectiphy\Groups({"Default"})
-     * @Objectiphy\Column(type="string", name="name")
+     * @Mapping\Column(type="string", name="name")
      */
     protected $name;
     /**
      * @var TestChild
      * @Objectiphy\Groups({"Full"})
-     * @Objectiphy\Column(type="TestChild", mappedBy="parent", relationshipType="one_to_one")
+     * @Mapping\Relationshiop(childClassName="TestChild", mappedBy="parent", relationshipType="one_to_one")
      */
     protected $child;
     /**
      * @var TestPet[]
-     * @Objectiphy\Column(type="TestPet", mappedBy="parent", relationshipType="one_to_many", orderBy={"name"="ASC","type"="DESC"}, cascadeDeletes=true, orphanRemoval=true)
+     * @Mapping\Relationship(childClassName="TestPet", mappedBy="parent", relationshipType="one_to_many", orderBy={"name"="ASC","type"="DESC"}, cascadeDeletes=true, orphanRemoval=true)
      */
     public $pets;
     /**
      * var int
-     * @Objectiphy\Column(aggregateFunction="COUNT", aggregateCollection="pets")
+     * @Mapping\Column(aggregateFunction="COUNT", aggregateCollection="pets")
      */
     public $numberOfPets;
     /**
      * @var int
-     * @Objectiphy\Column(aggregateFunction="SUM", aggregateCollection="pets", aggregateProperty="weightInGrams")
+     * @Mapping\Column(aggregateFunction="SUM", aggregateCollection="pets", aggregateProperty="weightInGrams")
      */
     public $totalWeightOfPets;
     /**
      * @var datetime
-     * @Objectiphy\Column(name="modified_date_time")
+     * @Mapping\Column(name="modified_date_time")
      */
     public $modifiedDateTime;
     /**
-     * @Objectiphy\Column(type="TestAddress", relationshipType="one_to_one", embedded=true)
+     * @Mapping\Relationship(childClassName="TestAddress", relationshipType="one_to_one", isEmbedded=true)
      */
     protected $address;
 

@@ -2,6 +2,8 @@
 
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
+use Objectiphy\Objectiphy\Orm\ConfigOptions;
+use Objectiphy\Objectiphy\Orm\RepositoryFactoryMySql;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\RepositoryFactory;
 use Objectiphy\Objectiphy\ObjectRepository;
@@ -20,21 +22,20 @@ class IntegrationTestBase extends TestCase
 
     protected function setUp(): void
     {
-        $this->startTime = microtime(true);
         $config = require(__DIR__ . '/../config.php');
         if (empty($config['DB_HOST']) || empty($config['DB_NAME']) || empty($config['DB_USER'])) {
             throw new \RuntimeException('Please populate the database credentials either in environment variables (recommended) or directly in /src/test/config.php (if you must).');
         }
         $this->pdo = new \PDO('mysql:host=' . $config['DB_HOST'] . ';dbname=' . $config['DB_NAME'], $config['DB_USER'], $config['DB_PASSWORD']);
         $this->createFixtures();
-        $repositoryFactory = new RepositoryFactory($this->pdo);
+        $configOptions = new ConfigOptions();
+        $configOptions->commonProperty = 'loginId';
+        $repositoryFactory = new RepositoryFactoryMySql($this->pdo, $configOptions);
         $this->objectRepository = $repositoryFactory->createRepository(TestPolicy::class);
-        $this->objectRepository->setCommonProperty('loginId');
-        //echo "Setup executed in ". (microtime(true) - $this->startTime) ." seconds\n";
         $this->startTime = microtime(true);
     }
 
-    public function tearDown()
+    protected function tearDown(): void
     {
         echo ($this->testName ?: get_class($this)) . " tests executed in ". round(microtime(true) - $this->startTime, 2) ." seconds\n";
     }

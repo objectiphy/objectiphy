@@ -20,18 +20,21 @@ use Objectiphy\Objectiphy\MappingProvider\MappingProviderDoctrineAnnotation;
 class RepositoryFactoryMySql
 {
     private \PDO $pdo;
-    private ConfigOptions $configCoptions;
+    private ConfigOptions $configOptions;
     private MappingProviderInterface $mappingProvider;
     
-    public function __construct(\PDO $pdo, ConfigOptions $configOptions)
+    public function __construct(\PDO $pdo, ?ConfigOptions $configOptions = null)
     {
         $this->pdo = $pdo;
+        if (!$configOptions) {
+            $configOptions = new ConfigOptions();
+        }
         $this->setConfigOptions($configOptions);
     }
 
     public function setConfigOptions(ConfigOptions $configOptions)
     {
-        $this->configCoptions = $configOptions;
+        $this->configOptions = $configOptions;
     }
 
     public function setMappingProvider(MappingProviderInterface $mappingProvider)
@@ -61,19 +64,21 @@ class RepositoryFactoryMySql
     public function createRepository(
         string $entityClassName = '',
         string $repositoryClassName = null,
-        EntityFactoryInterface $entityFactory = null
+        EntityFactoryInterface $entityFactory = null,
+        ?ConfigOptions $configOptions = null
     ) {
         $repositoryClassName = $this->getRepositoryClassName($repositoryClassName, $entityClassName);
 
         /** @var ObjectRepository $objectRepository */
         $objectRepository = new $repositoryClassName(
+            $this->createObjectMapper(),
             $this->createObjectFetcher(),
             $this->createObjectPersister(),
             $this->createObjectRemover(),
-            $configOptions
+            $configOptions ?? $this->configOptions
         );
         if ($entityClassName) {
-            $objectRepository->setEntityClassName($entityClassName, $entityFactory);
+            $objectRepository->setClassName($entityClassName, $entityFactory);
         }
 
         return $objectRepository;
@@ -94,15 +99,20 @@ class RepositoryFactoryMySql
         if ($this->validateEntityClass($entityClassName) && $repositoryClassName == ObjectRepository::class) {
             //Check for an annotation or other mapping definition that specifies a custom repository
             $entityReflectionClass = new \ReflectionClass($entityClassName);
-            $classMapping = $this->mappingProvider->getTableMapping($entityReflectionClass, $mappingFound);
+            $classMapping = $this->getMappingProvider()->getTableMapping($entityReflectionClass, $mappingFound);
             $repositoryClassName = $classMapping->repositoryClassName;
         }
         $useCustomClass = $this->validateCustomRepository($repositoryClassName, $mappingFound);
         $repositoryClassName = $useCustomClass ? $repositoryClassName : ObjectRepository::class;
 
-        return $repositoryClassName;
+        return '\\' . ltrim($repositoryClassName, '\\');
     }
 
+    private function createObjectMapper()
+    {
+        return new ObjectMapper($this->mappingProvider, $this->configOptions);
+    }
+    
     private function createObjectFetcher()
     {
         return new ObjectFetcher();

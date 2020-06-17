@@ -11,7 +11,7 @@ use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\Tests\Entity\TestUser;
 use Objectiphy\Objectiphy\Tests\Entity\TestWheel;
 use PHPUnit\Framework\TestCase;
-use Objectiphy\Objectiphy\Binding\ObjectHelper;
+use Objectiphy\Objectiphy\ObjectHelper;
 
 class ObjectHelperTest extends TestCase
 {

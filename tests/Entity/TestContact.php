@@ -46,12 +46,12 @@ class TestContact
     protected $titleText;
     /**
      * Unidirectional relationship (TODO: allow for other side of unidirectional relationship to have a scalar ID that stays scalar)
-     * @Objectiphy\Objectiphy\Column(relationshipType="one_to_one", type="TestSecurityPass", name="security_pass_id")
+     * @Objectiphy\Objectiphy\Relationship(relationshipType="one_to_one", childClassName="TestSecurityPass", sourceJoinColumn="security_pass_id")
      */
     protected $securityPass;
     /**
      * Unidirectional relationship on non PK column
-     * @Objectiphy\Objectiphy\Column(relationshipType="one_to_one", type="TestNonPkChild", name="child_nebulous_identifier", joinColumn="nebulous_identifier")
+     * @Objectiphy\Objectiphy\Relationship(relationshipType="one_to_one", childClassName="TestNonPkChild", sourceJoinColumn="child_nebulous_identifier", targetJoinColumn="nebulous_identifier")
      */
     protected $nonPkChild;
 

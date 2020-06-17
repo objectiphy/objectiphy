@@ -123,7 +123,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
                 $reflectionProperty,
                 \Doctrine\ORM\Mapping\Id::class
             );
-            $wasMapped = $wasMapped || $doctrineColumn;
+            $wasMapped = $wasMapped || $doctrineId;
             $column->isPrimaryKey = $doctrineId ? true : $column->isPrimaryKey;
         }
     }

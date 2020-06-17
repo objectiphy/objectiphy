@@ -2,10 +2,10 @@
 
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
-use Objectiphy\Objectiphy;
+use Objectiphy\Objectiphy\Mapping;
 
 /**
- * @Objectiphy\Table(name="objectiphy_test.employee")
+ * @Mapping\Table(name="objectiphy_test.employee")
  * @property int $id
  * @property string $name
  * @property TestEmployee $mentor
@@ -16,37 +16,37 @@ class TestEmployee
 {
     /**
      * @var int
-     * @Objectiphy\Column(isPrimaryKey=true)
+     * @Mapping\Column(isPrimaryKey=true)
      */
     protected $id;
     /**
      * @var string
-     * @Objectiphy\Column(type="string")
+     * @Mapping\Column(type="string")
      */
     protected $name;
     /**
      * @var TestEmployee
-     * @Objectiphy\Column(type="TestEmployee", name="mentor_id", relationshipType="one_to_one")
+     * @Mapping\Relationship(childClassName="TestEmployee", sourceJoinColumn="mentor_id", relationshipType="one_to_one")
      */
     protected $mentor;
     /**
      * @var TestEmployee
-     * @Objectiphy\Column(type="TestEmployee", name="mentee_id", relationshipType="one_to_one")
+     * @Mapping\Relationship(childClassName="TestEmployee", sourceJoinColumn="mentee_id", relationshipType="one_to_one")
      */
     protected $mentee;
     /**
      * @var TestEmployee
-     * @Objectiphy\Column(type="TestEmployee", name="union_rep_id", relationshipType="one_to_one")
+     * @Mapping\Relationship(childClassName="TestEmployee", sourceJoinColumn="union_rep_id", relationshipType="one_to_one")
      */
     protected $unionRep;
     /**
      * @var TestEmployee[]
-     * @Objectiphy\Column(type="TestEmployee", relationshipType="one_to_many", mappedBy="unionRep")
+     * @Mapping\Relationship(childClassName="TestEmployee", relationshipType="one_to_many", mappedBy="unionRep")
      */
     protected $unionMembers;
     /**
      * @var TestPosition
-     * @Objectiphy\Column(type="TestPosition",relationshipType="one_to_one",embedded=true)
+     * @Mapping\Relationship(childClassName="TestPosition",relationshipType="one_to_one",isEmbedded=true)
      */
     protected $position;
 

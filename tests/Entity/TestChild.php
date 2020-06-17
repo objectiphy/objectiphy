@@ -2,10 +2,10 @@
 
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
-use Objectiphy\Objectiphy;
+use Objectiphy\Objectiphy\Mapping;
 
 /**
- * @Objectiphy\Table(name="objectiphy_test.child")
+ * @Mapping\Table(name="objectiphy_test.child")
  * @property int $id
  * @property TestUser $user
  * @property string $name
@@ -14,33 +14,33 @@ use Objectiphy\Objectiphy;
 class TestChild
 {
     /**
-     * @Objectiphy\Column(isPrimaryKey=true)
+     * @Mapping\Column(isPrimaryKey=true)
      */
     protected $id;
     /**
      * @var TestUser
-     * @Objectiphy\Column(type="TestUser", name="user_id", relationshipType="one_to_one")
+     * @Objectiphy\Column(childClassName="TestUser", sourceJoinColumn="user_id", relationshipType="one_to_one")
      */
     protected $user;
     /**
      * @var string
      * @Objectiphy\Groups({"Special"})
-     * @Objectiphy\Column(type="string", name="name")
+     * @Mapping\Column(type="string", name="name")
      */
     protected $name;
     /**
      * @var string
      * @Objectiphy\Groups({"Special"})
-     * @Objectiphy\Column(type="int", name="height_in_cm")
+     * @Mapping\Column(type="int", name="height_in_cm")
      */
     protected $height;
     /**
      * @var TestParent
-     * @Objectiphy\Column(type="TestParent", name="parent_id", relationshipType="one_to_one")
+     * @Mapping\Relationship(childClassName="TestParent", sourceJoinColumn="parent_id", relationshipType="one_to_one")
      */
     protected $parent;
     /**
-     * @Objectiphy\Column(type="TestAddress", relationshipType="one_to_one", embedded=true, embeddedColumnPrefix="child_")
+     * @Mapping\Relationship(childClassName="TestAddress", relationshipType="one_to_one", isEmbedded=true, embeddedColumnPrefix="child_")
      */
     public $address;
 

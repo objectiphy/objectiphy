@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Contract;
 
-use Objectiphy\Objectiphy\ConfigOptions;
+use Objectiphy\Objectiphy\Orm\ConfigOptions;
 
-if (interface_exists('Doctrine\Common\Persistence\ObjectRepository')) {
-    interface ObjectRepositoryBaseInterface extends Doctrine\Common\Persistence\ObjectRepository {}
+if (interface_exists('\Doctrine\Common\Persistence\ObjectRepository')) {
+    interface ObjectRepositoryBaseInterface extends \Doctrine\Common\Persistence\ObjectRepository {}
 } else {
     interface ObjectRepositoryBaseInterface {}
 }
@@ -28,7 +28,12 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
     /**
      * @return string Name of the parent entity class
      */
-    public function setEntityClassName(string $className): void;
+    public function setClassName(string $className): void;
+
+    /**
+     * @return string Name of the parent entity class
+     */
+    public function getClassName(): string;
 
     /**
      * Set a pagination object (to store and supply information about how the results are paginated)
@@ -98,7 +103,7 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
         ?string $keyProperty = null, 
         bool $multiple = true, 
         bool $fetchOnDemand = false
-    ): iterable;
+    ): ?iterable;
 
     /**
      * Find all records that match the given criteria (and hydrate them as entities). Compatible with the equivalent
@@ -120,11 +125,11 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
     public function findBy(
         array $criteria, 
         ?array $orderBy = null, 
-        ?int $limit = null, 
-        ?int $offset = null, 
+        $limit = null,
+        $offset = null,
         ?string $keyProperty = null, 
         bool $fetchOnDemand = false
-    ): iterable;
+    ): ?iterable;
 
     /**
      * Alias for findBy but automatically sets the $fetchOnDemand flag to true and avoids needing to supply null values 
@@ -136,7 +141,7 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
     public function findOnDemandBy(
         array $criteria, 
         ?array $orderBy = null
-    ): iterable;
+    ): ?iterable;
 
     /**
      * Find all records. Compatible with the equivalent method in Doctrine.
@@ -148,7 +153,7 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * set(for streaming large amounts of data).
      * @return array|null
      */
-    public function findAll(?array $orderBy = null, ?string $keyProperty = null, bool $fetchOnDemand = false): iterable;
+    public function findAll(?array $orderBy = null, ?string $keyProperty = null, bool $fetchOnDemand = false): ?iterable;
 
     /**
      * Insert or update the supplied entity.
@@ -187,5 +192,5 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
     /**
      * @return Explanation Information about how the latest result was obtained.
      */
-    public function getExplanation(): ExplanationInterface;
+    public function getExplanation(): ?ExplanationInterface;
 }

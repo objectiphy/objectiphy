@@ -67,7 +67,7 @@ class PropertyMapping
         array $parentProperties = []
     ) {
         $this->className = $className;
-        $this->propertyName = $reflectionProperty->getName();
+        $this->propertyName = $propertyName;
         $this->table = $table;
         $this->column = $column;
         $this->relationship = $relationship;
@@ -88,7 +88,7 @@ class PropertyMapping
         $result = $separator == '.' ? $this->propertyPath : str_replace('.', $separator, $this->propertyPath);
         $result .= $includingPropertyName ? $separator . $this->propertyName : '';
         
-        return $result;
+        return ltrim($result, $separator);
     }
 
     /**
@@ -99,9 +99,9 @@ class PropertyMapping
      */
     public function getAlias(): string
     {
-        if (!isset($this->alias)) {
+        if (empty($this->alias)) {
             $this->alias = $this->getPropertyPath(true, '_');
-            if (array_key_exists($this->parentCollection->getColumns(), $this->alias)) {
+            if (array_key_exists($this->alias, $this->parentCollection->getColumns())) {
                 $this->alias = $this->getPropertyPath(true, '_-_');
             }
         }

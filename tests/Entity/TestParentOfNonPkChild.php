@@ -2,10 +2,10 @@
 
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
-use Objectiphy\Objectiphy;
+use Objectiphy\Objectiphy\Mapping;
 
 /**
- * @Objectiphy\Table(name="objectiphy_test.parent_of_non_pk_child")
+ * @Mapping\Table(name="objectiphy_test.parent_of_non_pk_child")
  * @property int $id
  * @property TestUser $user
  * @property string $name
@@ -15,27 +15,27 @@ class TestParentOfNonPkChild
 {
     /**
      * @var int
-     * @Objectiphy\Column(isPrimaryKey=true)
+     * @Mapping\Column(isPrimaryKey=true)
      */
     protected $id;
     /**
      * @var string
-     * @Objectiphy\Column(type="string", name="name")
+     * @Mapping\Column(type="string", name="name")
      */
     protected $name;
     /**
      * @var TestNonPkChild
-     * @Objectiphy\Column(type="TestNonPkChild", mappedBy="parent", relationshipType="one_to_one")
+     * @Mapping\Relationship(childClassName="TestNonPkChild", mappedBy="parent", relationshipType="one_to_one")
      */
     protected $child;
     /**
      * @var TestNonPkChild
-     * @Objectiphy\Column(type="TestNonPkChild", mappedBy="secondParent", relationshipType="one_to_one")
+     * @Mapping\Relationship(childClassName="TestNonPkChild", mappedBy="secondParent", relationshipType="one_to_one")
      */
     protected $secondChild;
     /**
      * @var TestNonPkChild
-     * @Objectiphy\Column(type="TestNonPkChild", mappedBy="fosterParent", relationshipType="one_to_many", orderBy={"nebulousIdentifier"="DESC"})
+     * @Mapping\Relationship(childClassName="TestNonPkChild", mappedBy="fosterParent", relationshipType="one_to_many", orderBy={"nebulousIdentifier"="DESC"})
      */
     public $fosterKids;
 

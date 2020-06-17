@@ -2,7 +2,7 @@
 
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
-use Objectiphy\Objectiphy;
+use Objectiphy\Objectiphy\Mapping;
 
 /**
  * @property string $positionKey
@@ -13,30 +13,32 @@ class TestPosition
 {
     /**
      * @var string
-     * @Objectiphy\Column(name="position_code",type="string")
+     * @Mapping\Column(name="position_code",type="string")
      */
     public $positionKey;
 
     /**
      * @var string
-     * @Objectiphy\Column(
-     *     type="string",
-     *     name="objectiphy_test.position.name",
+     * @Mapping\Relationship(
+     *     relationshipType="scalar",
+     *     type="string"
+     *     targetScalarValueColumn="objectiphy_test.position.name",
      *     joinTable="objectiphy_test.position",
      *     sourceJoinColumn="position_code",
-     *     joinColumn="objectiphy_test.position.value"
+     *     targetJoinColumn="objectiphy_test.position.value"
      * )
      */
     public $positionValue;
 
     /**
      * @var string
-     * @Objectiphy\Column(
+     * @Mapping\Column(
+     *     relationshipType="scalar",
      *     type="string",
-     *     name="objectiphy_test.position.description",
+     *     targetScalarValueColumn="objectiphy_test.position.description",
      *     joinTable="objectiphy_test.position",
      *     sourceJoinColumn="position_code",
-     *     joinColumn="objectiphy_test.position.value"
+     *     targetJoinColumn="objectiphy_test.position.value"
      * )
      */
     public $positionDescription;

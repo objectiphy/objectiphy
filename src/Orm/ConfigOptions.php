@@ -200,9 +200,9 @@ class ConfigOptions
      */
     public function __construct(array $options = ['cacheDirectory' => '', 'productionMode' => false], string $configFile = '')
     {
-        $this->setCacheDirectory($options['cacheDirectory'] ?? '');
         $this->setInitialOptions($options);
         $this->parseConfigFile($configFile);
+        $this->setCacheDirectory($options['cacheDirectory'] ?? '');
     }
 
     /**
@@ -310,7 +310,7 @@ class ConfigOptions
             } else {
                 $this->cacheDirectory = $cacheDirectory;
             }
-        } elseif ($productionMode) {
+        } elseif ($this->productionMode) {
             throw new ObjectiphyException('You must specify a cache directory for Objectiphy when running in production mode.');
         } else {
             $this->cacheDirectory = sys_get_temp_dir(); //Not safe in production due to garbage collection

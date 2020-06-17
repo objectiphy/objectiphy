@@ -8,6 +8,9 @@ use Objectiphy\Objectiphy\Contract\ExplanationInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
+use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Mapping\MappingCollection;
+use Objectiphy\Objectiphy\Mapping\ObjectMapper;
 
 /**
  * Main entry point for all ORM operations
@@ -18,18 +21,23 @@ class ObjectRepository implements ObjectRepositoryInterface
 {
     protected ConfigOptions $configOptions;
     protected string $className;
+    protected ObjectMapper $objectMapper;
     protected ObjectFetcher $objectFetcher;
     protected ObjectPersister $objectPersister;
     protected ObjectRemover $objectRemover;
     protected PaginationInterface $pagination;
     protected array $orderBy;
+    /** @var MappingCollection[] */
+    protected array $mappingCollection;
 
     public function __construct(
+        ObjectMapper $objectMapper,
         ObjectFetcher $objectFetcher,
         ObjectPersister $objectPersister,
         ObjectRemover $objectRemover,
         ConfigOptions $configOptions = null
     ) {
+        $this->objectMapper = $objectMapper;
         $this->objectFetcher = $objectFetcher;
         $this->objectPersister = $objectPersister;
         $this->objectRemover = $objectRemover;
@@ -48,11 +56,21 @@ class ObjectRepository implements ObjectRepositoryInterface
     }
 
     /**
-     * @return string Name of the parent entity class
+     * Setter for the parent entity class name.
+     * @param string $className
      */
-    public function setEntityClassName(string $className): void
+    public function setClassName(string $className): void
     {
         $this->className = $className;
+    }
+
+    /**
+     * Getter for the parent entity class name.
+     * @return string
+     */
+    public function getClassName(): string
+    {
+        return $this->className;
     }
 
     /**
@@ -80,7 +98,13 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     public function find($id): ?object
     {
+        $pkProperties = $this->getMappingCollection()->getPrimaryKeyProperties(true);
+        if (!$pkProperties) {
+            $errorMessage = sprintf('The current entity (`%1$s`) does not have a primary key, so you cannot use the find method. Either specify a primary key in the mapping information, or use findOneBy instead.', $this->className);
+            $this->throwException(new ObjectiphyException($errorMessage));
+        }
 
+        return $this->findOneBy(array_combine($pkProperties, is_array($id) ?: [$id]));
     }
 
     /**
@@ -92,7 +116,7 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     public function findOneBy(array $criteria = []): ?object
     {
-
+        return null;
     }
 
     /**
@@ -110,7 +134,7 @@ class ObjectRepository implements ObjectRepositoryInterface
         ?string $commonProperty = null,
         ?string $recordAgeIndicator = null
     ): ?object {
-
+        return null;
     }
 
     /**
@@ -137,8 +161,8 @@ class ObjectRepository implements ObjectRepositoryInterface
         ?string $keyProperty = null,
         bool $multiple = true,
         bool $fetchOnDemand = false
-    ): iterable {
-
+    ): ?iterable {
+        return null;
     }
 
     /**
@@ -161,12 +185,12 @@ class ObjectRepository implements ObjectRepositoryInterface
     public function findBy(
         array $criteria,
         ?array $orderBy = null,
-        ?int $limit = null,
-        ?int $offset = null,
+        $limit = null,
+        $offset = null,
         ?string $keyProperty = null,
         bool $fetchOnDemand = false
-    ): iterable {
-
+    ): ?iterable {
+        return null;
     }
 
     /**
@@ -179,8 +203,8 @@ class ObjectRepository implements ObjectRepositoryInterface
     public function findOnDemandBy(
         array $criteria,
         ?array $orderBy = null
-    ): iterable {
-
+    ): ?iterable {
+        return null;
     }
 
     /**
@@ -193,9 +217,9 @@ class ObjectRepository implements ObjectRepositoryInterface
      * set(for streaming large amounts of data).
      * @return array|null
      */
-    public function findAll(?array $orderBy = null, ?string $keyProperty = null, bool $fetchOnDemand = false): iterable
+    public function findAll(?array $orderBy = null, ?string $keyProperty = null, bool $fetchOnDemand = false): ?iterable
     {
-
+        return null;
     }
 
     /**
@@ -209,7 +233,7 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     public function saveEntity(object $entity, bool $updateChildren = true, bool $replace = false): ?int
     {
-
+        return null;
     }
 
     /**
@@ -223,7 +247,7 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     public function saveEntities(array $entities, bool $updateChildren = true, bool $replace = false): ?int
     {
-
+        return null;
     }
 
     /**
@@ -238,14 +262,28 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     public function getObjectReference($className, $id, array $constructorParams = []): ?ObjectReferenceInterface
     {
-
+        return null;
     }
 
     /**
      * @return Explanation Information about how the latest result was obtained.
      */
-    public function getExplanation(): ExplanationInterface
+    public function getExplanation(): ?ExplanationInterface
     {
-
+        return null;
+    }
+    
+    protected function getMappingCollection(?string $className = null): MappingCollection
+    {
+        $className = $className ?? $this->className;
+        if (!$className) {
+            throw new ObjectiphyException('Cannot get mapping information as no entity class name has been specified. Please call setClassName before attempting to load or save any data.');
+        }
+        
+        if (!isset($this->mappingCollection[$className])) {
+            $this->mappingCollection[$className] = $this->objectMapper->getMappingCollectionForClass($className);
+        }
+        
+        return $this->mappingCollection[$className];
     }
 }

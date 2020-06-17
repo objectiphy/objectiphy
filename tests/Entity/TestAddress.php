@@ -2,49 +2,49 @@
 
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
-use Objectiphy\Objectiphy;
+use Objectiphy\Objectiphy\Mapping;
 
 class TestAddress
 {
     /**
      * @var string
      * @Objectiphy\Groups(groups={"Default"})
-     * @Objectiphy\Column(name="address_line1")
+     * @Mapping\Column(name="address_line1")
      */
     protected $line1;
     /**
      * @var string
      * @Objectiphy\Groups(groups={"Default"})
-     * @Objectiphy\Column(name="address_line2")
+     * @Mapping\Column(name="address_line2")
      */
     protected $line2;
     /**
      * @var string
      * @Objectiphy\Groups(groups={"Default"})
-     * @Objectiphy\Column(name="address_town")
+     * @Mapping\Column(name="address_town")
      */
     protected $town;
     /**
      * @var string
      * @Objectiphy\Groups(groups={"Default"})
-     * @Objectiphy\Column(name="address_postcode")
+     * @Mapping\Column(name="address_postcode")
      */
     protected $postcode;
     /**
      * @var string
-     * @Objectiphy\Column(name="address_country_code",type="string")
+     * @Mapping\Column(name="address_country_code",type="string")
      * @Objectiphy\Groups(groups={"Default"})
      */
     protected $countryCode;
     /**
      * @var string Scalar join based on a code stored with the address fields
      * @Objectiphy\Groups(groups={"Default"})
-     * @Objectiphy\Column(
-     *     type="string",
-     *     name="objectiphy_test.country.description",
+     * @Mapping\Relationship(
+     *     relationshipType="scalar",
+     *     targetScalarValueColumn="objectiphy_test.country.description",
      *     joinTable="objectiphy_test.country",
      *     sourceJoinColumn="address_country_code",
-     *     joinColumn="objectiphy_test.country.code"
+     *     targetJoinColumn="objectiphy_test.country.code"
      * )
      */
     protected $countryDescription;
