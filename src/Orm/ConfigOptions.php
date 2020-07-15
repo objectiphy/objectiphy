@@ -45,27 +45,7 @@ class ConfigOptions
      * @var string Directory in which to store cache and proxy class files.
      */
     private string $cacheDirectory;
-    
-    /**
-     * @var array Associative array of custom repository classes keyed on class name (degrades performance). Note that
-     * you can also use an annotation for this if you always want a particular entity to use a particular repository
-     * class (respositoryClassName attribute on the Objectiphy\Table annotation).
-     */
-    private array $customRepositoryClasses = [];
-    
-    /**
-     * @var array Associative array of overridden database table names keyed on class name, eg.:
-     * ["MyNamespace\MyEntity" => "my_entity_table"]
-     */
-    private array $tableOverrides = [];
-    
-    /**
-     * @var array Associative array of overridden database column names. This is a nested array, the first level is
-     * keyed on class name, and the second level is keyed on property name, eg.:
-     * ["MyNamespace\MyEntity" => ["idProperty" => "identifier_column"]]
-     */
-    private array $columnOverrides = [];
-    
+
     /**
      * @var array Indexed array of serialization group names. If specified, only properties that belong to the
      * specified group(s) will be hydrated. Objectiphy does not do any serialization, this just allows you to improve
@@ -109,14 +89,6 @@ class ConfigOptions
      */
     private string $defaultCollectionType = 'array';
     
-    /**
-     * @var array Associative array of collection classes where one-to-many relationships require a custom collection
-     * class rather than a simple array. Keyed on class name (all -to-many collections for the class will use the
-     * specified class. Typically, you should use the collectionType attribute on the relationship mapping information
-     * to specify custom a collection class rather than setting it here programatically.
-     */
-    private array $collectionTypes = [];
-
     /**
      * @var bool Whether or not to allow duplicate entities to be returned.
      */
@@ -177,12 +149,9 @@ class ConfigOptions
     private array $queryOverrides = [];
 
     /**
-     * @var EntityFactoryInterface[]|null Associative array of factories to use for creating entities, keyed by class
-     * name. Any factory class supplied must implement EntityFactoryInterface. If no factories are supplied, entities 
-     * will be created directly using the new keyword with no arguments passed to the constructor. Note that this array
-     * should contain concrete instances of factories, not just the factory class name!
+     * @var array Entity specific configuration options (ConfigEntity instances), keyed by entity class name.
      */
-    private array $entityFactories = [];
+    private array $entityConfig = [];
 
     /**
      * @var array Keep track of which options have changed from the default value so that we can cache mappings for a
