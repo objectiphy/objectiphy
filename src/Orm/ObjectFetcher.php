@@ -10,5 +10,14 @@ namespace Objectiphy\Objectiphy\Orm;
  */
 final class ObjectFetcher
 {
-    
+    public function doFindBy(
+        string $className,
+        array $criteria = [], 
+        bool $multiple = true, 
+        string $keyProperty = null, 
+        bool $latest = false, 
+        bool $onDemand = false
+    ) {
+        
+    }
 }

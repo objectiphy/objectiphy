@@ -103,17 +103,23 @@ class MappingCollection
 
     /**
      * Whether or not a relationship between two classes has already been added (prevents infinite recursion).
-     * @param string $parentPropertyName
-     * @param string $className
-     * @param string $propertyName
+     * @param \Objectiphy\Objectiphy\Mapping\PropertyMapping $propertyMapping
+     * @param ConfigOptions $config
      * @return bool
      */
-    public function isRelationshipMapped(string $parentPropertyName, string $className, string $propertyName): bool
+    public function isRelationshipMapped(PropertyMapping $propertyMapping, ConfigOptions $config)
     {
-        $relationships = $this->relationships[$parentPropertyName . ':' . $className] ?? [];
-        return in_array($propertyName, $relationships);
-    }
+        $result = false;
+        $relationship = $propertyMapping->relationship;
+        $parentProperty = end($propertyMapping->parentProperties);
+        if ($relationship->childClassName ?? false && $relationship->isEager($config)) {
+            $relationships = $this->relationships[($parentProperty ?: '') . ':' . $propertyMapping->className] ?? [];
+            $result = !in_array($propertyMapping->propertyName, $relationships); 
+        }
 
+        return $result;
+    }
+    
     /**
      * Return list of properties that are marked as being part of the primary key.
      * @param bool $namesOnly Whether or not to just return a list of property names as strings (defaults to returning

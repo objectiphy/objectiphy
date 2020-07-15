@@ -1,6 +1,6 @@
 <?php
 
-namespace Objectiphy\Objectiphy;
+namespace Objectiphy\Objectiphy\Orm;
 
 /**
  * This class only contains static methods. In order to prevent hidden dependencies and brittle code, the only methods
@@ -155,6 +155,20 @@ class ObjectHelper
         }
     }
 
+    /**
+     * Copy a value from the property of one object to the property of another object (a shortcut for doing both a
+     * get and a set)
+     * @param object $sourceObject
+     * @param string $sourceProperty
+     * @param object $targetObject
+     * @param string $targetProperty If empty, the value of $sourceProperty will be used
+     */
+    public static function populateFromObject(object $sourceObject, string $sourceProperty, object $targetObject, string $targetProperty = '')
+    {
+        $sourceValue = self::getValueFromObject($sourceObject, $sourceProperty);
+        self::setValueOnObject($targetObject, $targetProperty ?: $sourceProperty, $sourceValue);
+    }
+    
     /**
      * Return the class name of an object, taking into account proxies.
      * @param $object

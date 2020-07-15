@@ -9,6 +9,7 @@ use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Mapping\Column;
 use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Mapping\Table;
+use Objectiphy\Objectiphy\Orm\ObjectHelper;
 
 /**
  * Reads Objectiphy annotations, which take precedence over any Doctrine ones supplied by the component we are 
@@ -37,8 +38,10 @@ class MappingProviderAnnotation implements MappingProviderInterface
         $table = $this->mappingProvider->getTableMapping($reflectionClass, $wasMapped);
         $objectiphyTable = $this->annotationReader->getClassAnnotation($reflectionClass, Table::class);
         $wasMapped = $wasMapped || $objectiphyTable;
+        $hostClassName = $reflectionClass->getName();
+        $hostProperty = '';
 
-        return $this->decorate($table, $objectiphyTable);
+        return $this->decorate($hostClassName, $hostProperty, $table, $objectiphyTable);
     }
 
     /**
@@ -51,8 +54,10 @@ class MappingProviderAnnotation implements MappingProviderInterface
         $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $wasMapped);
         $objectiphyColumn = $this->annotationReader->getPropertyAnnotation($reflectionProperty, Column::class);
         $wasMapped = $wasMapped || $objectiphyColumn;
-        
-        return $this->decorate($column, $objectiphyColumn);
+        $hostClassName = $reflectionProperty->getDeclaringClass()->getName();
+        $hostProperty = $reflectionProperty->getName();
+
+        return $this->decorate($hostClassName, $hostProperty, $column, $objectiphyColumn);
     }
 
     /**
@@ -65,8 +70,10 @@ class MappingProviderAnnotation implements MappingProviderInterface
         $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $wasMapped);
         $objectiphyRelationship = $this->annotationReader->getPropertyAnnotation($reflectionProperty, Relationship::class);
         $wasMapped = $wasMapped || $objectiphyRelationship;
+        $hostClassName = $reflectionProperty->getDeclaringClass()->getName();
+        $hostProperty = $reflectionProperty->getName();
         
-        return $this->decorate($relationship, $objectiphyRelationship);
+        return $this->decorate($hostClassName, $hostProperty, $relationship, $objectiphyRelationship);
     }
 
     /**
@@ -76,12 +83,13 @@ class MappingProviderAnnotation implements MappingProviderInterface
      * @param object $component The object whose values may be overridden.
      * @param object $decorator The object which holds the values that take priority.
      */
-    private function decorate(object $component, ?object $decorator = null)
+    private function decorate(string $hostClassName, string $hostProperty, object $component, ?object $decorator = null)
     {
         if ($decorator) {
             if (get_class($component) == get_class($decorator)) {
-                foreach ($this->annotationReader->getAttributesRead(get_class($decorator)) as $property => $value) {
-                    $component->$property = $value;
+                $attributesRead = $this->annotationReader->getAttributesRead($hostClassName, 'p:' . $hostProperty, get_class($decorator));
+                foreach ($attributesRead as $property => $value) {
+                    ObjectHelper::populateFromObject($decorator, $property, $component);
                 }
             }
         }

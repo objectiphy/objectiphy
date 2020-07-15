@@ -18,9 +18,10 @@ use Objectiphy\Objectiphy\Orm\ConfigOptions;
  */
 class ObjectMapper
 {
+    /* @var $mappingCollection MappingCollection[] */
+    private array $mappingCollection;
     private MappingProviderInterface $mappingProvider;
     private ConfigOptions $config;
-    private MappingCollection $mappingCollection;
     
     public function __construct(MappingProviderInterface $mappingProvider, ConfigOptions $config) 
     {
@@ -34,10 +35,16 @@ class ObjectMapper
      */
     public function getMappingCollectionForClass(string $className): MappingCollection
     {
-        $this->mappingCollection = new MappingCollection($className);
-        $this->populateMappingCollection($className);
-        
-        return $this->mappingCollection;
+        if (!$className) {
+            throw new ObjectiphyException('Cannot get mapping information as no entity class name has been specified. Please call setClassName before attempting to load or save any data.');
+        }
+
+        if (!isset($this->mappingCollection[$className])) {
+            $this->mappingCollection[$className] = new MappingCollection($className);
+            $this->populateMappingCollection($this->mappingCollection[$className], $className);
+        }
+
+        return $this->mappingCollection[$className];
     }
 
     /**
@@ -47,7 +54,7 @@ class ObjectMapper
      * @param array $parentProperties
      * @throws \ReflectionException
      */
-    private function populateMappingCollection(string $className, array $parentProperties = [])
+    private function populateMappingCollection(MappingCollection $mappingCollection, string $className, array $parentProperties = [])
     {
         $reflectionClass = new \ReflectionClass($className);
         $table = $this->getTableMapping($reflectionClass, true);
@@ -65,13 +72,14 @@ class ObjectMapper
                     $relationship,
                     $parentProperties
                 );
-                $childrenAlreadyMapped = $this->childrenAlreadyMapped($propertyMapping); //Check this before adding!
-                $this->mappingCollection->addMapping($propertyMapping);
+                //Check this before adding, otherwise it will always be true!
+                $childrenAlreadyMapped = $mappingCollection->isRelationshipMapped($propertyMapping, $this->config);
+                $mappingCollection->addMapping($propertyMapping);
                 //Resolve name *after* adding to collection so that naming strategies have access to the collection.
                 $this->resolveColumnName($propertyMapping);
                 if ($childrenAlreadyMapped) {
                     $childParentProperties = array_merge($parentProperties, [$reflectionProperty->getName()]);
-                    $this->populateMappingCollection($relationship->childClassName, $childParentProperties);
+                    $this->populateMappingCollection($mappingCollection, $relationship->childClassName, $childParentProperties);
                 }
             }
         }
@@ -95,27 +103,6 @@ class ObjectMapper
         $this->resolveTableName($reflectionClass, $table);
         
         return $table;
-    }
-
-    /**
-     * Detect infinite recursion or lazy loading.
-     * @param PropertyMapping $propertyMapping
-     * @return bool
-     */
-    private function childrenAlreadyMapped(PropertyMapping $propertyMapping)
-    {
-        $result = false;
-        $relationship = $propertyMapping->relationship;
-        $parentProperty = end($propertyMapping->parentProperties);
-        if ($relationship->childClassName ?? false && $relationship->isEager($this->config)) {
-            $result = !$this->mappingCollection->isRelationshipMapped(
-                $parentProperty ?: '',
-                $propertyMapping->className, 
-                $propertyMapping->propertyName
-            );
-        }
-        
-        return $result;
     }
 
     /**

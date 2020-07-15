@@ -11,6 +11,7 @@ use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\ObjectMapper;
+use Objectiphy\Objectiphy\Query\CB;
 
 /**
  * Main entry point for all ORM operations
@@ -27,8 +28,7 @@ class ObjectRepository implements ObjectRepositoryInterface
     protected ObjectRemover $objectRemover;
     protected PaginationInterface $pagination;
     protected array $orderBy;
-    /** @var MappingCollection[] */
-    protected array $mappingCollection;
+    protected MappingCollection $mappingCollection;
 
     public function __construct(
         ObjectMapper $objectMapper,
@@ -62,6 +62,7 @@ class ObjectRepository implements ObjectRepositoryInterface
     public function setClassName(string $className): void
     {
         $this->className = $className;
+        $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
     }
 
     /**
@@ -98,7 +99,8 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     public function find($id): ?object
     {
-        $pkProperties = $this->getMappingCollection()->getPrimaryKeyProperties(true);
+        $this->assertClassNameSet();
+        $pkProperties = $this->mappingCollection->getPrimaryKeyProperties(true);
         if (!$pkProperties) {
             $errorMessage = sprintf('The current entity (`%1$s`) does not have a primary key, so you cannot use the find method. Either specify a primary key in the mapping information, or use findOneBy instead.', $this->className);
             $this->throwException(new ObjectiphyException($errorMessage));
@@ -116,7 +118,8 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     public function findOneBy(array $criteria = []): ?object
     {
-        return null;
+        $this->assertClassNameSet();
+        return $this->objectFetcher->doFindBy($this->className, $criteria, false);
     }
 
     /**
@@ -134,7 +137,8 @@ class ObjectRepository implements ObjectRepositoryInterface
         ?string $commonProperty = null,
         ?string $recordAgeIndicator = null
     ): ?object {
-        return null;
+        $this->assertClassNameSet();
+        return $this->objectFetcher->doFindBy($this->className, $criteria, true, null, true);
     }
 
     /**
@@ -272,18 +276,24 @@ class ObjectRepository implements ObjectRepositoryInterface
     {
         return null;
     }
-    
-    protected function getMappingCollection(?string $className = null): MappingCollection
+
+    protected function normalizeCriteria(array $criteria = [])
     {
-        $className = $className ?? $this->className;
-        if (!$className) {
-            throw new ObjectiphyException('Cannot get mapping information as no entity class name has been specified. Please call setClassName before attempting to load or save any data.');
+        $criteriaBuilder = CB::create();
+        $normalizedCriteria = $criteriaBuilder->normalize($criteria, );
+
+        return $normalizedCriteria;
+    }
+
+    /**
+     * @throws ObjectiphyException
+     */
+    protected function assertClassNameSet()
+    {
+        if (!$this->className) {
+            $callingMethod = debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['function'] ?? 'Unknown method';
+            $message = sprintf('Please call setEntityClassName before calling %1$s.', $callingMethod);
+            throw new ObjectiphyException($message);
         }
-        
-        if (!isset($this->mappingCollection[$className])) {
-            $this->mappingCollection[$className] = $this->objectMapper->getMappingCollectionForClass($className);
-        }
-        
-        return $this->mappingCollection[$className];
     }
 }

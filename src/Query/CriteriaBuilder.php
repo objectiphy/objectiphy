@@ -262,6 +262,8 @@ class CriteriaBuilder
         foreach ($criteria as $critKey=>$critValue) {
             if (is_numeric($critKey) && intval($critKey) == $critKey && is_numeric($critValue) && intval($critValue) == $critValue) {
                 $idCount++;
+            } else {
+                break;
             }
         }
 
