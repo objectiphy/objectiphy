@@ -2,7 +2,7 @@
 
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
-use Objectiphy\Objectiphy\Orm\ConfigOptions;
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Orm\RepositoryFactoryMySql;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\RepositoryFactory;

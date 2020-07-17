@@ -6,9 +6,9 @@ namespace Objectiphy\Objectiphy\Mapping;
 
 use Objectiphy\Annotations\AnnotationReader;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
+use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface as NSI;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
-use Objectiphy\Objectiphy\Orm\ConfigOptions;
 
 /**
  * Loads mapping information from the supplied mapping provider (typically annotations, but the mapping information 
@@ -16,17 +16,34 @@ use Objectiphy\Objectiphy\Orm\ConfigOptions;
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-class ObjectMapper
+final class ObjectMapper
 {
     /* @var $mappingCollection MappingCollection[] */
     private array $mappingCollection;
     private MappingProviderInterface $mappingProvider;
-    private ConfigOptions $config;
+    private bool $eagerLoadToOne;
+    private bool $eagerLoadToMany;
+    private bool $guessMappings;
+    private NamingStrategyInterface $tableNamingStrategy;
+    private NamingStrategyInterface $columnNamingStrategy;
     
-    public function __construct(MappingProviderInterface $mappingProvider, ConfigOptions $config) 
+    public function __construct(MappingProviderInterface $mappingProvider)
     {
         $this->mappingProvider = $mappingProvider;
-        $this->config = $config;
+    }
+
+    public function setConfigOptions(
+        bool $eagerLoadToOne,
+        bool $eagerLoadToMany,
+        bool $guessMappings,
+        NamingStrategyInterface $tableNamingStrategy,
+        NamingStrategyInterface $columnNamingStrategy
+    ) {
+        $this->eagerLoadToOne = $eagerLoadToOne;
+        $this->eagerLoadToMany = $eagerLoadToMany;
+        $this->guessMappings = $guessMappings;
+        $this->tableNamingStrategy = $tableNamingStrategy;
+        $this->columnNamingStrategy = $columnNamingStrategy;
     }
 
     /**
@@ -73,7 +90,7 @@ class ObjectMapper
                     $parentProperties
                 );
                 //Check this before adding, otherwise it will always be true!
-                $childrenAlreadyMapped = $mappingCollection->isRelationshipMapped($propertyMapping, $this->config);
+                $childrenAlreadyMapped = $mappingCollection->isRelationshipMapped($propertyMapping, $this->eagerLoadToOne, $this->eagerLoadToMany);
                 $mappingCollection->addMapping($propertyMapping);
                 //Resolve name *after* adding to collection so that naming strategies have access to the collection.
                 $this->resolveColumnName($propertyMapping);
@@ -112,8 +129,8 @@ class ObjectMapper
      */
     private function resolveTableName(\ReflectionClass $reflectionClass, Table $table)
     {
-        if ($this->config->guessMappings && empty($table->name)) {
-            $table->name = $this->config->tableNamingStrategy->convertName(
+        if ($this->guessMappings && empty($table->name)) {
+            $table->name = $this->tableNamingStrategy->convertName(
                 $reflectionClass->getName(), 
                 NSI::TYPE_CLASS
             );
@@ -133,9 +150,9 @@ class ObjectMapper
         $parentClassName = $propertyMapping->className;
         $relationship = $propertyMapping->relationship;
         $column = $propertyMapping->column;
-        $strategy = $this->config->columnNamingStrategy ?? null;
+        $strategy = $this->columnNamingStrategy ?? null;
 
-        if ($this->config->guessMappings && $strategy) {
+        if ($this->guessMappings && $strategy) {
             if (empty($column->name) && !$relationship->isDefined()) {
                 //Resolve column name for scalar value property
                 $column->name = $strategy->convertName(

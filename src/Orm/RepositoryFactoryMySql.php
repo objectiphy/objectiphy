@@ -6,6 +6,7 @@ namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Annotations\AnnotationReader;
 use Objectiphy\Annotations\DocParser;
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\ObjectMapper;
@@ -110,7 +111,7 @@ class RepositoryFactoryMySql
 
     private function createObjectMapper()
     {
-        return new ObjectMapper($this->mappingProvider, $this->configOptions);
+        return new ObjectMapper($this->mappingProvider);
     }
     
     private function createObjectFetcher()

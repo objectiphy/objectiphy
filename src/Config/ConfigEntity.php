@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy\Orm;
+namespace Objectiphy\Objectiphy\Config;
 
 use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 
-class ConfigEntity
+class ConfigEntity extends ConfigBase
 {
     /**
      * @var string Class name of entity to which these settings relate

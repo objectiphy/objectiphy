@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\ExplanationInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
@@ -53,6 +54,22 @@ class ObjectRepository implements ObjectRepositoryInterface
     public function setConfiguration(ConfigOptions $configOptions): void
     {
         $this->configOptions = $configOptions;
+        $this->updateConfig();
+    }
+
+    public function setConfigOption(string $optionName, $value)
+    {
+        $this->configOptions->setConfigOption($optionName, $value);
+        $this->updateConfig();
+    }
+
+    public function setEntityConfigOption(string $entityClassName, string $optionName, $value)
+    {
+        $entityConfigs = $this->configOptions->getConfigOption('entityConfig');
+        $entityConfig = $entityConfig[$entityClassName] ?? new ConfigEntity();
+        $entityConfig->setConfigOption($optionName, $value);
+        $entityConfigs[$entityClassName] = $entityConfig;
+        $this->setConfigOption('entityConfig', $entityConfigs);
     }
 
     /**
@@ -295,5 +312,20 @@ class ObjectRepository implements ObjectRepositoryInterface
             $message = sprintf('Please call setEntityClassName before calling %1$s.', $callingMethod);
             throw new ObjectiphyException($message);
         }
+    }
+
+    /**
+     * One or more config options have changed, so pass along the required values to the various dependencies
+     * (it is not recommended to pass the whole config object around and let things help themselves)
+     */
+    protected function updateConfig()
+    {
+        $this->objectMapper->setConfigOptions(
+            $this->configOptions->eagerLoadToOne,
+            $this->configOptions->eagerLoadToMany,
+            $this->configOptions->guessMappings,
+            $this->configOptions->tableNamingStrategy,
+            $this->configOptions->columnNamingStrategy
+        );
     }
 }

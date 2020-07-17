@@ -7,7 +7,6 @@ namespace Objectiphy\Objectiphy\Mapping;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Relationship;
-use Objectiphy\Objectiphy\Orm\ConfigOptions;
 
 /**
  * Represents the full mapping information for the entire object hierarchy of a given parent class.
@@ -104,15 +103,16 @@ class MappingCollection
     /**
      * Whether or not a relationship between two classes has already been added (prevents infinite recursion).
      * @param \Objectiphy\Objectiphy\Mapping\PropertyMapping $propertyMapping
-     * @param ConfigOptions $config
+     * @param bool $eagerLoadToOne
+     * @param bool $eagerLoadToMany
      * @return bool
      */
-    public function isRelationshipMapped(PropertyMapping $propertyMapping, ConfigOptions $config)
+    public function isRelationshipMapped(PropertyMapping $propertyMapping, bool $eagerLoadToOne, bool $eagerLoadToMany)
     {
         $result = false;
         $relationship = $propertyMapping->relationship;
         $parentProperty = end($propertyMapping->parentProperties);
-        if ($relationship->childClassName ?? false && $relationship->isEager($config)) {
+        if ($relationship->childClassName ?? false && $relationship->isEager($eagerLoadToOne, $eagerLoadToMany)) {
             $relationships = $this->relationships[($parentProperty ?: '') . ':' . $propertyMapping->className] ?? [];
             $result = !in_array($propertyMapping->propertyName, $relationships); 
         }

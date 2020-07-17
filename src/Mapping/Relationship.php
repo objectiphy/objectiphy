@@ -6,7 +6,6 @@ namespace Objectiphy\Objectiphy\Mapping;
 
 use Objectiphy\Objectiphy\Contract\CollectionFactoryInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
-use Objectiphy\Objectiphy\Orm\ConfigOptions;
 
 /**
  * Mapping information to describe how a property relates to a property on another class, or a value from a table other
@@ -172,11 +171,11 @@ class Relationship
      * Determines whether or not to eager load the child.
      * @return bool
      */
-    public function isEager(ConfigOptions $config): bool
+    public function isEager(bool $eagerLoadToOne, bool $eagerLoadToMany): bool
     {
         $eager = !$this->lazyLoad;
         if ($this->lazyLoad === null) {
-            $eager = ($config->eagerLoadToOne && $this->isToOne()) || ($config->eagerLoadToMany && $this->isToMany());
+            $eager = ($eagerLoadToOne && $this->isToOne()) || ($eagerLoadToMany && $this->isToMany());
         }
 
         return $eager;

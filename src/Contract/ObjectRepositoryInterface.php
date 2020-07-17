@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Contract;
 
-use Objectiphy\Objectiphy\Orm\ConfigOptions;
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 
 if (interface_exists('\Doctrine\Common\Persistence\ObjectRepository')) {
     interface ObjectRepositoryBaseInterface extends \Doctrine\Common\Persistence\ObjectRepository {}
