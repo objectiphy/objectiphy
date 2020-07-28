@@ -14,9 +14,9 @@ class ConfigEntity extends ConfigBase
     private string $className;
 
     /**
-     * @var array Associative array of custom repository classes keyed on class name (degrades performance). Note that
-     * you can also use an annotation for this if you always want a particular entity to use a particular repository
-     * class (respositoryClassName attribute on the Objectiphy\Table annotation).
+     * @var array Custom repository class for this entity (degrades performance). Note that you can also use an
+     * annotation (or other mapping directive) for this if you always want a particular entity to use a particular
+     * repository class (respositoryClassName attribute on the Objectiphy\Table annotation).
      */
     private string $repositoryClassName;
 
@@ -33,7 +33,7 @@ class ConfigEntity extends ConfigBase
     /**
      * @var string Name of class to use for collections where one-to-many relationships require a custom collection
      * class rather than a simple array. All -to-many collections for the class will use the specified class. Typically,
-     * you should use the collectionType attribute on the relationship mapping information to specify custom a
+     * you should use the collectionType attribute on the relationship mapping information to specify a custom
      * collection class rather than setting it here programatically.
      */
     private string $collectionType;

@@ -91,7 +91,7 @@ class BasicReadingTest extends IntegrationTestBase
         //Find by ID, as per doctrine
         $start = microtime(true);
         $policy = $this->objectRepository->find(19071974);
-        $time = round(microtime(true) - $start, 2);
+        $time = round(microtime(true) - $start, 3);
 
         $this->assertEquals('P123456', $policy->policyNo);
         $this->assertEquals('Skywalker', $policy->contact->lastName);

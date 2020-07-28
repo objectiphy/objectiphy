@@ -85,6 +85,32 @@ class RepositoryFactoryMySql
         return $objectRepository;
     }
 
+    protected final function createObjectMapper()
+    {
+        return new ObjectMapper($this->mappingProvider);
+    }
+
+    protected final function createObjectFetcher()
+    {
+        $objectBinder = $this->createObjectBinder();
+        return new ObjectFetcher($objectBinder);
+    }
+
+    protected final function createObjectPersister()
+    {
+        return new ObjectPersister();
+    }
+
+    protected final function createObjectRemover()
+    {
+        return new ObjectRemover();
+    }
+
+    protected final function createObjectBinder()
+    {
+        return new ObjectBinder();
+    }
+
     /**
      * Check if a custom repository class is required for the given entity (always defer to the value passed in though,
      * if present).
@@ -107,26 +133,6 @@ class RepositoryFactoryMySql
         $repositoryClassName = $useCustomClass ? $repositoryClassName : ObjectRepository::class;
 
         return '\\' . ltrim($repositoryClassName, '\\');
-    }
-
-    private function createObjectMapper()
-    {
-        return new ObjectMapper($this->mappingProvider);
-    }
-    
-    private function createObjectFetcher()
-    {
-        return new ObjectFetcher();
-    }
-
-    private function createObjectPersister()
-    {
-        return new ObjectPersister();
-    }
-
-    private function createObjectRemover()
-    {
-        return new ObjectRemover();
     }
 
     private function validateEntityClass(?string $entityClassName = null)

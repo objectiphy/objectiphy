@@ -136,7 +136,9 @@ class ObjectRepository implements ObjectRepositoryInterface
     public function findOneBy(array $criteria = []): ?object
     {
         $this->assertClassNameSet();
-        return $this->objectFetcher->doFindBy($this->className, $criteria, false);
+        $this->objectFetcher->setFindOptions(['multiple' => false]);
+        
+        return $this->objectFetcher->doFindBy($this->className, $criteria);
     }
 
     /**
@@ -155,6 +157,8 @@ class ObjectRepository implements ObjectRepositoryInterface
         ?string $recordAgeIndicator = null
     ): ?object {
         $this->assertClassNameSet();
+        $this->objectFetcher->setFindOptions(['latest' => true]);
+        
         return $this->objectFetcher->doFindBy($this->className, $criteria, true, null, true);
     }
 
