@@ -13,16 +13,19 @@ use Objectiphy\Objectiphy\Mapping\ObjectMapper;
 use Objectiphy\Objectiphy\MappingProvider\MappingProvider;
 use Objectiphy\Objectiphy\MappingProvider\MappingProviderAnnotation;
 use Objectiphy\Objectiphy\MappingProvider\MappingProviderDoctrineAnnotation;
+use Objectiphy\Objectiphy\Query\QueryBuilderInterface;
+use Objectiphy\Objectiphy\Query\QueryBuilderMySql;
 
 /**
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-class RepositoryFactoryMySql
+class RepositoryFactory
 {
     private \PDO $pdo;
     private ConfigOptions $configOptions;
     private MappingProviderInterface $mappingProvider;
+    private QueryBuilderInterface $queryBuilder;
     
     public function __construct(\PDO $pdo, ?ConfigOptions $configOptions = null)
     {
@@ -38,6 +41,11 @@ class RepositoryFactoryMySql
         $this->configOptions = $configOptions;
     }
 
+    public function setQueryBuilder(QueryBuilderInterface $queryBuilder)
+    {
+        $this->queryBuilder = $queryBuilder;
+    }
+    
     public function setMappingProvider(MappingProviderInterface $mappingProvider)
     {
         $this->mappingProvider = $mappingProvider;
@@ -93,17 +101,17 @@ class RepositoryFactoryMySql
     protected final function createObjectFetcher()
     {
         $objectBinder = $this->createObjectBinder();
-        return new ObjectFetcher($objectBinder);
+        return new ObjectFetcher($this->getQueryBuilder(), $objectBinder);
     }
 
     protected final function createObjectPersister()
     {
-        return new ObjectPersister();
+        return new ObjectPersister($this->getQueryBuilder());
     }
 
     protected final function createObjectRemover()
     {
-        return new ObjectRemover();
+        return new ObjectRemover($this->getQueryBuilder());
     }
 
     protected final function createObjectBinder()
@@ -163,5 +171,14 @@ class RepositoryFactoryMySql
         }
 
         return $repositoryClassName ? true : false;
+    }
+    
+    private function getQueryBuilder()
+    {
+        if (!isset($this->queryBuilder)) {
+            $this->queryBuilder = new QueryBuilderMySql();
+        }
+        
+        return $this->queryBuilder;
     }
 }

@@ -3,9 +3,8 @@
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
 use Objectiphy\Objectiphy\Config\ConfigOptions;
-use Objectiphy\Objectiphy\Orm\RepositoryFactoryMySql;
+use Objectiphy\Objectiphy\Orm\RepositoryFactory;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
-use Objectiphy\Objectiphy\RepositoryFactory;
 use Objectiphy\Objectiphy\ObjectRepository;
 use PHPUnit\Framework\TestCase;
 
@@ -30,7 +29,7 @@ class IntegrationTestBase extends TestCase
         $this->createFixtures();
         $configOptions = new ConfigOptions();
         $configOptions->commonProperty = 'loginId';
-        $repositoryFactory = new RepositoryFactoryMySql($this->pdo, $configOptions);
+        $repositoryFactory = new RepositoryFactory($this->pdo, $configOptions);
         $this->objectRepository = $repositoryFactory->createRepository(TestPolicy::class);
         $this->startTime = microtime(true);
     }

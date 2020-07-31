@@ -12,7 +12,7 @@ use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\ObjectMapper;
-use Objectiphy\Objectiphy\Query\CB;
+use Objectiphy\Objectiphy\Criteria\CB;
 
 /**
  * Main entry point for all ORM operations
@@ -123,6 +123,7 @@ class ObjectRepository implements ObjectRepositoryInterface
             $this->throwException(new ObjectiphyException($errorMessage));
         }
 
+
         return $this->findOneBy(array_combine($pkProperties, is_array($id) ?: [$id]));
     }
 
@@ -135,10 +136,7 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     public function findOneBy(array $criteria = []): ?object
     {
-        $this->assertClassNameSet();
-        $this->objectFetcher->setFindOptions(['multiple' => false]);
-        
-        return $this->objectFetcher->doFindBy($this->className, $criteria);
+        return $this->doFindBy($criteria, ['multiple' => false]);
     }
 
     /**
@@ -156,10 +154,10 @@ class ObjectRepository implements ObjectRepositoryInterface
         ?string $commonProperty = null,
         ?string $recordAgeIndicator = null
     ): ?object {
-        $this->assertClassNameSet();
-        $this->objectFetcher->setFindOptions(['latest' => true]);
-        
-        return $this->objectFetcher->doFindBy($this->className, $criteria, true, null, true);
+
+        //TODO: common property/age indicator
+
+        return $this->doFindBy($criteria, ['latest' => true, 'multiple' => false]);
     }
 
     /**
@@ -298,11 +296,29 @@ class ObjectRepository implements ObjectRepositoryInterface
         return null;
     }
 
+    protected function doFindBy(array $criteria = [], array $findOptions = [])
+    {
+        $this->assertClassNameSet();
+        $criteria = $this->normalizeCriteria($criteria);
+        $this->objectFetcher->setFindOptions($findOptions);
+
+        return null; //$this->objectFetcher->doFindBy($this->className, $criteria);
+    }
+
     protected function normalizeCriteria(array $criteria = [])
     {
+        $pkProperty = '';
+        if (is_int(array_key_first($criteria) && is_scalar(reset($criteria)))) { //Plain list of primary keys passed in
+            $pkProperties = $this->mappingCollection->getPrimaryKeyProperties(true);
+            if (!$pkProperties || count($pkProperties) !== 1) {
+                $message = sprintf('The criteria passed in is a plain list of values, but entity \'%1$s\' has a composite key so there is insufficient information to identify which records to return.', $this->className);
+                throw new ObjectiphyException($message);
+            }
+            $pkProperty = $pkProperties[0];
+        }
         $criteriaBuilder = CB::create();
-        $normalizedCriteria = $criteriaBuilder->normalize($criteria, );
-
+        $normalizedCriteria = $criteriaBuilder->normalize($criteria, $pkProperty);
+        
         return $normalizedCriteria;
     }
 

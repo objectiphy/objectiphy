@@ -6,6 +6,7 @@ namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Query\QueryBuilderInterface;
 
 /**
  * @package Objectiphy\Objectiphy
@@ -13,24 +14,28 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
  */
 final class ObjectFetcher
 {
+    private QueryBuilderInterface $queryBuilder;
     private ObjectBinder $objectBinder;
-    private array $options = [
-        'multiple' => true,
-        'latest' => false,
-        'onDemand' => false,
-        'keyProperty' => '',
-    ];
+    private array $options;
     
-    public function __construct(ObjectBinder $objectBinder)
+    public function __construct(QueryBuilderInterface $queryBuilder, ObjectBinder $objectBinder)
     {
+        $this->queryBuilder = $queryBuilder;
         $this->objectBinder = $objectBinder;
+        $this->setFindOptions();
     }
 
     /**
-     * @param array $options Set specified options (see above for valid keys - anything else will be ignored)
+     * @param array $options Set specified options (anything unspecified will revert to default)
      */
-    public function setFindOptions(array $options)
+    public function setFindOptions(array $options = [])
     {
+        $this->options = [
+            'multiple' => true,
+            'latest' => false,
+            'onDemand' => false,
+            'keyProperty' => '',
+        ];
         foreach ($this->options as $key => $value) {
             $this->options[$key] = $options[$key] ?? $this->options[$key];
         }

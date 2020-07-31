@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy\Query;
+namespace Objectiphy\Objectiphy\Criteria;
 
 /**
  * Helper class to build an array of criteria that can be passed to a repository find method.

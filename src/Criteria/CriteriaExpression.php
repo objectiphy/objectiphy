@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy\Query;
+namespace Objectiphy\Objectiphy\Criteria;
 
 use Objectiphy\Objectiphy\Exception\CriteriaException;
 
