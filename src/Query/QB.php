@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy\Criteria;
+namespace Objectiphy\Objectiphy\Query;
 
-class CB extends CriteriaBuilder 
+class QB extends QueryBuilder 
 {
     //Just lets you use a more concise syntax
 }

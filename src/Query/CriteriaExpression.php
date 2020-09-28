@@ -14,28 +14,21 @@ use Objectiphy\Objectiphy\Exception\CriteriaException;
  */
 class CriteriaExpression implements \JsonSerializable
 {
-    /** @var string */
-    public $operator;
-    /** @var string */
-    public $propertyName;
-    /** @var string */
-    public $aggregateFunction;
-    /** @var string */
-    public $aggregateGroupByProperty;
-    /** @var string */
-    public $alias;
-    /** @var string */
+    public string $operator;
+    public string $propertyName;
+    public string $aggregateFunction = '';
+    public string $aggregateGroupByProperty = '';
+    public string $alias = '';
+    /** @var mixed $value */
     public $value;
-    /** @var string */
-    public $alias2;
-    /** @var string */
+    public string $alias2;
+    /** @var mixed $value2 */
     public $value2;
     /** @var CriteriaExpression[] */
-    public $andExpressions = [];
+    public array $andExpressions = [];
     /** @var CriteriaExpression[] */
-    public $orExpressions = [];
-    /** @var CriteriaExpression */
-    public $parentExpression;
+    public array $orExpressions = [];
+    public CriteriaExpression $parentExpression;
 
     /**
      * @param string $propertyName Name of the property being filtered on.

@@ -2,14 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy\Criteria;
+namespace Objectiphy\Objectiphy\Query;
+
+use Objectiphy\Objectiphy\Exception\QueryException;
 
 /**
  * Helper class to build an array of criteria that can be passed to a repository find method.
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-class CriteriaBuilder
+class QueryBuilder
 {
     public const EQ = '=';
     public const EQUALS = self::EQ; //Alias
@@ -48,9 +50,9 @@ class CriteriaBuilder
     /**
      * Allows us to use CB::create() to chain method calls without having to assign to a variable first
      */
-    public static function create(): CriteriaBuilder
+    public static function create(): QueryBuilder
     {
-        return new CriteriaBuilder();
+        return new QueryBuilder();
     }
 
     /**
@@ -61,10 +63,10 @@ class CriteriaBuilder
         string $propertyName,
         string $operator,
         $value,
-        ?CriteriaBuilder $nestedCriteria = null,
+        ?QueryBuilder $nestedCriteria = null,
         ?string $aggregateFunction = null,
         ?string $aggregateGroupByProperty = null
-    ): CriteriaBuilder {
+    ): QueryBuilder {
         return $this->andWhere($propertyName, $operator, $value, $nestedCriteria, $aggregateFunction, $aggregateGroupByProperty);
     }
 
@@ -74,7 +76,7 @@ class CriteriaBuilder
      * @param string $operator Operator to compare with
      * @param mixed $value Value to compare against (array of values for IN, NOT IN, or BETWEEN) - or an alias (aliases
      * are strings prefixed with a colon : which act as the key to the value array passed into the build method)
-     * @param CriteriaBuilder|null $nestedCriteria Another criteria builder with one or more andWhere or orWhere
+     * @param QueryBuilder|null $nestedCriteria Another criteria builder with one or more andWhere or orWhere
      * conditions already specified
      * @param string|null $aggregateFunction
      * @param string|null $aggregateGroupByProperty
@@ -84,10 +86,10 @@ class CriteriaBuilder
     public function andWhere(string $propertyName,
         string $operator,
         $value,
-        ?CriteriaBuilder $nestedCriteria = null,
+        ?QueryBuilder $nestedCriteria = null,
         ?string $aggregateFunction = null,
         ?string $aggregateGroupByProperty = null
-    ): CriteriaBuilder {
+    ): QueryBuilder {
         $this->buildExpression($propertyName, $operator, $value, $nestedCriteria, 'AND', $aggregateFunction, $aggregateGroupByProperty);
 
         return $this;
@@ -99,7 +101,7 @@ class CriteriaBuilder
      * @param string $operator Operator to compare with
      * @param mixed $value Value to compare against (array of values for IN, NOT IN, or BETWEEN) - or an alias (aliases
      * are strings prefixed with a colon : which act as the key to the value array passed into the build method)
-     * @param CriteriaBuilder|null $nestedCriteria Another criteria builder with one or more andWhere or orWhere
+     * @param QueryBuilder|null $nestedCriteria Another criteria builder with one or more andWhere or orWhere
      * conditions already specified
      * @param string|null $aggregateFunction
      * @param string|null $aggregateGroupByProperty
@@ -110,11 +112,25 @@ class CriteriaBuilder
         string $propertyName, 
         string $operator, 
         $value, 
-        ?CriteriaBuilder $nestedCriteria = null, 
+        ?QueryBuilder $nestedCriteria = null, 
         ?string $aggregateFunction = null, 
         ?string $aggregateGroupByProperty = null
-    ): CriteriaBuilder {
+    ): QueryBuilder {
         $this->buildExpression($propertyName, $operator, $value, $nestedCriteria, 'OR', $aggregateFunction, $aggregateGroupByProperty);
+
+        return $this;
+    }
+
+    public function leftJoin($targetEntityClassName, $alias, QueryBuilder $on)
+    {
+        $this->addJoin($targetEntityClassName, $alias, $on, 'LEFT');
+
+        return $this;
+    }
+
+    public function innerJoin($targetEntityClassName, $alias, QueryBuilder $on)
+    {
+        $this->addJoin($targetEntityClassName, $alias, $on, 'INNER');
 
         return $this;
     }
@@ -140,7 +156,12 @@ class CriteriaBuilder
         }
         $this->expressions = array_values(array_filter($this->expressions));
 
-        return $this->expressions;
+        foreach ($this->joins as $join) {
+            /** @var JoinExpression $join */
+            $join->extraCriteria = $join->extraCriteriaBuilder ? $join->extraCriteriaBuilder->build($params, $removeUnbound, $exceptionOnInvalidNull) : [];
+        }
+
+        return array_merge($this->expressions, $this->joins);
     }
 
     /**
@@ -176,52 +197,11 @@ class CriteriaBuilder
 
         return $this->getTranslatedFieldNames($orderBy, true, $preserveUntranslated);
     }
-    
-    /**
-     * If the build method has been called, we can translate tokens into property names for all or specified fields.
-     * This can be useful for quickly creating an orderBy array without having to translate all the field names again.
-     * @param array|null $fields
-     * @param bool $useKeys If used to create an orderBy array, and you have the field names as keys, and direction 
-     * as values, setting this to true translates the field names in the keys and preserves the values (false will 
-     * assume an indexed array and will translate field names in the values).
-     * @param bool $preserveUntranslated If some of the fields passed in do not have a translation, this option
-     * specifies whether or not to preserve them (ie. return them as they are, without any translation). If false,
-     * any such values will be omitted from the return value.
-     * @return array
-     */
-    protected function getTranslatedFieldNames(
-        array $fields = null, 
-        bool $useKeys = true, 
-        bool $preserveUntranslated = true
-    ): array {
-        $translatedFieldNames = [];
-        foreach ($this->translatedFieldNames as $key=>$translatedFieldName) {
-            if (($useKeys && !empty($fields[$key])) || (!$useKeys && in_array($key, $fields))) {
-                $fieldIndex = $fields ? array_search($key, $useKeys ? array_keys($fields) : $fields) : false;
-                if ($fields === null || $fieldIndex !== false) {
-                    $newIndex = $useKeys ? $translatedFieldName : count($translatedFieldNames);
-                    $newValue = $useKeys ? $fields[$key] : $translatedFieldName;
-                    $translatedFieldNames[$newIndex] = $newValue;
-                }
-            }
-        }
-
-        //Any fields passed in that do not have a translation, just use their original key/value
-        if ($preserveUntranslated && $fields) {
-            foreach ($fields as $key=>$value) {
-                if (!isset($this->translatedFieldNames[$useKeys ? $key : $value])) {
-                    $translatedFieldNames[$useKeys ? $key : count($translatedFieldNames)] = $value;
-                }
-            }
-        }
-        
-        return $translatedFieldNames;
-    }
 
     /**
      * Clear all expressions that have been added.
      */
-    public function reset(): CriteriaBuilder
+    public function reset(): QueryBuilder
     {
         $this->expressions = [];
         $this->params = [];
@@ -272,7 +252,7 @@ class CriteriaBuilder
             $normalizedCriteria[] = $expression;
         } else {
             foreach ($criteria as $propertyName=>$expression) {
-                if (!($expression instanceof CriteriaExpression)) {
+                if (!($expression instanceof CriteriaExpression) && !($expression instanceof JoinExpression)) {
                     $value = isset($expression['value']) ? $expression['value'] : $expression;
                     $expression = new CriteriaExpression(
                         $propertyName,
@@ -293,12 +273,86 @@ class CriteriaBuilder
 
         return $normalizedCriteria;
     }
+
+    /**
+     * @param string $type 'LEFT' or 'INNER'
+     */
+    protected function addJoin($targetEntityClassName, $alias, QueryBuilder $on, $type = 'LEFT')
+    {
+        //First line of criteria must link a property on the alias to a property of a known entity
+        /** @var CriteriaExpression $firstExpression */
+        $firstExpression = array_shift($on->expressions);
+        $firstProperty = $firstExpression ? $firstExpression->propertyName : '';
+        $firstValue = $firstExpression ? $firstExpression->value : '';
+
+        if (strpos($firstProperty, $alias . '.') !== 0) {
+            $errorMessage = sprintf('First criteria expression specified for the $on argument when adding a join must refer to the alias. The alias you specified was \'%1$s\', so the propertyName on the first criteria expression for the $on argument should start with \'%1$s.\'', $alias);
+            throw new QueryException($errorMessage);
+        }
+        if (substr($firstValue, 0, 1) !== '`' || substr($firstValue, strlen($firstValue) -1) !== '`') {
+            $errorMessage = 'First criteria expression specified for the $on argument when adding a join must refer to a property in the object hierarchy (ie. the value should be surrounded by backticks).';
+            throw new QueryException($errorMessage);
+        }
+
+        $this->joins[] = new JoinExpression(
+            str_replace('`', '', $firstValue),
+            $firstExpression->operator,
+            $targetEntityClassName,
+            substr($firstProperty, strlen($alias) + 1),
+            $alias,
+            $on,
+            $type
+        );
+
+        return $this;
+    }
+
+    /**
+     * If the build method has been called, we can translate tokens into property names for all or specified fields.
+     * This can be useful for quickly creating an orderBy array without having to translate all the field names again.
+     * @param array|null $fields
+     * @param bool $useKeys If used to create an orderBy array, and you have the field names as keys, and direction 
+     * as values, setting this to true translates the field names in the keys and preserves the values (false will 
+     * assume an indexed array and will translate field names in the values).
+     * @param bool $preserveUntranslated If some of the fields passed in do not have a translation, this option
+     * specifies whether or not to preserve them (ie. return them as they are, without any translation). If false,
+     * any such values will be omitted from the return value.
+     * @return array
+     */
+    protected function getTranslatedFieldNames(
+        array $fields = null, 
+        bool $useKeys = true, 
+        bool $preserveUntranslated = true
+    ): array {
+        $translatedFieldNames = [];
+        foreach ($this->translatedFieldNames as $key=>$translatedFieldName) {
+            if (($useKeys && !empty($fields[$key])) || (!$useKeys && in_array($key, $fields))) {
+                $fieldIndex = $fields ? array_search($key, $useKeys ? array_keys($fields) : $fields) : false;
+                if ($fields === null || $fieldIndex !== false) {
+                    $newIndex = $useKeys ? $translatedFieldName : count($translatedFieldNames);
+                    $newValue = $useKeys ? $fields[$key] : $translatedFieldName;
+                    $translatedFieldNames[$newIndex] = $newValue;
+                }
+            }
+        }
+
+        //Any fields passed in that do not have a translation, just use their original key/value
+        if ($preserveUntranslated && $fields) {
+            foreach ($fields as $key=>$value) {
+                if (!isset($this->translatedFieldNames[$useKeys ? $key : $value])) {
+                    $translatedFieldNames[$useKeys ? $key : count($translatedFieldNames)] = $value;
+                }
+            }
+        }
+        
+        return $translatedFieldNames;
+    }
     
     /**
      * @param $propertyName
      * @param $operator
      * @param $values
-     * @param CriteriaBuilder|null $nestedCriteria
+     * @param QueryBuilder|null $nestedCriteria
      * @param string $joinWith
      * @throws Exception\CriteriaException
      */
@@ -306,7 +360,7 @@ class CriteriaBuilder
         string $propertyName, 
         string $operator, 
         $values, 
-        ?CriteriaBuilder $nestedCriteria = null, 
+        ?QueryBuilder $nestedCriteria = null, 
         string $joinWith = 'AND', 
         ?string $aggregateFunction = null, 
         ?string $aggregateGroupByProperty = null

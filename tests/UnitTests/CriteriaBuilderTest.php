@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\UnitTests;
 
-use Objectiphy\Objectiphy\Query\CriteriaBuilder;
+use Objectiphy\Objectiphy\Query\QueryBuilder;
 use Objectiphy\Objectiphy\Query\CB;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use PHPUnit\Framework\TestCase;
 
-class CriteriaBuilderTest extends TestCase
+class QueryBuilderTest extends TestCase
 {
-    /** @var CriteriaBuilder */
+    /** @var QueryBuilder */
     protected $object;
 
     protected function setup(): void
     {
-        $this->object = CriteriaBuilder::create();
+        $this->object = QueryBuilder::create();
     }
 
     public function testWhere()
@@ -41,9 +41,9 @@ class CriteriaBuilderTest extends TestCase
         $this->assertEquals('A', $expression['value']);
         $this->assertEquals('B', $expression['alias2']);
 
-        $nestedCriteriaBuilder = CB::create();
-        $nestedCriteriaBuilder->{$method}('propertyThree', CB::NOT_EQUALS, ':propertyThree');
-        $this->object->{$method}('propertyTwo', 'NOT IN', [1, 'A', ':B'], $nestedCriteriaBuilder);
+        $nestedQueryBuilder = CB::create();
+        $nestedQueryBuilder->{$method}('propertyThree', CB::NOT_EQUALS, ':propertyThree');
+        $this->object->{$method}('propertyTwo', 'NOT IN', [1, 'A', ':B'], $nestedQueryBuilder);
         $array = $this->object->toArray();
         $expression = $array['propertyTwo']['andExpressions'][0];
         $this->assertEquals('propertyTwo', $expression['propertyName']);
@@ -77,9 +77,9 @@ class CriteriaBuilderTest extends TestCase
         $this->assertEquals(5, $expression['value']);
         $this->assertEquals(50, $expression['value2']);
 
-        $nestedCriteriaBuilder = CB::create();
-        $nestedCriteriaBuilder->orWhere('propertyThree', 'CONTAINS', ':snippet');
-        $this->object->orWhere('propertyTwo', CB::IN, [1, 'A', ':B'], $nestedCriteriaBuilder);
+        $nestedQueryBuilder = CB::create();
+        $nestedQueryBuilder->orWhere('propertyThree', 'CONTAINS', ':snippet');
+        $this->object->orWhere('propertyTwo', CB::IN, [1, 'A', ':B'], $nestedQueryBuilder);
         $array = $this->object->toArray();
         $expression = $array['propertyName']['orExpressions'][1];
         $this->assertEquals('propertyTwo', $expression['propertyName']);

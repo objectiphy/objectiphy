@@ -12,7 +12,7 @@ use Objectiphy\Objectiphy\Tests\Repository\CustomRepository;
 use Objectiphy\Objectiphy\CriteriaExpression;
 use Objectiphy\Objectiphy\RepositoryFactory;
 use Objectiphy\Objectiphy\Pagination;
-use Objectiphy\Objectiphy\CriteriaBuilder;
+use Objectiphy\Objectiphy\QueryBuilder;
 use Objectiphy\Objectiphy\CB;
 
 class CriteriaReadingTest extends IntegrationTestBase
@@ -96,13 +96,13 @@ class CriteriaReadingTest extends IntegrationTestBase
             'postcode' => 'PO27AJ',
             'some_random_value' => 'this_will_be_ignored'
         ]; // these could be grabbed from request object
-        $criteriaBuilder = new CriteriaBuilder();
+        $QueryBuilder = new QueryBuilder();
 
-        $criteriaBuilder->addBeginsWith('contact.lastName', 'lastname');
-        $criteriaBuilder->addExpression('=', 'contact.postcode', 'postcode');
+        $QueryBuilder->addBeginsWith('contact.lastName', 'lastname');
+        $QueryBuilder->addExpression('=', 'contact.postcode', 'postcode');
 
 //        //Alternative syntax:
-//        $criteriaBuilder->addExpressions([
+//        $QueryBuilder->addExpressions([
 //            ['beginsWith', 'contact.lastName', 'lastname'],
 //            ['=', 'contact.postcode', 'postcode'],
 //            ['contains', 'login.email', 'email'],
@@ -111,7 +111,7 @@ class CriteriaReadingTest extends IntegrationTestBase
         //Use serialization groups, CriteriaExpressions with nested OR, and key by property.
         $this->objectRepository->clearSerializationGroups();
         $this->objectRepository->addSerializationGroups(['Default', 'PolicyDetails']);
-        $criteria = $criteriaBuilder->buildCriteria($params);
+        $criteria = $QueryBuilder->buildCriteria($params);
         $criteria['policyNo'] = ['operator' => 'LIKE', 'value' => 'P1234%'];
         $policies2 = $this->objectRepository->findBy($criteria);
         $this->assertEquals(1, count($policies2));

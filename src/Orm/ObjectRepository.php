@@ -123,7 +123,6 @@ class ObjectRepository implements ObjectRepositoryInterface
             $this->throwException(new ObjectiphyException($errorMessage));
         }
 
-
         return $this->findOneBy(array_combine($pkProperties, is_array($id) ?: [$id]));
     }
 
@@ -136,7 +135,8 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     public function findOneBy(array $criteria = []): ?object
     {
-        return $this->doFindBy($criteria, ['multiple' => false]);
+        $this->objectFetcher->setFindOptions(false);
+        return $this->doFindBy($criteria);
     }
 
     /**
@@ -157,7 +157,9 @@ class ObjectRepository implements ObjectRepositoryInterface
 
         //TODO: common property/age indicator
 
-        return $this->doFindBy($criteria, ['latest' => true, 'multiple' => false]);
+        $this->objectFetcher->setFindOptions(false, true);
+
+        return $this->doFindBy($criteria);
     }
 
     /**
@@ -296,12 +298,11 @@ class ObjectRepository implements ObjectRepositoryInterface
         return null;
     }
 
-    protected function doFindBy(array $criteria = [], array $findOptions = [])
+    protected function doFindBy(array $criteria = [])
     {
         $this->assertClassNameSet();
         $criteria = $this->normalizeCriteria($criteria);
-        $this->objectFetcher->setFindOptions($findOptions);
-
+        
         return null; //$this->objectFetcher->doFindBy($this->className, $criteria);
     }
 
@@ -316,8 +317,8 @@ class ObjectRepository implements ObjectRepositoryInterface
             }
             $pkProperty = $pkProperties[0];
         }
-        $criteriaBuilder = CB::create();
-        $normalizedCriteria = $criteriaBuilder->normalize($criteria, $pkProperty);
+        $queryBuilder = CB::create();
+        $normalizedCriteria = $queryBuilder->normalize($criteria, $pkProperty);
         
         return $normalizedCriteria;
     }
@@ -346,6 +347,10 @@ class ObjectRepository implements ObjectRepositoryInterface
             $this->configOptions->guessMappings,
             $this->configOptions->tableNamingStrategy,
             $this->configOptions->columnNamingStrategy
+        );
+        
+        $this->objectFetcher->setConfigOptions(
+            $this->configOptions->bindToEntities,
         );
     }
 }

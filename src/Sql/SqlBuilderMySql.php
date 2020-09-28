@@ -4,152 +4,167 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Query;
 
+use Objectiphy\Objectiphy\Contract\PaginationInterface;
+use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
 class QueryBuilderMySql implements QueryBuilderInterface
 {
-    /** @var ObjectMapper */
-    public $objectMapper; //Public so we can replace it with a clone when lazy loading
-    /** @var boolean */
-    public $multiple = true;
-    /** @var Pagination */
-    protected $pagination;
-    /** @var array As per Doctrine, but with properties of children also allowed, eg. ['contact.lastName'=>'ASC',
-     * 'policyNo'=>'DESC'] */
-    protected $orderBy = [];
-    /** @var string */
-    protected $entityClassName;
-    /** @var boolean */
-    protected $latest = false;
-    /** @var array */
-    protected $params;
-    /** @var array */
-    protected $customWhereParams;
-    /** @var string */
-    protected $mainTable;
-    /** @var boolean Whether we are counting records */
-    protected $count = false;
-    /** @var boolean Whether we can omit GROUP BY during count */
-    protected $countWithoutGroups = false;
-    /** @var boolean */
-    protected $groupByPrimaryKey = true;
-    /** @var string */
-    protected $recordAgeIndicator;
-    /** @var string */
-    protected $customWhereClause = '';
-    /** @var array SQL strings or closures to override the generated SQL query parts (keyed on part) */
-    protected $queryOverrides;
-    /** @var string */
-    protected $knownParentProperty;
-    /** @var string */
-    private $latestAlias;
-    /** @var bool */
-    private $disableMySqlCache = false;
+    private bool $disableMySqlCache = false;
+    private PaginationInterface $pagination;
+    /**
+     * @var array As per Doctrine, but with properties of children also allowed, eg.
+     * ['contact.lastName'=>'ASC', 'policyNo'=>'DESC']
+     */
+    private array $orderBy;
+    private bool $multiple;
+    private bool $latest;
+    private bool $count;
+    private MappingCollection $mappingCollection;
 
-    public function __construct($disableMySqlCache = false)
+    public function __construct()
+    {
+        $this->setFindOptions();
+        $this->setSaveOptions();
+    }
+
+    /**
+     * These are options that are likely to change on each call (unlike config options).
+     */
+    public function setFindOptions(
+        ?PaginationInterface $pagination = null,
+        array $orderBy = [],
+        bool $multiple = true,
+        bool $latest = false,
+        bool $count = false
+    ) {
+        $this->pagination = $pagination;
+        $this->orderBy = $orderBy;
+        $this->multiple = $multiple;
+        $this->latest = $latest;
+        $this->count = $count;
+    }
+
+    public function setSaveOptions()
+    {
+        //None yet...
+    }
+
+    /**
+     * Any config options that the fetcher needs to know about are set here.
+     */
+    public function setConfigOptions(bool $disableMySqlCache = false)
     {
         $this->disableMySqlCache = $disableMySqlCache;
     }
 
     public function initialise(string $className, MappingCollection $mappingCollection)
     {
-        
+        $this->mappingCollection = $mappingCollection;
     }
 
-    /**
-     * Where returning the latest record from a group, the value supplied here will be used to determine which record
-     * in each group is the latest (defaults to primary key value).
-     * @param string $sqlFragment
-     */
-    public function setRecordAgeIndicator($sqlFragment)
-    {
-        $this->recordAgeIndicator = $sqlFragment;
-    }
 
-    /**
-     * Allows for custom criteria to be specified as an SQL WHERE clause.
-     * @param string $whereClause
-     * @param array $params
-     */
-    public function setCustomWhereClause($whereClause, array $params = [])
-    {
-        $this->customWhereClause = $whereClause;
-        $this->customWhereParams = $params;
-    }
 
-    /**
-     * @param PaginationInterface|null $pagination
-     */
-    public function setPagination(PaginationInterface $pagination = null)
-    {
-        $this->pagination = $pagination;
-    }
-
-    /**
-     * @param array|null $orderBy
-     */
-    public function setOrderBy(array $orderBy = null)
-    {
-        $this->orderBy = $orderBy;
-    }
-
-    /**
-     * @param bool $value Whether or not to group by primary key to prevent duplicate records being returned.
-     * NOTE: This may cause an error if MySQL's only_full_group_by is enabled (which it is by default in 5.7.5 onwards)
-     */
-    public function setAllowDuplicates($value)
-    {
-        $this->groupByPrimaryKey = $value ? false : true;
-    }
-
-    /**
-     * @param string $parentProperty We don't bother getting data that is already known
-     */
-    public function setKnownParentProperty($parentProperty)
-    {
-        $this->knownParentProperty = $parentProperty;
-    }
-
-    /**
-     * @param array $queryOverrides
-     */
-    public function overrideQueryParts(array $queryOverrides)
-    {
-        $this->queryOverrides = $queryOverrides;
-    }
+//    /** @var string */
+//    protected $entityClassName;
+//    /** @var array */
+//    protected $params;
+//    /** @var array */
+//    protected $customWhereParams;
+//    /** @var string */
+//    protected $mainTable;
+//    /** @var boolean Whether we can omit GROUP BY during count */
+//    protected $countWithoutGroups = false;
+//    /** @var boolean */
+//    protected $groupByPrimaryKey = true;
+//    /** @var string */
+//    protected $recordAgeIndicator;
+//    /** @var string */
+//    protected $customWhereClause = '';
+//    /** @var array SQL strings or closures to override the generated SQL query parts (keyed on part) */
+//    protected $queryOverrides;
+//    /** @var string */
+//    protected $knownParentProperty;
+//    /** @var string */
+//    private $latestAlias;
+//
+//
+//
+//
+//
+//    /**
+//     * Where returning the latest record from a group, the value supplied here will be used to determine which record
+//     * in each group is the latest (defaults to primary key value).
+//     * @param string $sqlFragment
+//     */
+//    public function setRecordAgeIndicator($sqlFragment)
+//    {
+//        $this->recordAgeIndicator = $sqlFragment;
+//    }
+//
+//    /**
+//     * Allows for custom criteria to be specified as an SQL WHERE clause.
+//     * @param string $whereClause
+//     * @param array $params
+//     */
+//    public function setCustomWhereClause($whereClause, array $params = [])
+//    {
+//        $this->customWhereClause = $whereClause;
+//        $this->customWhereParams = $params;
+//    }
+//
+//    /**
+//     * @param PaginationInterface|null $pagination
+//     */
+//    public function setPagination(PaginationInterface $pagination = null)
+//    {
+//        $this->pagination = $pagination;
+//    }
+//
+//    /**
+//     * @param array|null $orderBy
+//     */
+//    public function setOrderBy(array $orderBy = null)
+//    {
+//        $this->orderBy = $orderBy;
+//    }
+//
+//    /**
+//     * @param bool $value Whether or not to group by primary key to prevent duplicate records being returned.
+//     * NOTE: This may cause an error if MySQL's only_full_group_by is enabled (which it is by default in 5.7.5 onwards)
+//     */
+//    public function setAllowDuplicates($value)
+//    {
+//        $this->groupByPrimaryKey = $value ? false : true;
+//    }
+//
+//    /**
+//     * @param string $parentProperty We don't bother getting data that is already known
+//     */
+//    public function setKnownParentProperty($parentProperty)
+//    {
+//        $this->knownParentProperty = $parentProperty;
+//    }
+//
+//    /**
+//     * @param array $queryOverrides
+//     */
+//    public function overrideQueryParts(array $queryOverrides)
+//    {
+//        $this->queryOverrides = $queryOverrides;
+//    }
 
     /**
      * Get the SQL query necessary to select the records that will be used to hydrate the given entity.
-     * @param array $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
-     * with Doctrine criteria arrays, but also supports more options (see documentation).
-     * @param bool $multiple Whether we are fetching multiple records or limiting to a single record.
-     * @param bool $latest Whether or not to just return the latest record from each group.
-     * @param bool $count Whether we just want to count the records.
+     * @param array $criteria An array of CriteriaExpression objects.
      * @return string The SQL query to execute.
-     * @throws MappingException
-     * @throws \ReflectionException
-     * @throws Exception\CriteriaException
      */
-    public function getSelectQuery(array $criteria = [], $multiple = true, $latest = false, $count = false)
+    public function getSelectQuery(array $criteria = [])
     {
-        $this->multiple = $multiple;
-        $this->latest = $latest;
-        $this->count = $count;
-        $this->objectMapper->overrideLateBindings($this->entityClassName, $criteria + $this->orderBy);
-        $this->mainTable = $this->objectMapper->getClassMapping($this->entityClassName)->tableName;
-        if (!$this->mainTable) {
-            throw new MappingException(
-                'Could not locate table for entity ' . $this->entityClassName . '. Please ensure you have specified a database table in the mapping definition for the entity.'
-            );
-        }
-        if ($latest) {
-            if (!$this->objectMapper->getCommonShortColumn()) {
-                throw new MappingException('Cannot get latest record(s) - unable to determine common column.');
-            }
-            $this->latestAlias = $this->delimitColumns(str_replace('.', '_', $this->mainTable) . "_latest_alias");
+        if (!isset($this->mappingCollection)) {
+            throw new ObjectiphyException('SQL Builder has not been initialised. There is no mapping information!');
         }
 
-        $this->objectMapper->getJoinMappings($this->entityClassName, $criteria);
         $sqlParts = [
             $this->getSelect($criteria),
             $this->getFrom($criteria),
@@ -163,7 +178,7 @@ class QueryBuilderMySql implements QueryBuilderInterface
         ];
 
         $sql = implode(' ', $sqlParts);
-        if ($count && strpos($sql, 'SELECT COUNT') === false) { //We have to select all to get the count :(
+        if ($this->count && strpos($sql, 'SELECT COUNT') === false) { //We have to select all to get the count :(
             $sql = "SELECT COUNT(*) FROM ($sql) subquery";
         }
 
@@ -172,237 +187,6 @@ class QueryBuilderMySql implements QueryBuilderInterface
         }
 
         return $sql;
-    }
-
-    /**
-     * This is just an alias of getSelectQuery, for backward compatibility purposes
-     * @param array $criteria
-     * @param bool $multiple
-     * @param bool $latest
-     * @param bool $count
-     * @return string
-     * @throws Exception\CriteriaException
-     * @throws MappingException
-     * @throws \ReflectionException
-     */
-    public function getSelectSql(array $criteria = [], $multiple = true, $latest = false, $count = false)
-    {
-        return $this->getSelectQuery($criteria, $multiple, $latest, $count);
-    }
-
-    /**
-     * Return the parameter values to bind to the SQL statement. Where more than one SQL statement is involved, the
-     * index identifies which one we are dealing with.
-     * @param int|null $index Index of the SQL query.
-     * @return array Parameter key/value pairs to bind to the prepared statement.
-     */
-    public function getQueryParams($index = null)
-    {
-        $params = [];
-        if ($index !== null && ($index != 0 || isset($this->params[$index]))) {
-            $params = $this->params[$index] ?: [];
-        } else {
-            $params = !empty($this->params) ? $this->params : [];
-        }
-
-        return array_merge($params, $this->customWhereParams ?: []);
-    }
-
-    /**
-     * This is just an alias of getQueryParams, for backward compatibility purposes
-     * @param null $index
-     * @return array
-     * @deprecated
-     */
-    public function getSqlParams($index = null)
-    {
-        return $this->getQueryParams($index);
-    }
-
-    public function setQueryParams(array $params = [])
-    {
-        $this->params = $params;
-    }
-
-    /**
-     * Get the SQL statements necessary to insert the given row.
-     * @param array $row The row to insert.
-     * @param bool $replace Whether or not to update the row if the primary key already exists.
-     * @return array An array of SQL queries to execute for inserting this record (base implementation will always
-     * return a single SQL statement, but extended classes might need to execute multiple queries).
-     */
-    public function getInsertQueries(array $row, $replace = false)
-    {
-        $this->params = [];
-
-        if (!empty($row['table']) && !empty($row['data'])) {
-            $sql = "INSERT INTO " . $this->delimitColumns($row['table']) . " SET ";
-            $assignments = '';
-            foreach ($row['data'] as $column => $value) {
-                $value = $value instanceof ObjectReferenceInterface ? $value->getPrimaryKeyValue() : $value;
-                $paramName = 'param_' . strval(count($this->params));
-                $assignments .= $this->delimitColumns($column) . " = :" . $paramName . ',';
-                $this->params[$paramName] = $value;
-            }
-            $assignments = rtrim($assignments, ",");
-            $sql .= $assignments;
-            if ($replace || !empty($row['isScalarJoin'])) {
-                $sql .= ' ON DUPLICATE KEY UPDATE ' . $assignments;
-            }
-
-            return [$this->overrideQueryPart('insert', $sql, [], $this->params)];
-        }
-
-        return [];
-    }
-
-    /**
-     * This is just an alias of getInsertQueries, for backward compatibility purposes
-     * @param array $row
-     * @param bool $replace
-     * @return array
-     */
-    public function getInsertSql(array $row, $replace = false)
-    {
-        return $this->getInsertQueries($row, $replace);
-    }
-
-    /**
-     * Get the SQL statements necessary to update the given row record.
-     * @param string $entityClassName Name of the parent entity class for the record being updated (used to get the
-     * primary key column).
-     * @param array $row Row of data to update.
-     * @param mixed $keyValue Value of primary key for record to update.
-     * @param string $fullKeyColumn
-     * @return array An array of SQL queries to execute for updating the entity.
-     * @throws MappingException
-     * @throws \ReflectionException
-     */
-    public function getUpdateQueries($entityClassName, $row, $keyValue, $fullKeyColumn = '')
-    {
-        $this->params = [];
-
-        if (!empty($row['table']) && !empty($row['data'])) {
-            $sql = (!empty($row['isScalarJoin']) ? "INSERT INTO " : "UPDATE ") . $this->delimitColumns(
-                    $row['table']
-                ) . " SET ";
-            $assignments = '';
-            foreach ($row['data'] as $column => $value) {
-                $value = $value instanceof ObjectReferenceInterface ? $value->getPrimaryKeyValue() : $value;
-                $paramName = 'param_' . strval(count($this->params));
-                $assignments .= $this->delimitColumns($column) . " = :" . $paramName . ',';
-                $this->params[$paramName] = $value;
-            }
-            $assignments = rtrim($assignments, ",");
-            $sql .= $assignments;
-            $paramName = 'param_' . strval(count($this->params));
-            if (!empty($row['isScalarJoin'])) {
-                $sql .= " ON DUPLICATE KEY UPDATE " . $assignments;
-            } else {
-                $this->params[$paramName] = $keyValue;
-                $sql .= ' WHERE ' . $this->delimitColumns(
-                        $fullKeyColumn ?: $this->objectMapper->getIdColumn(true, $entityClassName)
-                    ) . ' = :' . $paramName;
-            }
-
-            return [$this->overrideQueryPart('update', $sql, [], $this->params)];
-        }
-
-        return [];
-    }
-
-    /**
-     * This is just an alias of getUpdateQueries, for backward compatibility purposes
-     * @param $entityClassName
-     * @param $row
-     * @param $keyValue
-     * @return array
-     * @throws MappingException
-     * @throws \ReflectionException
-     */
-    public function getUpdateSql($entityClassName, $row, $keyValue)
-    {
-        return $this->getUpdateQueries($entityClassName, $row, $keyValue);
-    }
-
-    /**
-     * @param $childClassName
-     * @param $parentKeyPropertyName
-     * @param $parentKeyPropertyValue
-     * @return string
-     * @throws MappingException
-     * @throws \ReflectionException
-     */
-    public function getForeignKeysQuery($childClassName, $parentKeyPropertyName, $parentKeyPropertyValue)
-    {
-        $sql = '';
-        $classMapping = $this->objectMapper->getClassMapping($childClassName);
-        $tableName = $classMapping->tableName;
-        $childPkMapping = $classMapping->getPrimaryKeyPropertyMapping();
-        $childPkColumn = $childPkMapping ? $childPkMapping->getFullColumnName() : '';
-        $columnName = '';
-
-        foreach ($classMapping->getPropertyMappings() as $propertyMapping) {
-            if ($propertyMapping->propertyName == $parentKeyPropertyName) {
-                $columnName = $propertyMapping->getFullColumnName();
-                break;
-            }
-        }
-
-        if ($tableName && $childPkColumn && $columnName) {
-            $sql = "SELECT $childPkColumn FROM $tableName WHERE $columnName = :parentKeyValue";
-            $this->params = ['parentKeyValue' => $parentKeyPropertyValue];
-        }
-
-        return $sql;
-    }
-
-    /**
-     * @param string $entityClassName Class name of entity being removed
-     * @param mixed $keyValue Value of primary key for record to delete.
-     * @return array An array of queries to execute for removing the entity.
-     * @throws MappingException
-     * @throws \ReflectionException
-     */
-    public function getDeleteQueries($entityClassName, $keyValue)
-    {
-        $sql = null;
-        $classMapping = $this->objectMapper->getClassMapping($entityClassName);
-        $tableName = $classMapping->tableName;
-        $pkPropertyMapping = $classMapping->getPrimaryKeyPropertyMapping();
-        $columnName = $pkPropertyMapping->getFullColumnName();
-
-        if ($tableName && $columnName && $keyValue !== null) {
-            $sql = "DELETE FROM $tableName WHERE $columnName = :pkValue";
-            $this->params = ['pkValue' => $keyValue];
-        }
-
-        return array_filter([$sql]);
-    }
-
-    /**
-     * Replace prepared statement parameters with actual values (for debugging output only, not for execution!)
-     * @param string $query Parameterised SQL string
-     * @param array $params Parameter values to replace tokens with
-     * @return string SQL string with values instead of parameters
-     */
-    public function replaceTokens($query, $params)
-    {
-        if (count($params)) {
-            foreach (
-                array_reverse(
-                    $params
-                ) as $key => $value
-            ) { //Don't want to replace param_10 with column name for param_1 followed by a zero!
-                $query = str_replace(
-                    ':' . $key,
-                    ($value === null || $value === true || $value === false ? var_export($value, true) : "'$value'"),
-                    $query
-                );
-            }
-        }
-
-        return $query;
     }
 
     /**
@@ -416,6 +200,8 @@ class QueryBuilderMySql implements QueryBuilderInterface
     {
         $sql = '';
         $this->countWithoutGroups = false;
+
+        
 
         if ($this->count && empty($this->queryOverrides)) {
             $groupBy = trim(str_replace('GROUP BY', '', $this->getGroupBy($criteria, true)));
@@ -721,6 +507,191 @@ class QueryBuilderMySql implements QueryBuilderInterface
         }
 
         return $this->overrideQueryPart('limit', $sql, $criteria, $this->getQueryParams());
+    }
+
+    /**
+     * Return the parameter values to bind to the SQL statement. Where more than one SQL statement is involved, the
+     * index identifies which one we are dealing with.
+     * @param int|null $index Index of the SQL query.
+     * @return array Parameter key/value pairs to bind to the prepared statement.
+     */
+    public function getQueryParams($index = null)
+    {
+        $params = [];
+        if ($index !== null && ($index != 0 || isset($this->params[$index]))) {
+            $params = $this->params[$index] ?: [];
+        } else {
+            $params = !empty($this->params) ? $this->params : [];
+        }
+
+        return array_merge($params, $this->customWhereParams ?: []);
+    }
+
+    /**
+     * Get the SQL statements necessary to insert the given row.
+     * @param array $row The row to insert.
+     * @param bool $replace Whether or not to update the row if the primary key already exists.
+     * @return array An array of SQL queries to execute for inserting this record (base implementation will always
+     * return a single SQL statement, but extended classes might need to execute multiple queries).
+     */
+    public function getInsertQueries(array $row, $replace = false)
+    {
+        $this->params = [];
+
+        if (!empty($row['table']) && !empty($row['data'])) {
+            $sql = "INSERT INTO " . $this->delimitColumns($row['table']) . " SET ";
+            $assignments = '';
+            foreach ($row['data'] as $column => $value) {
+                $value = $value instanceof ObjectReferenceInterface ? $value->getPrimaryKeyValue() : $value;
+                $paramName = 'param_' . strval(count($this->params));
+                $assignments .= $this->delimitColumns($column) . " = :" . $paramName . ',';
+                $this->params[$paramName] = $value;
+            }
+            $assignments = rtrim($assignments, ",");
+            $sql .= $assignments;
+            if ($replace || !empty($row['isScalarJoin'])) {
+                $sql .= ' ON DUPLICATE KEY UPDATE ' . $assignments;
+            }
+
+            return [$this->overrideQueryPart('insert', $sql, [], $this->params)];
+        }
+
+        return [];
+    }
+
+    /**
+     * This is just an alias of getInsertQueries, for backward compatibility purposes
+     * @param array $row
+     * @param bool $replace
+     * @return array
+     */
+    public function getInsertSql(array $row, $replace = false)
+    {
+        return $this->getInsertQueries($row, $replace);
+    }
+
+    /**
+     * Get the SQL statements necessary to update the given row record.
+     * @param string $entityClassName Name of the parent entity class for the record being updated (used to get the
+     * primary key column).
+     * @param array $row Row of data to update.
+     * @param mixed $keyValue Value of primary key for record to update.
+     * @param string $fullKeyColumn
+     * @return array An array of SQL queries to execute for updating the entity.
+     * @throws MappingException
+     * @throws \ReflectionException
+     */
+    public function getUpdateQueries($entityClassName, $row, $keyValue, $fullKeyColumn = '')
+    {
+        $this->params = [];
+
+        if (!empty($row['table']) && !empty($row['data'])) {
+            $sql = (!empty($row['isScalarJoin']) ? "INSERT INTO " : "UPDATE ") . $this->delimitColumns(
+                    $row['table']
+                ) . " SET ";
+            $assignments = '';
+            foreach ($row['data'] as $column => $value) {
+                $value = $value instanceof ObjectReferenceInterface ? $value->getPrimaryKeyValue() : $value;
+                $paramName = 'param_' . strval(count($this->params));
+                $assignments .= $this->delimitColumns($column) . " = :" . $paramName . ',';
+                $this->params[$paramName] = $value;
+            }
+            $assignments = rtrim($assignments, ",");
+            $sql .= $assignments;
+            $paramName = 'param_' . strval(count($this->params));
+            if (!empty($row['isScalarJoin'])) {
+                $sql .= " ON DUPLICATE KEY UPDATE " . $assignments;
+            } else {
+                $this->params[$paramName] = $keyValue;
+                $sql .= ' WHERE ' . $this->delimitColumns(
+                        $fullKeyColumn ?: $this->objectMapper->getIdColumn(true, $entityClassName)
+                    ) . ' = :' . $paramName;
+            }
+
+            return [$this->overrideQueryPart('update', $sql, [], $this->params)];
+        }
+
+        return [];
+    }
+
+    /**
+     * @param $childClassName
+     * @param $parentKeyPropertyName
+     * @param $parentKeyPropertyValue
+     * @return string
+     * @throws MappingException
+     * @throws \ReflectionException
+     */
+    public function getForeignKeysQuery($childClassName, $parentKeyPropertyName, $parentKeyPropertyValue)
+    {
+        $sql = '';
+        $classMapping = $this->objectMapper->getClassMapping($childClassName);
+        $tableName = $classMapping->tableName;
+        $childPkMapping = $classMapping->getPrimaryKeyPropertyMapping();
+        $childPkColumn = $childPkMapping ? $childPkMapping->getFullColumnName() : '';
+        $columnName = '';
+
+        foreach ($classMapping->getPropertyMappings() as $propertyMapping) {
+            if ($propertyMapping->propertyName == $parentKeyPropertyName) {
+                $columnName = $propertyMapping->getFullColumnName();
+                break;
+            }
+        }
+
+        if ($tableName && $childPkColumn && $columnName) {
+            $sql = "SELECT $childPkColumn FROM $tableName WHERE $columnName = :parentKeyValue";
+            $this->params = ['parentKeyValue' => $parentKeyPropertyValue];
+        }
+
+        return $sql;
+    }
+
+    /**
+     * @param string $entityClassName Class name of entity being removed
+     * @param mixed $keyValue Value of primary key for record to delete.
+     * @return array An array of queries to execute for removing the entity.
+     * @throws MappingException
+     * @throws \ReflectionException
+     */
+    public function getDeleteQueries($entityClassName, $keyValue)
+    {
+        $sql = null;
+        $classMapping = $this->objectMapper->getClassMapping($entityClassName);
+        $tableName = $classMapping->tableName;
+        $pkPropertyMapping = $classMapping->getPrimaryKeyPropertyMapping();
+        $columnName = $pkPropertyMapping->getFullColumnName();
+
+        if ($tableName && $columnName && $keyValue !== null) {
+            $sql = "DELETE FROM $tableName WHERE $columnName = :pkValue";
+            $this->params = ['pkValue' => $keyValue];
+        }
+
+        return array_filter([$sql]);
+    }
+
+    /**
+     * Replace prepared statement parameters with actual values (for debugging output only, not for execution!)
+     * @param string $query Parameterised SQL string
+     * @param array $params Parameter values to replace tokens with
+     * @return string SQL string with values instead of parameters
+     */
+    public function replaceTokens($query, $params)
+    {
+        if (count($params)) {
+            foreach (
+                array_reverse(
+                    $params
+                ) as $key => $value
+            ) { //Don't want to replace param_10 with column name for param_1 followed by a zero!
+                $query = str_replace(
+                    ':' . $key,
+                    ($value === null || $value === true || $value === false ? var_export($value, true) : "'$value'"),
+                    $query
+                );
+            }
+        }
+
+        return $query;
     }
 
     /**
