@@ -51,7 +51,7 @@ class MappingCollection
         return $this->entityClassName;
     }
 
-    public function getColumns()
+    public function getColumnDefinitions(): array
     {
         return $this->columns;
     }
@@ -133,5 +133,20 @@ class MappingCollection
         $pkProperties = $this->primaryKeyProperties[$className] ?? [];
 
         return $namesOnly ? array_keys($pkProperties) : $pkProperties;
+    }
+
+    /**
+     * Whether or not any of the properties in this collection use an aggregate function
+     * @return bool
+     */
+    public function hasAggregateFunctions(): bool
+    {
+        foreach ($this->properties as $propertyMapping) {
+            if ($propertyMapping->column->aggregateFunctionName) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }

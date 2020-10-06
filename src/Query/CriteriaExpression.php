@@ -97,22 +97,29 @@ class CriteriaExpression implements \JsonSerializable
         bool $removeUnbound = true,
         bool $exceptionOnInvalidNull = true
     ): void {
-        foreach ($values as $key=>$value) {
-            if ($this->alias == $key) {
-                $this->value = empty($this->value) || $overwrite ? ($this->requireNull() ? null : $value) : $this->value;
-                $this->dealWithNulls('value', $exceptionOnInvalidNull);
-                $this->alias = null;
-            } elseif ($this->alias2 == $key) {
-                $this->value2 = empty($this->value2) || $overwrite ? ($this->requireNull() ? null : $value) : $this->value2;
-                $this->dealWithNulls('value2', $exceptionOnInvalidNull);
-                $this->alias2 = null;
-            } elseif ($this->propertyName == $key) {
-                $this->value = empty($this->value) || $overwrite ? ($this->requireNull() ? null : $value) : $this->value;
-                $this->dealWithNulls('value', $exceptionOnInvalidNull);
-            } elseif (is_array($this->value)) {
-                foreach ($this->value as $index=>$inValue) {
-                    if (substr(strval($inValue), 0, 1) == ':' && substr(strval($inValue), 1) == $key) {
-                        $this->value[$index] = $value;
+        if (!$values && $this->operator) {
+            $this->dealWithNulls('value', $exceptionOnInvalidNull);
+        } else {
+            foreach ($values as $key => $value) {
+                if ($this->alias == $key) {
+                    $this->value = empty($this->value) || $overwrite ? ($this->requireNull(
+                    ) ? null : $value) : $this->value;
+                    $this->dealWithNulls('value', $exceptionOnInvalidNull);
+                    $this->alias = null;
+                } elseif ($this->alias2 == $key) {
+                    $this->value2 = empty($this->value2) || $overwrite ? ($this->requireNull(
+                    ) ? null : $value) : $this->value2;
+                    $this->dealWithNulls('value2', $exceptionOnInvalidNull);
+                    $this->alias2 = null;
+                } elseif ($this->propertyName == $key) {
+                    $this->value = empty($this->value) || $overwrite ? ($this->requireNull(
+                    ) ? null : $value) : $this->value;
+                    $this->dealWithNulls('value', $exceptionOnInvalidNull);
+                } elseif (is_array($this->value)) {
+                    foreach ($this->value as $index => $inValue) {
+                        if (substr(strval($inValue), 0, 1) == ':' && substr(strval($inValue), 1) == $key) {
+                            $this->value[$index] = $value;
+                        }
                     }
                 }
             }

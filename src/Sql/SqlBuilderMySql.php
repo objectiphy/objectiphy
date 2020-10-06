@@ -20,6 +20,7 @@ class QueryBuilderMySql implements QueryBuilderInterface
     private bool $multiple;
     private bool $latest;
     private bool $count;
+    private string $className;
     private MappingCollection $mappingCollection;
 
     public function __construct()
@@ -60,6 +61,7 @@ class QueryBuilderMySql implements QueryBuilderInterface
 
     public function initialise(string $className, MappingCollection $mappingCollection)
     {
+        $this->className = $className;
         $this->mappingCollection = $mappingCollection;
     }
 
@@ -165,7 +167,7 @@ class QueryBuilderMySql implements QueryBuilderInterface
             throw new ObjectiphyException('SQL Builder has not been initialised. There is no mapping information!');
         }
 
-        $sqlParts = [
+        $selectQuery = new SelectQuery(
             $this->getSelect($criteria),
             $this->getFrom($criteria),
             $this->getJoinsForLatestRecord($criteria),
@@ -174,10 +176,10 @@ class QueryBuilderMySql implements QueryBuilderInterface
             $this->getGroupBy($criteria),
             $this->getHaving($criteria),
             $this->getOrderBy($criteria),
-            $this->getLimit($criteria),
-        ];
+            $this->getLimit($criteria)
+        );
 
-        $sql = implode(' ', $sqlParts);
+        $sql = (string) $selectQuery;
         if ($this->count && strpos($sql, 'SELECT COUNT') === false) { //We have to select all to get the count :(
             $sql = "SELECT COUNT(*) FROM ($sql) subquery";
         }
@@ -201,13 +203,11 @@ class QueryBuilderMySql implements QueryBuilderInterface
         $sql = '';
         $this->countWithoutGroups = false;
 
-        
-
         if ($this->count && empty($this->queryOverrides)) {
             $groupBy = trim(str_replace('GROUP BY', '', $this->getGroupBy($criteria, true)));
             $baseGroupBy = trim(str_replace('GROUP BY', '', $this->baseGroupBy($criteria, true)));
             if ($groupBy) {
-                if (!$this->objectMapper->hasAggregateFunctions() && $groupBy == $baseGroupBy) {
+                if (!$this->mappingCollection->hasAggregateFunctions() && $groupBy == $baseGroupBy) {
                     $sql .= "SELECT COUNT(DISTINCT " . $groupBy . ") ";
                     $this->countWithoutGroups = true;
                 } // else: we do the full select, and use it as a sub-query - the count happens outside, in getSelectQuery
@@ -218,13 +218,11 @@ class QueryBuilderMySql implements QueryBuilderInterface
         }
 
         if (!$sql) {
-            //If different instances of the same entity appear on different parent entities, ensure we pick up the correct aliases
-            $topLevelPrefix = strtolower(str_replace('\\', '_', ltrim($this->entityClassName, '\\')));
-            $columns = $this->objectMapper->getColumnsForClass(
-                $this->entityClassName,
-                $topLevelPrefix,
-                $this->knownParentProperty
-            );
+            $columns = [];
+            $columnDefinitions = $this->mappingCollection->getColumnDefinitions();
+            foreach ($columnDefinitions as $alias => $propertyMapping) {
+                $columns[] = $propertyMapping->column->getFullColumnName() . ' AS ' . $alias;
+            }
             $sql = "SELECT " . ($columns ? implode(', ', $columns) . " " : "* ");
         }
 

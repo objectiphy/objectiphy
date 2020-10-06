@@ -73,7 +73,7 @@ class PropertyMapping
         $this->relationship = $relationship;
         $this->parentProperties = $parentProperties;
     }
-    
+
     /**
      * Get the fully qualified property path using dot notation by default.
      * @param bool $includingPropertyName
