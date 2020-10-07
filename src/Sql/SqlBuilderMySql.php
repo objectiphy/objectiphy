@@ -22,6 +22,7 @@ class QueryBuilderMySql implements QueryBuilderInterface
     private bool $count;
     private string $className;
     private MappingCollection $mappingCollection;
+    private string $mainTable;
 
     public function __construct()
     {
@@ -63,6 +64,7 @@ class QueryBuilderMySql implements QueryBuilderInterface
     {
         $this->className = $className;
         $this->mappingCollection = $mappingCollection;
+        $this->mainTable = $mappingCollection->getPrimaryTableMapping()->name;
     }
 
 
@@ -166,6 +168,9 @@ class QueryBuilderMySql implements QueryBuilderInterface
         if (!isset($this->mappingCollection)) {
             throw new ObjectiphyException('SQL Builder has not been initialised. There is no mapping information!');
         }
+        if (empty($this->mappingCollection->getPrimaryTableMapping())) {
+            throw new ObjectiphyException('Mapping collection does not have a primary table defined.');
+        }
 
         $selectQuery = new SelectQuery(
             $this->getSelect($criteria),
@@ -200,23 +205,9 @@ class QueryBuilderMySql implements QueryBuilderInterface
      */
     public function getSelect(array $criteria = [])
     {
-        $sql = '';
         $this->countWithoutGroups = false;
-
-        if ($this->count && empty($this->queryOverrides)) {
-            $groupBy = trim(str_replace('GROUP BY', '', $this->getGroupBy($criteria, true)));
-            $baseGroupBy = trim(str_replace('GROUP BY', '', $this->baseGroupBy($criteria, true)));
-            if ($groupBy) {
-                if (!$this->mappingCollection->hasAggregateFunctions() && $groupBy == $baseGroupBy) {
-                    $sql .= "SELECT COUNT(DISTINCT " . $groupBy . ") ";
-                    $this->countWithoutGroups = true;
-                } // else: we do the full select, and use it as a sub-query - the count happens outside, in getSelectQuery
-            } else {
-                $sql .= "SELECT COUNT(*) ";
-                $this->countWithoutGroups = true;
-            }
-        }
-
+        $sql = $this->getCountSql($criteria);
+        
         if (!$sql) {
             $columns = [];
             $columnDefinitions = $this->mappingCollection->getColumnDefinitions();
@@ -242,7 +233,7 @@ class QueryBuilderMySql implements QueryBuilderInterface
      */
     public function getFrom(array $criteria = [])
     {
-        $sql = "FROM " . $this->delimitColumns($this->mainTable);
+        $sql = "FROM " . $this->delimit($this->mainTable);
 
         return $this->overrideQueryPart('from', $sql, $criteria, $this->getQueryParams());
     }
@@ -258,7 +249,7 @@ class QueryBuilderMySql implements QueryBuilderInterface
         $sql = '';
         if ($this->latest && $this->objectMapper->getCommonShortColumn()) {
             //Join on itself to get latest record per common column
-            $sql .= " LEFT JOIN " . $this->delimitColumns($this->mainTable) . " $this->latestAlias   
+            $sql .= " LEFT JOIN " . $this->mainTable . " $this->latestAlias   
                 ON (" . $this->delimitColumns(
                     $this->mainTable . "." . $this->objectMapper->getCommonShortColumn()
                 ) . " = " . $this->delimitColumns(
@@ -692,6 +683,26 @@ class QueryBuilderMySql implements QueryBuilderInterface
         return $query;
     }
 
+    protected function getCountSql(array $criteria = [])
+    {
+        $sql = '';
+        if ($this->count && empty($this->queryOverrides)) { //See if we can do a more efficient count
+            $groupBy = trim(str_replace('GROUP BY', '', $this->getGroupBy($criteria, true)));
+            $baseGroupBy = trim(str_replace('GROUP BY', '', $this->baseGroupBy($criteria, true)));
+            if ($groupBy) {
+                if (!$this->mappingCollection->hasAggregateFunctions() && $groupBy == $baseGroupBy) {
+                    $sql .= "SELECT COUNT(DISTINCT " . $groupBy . ") ";
+                    $this->countWithoutGroups = true;
+                } // else: we do the full select, and use it as a sub-query - the count happens outside, in getSelectQuery
+            } else {
+                $sql .= "SELECT COUNT(*) ";
+                $this->countWithoutGroups = true;
+            }
+        }
+
+        return $sql;
+    }
+
     /**
      * Build an SQL expression based on an Objectiphy CriteriaExpression object or Doctrine-compatible criteria array.
      * @param CriteriaExpression|array $expression The line of criteria to convert into SQL.
@@ -878,15 +889,17 @@ class QueryBuilderMySql implements QueryBuilderInterface
     }
 
     /**
-     * Convert "database.table.column" to "`database`.`table`.`column`".
+     * Convert "database.table.column" to "`database`.`table`.`column`". As the input does not
+     * come from a user, but from mapping definitions, we will not sanitize in case there is a
+     * reason a for a developer wanting to break out of the backticks to do something filthy.
      * @param string $tableColumnString Database/Table/Column separated by a dot.
      * @return string Backtick separated string equivalent.
      */
-    private function delimitColumns($tableColumnString)
+    private function delimit($tableColumnString)
     {
         $delimited = '';
         if ($tableColumnString) {
-            $delimited = "`" . implode("`.`", explode('.', str_replace("`", "", $tableColumnString))) . "`";
+            $delimited = "`" . implode("`.`", explode('.', $tableColumnString)) . "`";
         }
 
         return $delimited;

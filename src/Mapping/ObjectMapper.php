@@ -75,6 +75,7 @@ final class ObjectMapper
     {
         $reflectionClass = new \ReflectionClass($className);
         $table = $this->getTableMapping($reflectionClass, true);
+        $mappingCollection->setPrimaryTableMapping($table);
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
             $columnIsMapped = false;
             $relationshipIsMapped = false;

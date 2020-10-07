@@ -19,6 +19,9 @@ class MappingCollection
      * @var string Name of parent entity class.
      */
     private string $entityClassName;
+    
+    /** @var Table Mapping for the main table. */
+    private Table $table;
 
     /**
      * @var array Property mappings keyed by column name or alias (ie. as the data appears in the result array).
@@ -44,6 +47,16 @@ class MappingCollection
     public function __construct(string $entityClassName)
     {
         $this->entityClassName = $entityClassName;
+    }
+    
+    public function setPrimaryTableMapping(Table $table)
+    {
+        $this->table = $table;
+    }
+    
+    public function getPrimaryTableMapping()
+    {
+        return $this->table;
     }
 
     public function getEntityClassName(): string
