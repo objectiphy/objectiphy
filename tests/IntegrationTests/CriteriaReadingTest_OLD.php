@@ -126,10 +126,10 @@ class CriteriaReadingTest extends IntegrationTestBase
             ->orWhere(['id', null, '=', 19072010]);
 
         //Nicer syntax, same result...  (operators can be strings or you can use the class constants)
-        $newCriteria = CB::create()
-            ->where('contact.lastName', CB::EQUALS, ":lastname_alias")
-            ->orWhere('status', CB::EQUALS, "PAID",
-                CB::create()->andWhere('effectiveStartDateTime', CB::GREATER_THAN, new \DateTime('2018-12-15')))
+        $newCriteria = QB::create()
+            ->where('contact.lastName', QB::EQUALS, ":lastname_alias")
+            ->orWhere('status', QB::EQUALS, "PAID",
+                QB::create()->andWhere('effectiveStartDateTime', QB::GREATER_THAN, new \DateTime('2018-12-15')))
             ->orWhere('id', '=', 19072010)
             ->build(['lastname_alias' => 'Skywalker']);
 
@@ -336,14 +336,14 @@ class CriteriaReadingTest extends IntegrationTestBase
     {
         //Use criteria that references an aggregate function property value
         $this->objectRepository->setEntityClassName(TestParent::class);
-        $criteria = CB::create()->where('totalWeightOfPets', '>', 1000)->build();
+        $criteria = QB::create()->where('totalWeightOfPets', '>', 1000)->build();
         $heavilyPettedParentsLol = $this->objectRepository->findBy($criteria);
         $this->assertEquals(2, count($heavilyPettedParentsLol));
         $this->assertEquals(1, $heavilyPettedParentsLol[0]->getId());
 
         //Use criteria that uses an aggregate function directly where we would not normally join
         $this->objectRepository->setEntityClassName(TestPolicy::class);
-        $criteria = CB::create()->where('vehicle.wheels.id', '>', 4, null, 'COUNT')->build(); //(5 wheels incl steering wheel!)
+        $criteria = QB::create()->where('vehicle.wheels.id', '>', 4, null, 'COUNT')->build(); //(5 wheels incl steering wheel!)
         $policiesWithFiveWheelVehicle = $this->objectRepository->findBy($criteria);
         $this->assertEquals(1, count($policiesWithFiveWheelVehicle));
         $this->assertEquals(1, $policiesWithFiveWheelVehicle[0]->vehicle->id);
@@ -356,7 +356,7 @@ class CriteriaReadingTest extends IntegrationTestBase
         //Use criteria with an aggregate function where we already join for an aggregate function property
         //NOTE: Keep this as the last test here, so that the doSqlTests method, below, gets what it expects!
         $this->objectRepository->setEntityClassName(TestParent::class);
-        $criteria = CB::create()->where('pets.id', CB::LTE, 4, null, 'COUNT')->build();
+        $criteria = QB::create()->where('pets.id', QB::LTE, 4, null, 'COUNT')->build();
         $parentsWithLessThanFivePets = $this->objectRepository->findBy($criteria);
         $this->assertEquals(2, count($parentsWithLessThanFivePets));
         $this->assertEquals('Danger Mouse', $parentsWithLessThanFivePets[0]->getName());

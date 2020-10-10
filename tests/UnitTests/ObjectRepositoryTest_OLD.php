@@ -38,7 +38,7 @@ class ObjectRepositoryTest extends \PHPUnit_Framework_TestCase
         $this->storage = $this->getMockBuilder(PdoStorage::class)->setConstructorArgs([$this->pdo])->getMock();
         $this->object = new ObjectRepository($this->sqlBuilder, $this->objectBinder, $this->storage);
         $this->object->setEagerLoad(true, true);
-        $this->criteria = CB::create()->normalize($this->criteria);
+        $this->criteria = QB::create()->normalize($this->criteria);
     }
 
     public function testFind()

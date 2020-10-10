@@ -101,7 +101,7 @@ class PropertyMapping
     {
         if (empty($this->alias)) {
             $this->alias = $this->getPropertyPath(true, '_');
-            if (array_key_exists($this->alias, $this->parentCollection->getColumns())) {
+            if (array_key_exists($this->alias, $this->parentCollection->getColumnDefinitions())) {
                 $this->alias = $this->getPropertyPath(true, '_-_');
             }
         }

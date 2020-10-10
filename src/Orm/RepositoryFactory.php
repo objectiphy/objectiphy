@@ -8,13 +8,14 @@ use Objectiphy\Annotations\AnnotationReader;
 use Objectiphy\Annotations\DocParser;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
+use Objectiphy\Objectiphy\Database\PdoStorage;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\ObjectMapper;
 use Objectiphy\Objectiphy\MappingProvider\MappingProvider;
 use Objectiphy\Objectiphy\MappingProvider\MappingProviderAnnotation;
 use Objectiphy\Objectiphy\MappingProvider\MappingProviderDoctrineAnnotation;
-use Objectiphy\Objectiphy\Query\QueryBuilderInterface;
-use Objectiphy\Objectiphy\Query\QueryBuilderMySql;
+use Objectiphy\Objectiphy\Database\SqlBuilderInterface;
+use Objectiphy\Objectiphy\Database\SqlBuilderMySql;
 
 /**
  * @package Objectiphy\Objectiphy
@@ -25,7 +26,7 @@ class RepositoryFactory
     private \PDO $pdo;
     private ConfigOptions $configOptions;
     private MappingProviderInterface $mappingProvider;
-    private QueryBuilderInterface $queryBuilder;
+    private SqlBuilderInterface $sqlBuilder;
     
     public function __construct(\PDO $pdo, ?ConfigOptions $configOptions = null)
     {
@@ -41,9 +42,9 @@ class RepositoryFactory
         $this->configOptions = $configOptions;
     }
 
-    public function setQueryBuilder(QueryBuilderInterface $queryBuilder)
+    public function setSqlBuilder(SqlBuilderInterface $sqlBuilder)
     {
-        $this->queryBuilder = $queryBuilder;
+        $this->sqlBuilder = $sqlBuilder;
     }
     
     public function setMappingProvider(MappingProviderInterface $mappingProvider)
@@ -101,22 +102,29 @@ class RepositoryFactory
     protected final function createObjectFetcher()
     {
         $objectBinder = $this->createObjectBinder();
-        return new ObjectFetcher($this->getQueryBuilder(), $objectBinder);
+        $storage = $this->createStorage();
+
+        return new ObjectFetcher($this->getSqlBuilder(), $objectBinder, $this->createStorage());
     }
 
     protected final function createObjectPersister()
     {
-        return new ObjectPersister($this->getQueryBuilder());
+        return new ObjectPersister($this->getSqlBuilder());
     }
 
     protected final function createObjectRemover()
     {
-        return new ObjectRemover($this->getQueryBuilder());
+        return new ObjectRemover($this->getSqlBuilder());
     }
 
     protected final function createObjectBinder()
     {
         return new ObjectBinder();
+    }
+
+    protected final function createStorage()
+    {
+        return new PdoStorage($this->pdo);
     }
 
     /**
@@ -173,12 +181,12 @@ class RepositoryFactory
         return $repositoryClassName ? true : false;
     }
     
-    private function getQueryBuilder()
+    private function getSqlBuilder()
     {
-        if (!isset($this->queryBuilder)) {
-            $this->queryBuilder = new QueryBuilderMySql();
+        if (!isset($this->sqlBuilder)) {
+            $this->sqlBuilder = new SqlBuilderMySql();
         }
         
-        return $this->queryBuilder;
+        return $this->sqlBuilder;
     }
 }

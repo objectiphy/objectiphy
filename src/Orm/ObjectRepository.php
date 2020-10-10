@@ -13,6 +13,7 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\ObjectMapper;
 use Objectiphy\Objectiphy\Criteria\CB;
+use Objectiphy\Objectiphy\Query\QB;
 
 /**
  * Main entry point for all ORM operations
@@ -317,7 +318,7 @@ class ObjectRepository implements ObjectRepositoryInterface
             }
             $pkProperty = $pkProperties[0];
         }
-        $queryBuilder = CB::create();
+        $queryBuilder = QB::create();
         $normalizedCriteria = $queryBuilder->normalize($criteria, $pkProperty);
         
         return $normalizedCriteria;

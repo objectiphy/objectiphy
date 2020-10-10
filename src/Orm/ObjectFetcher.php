@@ -8,6 +8,7 @@ use Marmalade\Objectiphy\IterableResult;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Database\SqlBuilderInterface;
 
 /**
  * @package Objectiphy\Objectiphy
@@ -24,7 +25,7 @@ final class ObjectFetcher
     private bool $onDemand;
     private string $keyProperty;
     
-    public function __construct(SqlBuilder $sqlBuilder, StorageInterface $storage, ObjectBinder $objectBinder)
+    public function __construct(SqlBuilderInterface $sqlBuilder, ObjectBinder $objectBinder, StorageInterface $storage)
     {
         $this->sqlBuilder = $sqlBuilder;
         $this->storage = $storage;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy\Criteria;
+namespace Objectiphy\Objectiphy\Query;
 
 use Objectiphy\Objectiphy\Exception\CriteriaException;
 
@@ -18,10 +18,10 @@ class CriteriaExpression implements \JsonSerializable
     public string $propertyName;
     public string $aggregateFunction = '';
     public string $aggregateGroupByProperty = '';
-    public string $alias = '';
+    public ?string $alias = '';
     /** @var mixed $value */
     public $value;
-    public string $alias2;
+    public ?string $alias2;
     /** @var mixed $value2 */
     public $value2;
     /** @var CriteriaExpression[] */
@@ -44,8 +44,8 @@ class CriteriaExpression implements \JsonSerializable
      * using the applyValues method.
      * @param array $andExpressions An array of CriteriaExpression objects that should be ANDed together with this one.
      * @param array $orExpressions An array of CritieraExpression objects that should be ORed together with this one.
-     * @param string|null $aggregateFunction
-     * @param string|null $aggregateGroupByProperty
+     * @param string $aggregateFunction
+     * @param string $aggregateGroupByProperty
      * @throws CriteriaException
      */
     public function __construct(
@@ -57,8 +57,8 @@ class CriteriaExpression implements \JsonSerializable
         $value2 = null,
         array $andExpressions = [],
         array $orExpressions = [],
-        ?string $aggregateFunction = null,
-        ?string $aggregateGroupByProperty = null
+        string $aggregateFunction = '',
+        string $aggregateGroupByProperty = ''
     ) {
         $this->operator = strtoupper($operator);
         $this->propertyName = $propertyName;
@@ -147,7 +147,7 @@ class CriteriaExpression implements \JsonSerializable
      */
     public function hasUnboundParameters(): bool
     {
-        if ($this->operator != CB::IS && $this->operator != CB::IS_NOT
+        if ($this->operator != QB::IS && $this->operator != QB::IS_NOT
             && (($this->alias && $this->value === null) || ($this->alias2 && $this->value2 === null))
         ) {
             return true;
@@ -292,7 +292,7 @@ class CriteriaExpression implements \JsonSerializable
         if ($this->value === null) {
             $string .= 'null';
         }
-        if ($this->operator == CB::BETWEEN) {
+        if ($this->operator == QB::BETWEEN) {
             $string .= ' AND ' . strval($this->value2);
             if ($this->value2 === null) {
                 $string .= 'null';
@@ -322,7 +322,7 @@ class CriteriaExpression implements \JsonSerializable
      */
     private function requireNull(): bool
     {
-        return $this->operator == CB::IS || $this->operator == CB::IS_NOT;
+        return $this->operator == QB::IS || $this->operator == QB::IS_NOT;
     }
 
     /**

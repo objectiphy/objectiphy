@@ -69,6 +69,11 @@ class MappingCollection
         return $this->columns;
     }
 
+    public function getRelationships(): array 
+    {
+        return $this->relationships;
+    }
+    
     /**
      * Add the mapping information for a property to the collection and index it by both column and property names.
      * @param PropertyMapping $propertyMapping

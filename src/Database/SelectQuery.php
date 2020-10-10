@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy\Query;
+namespace Objectiphy\Objectiphy\Database;
 
 class SelectQuery
 {

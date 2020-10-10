@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Query;
 
+use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Exception\QueryException;
 
 /**
@@ -48,7 +49,7 @@ class QueryBuilder
     private string $joinWith = 'AND';
 
     /**
-     * Allows us to use CB::create() to chain method calls without having to assign to a variable first
+     * Allows us to use QB::create() to chain method calls without having to assign to a variable first
      */
     public static function create(): QueryBuilder
     {
@@ -263,8 +264,8 @@ class QueryBuilder
                         isset($expression['value2']) ? $expression['value2'] : null,
                         !empty($expression['and']) ? $this->normalize($expression['and']) : [],
                         !empty($expression['or']) ? $this->normalize($expression['or']) : [],
-                        !empty($expression['aggregateFunction']) ? $expression['aggregateFunction'] : null,
-                        !empty($expression['aggregateGroupByProperty']) ? $expression['aggregateGroupByProperty'] : null
+                        !empty($expression['aggregateFunction']) ? $expression['aggregateFunction'] : '',
+                        !empty($expression['aggregateGroupByProperty']) ? $expression['aggregateGroupByProperty'] : ''
                     );
                 }
                 $normalizedCriteria[] = $expression;

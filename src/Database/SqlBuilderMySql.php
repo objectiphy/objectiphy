@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy\Query;
+namespace Objectiphy\Objectiphy\Database;
 
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
-class QueryBuilderMySql implements QueryBuilderInterface
+class SqlBuilderMySql implements SqlBuilderInterface
 {
     private bool $disableMySqlCache = false;
-    private PaginationInterface $pagination;
+    private ?PaginationInterface $pagination;
     /**
      * @var array As per Doctrine, but with properties of children also allowed, eg.
      * ['contact.lastName'=>'ASC', 'policyNo'=>'DESC']
@@ -247,33 +247,33 @@ class QueryBuilderMySql implements QueryBuilderInterface
     public function getJoinsForLatestRecord(array $criteria = [])
     {
         $sql = '';
-        if ($this->latest && $this->objectMapper->getCommonShortColumn()) {
-            //Join on itself to get latest record per common column
-            $sql .= " LEFT JOIN " . $this->mainTable . " $this->latestAlias   
-                ON (" . $this->delimitColumns(
-                    $this->mainTable . "." . $this->objectMapper->getCommonShortColumn()
-                ) . " = " . $this->delimitColumns(
-                    $this->latestAlias . "." . $this->objectMapper->getCommonShortColumn()
-                );
-            if ($this->recordAgeIndicator) { //Custom indicator for which record is the latest (eg. by a datetime field, or coalesce on more than one column)
-                if (strpos($this->recordAgeIndicator, $this->mainTable) === false) {
-                    throw new MappingException(
-                        'Record age indicator does not contain the fully qualified main table name (' . $this->mainTable . ').'
-                    );
-                }
-                $sql .= " AND " . $this->recordAgeIndicator . " < " . str_replace(
-                        $this->mainTable,
-                        $this->latestAlias,
-                        $this->recordAgeIndicator
-                    ) . ")";
-            } else { //Default to assuming the largest id is the latest record
-                $sql .= " AND " . $this->delimitColumns(
-                        $this->mainTable . "." . $this->objectMapper->getIdColumn(false)
-                    ) . " < " . $this->delimitColumns(
-                        $this->latestAlias . "." . $this->objectMapper->getIdColumn(false)
-                    ) . ") ";
-            }
-        }
+//        if ($this->latest && $this->objectMapper->getCommonShortColumn()) {
+//            //Join on itself to get latest record per common column
+//            $sql .= " LEFT JOIN `" . $this->mainTable . "` $this->latestAlias   
+//                ON (" . $this->delimit(
+//                    $this->mainTable . "." . $this->objectMapper->getCommonShortColumn()
+//                ) . " = " . $this->delimit(
+//                    $this->latestAlias . "." . $this->objectMapper->getCommonShortColumn()
+//                );
+//            if ($this->recordAgeIndicator) { //Custom indicator for which record is the latest (eg. by a datetime field, or coalesce on more than one column)
+//                if (strpos($this->recordAgeIndicator, $this->mainTable) === false) {
+//                    throw new MappingException(
+//                        'Record age indicator does not contain the fully qualified main table name (' . $this->mainTable . ').'
+//                    );
+//                }
+//                $sql .= " AND " . $this->recordAgeIndicator . " < " . str_replace(
+//                        $this->mainTable,
+//                        $this->latestAlias,
+//                        $this->recordAgeIndicator
+//                    ) . ")";
+//            } else { //Default to assuming the largest id is the latest record
+//                $sql .= " AND " . $this->delimit(
+//                        $this->mainTable . "." . $this->objectMapper->getIdColumn(false)
+//                    ) . " < " . $this->delimit(
+//                        $this->latestAlias . "." . $this->objectMapper->getIdColumn(false)
+//                    ) . ") ";
+//            }
+//        }
 
         return $this->overrideQueryPart('joinsforlatestrecord', $sql, $criteria, $this->getQueryParams());
     }
@@ -288,7 +288,12 @@ class QueryBuilderMySql implements QueryBuilderInterface
     public function getJoins(array $criteria = [])
     {
         $sql = '';
-        $criteria = CB::create()->normalize($criteria); //As method is public, we have to normalize
+        $criteria = QB::create()->normalize($criteria); //As method is public, we have to normalize
+        $relationships = $this->mappingCollection->getRelationships();
+        foreach ($relationships as $key => $relationship) {
+            $stop = true;
+        }
+        
         $joinMappings = $this->objectMapper->getJoinMappings($this->entityClassName, $criteria);
 
         foreach ($joinMappings as $tableOrAlias => $joinMapping) {
@@ -302,7 +307,7 @@ class QueryBuilderMySql implements QueryBuilderInterface
                 $alias = $targetJoinTable == $tableOrAlias ? '' : $tableOrAlias;
                 if ($propertyMapping->isScalarJoin(false)) {
                     //Do the scalar join sql...
-                    $sql .= " " . ($propertyMapping->joinType ?: 'LEFT') . " JOIN " . $this->delimitColumns(
+                    $sql .= " " . ($propertyMapping->joinType ?: 'LEFT') . " JOIN " . $this->delimit(
                             $targetJoinTable
                         ) . " $alias ON ";
                     $columnPrefix = strlen(
@@ -322,13 +327,13 @@ class QueryBuilderMySql implements QueryBuilderInterface
                 } elseif ($joinedClassMapping && ($propertyMapping->joinSql || $propertyMapping->getFullColumnName(
                         )) && $propertyMapping->targetJoinColumn) {
                     //Normal join for a parent/child relationship
-                    $sql .= " " . ($propertyMapping->joinType ?: 'LEFT') . " JOIN " . $this->delimitColumns(
+                    $sql .= " " . ($propertyMapping->joinType ?: 'LEFT') . " JOIN " . $this->delimit(
                             $targetJoinTable
                         ) . " $alias ON ";
                     $sql .= ($propertyMapping->joinSql ?: $propertyMapping->getFullColumnName(
                             true,
                             $joinMapping->tableOrAlias
-                        ) . " = " . $this->delimitColumns(
+                        ) . " = " . $this->delimit(
                             ($alias ?: $targetJoinTable) . "." . $propertyMapping->targetJoinColumn
                         ));
                 } elseif ($propertyMapping->mappedBy && !empty($joinedClassMapping->properties[$propertyMapping->mappedBy])) {
@@ -361,13 +366,13 @@ class QueryBuilderMySql implements QueryBuilderInterface
                     }
                     $joinType = ($relatedPropertyMapping->joinType ?: ($propertyMapping->joinType ?: 'LEFT'));
                     $targetJoinColumn = $relatedPropertyMapping->targetJoinColumn && $relatedPropertyMapping->targetJoinColumn != '**id**' ? $relatedPropertyMapping->targetJoinColumn : $leftColumn;
-                    $joinSql = $this->delimitColumns(
+                    $joinSql = $this->delimit(
                             $leftTable . "." . $targetJoinColumn
-                        ) . " = " . $this->delimitColumns($targetTable . '.' . $targetColumn);
+                        ) . " = " . $this->delimit($targetTable . '.' . $targetColumn);
                     $joinSql = $relatedPropertyMapping->joinSql ?: $joinSql;
-                    $sql .= " " . $joinType . " JOIN " . $this->delimitColumns(
+                    $sql .= " " . $joinType . " JOIN " . $this->delimit(
                             $targetJoinTable
-                        ) . " " . $this->delimitColumns($alias) . " ON " . $joinSql;
+                        ) . " " . $this->delimit($alias) . " ON " . $joinSql;
                 }
             }
         }
@@ -384,7 +389,7 @@ class QueryBuilderMySql implements QueryBuilderInterface
      */
     public function getWhere(array $criteria = [])
     {
-        $criteria = CB::create()->normalize($criteria); //As method is public, we have to normalize
+        $criteria = QB::create()->normalize($criteria); //As method is public, we have to normalize
         $this->params = [];
         $sql = ' WHERE 1 ';
 
@@ -423,7 +428,7 @@ class QueryBuilderMySql implements QueryBuilderInterface
     public function getHaving(array $criteria = [])
     {
         $sql = '';
-        $criteria = CB::create()->normalize($criteria); //As method is public, we have to normalize
+        $criteria = QB::create()->normalize($criteria); //As method is public, we have to normalize
 
         $having = '';
         $joinMappings = $this->objectMapper->getJoinMappings($this->entityClassName, $criteria);
@@ -498,6 +503,11 @@ class QueryBuilderMySql implements QueryBuilderInterface
         return $this->overrideQueryPart('limit', $sql, $criteria, $this->getQueryParams());
     }
 
+    public function setQueryParams(array $params = [])
+    {
+        $this->params = $params;
+    }
+
     /**
      * Return the parameter values to bind to the SQL statement. Where more than one SQL statement is involved, the
      * index identifies which one we are dealing with.
@@ -528,12 +538,12 @@ class QueryBuilderMySql implements QueryBuilderInterface
         $this->params = [];
 
         if (!empty($row['table']) && !empty($row['data'])) {
-            $sql = "INSERT INTO " . $this->delimitColumns($row['table']) . " SET ";
+            $sql = "INSERT INTO " . $this->delimit($row['table']) . " SET ";
             $assignments = '';
             foreach ($row['data'] as $column => $value) {
                 $value = $value instanceof ObjectReferenceInterface ? $value->getPrimaryKeyValue() : $value;
                 $paramName = 'param_' . strval(count($this->params));
-                $assignments .= $this->delimitColumns($column) . " = :" . $paramName . ',';
+                $assignments .= $this->delimit($column) . " = :" . $paramName . ',';
                 $this->params[$paramName] = $value;
             }
             $assignments = rtrim($assignments, ",");
@@ -575,14 +585,14 @@ class QueryBuilderMySql implements QueryBuilderInterface
         $this->params = [];
 
         if (!empty($row['table']) && !empty($row['data'])) {
-            $sql = (!empty($row['isScalarJoin']) ? "INSERT INTO " : "UPDATE ") . $this->delimitColumns(
+            $sql = (!empty($row['isScalarJoin']) ? "INSERT INTO " : "UPDATE ") . $this->delimit(
                     $row['table']
                 ) . " SET ";
             $assignments = '';
             foreach ($row['data'] as $column => $value) {
                 $value = $value instanceof ObjectReferenceInterface ? $value->getPrimaryKeyValue() : $value;
                 $paramName = 'param_' . strval(count($this->params));
-                $assignments .= $this->delimitColumns($column) . " = :" . $paramName . ',';
+                $assignments .= $this->delimit($column) . " = :" . $paramName . ',';
                 $this->params[$paramName] = $value;
             }
             $assignments = rtrim($assignments, ",");
@@ -592,7 +602,7 @@ class QueryBuilderMySql implements QueryBuilderInterface
                 $sql .= " ON DUPLICATE KEY UPDATE " . $assignments;
             } else {
                 $this->params[$paramName] = $keyValue;
-                $sql .= ' WHERE ' . $this->delimitColumns(
+                $sql .= ' WHERE ' . $this->delimit(
                         $fullKeyColumn ?: $this->objectMapper->getIdColumn(true, $entityClassName)
                     ) . ' = :' . $paramName;
             }
@@ -925,9 +935,9 @@ class QueryBuilderMySql implements QueryBuilderInterface
             }
             if ($this->latest) {
                 //Getting latest record
-                $groups[] = $this->delimitColumns($this->mainTable . '.' . $this->objectMapper->getCommonShortColumn());
+                $groups[] = $this->delimit($this->mainTable . '.' . $this->objectMapper->getCommonShortColumn());
             } elseif ($this->groupByPrimaryKey) {
-                $groups[] = $this->delimitColumns($this->objectMapper->getIdColumn());
+                $groups[] = $this->delimit($this->objectMapper->getIdColumn());
             }
             if (!empty(array_filter($groups))) {
                 $sql .= ' ' . implode(', ', array_unique($groups)) . ' ';

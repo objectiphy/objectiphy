@@ -33,7 +33,7 @@ class QueryBuilderTest extends TestCase
         $this->assertEquals('>', $array['propertyName']['operator']);
         $this->assertEquals(1, $array['propertyName']['value']);
 
-        $this->object->{$method}('propertyTwo', CB::BETWEEN, ['A', ':B']);
+        $this->object->{$method}('propertyTwo', QB::BETWEEN, ['A', ':B']);
         $array = $this->object->toArray();
         $expression = $array['propertyTwo'];
         $this->assertEquals('propertyTwo', $expression['propertyName']);
@@ -41,17 +41,17 @@ class QueryBuilderTest extends TestCase
         $this->assertEquals('A', $expression['value']);
         $this->assertEquals('B', $expression['alias2']);
 
-        $nestedQueryBuilder = CB::create();
-        $nestedQueryBuilder->{$method}('propertyThree', CB::NOT_EQUALS, ':propertyThree');
+        $nestedQueryBuilder = QB::create();
+        $nestedQueryBuilder->{$method}('propertyThree', QB::NOT_EQUALS, ':propertyThree');
         $this->object->{$method}('propertyTwo', 'NOT IN', [1, 'A', ':B'], $nestedQueryBuilder);
         $array = $this->object->toArray();
         $expression = $array['propertyTwo']['andExpressions'][0];
         $this->assertEquals('propertyTwo', $expression['propertyName']);
-        $this->assertEquals(CB::NOT_IN, $expression['operator']);
+        $this->assertEquals(QB::NOT_IN, $expression['operator']);
         $this->assertEquals([1, 'A', ':B'], $expression['value']);
         $this->assertEquals('propertyThree', $expression['andExpressions'][0]['propertyName']);
 
-        $this->object->{$method}('propertyFour', CB::IS, null, null, 'SUM', 'loginId');
+        $this->object->{$method}('propertyFour', QB::IS, null, null, 'SUM', 'loginId');
         $array = $this->object->toArray();
         $expression = $array['propertyFour'];
         $this->assertEquals('propertyFour', $expression['propertyName']);
@@ -63,13 +63,13 @@ class QueryBuilderTest extends TestCase
 
     public function testOrWhere()
     {
-        $this->object->orWhere('propertyName', CB::LTE, 10);
+        $this->object->orWhere('propertyName', QB::LTE, 10);
         $array = $this->object->toArray();
         $this->assertArrayHasKey('propertyName', $array);
         $this->assertEquals('<=', $array['propertyName']['operator']);
         $this->assertEquals(10, $array['propertyName']['value']);
 
-        $this->object->orWhere('propertyTwo', CB::BETWEEN, [5, 50]);
+        $this->object->orWhere('propertyTwo', QB::BETWEEN, [5, 50]);
         $array = $this->object->toArray();
         $expression = $array['propertyName']['orExpressions'][0];
         $this->assertEquals('propertyTwo', $expression['propertyName']);
@@ -77,9 +77,9 @@ class QueryBuilderTest extends TestCase
         $this->assertEquals(5, $expression['value']);
         $this->assertEquals(50, $expression['value2']);
 
-        $nestedQueryBuilder = CB::create();
+        $nestedQueryBuilder = QB::create();
         $nestedQueryBuilder->orWhere('propertyThree', 'CONTAINS', ':snippet');
-        $this->object->orWhere('propertyTwo', CB::IN, [1, 'A', ':B'], $nestedQueryBuilder);
+        $this->object->orWhere('propertyTwo', QB::IN, [1, 'A', ':B'], $nestedQueryBuilder);
         $array = $this->object->toArray();
         $expression = $array['propertyName']['orExpressions'][1];
         $this->assertEquals('propertyTwo', $expression['propertyName']);
@@ -87,7 +87,7 @@ class QueryBuilderTest extends TestCase
         $this->assertEquals([1, 'A', ':B'], $expression['value']);
         $this->assertEquals('propertyThree', $expression['orExpressions'][0]['propertyName']);
 
-        $this->object->orWhere('propertyFour', CB::LIKE, 'Some%thing%', null, 'AVG', 'policyNumber');
+        $this->object->orWhere('propertyFour', QB::LIKE, 'Some%thing%', null, 'AVG', 'policyNumber');
         $array = $this->object->toArray();
         $expression = $array['propertyName']['orExpressions'][2];
         $this->assertEquals('propertyFour', $expression['propertyName']);
@@ -176,7 +176,7 @@ class QueryBuilderTest extends TestCase
         $this->assertEquals(1, count($normalized));
         $this->assertInstanceOf(CriteriaExpression::class, $normalized[0]);
         $this->assertEquals('policyId', $normalized[0]->propertyName);
-        $this->assertEquals(CB::IN, $normalized[0]->operator);
+        $this->assertEquals(QB::IN, $normalized[0]->operator);
         $this->assertEquals($criteria, $normalized[0]->value);
     }
 
@@ -209,24 +209,24 @@ class QueryBuilderTest extends TestCase
         $this->assertEquals(3, count($normalized));
         $this->assertInstanceOf(CriteriaExpression::class, $normalized[0]);
         $this->assertEquals('policyId', $normalized[0]->propertyName);
-        $this->assertEquals(CB::NOT_EQUALS, $normalized[0]->operator);
+        $this->assertEquals(QB::NOT_EQUALS, $normalized[0]->operator);
         $this->assertEquals(100, $normalized[0]->value);
 
         $this->assertInstanceOf(CriteriaExpression::class, $normalized[1]);
         $this->assertEquals('startDate', $normalized[1]->propertyName);
-        $this->assertEquals(CB::BETWEEN, $normalized[1]->operator);
+        $this->assertEquals(QB::BETWEEN, $normalized[1]->operator);
         $this->assertEquals('2019-01-01', $normalized[1]->value);
         $this->assertEquals('2019-12-31', $normalized[1]->value2);
 
         $this->assertInstanceOf(CriteriaExpression::class, $normalized[2]);
         $this->assertEquals('somethingElse', $normalized[2]->propertyName);
-        $this->assertEquals(CB::EQ, $normalized[2]->operator);
+        $this->assertEquals(QB::EQ, $normalized[2]->operator);
         $this->assertEquals(321, $normalized[2]->value);
         $this->assertEquals(1, count($normalized[2]->orExpressions));
 
         $this->assertInstanceOf(CriteriaExpression::class, $normalized[2]->orExpressions[0]);
         $this->assertEquals('nestedOr', $normalized[2]->orExpressions[0]->propertyName);
-        $this->assertEquals(CB::IN, $normalized[2]->orExpressions[0]->operator);
+        $this->assertEquals(QB::IN, $normalized[2]->orExpressions[0]->operator);
         $this->assertEquals([1, 'A'], $normalized[2]->orExpressions[0]->value);
 
         return $criteria;
@@ -244,17 +244,17 @@ class QueryBuilderTest extends TestCase
         $this->assertEquals(2, count($normalized));
         $this->assertInstanceOf(CriteriaExpression::class, $normalized[0]);
         $this->assertEquals('policyId', $normalized[0]->propertyName);
-        $this->assertEquals(CB::GREATER_THAN, $normalized[0]->operator);
+        $this->assertEquals(QB::GREATER_THAN, $normalized[0]->operator);
         $this->assertEquals(100, $normalized[0]->value);
 
         $this->assertInstanceOf(CriteriaExpression::class, $normalized[1]);
         $this->assertEquals('lastName', $normalized[1]->propertyName);
-        $this->assertEquals(CB::CONTAINS, $normalized[1]->operator);
+        $this->assertEquals(QB::CONTAINS, $normalized[1]->operator);
         $this->assertEquals('Mc', $normalized[1]->value);
         $this->assertEquals(1, count($normalized[1]->orExpressions));
 
         $this->assertEquals('lastName', $normalized[1]->orExpressions[0]->propertyName);
-        $this->assertEquals(CB::BEGINS_WITH, $normalized[1]->orExpressions[0]->operator);
+        $this->assertEquals(QB::BEGINS_WITH, $normalized[1]->orExpressions[0]->operator);
         $this->assertEquals('Mac', $normalized[1]->orExpressions[0]->value);
 
         return $criteria;
@@ -273,7 +273,7 @@ class QueryBuilderTest extends TestCase
         $this->assertEquals(6, count($normalized));
         $this->assertInstanceOf(CriteriaExpression::class, $normalized[0]);
         $this->assertEquals('policyId', $normalized[0]->propertyName);
-        $this->assertEquals(CB::NOT_EQ, $normalized[0]->operator);
+        $this->assertEquals(QB::NOT_EQ, $normalized[0]->operator);
         $this->assertEquals(100, $normalized[0]->value);
 
         $this->assertInstanceOf(CriteriaExpression::class, $normalized[1]);
@@ -284,35 +284,35 @@ class QueryBuilderTest extends TestCase
         //Complex array
         $this->assertInstanceOf(CriteriaExpression::class, $normalized[2]);
         $this->assertEquals('startDate', $normalized[2]->propertyName);
-        $this->assertEquals(CB::BETWEEN, $normalized[2]->operator);
+        $this->assertEquals(QB::BETWEEN, $normalized[2]->operator);
         $this->assertEquals('2019-01-01', $normalized[2]->value);
         $this->assertEquals('2019-12-31', $normalized[2]->value2);
 
         $this->assertInstanceOf(CriteriaExpression::class, $normalized[3]);
         $this->assertEquals('somethingElse', $normalized[3]->propertyName);
-        $this->assertEquals(CB::EQUALS, $normalized[3]->operator);
+        $this->assertEquals(QB::EQUALS, $normalized[3]->operator);
         $this->assertEquals(321, $normalized[3]->value);
         $this->assertEquals(1, count($normalized[3]->orExpressions));
 
         $this->assertInstanceOf(CriteriaExpression::class, $normalized[3]->orExpressions[0]);
         $this->assertEquals('nestedOr', $normalized[3]->orExpressions[0]->propertyName);
-        $this->assertEquals(CB::IN, $normalized[3]->orExpressions[0]->operator);
+        $this->assertEquals(QB::IN, $normalized[3]->orExpressions[0]->operator);
         $this->assertEquals([1, 'A'], $normalized[3]->orExpressions[0]->value);
 
         //Expressions
         $this->assertInstanceOf(CriteriaExpression::class, $normalized[4]);
         $this->assertEquals('policyId', $normalized[4]->propertyName);
-        $this->assertEquals(CB::GT, $normalized[4]->operator);
+        $this->assertEquals(QB::GT, $normalized[4]->operator);
         $this->assertEquals(100, $normalized[4]->value);
 
         $this->assertInstanceOf(CriteriaExpression::class, $normalized[5]);
         $this->assertEquals('lastName', $normalized[5]->propertyName);
-        $this->assertEquals(CB::CONTAINS, $normalized[5]->operator);
+        $this->assertEquals(QB::CONTAINS, $normalized[5]->operator);
         $this->assertEquals('Mc', $normalized[5]->value);
         $this->assertEquals(1, count($normalized[5]->orExpressions));
 
         $this->assertEquals('lastName', $normalized[5]->orExpressions[0]->propertyName);
-        $this->assertEquals(CB::BEGINS_WITH, $normalized[5]->orExpressions[0]->operator);
+        $this->assertEquals(QB::BEGINS_WITH, $normalized[5]->orExpressions[0]->operator);
         $this->assertEquals('Mac', $normalized[5]->orExpressions[0]->value);
     }
 
