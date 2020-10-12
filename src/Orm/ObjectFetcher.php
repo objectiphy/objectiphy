@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use http\Exception\RuntimeException;
 use Marmalade\Objectiphy\IterableResult;
+use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Database\SqlBuilderInterface;
+use Objectiphy\Objectiphy\Mapping\ObjectMapper;
+use Objectiphy\Objectiphy\Query\CriteriaExpression;
+use Objectiphy\Objectiphy\Query\JoinExpression;
 
 /**
  * @package Objectiphy\Objectiphy
@@ -18,42 +23,33 @@ final class ObjectFetcher
 {
     private SqlBuilderInterface $sqlBuilder;
     private StorageInterface $storage;
+    private ObjectMapper $objectMapper;
     private ObjectBinder $objectBinder;
-    private bool $bindToEntities = true;
-    private bool $multiple;
-    private bool $latest;
-    private bool $onDemand;
-    private string $keyProperty;
     
-    public function __construct(SqlBuilderInterface $sqlBuilder, ObjectBinder $objectBinder, StorageInterface $storage)
-    {
+    public function __construct(
+        SqlBuilderInterface $sqlBuilder,
+        ObjectMapper $objectMapper,
+        ObjectBinder $objectBinder,
+        StorageInterface $storage
+    ) {
         $this->sqlBuilder = $sqlBuilder;
         $this->storage = $storage;
+        $this->objectMapper = $objectMapper;
         $this->objectBinder = $objectBinder;
-        $this->setFindOptions(); //Set the defaults
     }
 
+    public function setClassName(string $className): void 
+    {
+        $this->className = $className;
+    }
+    
     /**
      * These are options that are likely to change on each call (unlike config options).
      */
-    public function setFindOptions(
-        bool $multiple = true, 
-        bool $latest = false, 
-        bool $onDemand = false, 
-        string $keyProperty = ''
-    ) {
-        $this->multiple = $multiple;
-        $this->latest = $latest;
-        $this->onDemand = $onDemand;
-        $this->keyProperty = $keyProperty;
-    }
-
-    /**
-     * Any config options that the fetcher needs to know about are set here.
-     */
-    public function setConfigOptions(bool $bindToEntities)
+    public function setFindOptions(FindOptions $findOptions) 
     {
-        $this->bindToEntities = $bindToEntities;
+        $this->findOptions = $findOptions;
+        $this->sqlBuilder->setFindOptions($findOptions);
     }
 
     /**
@@ -64,28 +60,26 @@ final class ObjectFetcher
      * @param string $scalarProperty Property name if returning a value or array of values from a single property.
      * @return mixed
      */
-    public function doFindBy(
-        string $className,
-        array $criteria = [],
-        array $orderBy = [],
-        ?PaginationInterface $pagination = null,
-        string $scalarProperty = ''
-    ) {
-        $this->validateCriteria();
-        $this->doCount($pagination, $criteria);
-        $result = $this->doFetch($criteria, $orderBy, $pagination, $scalarProperty);
+    public function doFindBy() 
+    {
+        $this->validate();
+        $this->doCount();
+        $result = $this->doFetch();
 
         return $result;
     }
 
     /**
-     * Ensure we have CriteriaExpressions in the criteria array (indicates that it has been normalised).
-     * To save time, we won't check every element of the criteria array - if the first item is OK, the
-     * rest will almost certainly be fine - not worth checking them all.
-     * @param array $criteria
+     * Ensure find options have been set and that we have CriteriaExpressions in the criteria array 
+     * (indicates that it has been normalised). To save time, we won't check every element of the 
+     * criteria array - if the first item is OK, the rest will almost certainly be fine - not worth 
+     * checking them all.
      */
-    private function validateCriteria(array $criteria): void
+    private function validate(): void
     {
+        if (empty($critiera = $this->findOptions)) {
+            throw new ObjectiphyException('Find options have not been set on the object fetcher.');
+        }
         if (!empty($criteria)
             && !(reset($criteria) instanceof CriteriaExpression)
             && !(reset($criteria) instanceof JoinExpression)
@@ -111,9 +105,8 @@ final class ObjectFetcher
      */
     private function doFetch(array $criteria, array $orderBy, ?PaginationInterface $pagination, string $scalarProperty)
     {
-        $this->sqlBuilder->setPagination($pagination);
-        $this->sqlBuilder->setOrderBy($orderBy);
-        $sql = $this->sqlBuilder->getSelectQuery($criteria, $this->multiple, $this->latest);
+        $this->sqlBuilder->setFindOptions( $pagination, $orderBy, $this->multiple, $this->latest);
+        $sql = $this->sqlBuilder->getSelectQuery($criteria);
         $params = $this->sqlBuilder->getQueryParams();
 
         if ($this->multiple && $this->iterable && $scalarProperty) {

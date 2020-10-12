@@ -4,15 +4,22 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Database;
 
+use Objectiphy\Objectiphy\Config\FindOptions;
+
 interface SqlBuilderInterface
 {
+    /**
+     * Set runtime configuration for a find query
+     */
+    public function setFindOptions(FindOptions $findOptions): void;
+        
     /**
      * Get the query necessary to select the records that will be used to hydrate the given entity.
      * @param array $criteria An array of CriteriaExpression objects.
      * @param array $fetchOptions Array of options (eg. multiple, latest, keyProperty - see ObjectFetcher)
      * @return string|object The query to execute (return type must match whatever is expected by the storage class).
      */
-    public function getSelectQuery(array $criteria = []);
+    public function getSelectQuery();
 
     /**
      * Return the parameter values to bind to the query. Where more than one query is involved, the index identifies

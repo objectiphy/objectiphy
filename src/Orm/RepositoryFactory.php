@@ -101,10 +101,12 @@ class RepositoryFactory
 
     protected final function createObjectFetcher()
     {
+        $sqlBuilder = $this->getSqlBuilder();
+        $objectMapper = $this->createObjectMapper();
         $objectBinder = $this->createObjectBinder();
         $storage = $this->createStorage();
 
-        return new ObjectFetcher($this->getSqlBuilder(), $objectBinder, $this->createStorage());
+        return new ObjectFetcher($sqlBuilder, $objectMapper, $objectBinder, $storage);
     }
 
     protected final function createObjectPersister()

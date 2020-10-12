@@ -81,6 +81,7 @@ class ObjectRepository implements ObjectRepositoryInterface
     {
         $this->className = $className;
         $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
+        $this->objectFetcher->setClassname($className);
     }
 
     /**
@@ -304,7 +305,7 @@ class ObjectRepository implements ObjectRepositoryInterface
         $this->assertClassNameSet();
         $criteria = $this->normalizeCriteria($criteria);
         
-        return null; //$this->objectFetcher->doFindBy($this->className, $criteria);
+        return $this->objectFetcher->doFindBy($this->className, $criteria);
     }
 
     protected function normalizeCriteria(array $criteria = [])
@@ -348,10 +349,6 @@ class ObjectRepository implements ObjectRepositoryInterface
             $this->configOptions->guessMappings,
             $this->configOptions->tableNamingStrategy,
             $this->configOptions->columnNamingStrategy
-        );
-        
-        $this->objectFetcher->setConfigOptions(
-            $this->configOptions->bindToEntities,
         );
     }
 }

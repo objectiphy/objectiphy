@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Database;
 
+use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
@@ -11,43 +12,19 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 class SqlBuilderMySql implements SqlBuilderInterface
 {
     private bool $disableMySqlCache = false;
-    private ?PaginationInterface $pagination;
-    /**
-     * @var array As per Doctrine, but with properties of children also allowed, eg.
-     * ['contact.lastName'=>'ASC', 'policyNo'=>'DESC']
-     */
-    private array $orderBy;
-    private bool $multiple;
-    private bool $latest;
-    private bool $count;
-    private string $className;
-    private MappingCollection $mappingCollection;
+    private FindOptions $findOptions;
     private string $mainTable;
-
-    public function __construct()
-    {
-        $this->setFindOptions();
-        $this->setSaveOptions();
-    }
 
     /**
      * These are options that are likely to change on each call (unlike config options).
      */
-    public function setFindOptions(
-        ?PaginationInterface $pagination = null,
-        array $orderBy = [],
-        bool $multiple = true,
-        bool $latest = false,
-        bool $count = false
-    ) {
-        $this->pagination = $pagination;
-        $this->orderBy = $orderBy;
-        $this->multiple = $multiple;
-        $this->latest = $latest;
-        $this->count = $count;
+    public function setFindOptions(FindOptions $findOptions): void
+    {
+        $this->findOptions = $findOptions;
+        $this->mainTable = $findOptions->mappingCollection->getPrimaryTableMapping()->name;
     }
 
-    public function setSaveOptions()
+    public function setSaveOptions(): void
     {
         //None yet...
     }
@@ -59,15 +36,6 @@ class SqlBuilderMySql implements SqlBuilderInterface
     {
         $this->disableMySqlCache = $disableMySqlCache;
     }
-
-    public function initialise(string $className, MappingCollection $mappingCollection)
-    {
-        $this->className = $className;
-        $this->mappingCollection = $mappingCollection;
-        $this->mainTable = $mappingCollection->getPrimaryTableMapping()->name;
-    }
-
-
 
 //    /** @var string */
 //    protected $entityClassName;
@@ -165,10 +133,10 @@ class SqlBuilderMySql implements SqlBuilderInterface
      */
     public function getSelectQuery(array $criteria = [])
     {
-        if (!isset($this->mappingCollection)) {
+        if (!isset($this->findOptions->mappingCollection)) {
             throw new ObjectiphyException('SQL Builder has not been initialised. There is no mapping information!');
         }
-        if (empty($this->mappingCollection->getPrimaryTableMapping())) {
+        if (empty($this->mainTable)) {
             throw new ObjectiphyException('Mapping collection does not have a primary table defined.');
         }
 
@@ -185,7 +153,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
         );
 
         $sql = (string) $selectQuery;
-        if ($this->count && strpos($sql, 'SELECT COUNT') === false) { //We have to select all to get the count :(
+        if ($this->findOptions->count && strpos($sql, 'SELECT COUNT') === false) { //We have to select all to get the count :(
             $sql = "SELECT COUNT(*) FROM ($sql) subquery";
         }
 
@@ -210,7 +178,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
         
         if (!$sql) {
             $columns = [];
-            $columnDefinitions = $this->mappingCollection->getColumnDefinitions();
+            $columnDefinitions = $this->findOptions->mappingCollection->getColumnDefinitions();
             foreach ($columnDefinitions as $alias => $propertyMapping) {
                 $columns[] = $propertyMapping->column->getFullColumnName() . ' AS ' . $alias;
             }
@@ -289,7 +257,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
     {
         $sql = '';
         $criteria = QB::create()->normalize($criteria); //As method is public, we have to normalize
-        $relationships = $this->mappingCollection->getRelationships();
+        $relationships = $this->findOptions->mappingCollection->getRelationships();
         foreach ($relationships as $key => $relationship) {
             $stop = true;
         }
