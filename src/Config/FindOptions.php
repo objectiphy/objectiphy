@@ -10,8 +10,7 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 class FindOptions
 {
     public MappingCollection $mappingCollection;
-    public string $className;
-    public array $criteria;
+    public array $criteria = [];
     public ?PaginationInterface $pagination = null;
     /**
      * @var array As per Doctrine, but with properties of children also allowed, eg.
@@ -25,4 +24,26 @@ class FindOptions
     public bool $onDemand = false;
     public string $keyProperty = '';
     public string $scalarProperty = '';
+    
+    public function __construct(MappingCollection $mappingCollection)
+    {
+        $this->mappingCollection = $mappingCollection;
+    }
+
+    public static function create(MappingCollection $mappingCollection, array $settings = [])
+    {
+        $findOptions = new FindOptions($mappingCollection);
+        foreach ($settings as $key => $value) {
+            if (property_exists($findOptions, $key)) {
+                $findOptions->$key = $value;
+            }
+        }
+        
+        return $findOptions;
+    }
+    
+    public function getClassName()
+    {
+        return $this->mappingCollection->getEntityClassName();
+    }
 }

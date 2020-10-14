@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Config\ConfigOptions;
+use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Contract\ExplanationInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
@@ -23,7 +24,6 @@ use Objectiphy\Objectiphy\Query\QB;
 class ObjectRepository implements ObjectRepositoryInterface
 {
     protected ConfigOptions $configOptions;
-    protected string $className;
     protected ObjectMapper $objectMapper;
     protected ObjectFetcher $objectFetcher;
     protected ObjectPersister $objectPersister;
@@ -79,9 +79,9 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     public function setClassName(string $className): void
     {
-        $this->className = $className;
         $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
-        $this->objectFetcher->setClassname($className);
+        $findOptions = FindOptions::create($this->mappingCollection);
+        $this->objectFetcher->setFindOptions($findOptions);
     }
 
     /**
@@ -90,7 +90,7 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     public function getClassName(): string
     {
-        return $this->className;
+        return $this->mappingCollection->getEntityClassName() ?? '';
     }
 
     /**
@@ -121,7 +121,7 @@ class ObjectRepository implements ObjectRepositoryInterface
         $this->assertClassNameSet();
         $pkProperties = $this->mappingCollection->getPrimaryKeyProperties(true);
         if (!$pkProperties) {
-            $errorMessage = sprintf('The current entity (`%1$s`) does not have a primary key, so you cannot use the find method. Either specify a primary key in the mapping information, or use findOneBy instead.', $this->className);
+            $errorMessage = sprintf('The current entity (`%1$s`) does not have a primary key, so you cannot use the find method. Either specify a primary key in the mapping information, or use findOneBy instead.', $this->getClassName());
             $this->throwException(new ObjectiphyException($errorMessage));
         }
 
@@ -137,7 +137,9 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     public function findOneBy(array $criteria = []): ?object
     {
-        $this->objectFetcher->setFindOptions(false);
+        $findOptions = FindOptions::create($this->mappingCollection, ['multiple' => false]);
+        $this->objectFetcher->setFindOptions($findOptions);
+
         return $this->doFindBy($criteria);
     }
 
@@ -159,7 +161,8 @@ class ObjectRepository implements ObjectRepositoryInterface
 
         //TODO: common property/age indicator
 
-        $this->objectFetcher->setFindOptions(false, true);
+        $findOptions = FindOptions::create($this->mappingCollection, ['multiple' => false, 'latest' => true]);
+        $this->objectFetcher->setFindOptions($findOptions);
 
         return $this->doFindBy($criteria);
     }
@@ -305,7 +308,7 @@ class ObjectRepository implements ObjectRepositoryInterface
         $this->assertClassNameSet();
         $criteria = $this->normalizeCriteria($criteria);
         
-        return $this->objectFetcher->doFindBy($this->className, $criteria);
+        return $this->objectFetcher->doFindBy($this->getClassName(), $criteria);
     }
 
     protected function normalizeCriteria(array $criteria = [])
@@ -314,7 +317,7 @@ class ObjectRepository implements ObjectRepositoryInterface
         if (is_int(array_key_first($criteria) && is_scalar(reset($criteria)))) { //Plain list of primary keys passed in
             $pkProperties = $this->mappingCollection->getPrimaryKeyProperties(true);
             if (!$pkProperties || count($pkProperties) !== 1) {
-                $message = sprintf('The criteria passed in is a plain list of values, but entity \'%1$s\' has a composite key so there is insufficient information to identify which records to return.', $this->className);
+                $message = sprintf('The criteria passed in is a plain list of values, but entity \'%1$s\' has a composite key so there is insufficient information to identify which records to return.', $this->getClassName());
                 throw new ObjectiphyException($message);
             }
             $pkProperty = $pkProperties[0];
@@ -330,7 +333,7 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     protected function assertClassNameSet()
     {
-        if (!$this->className) {
+        if (!$this->getClassName()) {
             $callingMethod = debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['function'] ?? 'Unknown method';
             $message = sprintf('Please call setEntityClassName before calling %1$s.', $callingMethod);
             throw new ObjectiphyException($message);

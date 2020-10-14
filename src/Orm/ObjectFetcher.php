@@ -25,6 +25,7 @@ final class ObjectFetcher
     private StorageInterface $storage;
     private ObjectMapper $objectMapper;
     private ObjectBinder $objectBinder;
+    private FindOptions $options;
     
     public function __construct(
         SqlBuilderInterface $sqlBuilder,
@@ -38,17 +39,12 @@ final class ObjectFetcher
         $this->objectBinder = $objectBinder;
     }
 
-    public function setClassName(string $className): void 
-    {
-        $this->className = $className;
-    }
-    
     /**
      * These are options that are likely to change on each call (unlike config options).
      */
     public function setFindOptions(FindOptions $findOptions) 
     {
-        $this->findOptions = $findOptions;
+        $this->options = $findOptions;
         $this->sqlBuilder->setFindOptions($findOptions);
     }
 
@@ -77,10 +73,10 @@ final class ObjectFetcher
      */
     private function validate(): void
     {
-        if (empty($critiera = $this->findOptions)) {
+        if (empty($this->options)) {
             throw new ObjectiphyException('Find options have not been set on the object fetcher.');
         }
-        if (!empty($criteria)
+        if (!empty($this->options->criteria)
             && !(reset($criteria) instanceof CriteriaExpression)
             && !(reset($criteria) instanceof JoinExpression)
         ) {
@@ -91,22 +87,21 @@ final class ObjectFetcher
     /**
      * Count the records and populate the record count on the pagination object.
      */
-    private function doCount(?PaginationInterface $pagination, array $criteria): void
+    private function doCount(): void
     {
-        if ($this->multiple && $pagination) {
-            $countSql = $this->sqlBuilder->getSelectQuery($criteria, $this->multiple, $this->latest, true);
+        if ($this->options->multiple && $this->findOptions->pagination) {
+            $countSql = $this->sqlBuilder->getSelectQuery($this->options->criteria, $this->options->multiple, $this->options->latest, true);
             $recordCount = intval($this->fetchValue($countSql, $this->sqlBuilder->getQueryParams()));
-            $pagination->setTotalRecords($recordCount);
+            $this->options->pagination->setTotalRecords($recordCount);
         }
     }
 
     /**
      * Return the records, in whatever format is requested.
      */
-    private function doFetch(array $criteria, array $orderBy, ?PaginationInterface $pagination, string $scalarProperty)
+    private function doFetch()
     {
-        $this->sqlBuilder->setFindOptions( $pagination, $orderBy, $this->multiple, $this->latest);
-        $sql = $this->sqlBuilder->getSelectQuery($criteria);
+        $sql = $this->sqlBuilder->getSelectQuery();
         $params = $this->sqlBuilder->getQueryParams();
 
         if ($this->multiple && $this->iterable && $scalarProperty) {
@@ -116,7 +111,7 @@ final class ObjectFetcher
         } elseif ($this->multiple && $scalarProperty) {
             $result = $this->fetchValues($sql, $params);
         } elseif ($this->multiple) {
-            $result = $this->fetchResults($sql, $params, $keyProperty);
+            $result = $this->fetchResults($sql, $params);
         } elseif ($scalarProperty) {
             $result = $this->fetchValue($sql, $params);
         } else {
@@ -179,12 +174,12 @@ final class ObjectFetcher
      * will be lost).
      * @return array Array of arrays of data or array of entities.
      */
-    public function fetchResults(string $sql, array $params = null, string $keyProperty = null): array
+    public function fetchResults(string $sql, array $params = null): array
     {
         $this->storage->executeQuery($sql, $params ?: []);
         $rows = $this->storage->fetchResults();
-        if ($rows && $this->bindToEntities) {
-            $result = $this->objectBinder->bindRowsToEntities($rows, $this->repository->getEntityClassName(), $keyProperty);
+        if ($rows && $this->options->bindToEntities) {
+            $result = $this->objectBinder->bindRowsToEntities($rows, $this->options->getClassName(), $this->options->keyProperty);
         } else {
             $result = $rows;
         }

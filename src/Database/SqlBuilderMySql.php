@@ -8,11 +8,12 @@ use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
+use Objectiphy\Objectiphy\Query\QB;
 
 class SqlBuilderMySql implements SqlBuilderInterface
 {
     private bool $disableMySqlCache = false;
-    private FindOptions $findOptions;
+    private FindOptions $options;
     private string $mainTable;
 
     /**
@@ -20,7 +21,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
      */
     public function setFindOptions(FindOptions $findOptions): void
     {
-        $this->findOptions = $findOptions;
+        $this->options = $findOptions;
         $this->mainTable = $findOptions->mappingCollection->getPrimaryTableMapping()->name;
     }
 
@@ -128,12 +129,11 @@ class SqlBuilderMySql implements SqlBuilderInterface
 
     /**
      * Get the SQL query necessary to select the records that will be used to hydrate the given entity.
-     * @param array $criteria An array of CriteriaExpression objects.
      * @return string The SQL query to execute.
      */
-    public function getSelectQuery(array $criteria = [])
+    public function getSelectQuery()
     {
-        if (!isset($this->findOptions->mappingCollection)) {
+        if (!isset($this->options->mappingCollection)) {
             throw new ObjectiphyException('SQL Builder has not been initialised. There is no mapping information!');
         }
         if (empty($this->mainTable)) {
@@ -141,19 +141,19 @@ class SqlBuilderMySql implements SqlBuilderInterface
         }
 
         $selectQuery = new SelectQuery(
-            $this->getSelect($criteria),
-            $this->getFrom($criteria),
-            $this->getJoinsForLatestRecord($criteria),
-            $this->getJoins($criteria),
-            $this->getWhere($criteria),
-            $this->getGroupBy($criteria),
-            $this->getHaving($criteria),
-            $this->getOrderBy($criteria),
-            $this->getLimit($criteria)
+            $this->getSelect(),
+            $this->getFrom(),
+            $this->getJoinsForLatestRecord(),
+            $this->getJoins(),
+            $this->getWhere(),
+            $this->getGroupBy(),
+            $this->getHaving(),
+            $this->getOrderBy(),
+            $this->getLimit()
         );
 
         $sql = (string) $selectQuery;
-        if ($this->findOptions->count && strpos($sql, 'SELECT COUNT') === false) { //We have to select all to get the count :(
+        if ($this->options->count && strpos($sql, 'SELECT COUNT') === false) { //We have to select all to get the count :(
             $sql = "SELECT COUNT(*) FROM ($sql) subquery";
         }
 
@@ -178,17 +178,19 @@ class SqlBuilderMySql implements SqlBuilderInterface
         
         if (!$sql) {
             $columns = [];
-            $columnDefinitions = $this->findOptions->mappingCollection->getColumnDefinitions();
+            $columnDefinitions = $this->options->mappingCollection->getColumnDefinitions();
             foreach ($columnDefinitions as $alias => $propertyMapping) {
-                $columns[] = $propertyMapping->column->getFullColumnName() . ' AS ' . $alias;
+                if ($columnName = $propertyMapping->column->getFullColumnName()) {
+                    $columns[] = $columnName . ' AS ' . $alias;
+                }
             }
             $sql = "SELECT " . ($columns ? implode(', ', $columns) . " " : "* ");
         }
 
-        $selectSql = $this->overrideQueryPart('select', $sql, $criteria, $this->getQueryParams());
+        $selectSql = $this->overrideQueryPart('select', $sql, $this->getQueryParams());
 
         //We cannot count using a subquery if there are duplicate column names, and only need one column for the count to work
-        if ($this->count && strpos($selectSql, 'SELECT COUNT(') === false) {
+        if ($this->options->count && strpos($selectSql, 'SELECT COUNT(') === false) {
             $selectSql = substr($selectSql, 0, strpos($selectSql, ','));
         }
 
@@ -196,23 +198,21 @@ class SqlBuilderMySql implements SqlBuilderInterface
     }
 
     /**
-     * @param array $criteria
      * @return string The FROM part of the SQL query.
      */
-    public function getFrom(array $criteria = [])
+    public function getFrom()
     {
         $sql = "FROM " . $this->delimit($this->mainTable);
 
-        return $this->overrideQueryPart('from', $sql, $criteria, $this->getQueryParams());
+        return $this->overrideQueryPart('from', $sql, $this->getQueryParams());
     }
 
     /**
-     * @param array $criteria
      * @return string The join SQL for returning the latest record(s) in a group.
      * @throws MappingException
      * @throws \ReflectionException
      */
-    public function getJoinsForLatestRecord(array $criteria = [])
+    public function getJoinsForLatestRecord()
     {
         $sql = '';
 //        if ($this->latest && $this->objectMapper->getCommonShortColumn()) {
@@ -243,26 +243,25 @@ class SqlBuilderMySql implements SqlBuilderInterface
 //            }
 //        }
 
-        return $this->overrideQueryPart('joinsforlatestrecord', $sql, $criteria, $this->getQueryParams());
+        return $this->overrideQueryPart('joinsforlatestrecord', $sql, $this->getQueryParams());
     }
 
     /**
-     * @param array $criteria
      * @return string The join SQL for object relationships.
      * @throws Exception\CriteriaException
      * @throws MappingException
      * @throws \ReflectionException
      */
-    public function getJoins(array $criteria = [])
+    public function getJoins()
     {
         $sql = '';
-        $criteria = QB::create()->normalize($criteria); //As method is public, we have to normalize
-        $relationships = $this->findOptions->mappingCollection->getRelationships();
+        $this->options->criteria = QB::create()->normalize($this->options->criteria); //As method is public, we have to normalize
+        $relationships = $this->options->mappingCollection->getRelationships();
         foreach ($relationships as $key => $relationship) {
             $stop = true;
         }
         
-        $joinMappings = $this->objectMapper->getJoinMappings($this->entityClassName, $criteria);
+        $joinMappings = $this->objectMapper->getJoinMappings($this->options->getClassName(), $criteria);
 
         foreach ($joinMappings as $tableOrAlias => $joinMapping) {
             $propertyMapping = $joinMapping->propertyMapping;
@@ -345,7 +344,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
             }
         }
 
-        return $this->overrideQueryPart('joins', $sql, $criteria, $this->getQueryParams());
+        return $this->overrideQueryPart('joins', $sql, $this->getQueryParams());
     }
 
     /**
@@ -371,7 +370,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
 
         $sql .= $this->customWhereClause ? " AND ($this->customWhereClause) " : "";
 
-        return $this->overrideQueryPart('where', $sql, $criteria, $this->getQueryParams());
+        return $this->overrideQueryPart('where', $sql, $this->getQueryParams());
     }
 
     /**
@@ -405,7 +404,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
         }
         $sql = $having ? ' HAVING 1 ' . $having : '';
 
-        return $this->overrideQueryPart('having', $sql, $criteria, $this->getQueryParams());
+        return $this->overrideQueryPart('having', $sql, $this->getQueryParams());
     }
 
     /**
@@ -448,7 +447,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
             }
         }
 
-        return $this->overrideQueryPart('orderby', $sql, $criteria, $this->getQueryParams());
+        return $this->overrideQueryPart('orderby', $sql, $this->getQueryParams());
     }
 
     /**
@@ -468,7 +467,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
             }
         }
 
-        return $this->overrideQueryPart('limit', $sql, $criteria, $this->getQueryParams());
+        return $this->overrideQueryPart('limit', $sql, $this->getQueryParams());
     }
 
     public function setQueryParams(array $params = [])
@@ -491,7 +490,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
             $params = !empty($this->params) ? $this->params : [];
         }
 
-        return array_merge($params, $this->customWhereParams ?: []);
+        return $params;
     }
 
     /**
@@ -664,7 +663,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
     protected function getCountSql(array $criteria = [])
     {
         $sql = '';
-        if ($this->count && empty($this->queryOverrides)) { //See if we can do a more efficient count
+        if ($this->options->count && empty($this->queryOverrides)) { //See if we can do a more efficient count
             $groupBy = trim(str_replace('GROUP BY', '', $this->getGroupBy($criteria, true)));
             $baseGroupBy = trim(str_replace('GROUP BY', '', $this->baseGroupBy($criteria, true)));
             if ($groupBy) {
@@ -917,13 +916,13 @@ class SqlBuilderMySql implements SqlBuilderInterface
         return $this->overrideQueryPart('groupby', $sql, $criteria, $this->getQueryParams());
     }
 
-    private function overrideQueryPart($part, $generatedQuery, $criteria, $params)
+    private function overrideQueryPart($part, $generatedQuery, $params)
     {
-        $override = !empty($this->queryOverrides[strtolower($part)]) ? $this->queryOverrides[strtolower(
-            $part
-        )] : $generatedQuery;
+        $override = !empty($this->queryOverrides[strtolower($part)])
+            ? $this->queryOverrides[strtolower($part)]
+            : $generatedQuery;
         if (is_callable($override)) {
-            $override = call_user_func_array($override, [$generatedQuery, $criteria, $params]);
+            $override = call_user_func_array($override, [$generatedQuery, $this->options->criteria, $params]);
         } elseif (!is_string($override)) { //We don't know what the heck this is - just use our generated query
             $override = $generatedQuery;
         }
