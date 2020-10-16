@@ -54,42 +54,4 @@ class Column
     
     /** @var string Name of property or properties to group by (comma separated) */
     public string $aggregateGroupBy = '';
-
-    /** @var string Name of table to which this column belongs. */
-    private string $tableName = '';
-    
-    /** @var string Alias used for the table in the SQL. */
-    private string $tableAlias = '';
-    
-    /** @var string Alias used in the SQL. */
-    private string $alias = '';
-
-    public function setTableName(string $value): void
-    {
-        $this->tableName = $tableName;
-    }
-
-    public function setTableAlias(string $value): void
-    {
-        $this->tableAlias = $tableAlias;
-    }
-    
-    public function setAlias(string $value): void
-    {
-        $this->alias = $alias;
-    }
-    
-    public function getFullColumnName($useAliases = true)
-    {
-        $table = '';
-        $column = '';
-        if ($useAliases) {
-            $table = $this->tableAlias;
-            $column = $this->alias;
-        }
-        $table = $table ?: $this->tableName;
-        $column = $column ?: $this->name;
-        
-        return trim($table . '.' . $column, '.');
-    }
 }

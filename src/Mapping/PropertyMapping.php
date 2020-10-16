@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Mapping;
 
 /**
- * Mapping information for a particular property.
+ * Mapping information for a particular property in context (ie. the same property
+ * on different instances of the same class will have different context such as
+ * aliases and relationship positioning).
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
@@ -58,6 +60,11 @@ class PropertyMapping
      */
     private string $alias = '';
 
+    /**
+     * @var string Locally cached alias for this property's column's table.
+     */
+    private string $tableAlias = '';
+
     public function __construct(
         string $className, 
         string $propertyName, 
@@ -107,5 +114,33 @@ class PropertyMapping
         }
         
         return $this->alias;
+    }
+
+    public function getTableAlias(): string
+    {
+        if (empty($this->tableAlias)
+            && count($this->parentProperties) > 0 //On the root entity, no need to alias
+            && strpos($this->column->name, '.') === false) { //Already mapped to an alias manually, so don't mess 
+            $this->tableAlias = 'obj_alias_' . implode('_', $this->parentProperties);
+        }
+        
+        return $this->tableAlias;
+    }
+
+    public function getFullColumnName()
+    {
+        $table = $this->getTableAlias();
+        $table = $table ?: $this->table->name;
+        $column = $this->column->name;
+
+        return $column ? trim($table . '.' . $column, '.') : '';
+    }
+    
+    public function getShortColumnName($useAlias = true)
+    {
+        $columnName = $useAlias ? $this->getAlias() : '';
+        $columnName = $columnName ?: $this->column->name;
+        
+        return $columnName;
     }
 }

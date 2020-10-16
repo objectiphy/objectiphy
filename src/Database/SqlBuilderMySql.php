@@ -180,8 +180,8 @@ class SqlBuilderMySql implements SqlBuilderInterface
             $columns = [];
             $columnDefinitions = $this->options->mappingCollection->getColumnDefinitions();
             foreach ($columnDefinitions as $alias => $propertyMapping) {
-                if ($columnName = $propertyMapping->column->getFullColumnName()) {
-                    $columns[] = $columnName . ' AS ' . $alias;
+                if ($columnName = $propertyMapping->getFullColumnName()) {
+                    $columns[] = $this->delimit($columnName) . ' AS ' . $this->delimit($alias);
                 }
             }
             $sql = "SELECT " . ($columns ? implode(', ', $columns) . " " : "* ");
