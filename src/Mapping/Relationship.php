@@ -180,4 +180,9 @@ class Relationship
 
         return $eager;
     }
+
+    public function isScalarJoin(): bool
+    {
+        return $this->targetScalarValueColumn ? true : false;
+    }
 }

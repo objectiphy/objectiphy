@@ -97,7 +97,7 @@ final class ObjectMapper
                 $mappingCollection->addMapping($propertyMapping);
                 //Resolve name *after* adding to collection so that naming strategies have access to the collection.
                 $this->resolveColumnName($propertyMapping);
-                if ($childrenAlreadyMapped) {
+                if ($relationship->isDefined() && !$childrenAlreadyMapped) {
                     $childParentProperties = array_merge($parentProperties, [$reflectionProperty->getName()]);
                     $this->populateMappingCollection($mappingCollection, $relationship->childClassName, $childParentProperties);
                 }

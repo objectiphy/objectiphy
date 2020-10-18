@@ -73,7 +73,7 @@ class MappingCollection
     {
         return $this->relationships;
     }
-    
+
     /**
      * Add the mapping information for a property to the collection and index it by both column and property names.
      * @param PropertyMapping $propertyMapping
@@ -87,8 +87,8 @@ class MappingCollection
             $this->primaryKeyProperties[$propertyMapping->className][$propertyMapping->propertyName] = $propertyMapping;
         }
         if ($propertyMapping->relationship->isDefined()) {
-            $relationshipKey = (end($propertyMapping->parentProperties) ?: '') . ':' . $propertyMapping->className;
-            $this->relationships[$relationshipKey][] = $propertyMapping->propertyName;
+            $relationshipKey = $this->getRelationshipKey($propertyMapping);
+            $this->relationships[$relationshipKey] = $propertyMapping;
         }
     }
 
@@ -131,8 +131,10 @@ class MappingCollection
         $relationship = $propertyMapping->relationship;
         $parentProperty = end($propertyMapping->parentProperties);
         if ($relationship->childClassName ?? false && $relationship->isEager($eagerLoadToOne, $eagerLoadToMany)) {
-            $relationships = $this->relationships[($parentProperty ?: '') . ':' . $propertyMapping->className] ?? [];
-            $result = !in_array($propertyMapping->propertyName, $relationships); 
+            $relationshipKey = $this->getRelationshipKey($propertyMapping);
+            $result = array_key_exists($relationshipKey, $this->relationships);
+//            $relationships = $this->relationships[$relationshipKey] ?? [];
+//            $result = !in_array($propertyMapping->propertyName, array_column($relationships, 'propertyName'));
         }
 
         return $result;
@@ -166,5 +168,19 @@ class MappingCollection
         }
         
         return false;
+    }
+
+    /**
+     * Generate a key describing the relationship to prevent infinite recursion
+     */
+    private function getRelationshipKey(PropertyMapping $propertyMapping)
+    {
+        $parentProperties = $propertyMapping->parentProperties ?? [''];
+        $parentProperty = end($parentProperties);
+        $relationshipKey = $parentProperty;
+        $relationshipKey .= ':' . $propertyMapping->className;
+        $relationshipKey .= ':' . $propertyMapping->propertyName;
+
+        return $relationshipKey;
     }
 }

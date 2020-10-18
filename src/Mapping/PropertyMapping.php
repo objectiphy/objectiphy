@@ -116,7 +116,7 @@ class PropertyMapping
         return $this->alias;
     }
 
-    public function getTableAlias(): string
+    public function getTableAlias(bool $forJoin = false): string
     {
         if (empty($this->tableAlias)
             && count($this->parentProperties) > 0 //On the root entity, no need to alias
@@ -124,7 +124,7 @@ class PropertyMapping
             $this->tableAlias = 'obj_alias_' . implode('_', $this->parentProperties);
         }
         
-        return $this->tableAlias;
+        return $forJoin ? $this->tableAlias . '_' . $this->propertyName : $this->tableAlias;
     }
 
     public function getFullColumnName()
