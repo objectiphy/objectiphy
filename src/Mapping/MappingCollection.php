@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Mapping;
 
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
+use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Relationship;
 
@@ -23,6 +24,9 @@ class MappingCollection
     /** @var Table Mapping for the main table. */
     private Table $table;
 
+    /** @var array Table mapping for each class. */
+    private array $classes = [];
+
     /**
      * @var array Property mappings keyed by column name or alias (ie. as the data appears in the result array).
      */
@@ -40,9 +44,15 @@ class MappingCollection
     private array $primaryKeyProperties = [];
 
     /**
-     * @var array Relationship mappings keyed by parent property name and class 
+     * @var array Relationship mappings keyed by parent property name and class.
      */
     private array $relationships = [];
+
+    /**
+     * @var bool Whether relationship join information has been populated (we have to
+     * wait until all relationships are added).
+     */
+    private bool $relationshipMappingDone = false;
     
     public function __construct(string $entityClassName)
     {
@@ -71,6 +81,10 @@ class MappingCollection
 
     public function getRelationships(): array 
     {
+        if (!$this->relationshipMappingDone) {
+            $this->finaliseRelationshipMappings();
+        }
+
         return $this->relationships;
     }
 
@@ -83,6 +97,7 @@ class MappingCollection
         $propertyMapping->parentCollection = $this;
         $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
         $this->properties[$propertyMapping->getPropertyPath()] = $propertyMapping;
+        $this->classes[$propertyMapping->className] = $propertyMapping->table;
         if ($propertyMapping->column->isPrimaryKey ?? false) {
             $this->primaryKeyProperties[$propertyMapping->className][$propertyMapping->propertyName] = $propertyMapping;
         }
@@ -133,8 +148,6 @@ class MappingCollection
         if ($relationship->childClassName ?? false && $relationship->isEager($eagerLoadToOne, $eagerLoadToMany)) {
             $relationshipKey = $this->getRelationshipKey($propertyMapping);
             $result = array_key_exists($relationshipKey, $this->relationships);
-//            $relationships = $this->relationships[$relationshipKey] ?? [];
-//            $result = !in_array($propertyMapping->propertyName, array_column($relationships, 'propertyName'));
         }
 
         return $result;
@@ -182,5 +195,52 @@ class MappingCollection
         $relationshipKey .= ':' . $propertyMapping->propertyName;
 
         return $relationshipKey;
+    }
+
+    /**
+     * Ensure joinTable, sourceJoinColumn, and targetJoinColumn are populated for
+     * each relationship (ie. if not specified explicitly in the mapping information,
+     * work it out).
+     */
+    private function finaliseRelationshipMappings()
+    {
+        /** @var PropertyMapping $relationshipMapping */
+        foreach ($this->relationships as $relationshipMapping) {
+            $relationship = $relationshipMapping->relationship;
+            if (!$relationship->joinTable) {
+                $relationship->joinTable = $this->classes[$relationship->type]->name ?? '';
+            }
+            if (!$relationship->joinSql) {
+                if (!$relationship->sourceJoinColumn) {
+                    
+                }
+                if (!$relationship->targetJoinColumn) {
+
+                }
+            }
+        }
+        $this->validateRelationship($relationship);
+        $this->relationshipMappingDone = true;
+    }
+
+    private function validateRelationship(Relationship $relationship)
+    {
+        $errorMessage = '';
+        if (!$relationship->joinTable) {
+            $errorMessage = 'Could not determine join table for relationship from %1$s to %2$s';
+        } elseif (!$relationship->sourceJoinColumn) {
+            $errorMessage = 'Could not determine source join column for relationship from %1$s to %2$s';
+        } elseif (!$relationship->targetJoinColumn) {
+            $errorMessage = 'Could not determine target join column for relationship from %1$s to %2$s';
+        }
+
+        if ($errorMessage) {
+            $errorMessage = sprintf(
+                $errorMessage,
+                $relationshipMapping->className . '::' . $relationshipMapping->propertyName,
+                $relationship->type
+            );
+            throw new MappingException($errorMessage);
+        }
     }
 }

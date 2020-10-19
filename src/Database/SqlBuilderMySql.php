@@ -260,13 +260,13 @@ class SqlBuilderMySql implements SqlBuilderInterface
         $relationshipProperties = $this->options->mappingCollection->getRelationships();
         /** @var PropertyMapping $propertyMapping */
         foreach ($relationshipProperties as $propertyMapping) {
-            if ($this->options->count && !$this->options->criteria && ($propertyMapping->joinType ?: 'LEFT') == 'LEFT') {
+            if ($this->options->count && !$this->options->criteria && ($propertyMapping->relationship->joinType ?: 'LEFT') == 'LEFT') {
                 continue; //No need for left joins if there is no criteria and we are just counting records
             }
 
-            if ($propertyMapping->relationship->isScalarJoin()) {
-                //Do the scalar join sql...
-                $sql .= " " . ($propertyMapping->joinType ?: 'LEFT') . " JOIN ";
+//            if ($propertyMapping->relationship->isScalarJoin()) {
+//                //Do the scalar join sql...
+                $sql .= " " . ($propertyMapping->relationship->joinType ?: 'LEFT') . " JOIN ";
                 $sql .= $this->delimit($propertyMapping->relationship->joinTable) . " ";
                 $sql .= $propertyMapping->getTableAlias(true) . " ";
                 $sql .= "ON ";
@@ -285,56 +285,56 @@ class SqlBuilderMySql implements SqlBuilderInterface
                         . $propertyMapping->relationship->targetJoinColumn
                     );
                 }
-            } elseif ($joinedClassMapping && ($propertyMapping->joinSql || $propertyMapping->getFullColumnName(
-                    )) && $propertyMapping->targetJoinColumn) {
-                //Normal join for a parent/child relationship
-                $sql .= " " . ($propertyMapping->joinType ?: 'LEFT') . " JOIN " . $this->delimit(
-                        $targetJoinTable
-                    ) . " $alias ON ";
-                $sql .= ($propertyMapping->joinSql ?: $propertyMapping->getFullColumnName(
-                        true,
-                        $joinMapping->tableOrAlias
-                    ) . " = " . $this->delimit(
-                        ($alias ?: $targetJoinTable) . "." . $propertyMapping->targetJoinColumn
-                    ));
-            } elseif ($propertyMapping->mappedBy && !empty($joinedClassMapping->properties[$propertyMapping->mappedBy])) {
-                //Relationship is inverted
-                $relatedPropertyMapping = $joinedClassMapping->properties[$propertyMapping->mappedBy];
-                $leftTable = $propertyMapping->tableName && isset($joinMappings[$alias]) ? $joinMappings[$alias]->tableOrAlias : $propertyMapping->tableName;// ? ($tableOrAlias ?: $propertyMapping->tableName) : '';
-                $leftColumn = $propertyMapping->columnName;
-                $targetTable = $alias ?: $relatedPropertyMapping->tableName;
-                $targetColumn = $relatedPropertyMapping->columnShortName;
-                if (!$leftTable || !$leftColumn) {
-                    if ($relatedPropertyMapping->hasKnownDataType()) {
-                        throw new MappingException(
-                            sprintf(
-                                'There is a problem with the relationship mapping for %1$s, whose mappedBy attribute refers to %2$s. %2$s has a scalar data type, with no relationship mapping information. Please check that the correct value is being used for the mappedBy attribute, and that you have specified the mappedBy attribute only on the property that does NOT own the relationship (ie. does not map to the database column that contains the foreign key). The mappedBy attribute should *point to* the property that owns the relationship (is mapped to the database column that holds the foreign key). On a one-to-many relationship, the parent (one) will have a mappedBy attribute that points to the property representing the parent (ie. the foreign key) on the child (many).',
-                                $propertyMapping->className . '::' . $propertyMapping->propertyName,
-                                $relatedPropertyMapping->className . '::' . $relatedPropertyMapping->propertyName
-                            )
-                        );
-                    }
-                    $leftClassMapping = $this->objectMapper->getClassMapping(
-                        $relatedPropertyMapping->dataType ? $relatedPropertyMapping->dataType : $propertyMapping->className
-                    );
-                    $leftTable = $leftClassMapping->tableName;
-                    $leftColumn = $leftClassMapping->getPrimaryKeyPropertyMapping()->columnName;
-                }
-                if (!$targetTable || !$targetColumn) {
-                    $targetTable = $alias ?: $joinedClassMapping->tableName;
-                    $joinedPkPropertyMapping = $joinedClassMapping->getPrimaryKeyPropertyMapping();
-                    $targetColumn = $joinedPkPropertyMapping ? $joinedPkPropertyMapping->columnName : null;
-                }
-                $joinType = ($relatedPropertyMapping->joinType ?: ($propertyMapping->joinType ?: 'LEFT'));
-                $targetJoinColumn = $relatedPropertyMapping->targetJoinColumn && $relatedPropertyMapping->targetJoinColumn != '**id**' ? $relatedPropertyMapping->targetJoinColumn : $leftColumn;
-                $joinSql = $this->delimit(
-                        $leftTable . "." . $targetJoinColumn
-                    ) . " = " . $this->delimit($targetTable . '.' . $targetColumn);
-                $joinSql = $relatedPropertyMapping->joinSql ?: $joinSql;
-                $sql .= " " . $joinType . " JOIN " . $this->delimit(
-                        $targetJoinTable
-                    ) . " " . $this->delimit($alias) . " ON " . $joinSql;
-            }
+//            } elseif ($joinedClassMapping && ($propertyMapping->joinSql || $propertyMapping->getFullColumnName(
+//                    )) && $propertyMapping->targetJoinColumn) {
+//                //Normal join for a parent/child relationship
+//                $sql .= " " . ($propertyMapping->joinType ?: 'LEFT') . " JOIN " . $this->delimit(
+//                        $targetJoinTable
+//                    ) . " $alias ON ";
+//                $sql .= ($propertyMapping->joinSql ?: $propertyMapping->getFullColumnName(
+//                        true,
+//                        $joinMapping->tableOrAlias
+//                    ) . " = " . $this->delimit(
+//                        ($alias ?: $targetJoinTable) . "." . $propertyMapping->targetJoinColumn
+//                    ));
+//            } elseif ($propertyMapping->mappedBy && !empty($joinedClassMapping->properties[$propertyMapping->mappedBy])) {
+//                //Relationship is inverted
+//                $relatedPropertyMapping = $joinedClassMapping->properties[$propertyMapping->mappedBy];
+//                $leftTable = $propertyMapping->tableName && isset($joinMappings[$alias]) ? $joinMappings[$alias]->tableOrAlias : $propertyMapping->tableName;// ? ($tableOrAlias ?: $propertyMapping->tableName) : '';
+//                $leftColumn = $propertyMapping->columnName;
+//                $targetTable = $alias ?: $relatedPropertyMapping->tableName;
+//                $targetColumn = $relatedPropertyMapping->columnShortName;
+//                if (!$leftTable || !$leftColumn) {
+//                    if ($relatedPropertyMapping->hasKnownDataType()) {
+//                        throw new MappingException(
+//                            sprintf(
+//                                'There is a problem with the relationship mapping for %1$s, whose mappedBy attribute refers to %2$s. %2$s has a scalar data type, with no relationship mapping information. Please check that the correct value is being used for the mappedBy attribute, and that you have specified the mappedBy attribute only on the property that does NOT own the relationship (ie. does not map to the database column that contains the foreign key). The mappedBy attribute should *point to* the property that owns the relationship (is mapped to the database column that holds the foreign key). On a one-to-many relationship, the parent (one) will have a mappedBy attribute that points to the property representing the parent (ie. the foreign key) on the child (many).',
+//                                $propertyMapping->className . '::' . $propertyMapping->propertyName,
+//                                $relatedPropertyMapping->className . '::' . $relatedPropertyMapping->propertyName
+//                            )
+//                        );
+//                    }
+//                    $leftClassMapping = $this->objectMapper->getClassMapping(
+//                        $relatedPropertyMapping->dataType ? $relatedPropertyMapping->dataType : $propertyMapping->className
+//                    );
+//                    $leftTable = $leftClassMapping->tableName;
+//                    $leftColumn = $leftClassMapping->getPrimaryKeyPropertyMapping()->columnName;
+//                }
+//                if (!$targetTable || !$targetColumn) {
+//                    $targetTable = $alias ?: $joinedClassMapping->tableName;
+//                    $joinedPkPropertyMapping = $joinedClassMapping->getPrimaryKeyPropertyMapping();
+//                    $targetColumn = $joinedPkPropertyMapping ? $joinedPkPropertyMapping->columnName : null;
+//                }
+//                $joinType = ($relatedPropertyMapping->joinType ?: ($propertyMapping->joinType ?: 'LEFT'));
+//                $targetJoinColumn = $relatedPropertyMapping->targetJoinColumn && $relatedPropertyMapping->targetJoinColumn != '**id**' ? $relatedPropertyMapping->targetJoinColumn : $leftColumn;
+//                $joinSql = $this->delimit(
+//                        $leftTable . "." . $targetJoinColumn
+//                    ) . " = " . $this->delimit($targetTable . '.' . $targetColumn);
+//                $joinSql = $relatedPropertyMapping->joinSql ?: $joinSql;
+//                $sql .= " " . $joinType . " JOIN " . $this->delimit(
+//                        $targetJoinTable
+//                    ) . " " . $this->delimit($alias) . " ON " . $joinSql;
+//            }
         }
 
         return $this->overrideQueryPart('joins', $sql, $this->getQueryParams());
