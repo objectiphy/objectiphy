@@ -208,39 +208,23 @@ class MappingCollection
         foreach ($this->relationships as $relationshipMapping) {
             $relationship = $relationshipMapping->relationship;
             if (!$relationship->joinTable) {
-                $relationship->joinTable = $this->classes[$relationship->type]->name ?? '';
+                $relationship->joinTable = $this->classes[$relationship->childClassName]->name ?? '';
             }
             if (!$relationship->joinSql) {
-                if (!$relationship->sourceJoinColumn) {
-                    
-                }
-                if (!$relationship->targetJoinColumn) {
-
+                if (!$relationship->sourceJoinColumn && $relationship->mappedBy) {
+                    //Get it from the other side...
+                    $stop = true;
+                } elseif (!$relationship->targetJoinColumn) {
+                    $relationship->targetJoinColumn = implode(',',
+                        $this->getPrimaryKeyProperties(
+                            true,
+                            $relationship->childClassName
+                        )
+                    );
                 }
             }
         }
-        $this->validateRelationship($relationship);
+        $relationship->validate($relationshipMapping);
         $this->relationshipMappingDone = true;
-    }
-
-    private function validateRelationship(Relationship $relationship)
-    {
-        $errorMessage = '';
-        if (!$relationship->joinTable) {
-            $errorMessage = 'Could not determine join table for relationship from %1$s to %2$s';
-        } elseif (!$relationship->sourceJoinColumn) {
-            $errorMessage = 'Could not determine source join column for relationship from %1$s to %2$s';
-        } elseif (!$relationship->targetJoinColumn) {
-            $errorMessage = 'Could not determine target join column for relationship from %1$s to %2$s';
-        }
-
-        if ($errorMessage) {
-            $errorMessage = sprintf(
-                $errorMessage,
-                $relationshipMapping->className . '::' . $relationshipMapping->propertyName,
-                $relationship->type
-            );
-            throw new MappingException($errorMessage);
-        }
     }
 }
