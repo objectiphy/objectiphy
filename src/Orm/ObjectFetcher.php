@@ -6,14 +6,16 @@ namespace Objectiphy\Objectiphy\Orm;
 
 use http\Exception\RuntimeException;
 use Marmalade\Objectiphy\IterableResult;
+use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Database\SqlBuilderInterface;
-use Objectiphy\Objectiphy\Mapping\ObjectMapper;
+use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\JoinExpression;
+use Objectiphy\Objectiphy\Query\QB;
 
 /**
  * @package Objectiphy\Objectiphy
@@ -40,12 +42,26 @@ final class ObjectFetcher
     }
 
     /**
-     * These are options that are likely to change on each call (unlike config options).
+     * Config options relating to fetching data only.
      */
     public function setFindOptions(FindOptions $findOptions) 
     {
         $this->options = $findOptions;
         $this->sqlBuilder->setFindOptions($findOptions);
+        $this->objectBinder->setMappingCollection($findOptions->mappingCollection);
+    }
+
+    /**
+     * @param ConfigEntity[] $entityConfigOptions
+     */
+    public function setEntityConfigOptions(array $entityConfigOptions)
+    {
+        foreach ($entityConfigOptions as $option) {
+            if (!($option instanceof ConfigEntity)) {
+                throw new ObjectiphyException('Invalid entity config option set on object fetcher.');
+            }
+        }
+        $this->objectBinder->setEntityConfigOptions($entityConfigOptions);
     }
 
     /**
@@ -76,11 +92,12 @@ final class ObjectFetcher
         if (empty($this->options)) {
             throw new ObjectiphyException('Find options have not been set on the object fetcher.');
         }
-        if (!empty($this->options->criteria)
+        $criteria = $this->options->getCriteria();
+        if (!empty($criteria)
             && !(reset($criteria) instanceof CriteriaExpression)
             && !(reset($criteria) instanceof JoinExpression)
         ) {
-            throw new CriteriaException('Invalid criteria passed to ObjectFetcher::doFindBy. If you are overriding a findBy method of a repository, please call $criteria = $this->normalizeCriteria($criteria) on your repository first.');
+            throw new QueryException('Invalid criteria passed to ObjectFetcher::doFindBy.');
         }
     }
 
@@ -104,15 +121,15 @@ final class ObjectFetcher
         $sql = $this->sqlBuilder->getSelectQuery();
         $params = $this->sqlBuilder->getQueryParams();
 
-        if ($this->multiple && $this->iterable && $scalarProperty) {
+        if ($this->options->multiple && $this->options->onDemand && $this->options->scalarProperty) {
             $result = $this->fetchIterableValues($sql, $params);
-        } elseif ($this->multiple && $this->iterable) {
+        } elseif ($this->options->multiple && $this->options->iterable) {
             $result = $this->fetchIterableResult($sql, $params);
-        } elseif ($this->multiple && $scalarProperty) {
+        } elseif ($this->options->multiple && $this->options->scalarProperty) {
             $result = $this->fetchValues($sql, $params);
-        } elseif ($this->multiple) {
+        } elseif ($this->options->multiple) {
             $result = $this->fetchResults($sql, $params);
-        } elseif ($scalarProperty) {
+        } elseif ($this->options->scalarProperty) {
             $result = $this->fetchValue($sql, $params);
         } else {
             $result = $this->fetchResult($sql, $params);
@@ -155,8 +172,9 @@ final class ObjectFetcher
     {
         $this->storage->executeQuery($sql, $params ?: []);
         $row = $this->storage->fetchResult();
-        if ($this->bindToEntities) {
-            $result = $row ? $this->objectBinder->bindRowToEntity($row, $this->repository->getEntityClassName()) : null;
+        if ($this->options->bindToEntities) {
+            $className = $this->options->mappingCollection->getEntityClassName();
+            $result = $row ? $this->objectBinder->bindRowToEntity($row, $className) : null;
         } else {
             $result = $row;
         }

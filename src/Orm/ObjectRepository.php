@@ -12,7 +12,6 @@ use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
-use Objectiphy\Objectiphy\Mapping\ObjectMapper;
 use Objectiphy\Objectiphy\Criteria\CB;
 use Objectiphy\Objectiphy\Query\QB;
 
@@ -58,12 +57,25 @@ class ObjectRepository implements ObjectRepositoryInterface
         $this->updateConfig();
     }
 
+    /**
+     * Set a general configuration option by name. Available options are defined on
+     * the Objectiphy\Objectiphy\Config\ConfigOptions class.
+     * @param string $optionName
+     * @param $value
+     */
     public function setConfigOption(string $optionName, $value)
     {
         $this->configOptions->setConfigOption($optionName, $value);
         $this->updateConfig();
     }
 
+    /**
+     * Set an entity-specific configuration option by name. Available options are 
+     * defined on the Objectiphy\Objectiphy\Config\ConfigEntity class.
+     * @param string $entityClassName
+     * @param string $optionName
+     * @param $value
+     */
     public function setEntityConfigOption(string $entityClassName, string $optionName, $value)
     {
         $entityConfigs = $this->configOptions->getConfigOption('entityConfig');
@@ -137,10 +149,10 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     public function findOneBy(array $criteria = []): ?object
     {
-        $findOptions = FindOptions::create($this->mappingCollection, ['multiple' => false]);
+        $findOptions = FindOptions::create($this->mappingCollection, ['multiple' => false, 'criteria' => $criteria]);
         $this->objectFetcher->setFindOptions($findOptions);
 
-        return $this->doFindBy($criteria);
+        return $this->doFindBy();
     }
 
     /**
@@ -161,7 +173,11 @@ class ObjectRepository implements ObjectRepositoryInterface
 
         //TODO: common property/age indicator
 
-        $findOptions = FindOptions::create($this->mappingCollection, ['multiple' => false, 'latest' => true]);
+        $findOptions = FindOptions::create($this->mappingCollection, [
+            'multiple' => false,
+            'latest' => true,
+            'criteria' => $criteria
+        ]);
         $this->objectFetcher->setFindOptions($findOptions);
 
         return $this->doFindBy($criteria);
@@ -303,12 +319,11 @@ class ObjectRepository implements ObjectRepositoryInterface
         return null;
     }
 
-    protected function doFindBy(array $criteria = [])
+    protected function doFindBy()
     {
         $this->assertClassNameSet();
-        $criteria = $this->normalizeCriteria($criteria);
-        
-        return $this->objectFetcher->doFindBy($this->getClassName(), $criteria);
+                
+        return $this->objectFetcher->doFindBy();
     }
 
     protected function normalizeCriteria(array $criteria = [])
@@ -352,6 +367,10 @@ class ObjectRepository implements ObjectRepositoryInterface
             $this->configOptions->guessMappings,
             $this->configOptions->tableNamingStrategy,
             $this->configOptions->columnNamingStrategy
+        );
+        
+        $this->objectFetcher->setEntityConfigOptions(
+            $this->configOptions->getConfigOption('entityConfig')
         );
     }
 }

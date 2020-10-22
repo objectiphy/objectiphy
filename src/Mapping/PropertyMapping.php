@@ -27,25 +27,25 @@ class PropertyMapping
      * @var array Indexed array of parent property names.
      */
     public array $parentProperties = [];
-    
-    /** 
-     * @var MappingCollection Collection to which this mapping belongs 
+
+    /**
+     * @var MappingCollection Collection to which this mapping belongs
      */
     public MappingCollection $parentCollection;
-    
-    /** 
+
+    /**
      * @var Relationship If this property represents a relationship to a child entity, the relationship annotation.
      */
     public Relationship $relationship;
 
     /**
-     * @var Table If the value of this property is stored in a column on the entity's table, the table 
+     * @var Table If the value of this property is stored in a column on the entity's table, the table
      * annotation.
      */
     public Table $table;
-    
+
     /**
-     * @var Column If the value of this property is stored in a column on the entity's table, the column 
+     * @var Column If the value of this property is stored in a column on the entity's table, the column
      * annotation.
      */
     public Column $column;
@@ -66,11 +66,11 @@ class PropertyMapping
     private string $tableAlias = '';
 
     public function __construct(
-        string $className, 
-        string $propertyName, 
-        Table $table, 
-        Column $column, 
-        Relationship $relationship, 
+        string $className,
+        string $propertyName,
+        Table $table,
+        Column $column,
+        Relationship $relationship,
         array $parentProperties = []
     ) {
         $this->className = $className;
@@ -94,13 +94,23 @@ class PropertyMapping
 
         $result = $separator == '.' ? $this->propertyPath : str_replace('.', $separator, $this->propertyPath);
         $result .= $includingPropertyName ? $separator . $this->propertyName : '';
-        
+
         return ltrim($result, $separator);
+    }
+    
+    public function isScalarValue()
+    {
+        return !$this->relationship->isDefined() || $this->relationship->isScalarJoin();
+    }
+    
+    public function getChildClassName()
+    {
+        return $this->relationship->childClassName;
     }
 
     /**
-     * Try to use a nice alias with underscores. If there are clashes (due to property names that already contain 
-     * underscores), we have to get ugly and use an alternative separator that is never likely to appear in a property 
+     * Try to use a nice alias with underscores. If there are clashes (due to property names that already contain
+     * underscores), we have to get ugly and use an alternative separator that is never likely to appear in a property
      * name.
      * @return string
      */
@@ -112,23 +122,31 @@ class PropertyMapping
                 $this->alias = $this->getPropertyPath(true, '_-_');
             }
         }
-        
+
         return $this->alias;
     }
 
     public function getTableAlias(bool $forJoin = false): string
     {
-        $tableAlias = '';
         if (empty($this->tableAlias)
-            && count($this->parentProperties) > 0 //On the root entity, no need to alias
+            && count($this->parentProperties) > 0 //No need to alias scalar properties of main entity
             && strpos($this->column->name, '.') === false) { //Already mapped to an alias manually, so don't mess 
-            $this->tableAlias = 'obj_alias_' . implode('_', $this->parentProperties);
+            $this->tableAlias = rtrim('obj_alias_' . implode('_', $this->parentProperties), '_');
+        }
+        $tableAlias = $this->tableAlias;
+        
+        if ($forJoin) {
+            if (!$tableAlias && $this->relationship->childClassName) {
+                $tableAlias = 'obj_alias_' . $this->propertyName;
+            } else {
+                $tableAlias = ltrim($tableAlias . '_' . $this->propertyName, '_');
+            }
         }
 
-        return ltrim($this->tableAlias . ($forJoin ? '_' . $this->propertyName : ''), '_');
+        return $tableAlias;
     }
 
-    public function getFullColumnName()
+    public function getFullColumnName(): string
     {
         $table = $this->getTableAlias();
         $table = $table ?: $this->table->name;
@@ -136,12 +154,42 @@ class PropertyMapping
 
         return $column ? trim($table . '.' . $column, '.') : '';
     }
-    
-    public function getShortColumnName($useAlias = true)
+
+    public function getShortColumnName($useAlias = true): string
     {
         $columnName = $useAlias ? $this->getAlias() : '';
         $columnName = $columnName ?: $this->column->name;
-        
+
         return $columnName;
+    }
+
+    public function getSourceJoinColumns(): array
+    {
+        $table = $this->getTableAlias();
+        $table = $table ?: $this->table->name;
+        return $this->getJoinColumns($this->relationship->sourceJoinColumn, $table);
+    }
+
+    public function getTargetJoinColumns(): array
+    {
+        $table = $this->getTableAlias(true);
+        return $this->getJoinColumns($this->relationship->targetJoinColumn, $table);
+    }
+    
+    private function getJoinColumns(string $sourceOrTargetColumn, string $table): array
+    {
+        $joinColumns = [];
+        foreach (explode(',', $sourceOrTargetColumn) as $thisJoinColumn) {
+            $joinColumn = '';
+            if (strpos($thisJoinColumn, '.') === false) { //Table not specified in mapping definition
+                $joinColumn = $table;
+                $joinColumn = $joinColumn ?: $this->table->name; //No alias, so assume root
+                $joinColumn .= ".";
+            }
+            $joinColumn .= trim($thisJoinColumn);
+            $joinColumns[] = $joinColumn;
+        }
+
+        return $joinColumns;
     }
 }

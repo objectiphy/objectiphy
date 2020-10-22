@@ -6,9 +6,11 @@ namespace Objectiphy\Objectiphy\Database;
 
 use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
+use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
+use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\QB;
 
 class SqlBuilderMySql implements SqlBuilderInterface
@@ -24,6 +26,15 @@ class SqlBuilderMySql implements SqlBuilderInterface
     {
         $this->options = $findOptions;
         $this->mainTable = $findOptions->mappingCollection->getPrimaryTableMapping()->name;
+    }
+
+    /**
+     * In case you are being naughty and overriding things, you might need this.
+     * @return FindOptions
+     */
+    public function getFindOptions(): FindOptions
+    {
+        return $this->options;
     }
 
     public function setSaveOptions(): void
@@ -141,19 +152,17 @@ class SqlBuilderMySql implements SqlBuilderInterface
             throw new ObjectiphyException('Mapping collection does not have a primary table defined.');
         }
 
-        $selectQuery = new SelectQuery(
-            $this->getSelect(),
-            $this->getFrom(),
-            $this->getJoinsForLatestRecord(),
-            $this->getJoins(),
-            $this->getWhere(),
-            $this->getGroupBy(),
-            $this->getHaving(),
-            $this->getOrderBy(),
-            $this->getLimit()
-        );
+        $sql = $this->getSelect()
+            . $this->getFrom()
+            . $this->getJoinsForLatestRecord()
+            . $this->getJoins()
+            . $this->getWhere()
+            . $this->getGroupBy()
+            . $this->getHaving()
+            . $this->getOrderBy()
+            . $this->getLimit()
+            . $this->getOffset();
 
-        $sql = (string) $selectQuery;
         if ($this->options->count && strpos($sql, 'SELECT COUNT') === false) { //We have to select all to get the count :(
             $sql = "SELECT COUNT(*) FROM ($sql) subquery";
         }
@@ -256,36 +265,27 @@ class SqlBuilderMySql implements SqlBuilderInterface
     public function getJoins()
     {
         $sql = '';
-        $this->options->criteria = QB::create()->normalize($this->options->criteria); //As method is public, we have to normalize
         $relationshipProperties = $this->options->mappingCollection->getRelationships();
         /** @var PropertyMapping $propertyMapping */
         foreach ($relationshipProperties as $propertyMapping) {
-            if ($this->options->count && !$this->options->criteria && ($propertyMapping->relationship->joinType ?: 'LEFT') == 'LEFT') {
+            if ($this->options->count && !$this->options->getCriteria() && ($propertyMapping->relationship->joinType ?: 'LEFT') == 'LEFT') {
                 continue; //No need for left joins if there is no criteria and we are just counting records
             }
-
-                $sql .= " " . ($propertyMapping->relationship->joinType ?: 'LEFT') . " JOIN ";
-                $sql .= $this->delimit($propertyMapping->relationship->joinTable) . " ";
-                $sql .= $this->delimit($propertyMapping->getTableAlias(true)) . " ";
-                $sql .= "ON ";
-                if ($propertyMapping->relationship->joinSql) {
-                    $sql .= $joinSql;
-                } else {
-                    //Allow for multiple join columns (comma separated) - use AND
-                    //(eg. for cases where there is a composite key)
-                    $sql .= $this->delimit(
-                        $propertyMapping->getTableAlias(true)
-                        . "."
-                        . $propertyMapping->relationship->sourceJoinColumn
-                    );
-                    $sql .= " = ";
-                    $sql .= $this->delimit(
-                        $propertyMapping->getTableAlias(true)
-                        . "."
-                        . $propertyMapping->relationship->targetJoinColumn
-                    );
+            $sql .= " " . ($propertyMapping->relationship->joinType ?: 'LEFT') . " JOIN ";
+            $sql .= $this->delimit($propertyMapping->relationship->joinTable) . " ";
+            $sql .= $this->delimit($propertyMapping->getTableAlias(true));
+            $sql .= " ON ";
+            if ($propertyMapping->relationship->joinSql) {
+                $sql .= $propertyMapping->relationship->joinSql;
+            } else {
+                $sourceJoinColumns = $propertyMapping->getSourceJoinColumns();
+                $targetJoinColumns = $propertyMapping->getTargetJoinColumns();
+                $joinSql = [];
+                foreach ($sourceJoinColumns as $index => $sourceJoinColumn) {
+                    $joinSql[] = $this->delimit($sourceJoinColumn) . ' = ' . $this->delimit($targetJoinColumns[$index]);
                 }
-
+                $sql .= implode(' AND ', $joinSql);
+            }
         }
 
         return $this->overrideQueryPart('joins', $sql, $this->getQueryParams());
@@ -298,21 +298,20 @@ class SqlBuilderMySql implements SqlBuilderInterface
      * @throws MappingException
      * @throws \ReflectionException
      */
-    public function getWhere(array $criteria = [])
+    public function getWhere()
     {
-        $criteria = QB::create()->normalize($criteria); //As method is public, we have to normalize
         $this->params = [];
         $sql = ' WHERE 1 ';
 
-        if ($this->latest) {
-            $sql .= " AND $this->latestAlias." . $this->objectMapper->getIdColumn(false) . " IS NULL ";
+        if ($this->options->latest) {
+            //$sql .= " AND $this->latestAlias." . $this->objectMapper->getIdColumn(false) . " IS NULL ";
         }
 
-        foreach ($criteria as $criteriaExpression) {
+        foreach ($this->options->getCriteria() as $criteriaExpression) {
             $sql .= $this->applyCriteria($criteriaExpression, 'AND');
         }
 
-        $sql .= $this->customWhereClause ? " AND ($this->customWhereClause) " : "";
+        //$sql .= $this->customWhereClause ? " AND ($this->customWhereClause) " : "";
 
         return $this->overrideQueryPart('where', $sql, $this->getQueryParams());
     }
@@ -322,10 +321,10 @@ class SqlBuilderMySql implements SqlBuilderInterface
      * @throws MappingException
      * @throws \ReflectionException
      */
-    public function getGroupBy(array $criteria = [], $ignoreCount = false)
+    public function getGroupBy($ignoreCount = false)
     {
         //This function can be overridden, but baseGroupBy cannot be - we need to know whether the value is ours or not.
-        return $this->baseGroupBy($criteria, $ignoreCount);
+        return $this->baseGroupBy($ignoreCount);
     }
 
     /**
@@ -336,16 +335,16 @@ class SqlBuilderMySql implements SqlBuilderInterface
      * @throws MappingException
      * @throws \ReflectionException
      */
-    public function getHaving(array $criteria = [])
+    public function getHaving()
     {
         $sql = '';
-        $criteria = QB::create()->normalize($criteria); //As method is public, we have to normalize
+        //$criteria = QB::create()->normalize($criteria); //As method is public, we have to normalize
 
         $having = '';
-        $joinMappings = $this->objectMapper->getJoinMappings($this->entityClassName, $criteria);
-        foreach ($criteria as $criteriaExpression) {
-            $having .= $this->applyCriteria($criteriaExpression, 'AND', true, $joinMappings);
-        }
+//        $joinMappings = $this->objectMapper->getJoinMappings($this->entityClassName, $criteria);
+//        foreach ($criteria as $criteriaExpression) {
+//            $having .= $this->applyCriteria($criteriaExpression, 'AND', true, $joinMappings);
+//        }
         $sql = $having ? ' HAVING 1 ' . $having : '';
 
         return $this->overrideQueryPart('having', $sql, $this->getQueryParams());
@@ -357,34 +356,31 @@ class SqlBuilderMySql implements SqlBuilderInterface
      * @throws MappingException
      * @throws \ReflectionException
      */
-    public function getOrderBy(array $criteria = [])
+    public function getOrderBy()
     {
         $sql = '';
 
-        if (!$this->count) {
-            if (!isset($this->orderBy) && !empty($this->objectMapper->getIdColumn(false))) {
-                $sql = " ORDER BY $this->mainTable." . $this->objectMapper->getIdColumn(false) . " ASC ";
-            } elseif (!empty($this->orderBy)) {
+        if (!$this->options->count) {
+            $orderBy = $this->options->getOrderBy();
+
+            if ($orderBy === null) {
+                //See if we can order by primary key of main entity
+                $pkProperties = $this->options->mappingCollection->getPrimaryKeyProperties(true);
+                $orderBy = array_combine($pkProperties, array_fill(0, count($pkProperties), 'ASC'));
+
+            }
+            if (!empty($orderBy)) {
                 $sql = " ORDER BY ";
-                foreach ($this->orderBy as $property => $direction) {
-                    if (is_int($property) && !in_array(
-                            strtoupper($direction),
-                            ['ASC', 'DESC']
-                        )) { //Indexed array, not associative
-                        $property = $direction;
-                        $direction = '';
-                    }
-                    $propertyMapping = $this->objectMapper->getPropertyMapping($this->entityClassName, $property);
+                foreach ($orderBy as $property => $direction) {
+                    $propertyMapping = $this->options->mappingCollection->getPropertyMapping($property);
                     if ($propertyMapping) {
-                        if ($propertyMapping->aggregateFunction) {
-                            $classMapping = $this->objectMapper->getClassMapping($this->entityClassName);
-                            $sql .= $this->objectMapper->constructAggregateFunction($classMapping, $propertyMapping);
-                        } else {
+//                        if ($propertyMapping->aggregateFunction) {
+//                            $classMapping = $this->objectMapper->getClassMapping($this->entityClassName);
+//                            $sql .= $this->objectMapper->constructAggregateFunction($classMapping, $propertyMapping);
+//                        } else {
                             $sql .= $propertyMapping->getFullColumnName();
-                        }
-                        $sql .= " " . (in_array(strtoupper($direction), ['ASC', 'DESC']) ? strtoupper(
-                                $direction
-                            ) : 'ASC') . ',';
+//                        }
+                        $sql .= " " . strtoupper($direction) . ',';
                     }
                 }
                 $sql = rtrim($sql, ',');
@@ -398,20 +394,32 @@ class SqlBuilderMySql implements SqlBuilderInterface
      * @param array $criteria
      * @return string The SQL string for the LIMIT clause (if using pagination).
      */
-    public function getLimit(array $criteria = [])
+    public function getLimit()
     {
         $sql = '';
 
-        if (!$this->multiple) {
+        if (!$this->options->multiple) {
             $sql = ' LIMIT 1 ';
-        } elseif (!$this->count && !empty($this->pagination)) {
-            $sql = ' LIMIT ' . $this->pagination->getRecordsPerPage() . ' ';
-            if ($this->pagination->getOffset()) {
-                $sql .= ' OFFSET ' . $this->pagination->getOffset() . ' ';
-            }
+        } elseif (!$this->options->count && !empty($this->options->pagination)) {
+            $sql = ' LIMIT ' . $this->options->pagination->getRecordsPerPage() . ' ';
         }
 
         return $this->overrideQueryPart('limit', $sql, $this->getQueryParams());
+    }
+    
+    public function getOffset()
+    {
+        $sql = '';
+
+        if ($this->options->multiple
+            && !$this->options->count
+            && !empty($this->options->pagination) 
+            && $this->options->pagination->getOffset()
+        ) {
+            $sql .= ' OFFSET ' . $this->options->pagination->getOffset() . ' ';
+        }
+
+        return $this->overrideQueryPart('offset', $sql, $this->getQueryParams());
     }
 
     public function setQueryParams(array $params = [])
@@ -625,7 +633,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
     }
 
     /**
-     * Build an SQL expression based on an Objectiphy CriteriaExpression object or Doctrine-compatible criteria array.
+     * Build an SQL expression based on an Objectiphy CriteriaExpression object.
      * @param CriteriaExpression|array $expression The line of criteria to convert into SQL.
      * @param string $joiner How to join this set of criteria with any previous criteria.
      * @param bool $having
@@ -644,89 +652,95 @@ class SqlBuilderMySql implements SqlBuilderInterface
             $value2 = $expression->getCriteriaValue2();
             $operator = $expression->getCriteriaOperator() ?: '=';
             if ($value !== null || $operator == 'IS' || $operator == 'IS NOT') { //Only filter if value supplied
-                $parentClassMapping = null;
-                $propertyMapping = $this->objectMapper->getPropertyMapping(
-                    $this->entityClassName,
-                    $expression->propertyName,
-                    true,
-                    $parentClassMapping
-                );
-                $joinMappingAlias = $this->objectMapper->joinMapper->getJoinMappingKeyForPropertyPath(
-                    $this->entityClassName,
-                    $expression->propertyName,
-                    $joinMappings,
-                    $parentClassMapping ? $parentClassMapping->tableName : ''
-                );
-                if ($propertyMapping) {
-                    $applyCriteria = ($having && ($expression->aggregateFunction || $propertyMapping->aggregateFunction))
-                        || (!$having && !$expression->aggregateFunction && !$propertyMapping->aggregateFunction);
-                    if ($applyCriteria) { //Criteria involving aggregate functions use HAVING
-                        if ($propertyMapping->aggregateFunction) { //Find the correct alias for the collection
-                            $aggregateCollectionClass = $parentClassMapping->properties[$propertyMapping->aggregateCollection]->dataType;
-                            $aggregateCollectionPropertyPathParts = explode('.', $expression->propertyName);
-                            array_pop($aggregateCollectionPropertyPathParts);
-                            $aggregateCollectionPropertyPath = implode(
-                                '.',
-                                array_merge(
-                                    $aggregateCollectionPropertyPathParts,
-                                    explode(
-                                        '.',
-                                        $propertyMapping->aggregateCollection
-                                    )
-                                )
-                            );
-                            $joinMappingAlias = $having ? $this->objectMapper->joinMapper->getJoinMappingKeyForPropertyPath(
-                                $this->entityClassName,
-                                $aggregateCollectionPropertyPath,
-                                $joinMappings
-                            ) : '';
-                            $aggregatePropertyMapping = $this->objectMapper->getPropertyMapping(
-                                $aggregateCollectionClass,
-                                $propertyMapping->aggregateProperty
-                            );
-                            $columnName = $aggregatePropertyMapping->getFullColumnName(true, $joinMappingAlias);
-                            $columnName = $propertyMapping->aggregateFunction . '(' . $columnName . ')';
-                        } else {
-                            $tableAlias = $joinMappingAlias ?: (!$propertyMapping->tableName && $parentClassMapping ? $parentClassMapping->tableName : '');
-                            $columnPrefix = $this->objectMapper->getColumnPrefixForPropertyPath(
-                                $expression->propertyName
-                            );
-                            $columnName = $propertyMapping->getFullColumnName(
-                                true,
-                                $tableAlias,
-                                false,
-                                false,
-                                $columnPrefix
-                            ); //Embedded objects do not have a table name - use parent
-                            if ($expression->aggregateFunction) {
-                                $columnName = $expression->aggregateFunction . '(' . $columnName . ')';
-                            }
-                        }
-                        $dateFormat = $propertyMapping->format && (in_array(
-                                $propertyMapping->dataType,
-                                ['datetimestring', 'datestring']
-                            ) || strpos(
-                                strtolower($propertyMapping->propertyName),
-                                'date'
-                            ) !== false) ? $propertyMapping->format : '';
-                        $sql = " $joiner (" . $this->applyCriteriaValue(
-                                $columnName,
-                                $operator,
-                                $value,
-                                $value2,
-                                $dateFormat
-                            );
-                    }
+                $propertyMapping = $this->options->mappingCollection->getPropertyMapping($expression->propertyName);
+                $columnName = $propertyMapping->getFullColumnName();
+                $format = $propertyMapping->column->format;
+                $isDateString = in_array($propertyMapping->column->type, ['datetimestring', 'datestring']);
+                $isDateString = $isDateString ?: strpos(strtolower($propertyMapping->propertyName), 'date') !== false;
+                $dateFormat = $isDateString ? $format : '';
+                $sql .= $joiner . ' (' . $this->applyCriteriaValue($columnName, $operator, $value, $value2, $dateFormat);
+
+//                $parentClassMapping = null;
+//                $propertyMapping = $this->objectMapper->getPropertyMapping(
+//                    $this->entityClassName,
+//                    $expression->propertyName,
+//                    true,
+//                    $parentClassMapping
+//                );
+//                $joinMappingAlias = $this->objectMapper->joinMapper->getJoinMappingKeyForPropertyPath(
+//                    $this->entityClassName,
+//                    $expression->propertyName,
+//                    $joinMappings,
+//                    $parentClassMapping ? $parentClassMapping->tableName : ''
+//                );
+//                if ($propertyMapping) {
+//                    $applyCriteria = ($having && ($expression->aggregateFunction || $propertyMapping->aggregateFunction))
+//                        || (!$having && !$expression->aggregateFunction && !$propertyMapping->aggregateFunction);
+//                    if ($applyCriteria) { //Criteria involving aggregate functions use HAVING
+//                        if ($propertyMapping->aggregateFunction) { //Find the correct alias for the collection
+//                            $aggregateCollectionClass = $parentClassMapping->properties[$propertyMapping->aggregateCollection]->dataType;
+//                            $aggregateCollectionPropertyPathParts = explode('.', $expression->propertyName);
+//                            array_pop($aggregateCollectionPropertyPathParts);
+//                            $aggregateCollectionPropertyPath = implode(
+//                                '.',
+//                                array_merge(
+//                                    $aggregateCollectionPropertyPathParts,
+//                                    explode(
+//                                        '.',
+//                                        $propertyMapping->aggregateCollection
+//                                    )
+//                                )
+//                            );
+//                            $joinMappingAlias = $having ? $this->objectMapper->joinMapper->getJoinMappingKeyForPropertyPath(
+//                                $this->entityClassName,
+//                                $aggregateCollectionPropertyPath,
+//                                $joinMappings
+//                            ) : '';
+//                            $aggregatePropertyMapping = $this->objectMapper->getPropertyMapping(
+//                                $aggregateCollectionClass,
+//                                $propertyMapping->aggregateProperty
+//                            );
+//                            $columnName = $aggregatePropertyMapping->getFullColumnName(true, $joinMappingAlias);
+//                            $columnName = $propertyMapping->aggregateFunction . '(' . $columnName . ')';
+//                        } else {
+//                            $tableAlias = $joinMappingAlias ?: (!$propertyMapping->tableName && $parentClassMapping ? $parentClassMapping->tableName : '');
+//                            $columnPrefix = $this->objectMapper->getColumnPrefixForPropertyPath(
+//                                $expression->propertyName
+//                            );
+//                            $columnName = $propertyMapping->getFullColumnName(
+//                                true,
+//                                $tableAlias,
+//                                false,
+//                                false,
+//                                $columnPrefix
+//                            ); //Embedded objects do not have a table name - use parent
+//                            if ($expression->aggregateFunction) {
+//                                $columnName = $expression->aggregateFunction . '(' . $columnName . ')';
+//                            }
+//                        }
+//                        $dateFormat = $propertyMapping->format && (in_array(
+//                                $propertyMapping->dataType,
+//                                ['datetimestring', 'datestring']
+//                            ) || strpos(
+//                                strtolower($propertyMapping->propertyName),
+//                                'date'
+//                            ) !== false) ? $propertyMapping->format : '';
+//                        $sql = " $joiner (" . $this->applyCriteriaValue(
+//                                $columnName,
+//                                $operator,
+//                                $value,
+//                                $value2,
+//                                $dateFormat
+//                            );
+//                    }
                     foreach ($expression->andExpressions as $andExpression) {
                         $sql .= $this->applyCriteria($andExpression, 'AND', $having, $joinMappings);
                     }
                     foreach ($expression->orExpressions as $orExpression) {
                         $sql .= $this->applyCriteria($orExpression, 'OR', $having, $joinMappings);
                     }
-                    if ($applyCriteria) {
-                        $sql .= ")";
-                    }
-                }
+                    $sql .= ')';
+//                }
             }
         }
 
@@ -798,8 +812,9 @@ class SqlBuilderMySql implements SqlBuilderInterface
      */
     private function resolveValue(&$value)
     {
-        if (substr($value, 0, 1) == '`' && substr($value, -1) == '`') {
-            $columnName = $this->objectMapper->getColumnForPropertyPath(str_replace('`', '', $value));
+        $strValue = (string) $value;
+        if (substr($strValue, 0, 1) == '`' && substr($strValue, -1) == '`') {
+            $columnName = $this->objectMapper->getColumnForPropertyPath(str_replace('`', '', $strValue));
             if ($columnName) {
                 $value = $columnName;
                 return true;
@@ -827,37 +842,36 @@ class SqlBuilderMySql implements SqlBuilderInterface
     }
 
     /**
-     * @param array $criteria
      * @param bool $ignoreCount
      * @return string SQL string for the GROUP BY clause, base implementation (cannot be overridden).
      * @throws MappingException
      * @throws \ReflectionException
      */
-    private function baseGroupBy(array $criteria = [], $ignoreCount = false)
+    private function baseGroupBy($ignoreCount = false)
     {
         $sql = '';
 
         if ($ignoreCount || !$this->countWithoutGroups) {
-            $sql .= " GROUP BY ";
-            $groups = [];
-            $aggregateGroupByColumns = $this->objectMapper->getAggregateGroupByColumns();
-            if ($aggregateGroupByColumns) {
-                $groups = array_merge($groups, $aggregateGroupByColumns);
-            }
-            if ($this->latest) {
-                //Getting latest record
-                $groups[] = $this->delimit($this->mainTable . '.' . $this->objectMapper->getCommonShortColumn());
-            } elseif ($this->groupByPrimaryKey) {
-                $groups[] = $this->delimit($this->objectMapper->getIdColumn());
-            }
-            if (!empty(array_filter($groups))) {
-                $sql .= ' ' . implode(', ', array_unique($groups)) . ' ';
-            } else {
-                $sql = '';
-            }
+//            $sql .= " GROUP BY ";
+//            $groups = [];
+//            $aggregateGroupByColumns = $this->objectMapper->getAggregateGroupByColumns();
+//            if ($aggregateGroupByColumns) {
+//                $groups = array_merge($groups, $aggregateGroupByColumns);
+//            }
+//            if ($this->latest) {
+//                //Getting latest record
+//                $groups[] = $this->delimit($this->mainTable . '.' . $this->objectMapper->getCommonShortColumn());
+//            } elseif ($this->groupByPrimaryKey) {
+//                $groups[] = $this->delimit($this->objectMapper->getIdColumn());
+//            }
+//            if (!empty(array_filter($groups))) {
+//                $sql .= ' ' . implode(', ', array_unique($groups)) . ' ';
+//            } else {
+//                $sql = '';
+//            }
         }
 
-        return $this->overrideQueryPart('groupby', $sql, $criteria, $this->getQueryParams());
+        return $sql;
     }
 
     private function overrideQueryPart($part, $generatedQuery, $params)

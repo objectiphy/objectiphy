@@ -20,7 +20,7 @@ class MappingCollection
      * @var string Name of parent entity class.
      */
     private string $entityClassName;
-    
+
     /** @var Table Mapping for the main table. */
     private Table $table;
 
@@ -28,23 +28,23 @@ class MappingCollection
     private array $classes = [];
 
     /**
-     * @var array Property mappings keyed by column name or alias (ie. as the data appears in the result array).
+     * @var PropertyMapping[] Property mappings keyed by column name or alias (ie. as the data appears in the result array).
      */
     private array $columns = [];
-    
-    /** 
-     * @var array Property mappings keyed by property path.
+
+    /**
+     * @var PropertyMapping[] Property mappings keyed by property path.
      */
     private array $properties = [];
 
     /**
-     * @var array Property mappings for primary keys - indexed arrays of property mappings, keyed on class name, eg.
+     * @var PropertyMapping[] Property mappings for primary keys - indexed arrays of property mappings, keyed on class name, eg.
      * ['My\Class' => [0 => PropertyMapping, 1 => PropertyMapping], 'My\Child\Class' => [0 => PropertyMapping]
      */
     private array $primaryKeyProperties = [];
 
     /**
-     * @var array Relationship mappings keyed by parent property name and class.
+     * @var PropertyMapping[] Property mappings for relationships keyed by parent class and property name
      */
     private array $relationships = [];
 
@@ -53,17 +53,17 @@ class MappingCollection
      * wait until all relationships are added).
      */
     private bool $relationshipMappingDone = false;
-    
+
     public function __construct(string $entityClassName)
     {
         $this->entityClassName = $entityClassName;
     }
-    
+
     public function setPrimaryTableMapping(Table $table)
     {
         $this->table = $table;
     }
-    
+
     public function getPrimaryTableMapping()
     {
         return $this->table;
@@ -79,7 +79,7 @@ class MappingCollection
         return $this->columns;
     }
 
-    public function getRelationships(): array 
+    public function getRelationships(): array
     {
         if (!$this->relationshipMappingDone) {
             $this->finaliseRelationshipMappings();
@@ -88,6 +88,32 @@ class MappingCollection
         return $this->relationships;
     }
 
+    /**
+     * @param array $parentProperties Optionally restrict to properties with the given parents (if supplied, 
+     * the keys will be the property path relative to the nearest parent).
+     * @return PropertyMapping[]
+     */
+    public function getPropertyMappings(array $parentProperties = []): array
+    {
+        if ($parentProperties) {
+            $properties = [];
+            foreach ($this->properties as $propertyPath => $propertyMapping) {
+                if (array_slice($propertyMapping->parentProperties, 0, count($parentProperties)) == $parentProperties) {
+                    $newPath = implode('.', array_slice($propertyMapping->parentProperties, count($parentProperties)));
+                    $properties[$newPath] = $propertyMapping;
+                }
+            }
+            return $properties;
+        } else {
+            return $this->properties;
+        }
+    }
+
+    public function getPropertyMapping(string $propertyPath): ?PropertyMapping
+    {
+        return $this->properties[$propertyPath] ?? null;
+    }
+    
     /**
      * Add the mapping information for a property to the collection and index it by both column and property names.
      * @param PropertyMapping $propertyMapping
@@ -108,18 +134,17 @@ class MappingCollection
     }
 
     /**
-     * Return the true, short, column name for this property (not an alias).
-     * @param string $propertyName
-     * @param array $parentProperties
+     * Return the column alias used for the given property
+     * @param string $propertyPath
      * @return string | null
      */
-    public function getColumnForProperty(string $propertyName, array $parentProperties): ?string
+    public function getColumnForPropertyPath(string $propertyPath, bool $fullyQualified = false): ?string
     {
-        $propertyPath = implode('.', array_merge($parentProperties, [$propertyName]));
-        if (isset($this->properties[$propertyPath])) {
-            return $this->properties[$propertyPath]->column->name;
+        $propertyMapping = $this->properties[$propertyPath] ?? null;
+        if ($propertyMapping) {
+            return $fullyQualified ? $propertyMapping->getFullColumnName() : $propertyMapping->getShortColumnName();
         }
-
+        
         return null;
     }
 

@@ -2,13 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy\Mapping;
+namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Annotations\AnnotationReader;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface as NSI;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Mapping\MappingCollection;
+use Objectiphy\Objectiphy\Mapping\PropertyMapping;
+use Objectiphy\Objectiphy\Mapping\Table;
 
 /**
  * Loads mapping information from the supplied mapping provider (typically annotations, but the mapping information 

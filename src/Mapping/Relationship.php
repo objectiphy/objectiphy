@@ -187,7 +187,7 @@ class Relationship
         return $this->targetScalarValueColumn ? true : false;
     }
 
-    private function validateRelationship(PropertyMapping $propertyMapping)
+    public function validate(PropertyMapping $propertyMapping)
     {
         $errorMessage = '';
         if (!$this->joinTable) {

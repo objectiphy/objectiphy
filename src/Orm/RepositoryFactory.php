@@ -7,10 +7,10 @@ namespace Objectiphy\Objectiphy\Orm;
 use Objectiphy\Annotations\AnnotationReader;
 use Objectiphy\Annotations\DocParser;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
+use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Database\PdoStorage;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
-use Objectiphy\Objectiphy\Mapping\ObjectMapper;
 use Objectiphy\Objectiphy\MappingProvider\MappingProvider;
 use Objectiphy\Objectiphy\MappingProvider\MappingProviderAnnotation;
 use Objectiphy\Objectiphy\MappingProvider\MappingProviderDoctrineAnnotation;
@@ -74,7 +74,6 @@ class RepositoryFactory
     public function createRepository(
         string $entityClassName = '',
         string $repositoryClassName = null,
-        EntityFactoryInterface $entityFactory = null,
         ?ConfigOptions $configOptions = null
     ) {
         $repositoryClassName = $this->getRepositoryClassName($repositoryClassName, $entityClassName);
@@ -88,7 +87,7 @@ class RepositoryFactory
             $configOptions ?? $this->configOptions
         );
         if ($entityClassName) {
-            $objectRepository->setClassName($entityClassName, $entityFactory);
+            $objectRepository->setClassName($entityClassName);
         }
 
         return $objectRepository;
