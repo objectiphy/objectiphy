@@ -89,24 +89,11 @@ class MappingCollection
     }
 
     /**
-     * @param array $parentProperties Optionally restrict to properties with the given parents (if supplied, 
-     * the keys will be the property path relative to the nearest parent).
      * @return PropertyMapping[]
      */
-    public function getPropertyMappings(array $parentProperties = []): array
+    public function getPropertyMappings(): array
     {
-        if ($parentProperties) {
-            $properties = [];
-            foreach ($this->properties as $propertyPath => $propertyMapping) {
-                if (array_slice($propertyMapping->parentProperties, 0, count($parentProperties)) == $parentProperties) {
-                    $newPath = implode('.', array_slice($propertyMapping->parentProperties, count($parentProperties)));
-                    $properties[$newPath] = $propertyMapping;
-                }
-            }
-            return $properties;
-        } else {
-            return $this->properties;
-        }
+        return $this->properties;
     }
 
     public function getPropertyMapping(string $propertyPath): ?PropertyMapping

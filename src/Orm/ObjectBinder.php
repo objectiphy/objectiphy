@@ -46,26 +46,27 @@ final class ObjectBinder
         }
     }
 
-    public function bindRowToEntity(array $row, string $entityClassName, array $parentProperties = []): object
+    public function bindRowToEntity(array $row, string $entityClassName): object
     {
         if (!isset($this->mappingCollection)) {
             throw new MappingException('Mapping collection has not been supplied to the object binder.');
         }
         
         $entity = $this->entityFactory->createEntity($entityClassName);
-        foreach ($this->mappingCollection->getPropertyMappings($parentProperties) as $propertyMapping) {
-            if ($propertyMapping->isScalarValue()) {
-                $value = $row[$propertyMapping->getShortColumnName()] ?? null;
-                $type = $propertyMapping->column->type;
-                $format = $propertyMapping->column->format;
-            } elseif ($propertyMapping->getChildClassName()) {
-                $parentProperties[] = $propertyMapping->propertyName;
-                $value = $this->bindRowToEntity($row, $propertyMapping->getChildClassName(), $parentProperties);
-                $type = $propertyMapping->getChildClassName();
-                $format = '';
+        foreach ($this->mappingCollection->getPropertyMappings() as $propertyMapping) {
+            if ($propertyMapping->className == $entityClassName) {
+                if ($propertyMapping->isScalarValue()) {
+                    $value = $row[$propertyMapping->getShortColumnName()] ?? null;
+                    $type = $propertyMapping->column->type;
+                    $format = $propertyMapping->column->format;
+                } elseif ($propertyMapping->getChildClassName()) {
+                    $value = $this->bindRowToEntity($row, $propertyMapping->getChildClassName());
+                    $type = $propertyMapping->getChildClassName();
+                    $format = '';
+                }
+                $name = $propertyMapping->propertyName;
+                ObjectHelper::setValueOnObject($entity, $name, $value, $type, $format);
             }
-            $name = $propertyMapping->propertyName;
-            ObjectHelper::setValueOnObject($entity, $name, $value, $type, $format);
         }
         
         return $entity;
