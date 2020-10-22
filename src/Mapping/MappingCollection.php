@@ -38,6 +38,11 @@ class MappingCollection
     private array $properties = [];
 
     /**
+     * @var PropertyMapping[] Property mappings keyed by class name then property path.
+     */
+    private array $propertiesByClass = [];
+
+    /**
      * @var PropertyMapping[] Property mappings for primary keys - indexed arrays of property mappings, keyed on class name, eg.
      * ['My\Class' => [0 => PropertyMapping, 1 => PropertyMapping], 'My\Child\Class' => [0 => PropertyMapping]
      */
@@ -89,11 +94,16 @@ class MappingCollection
     }
 
     /**
+     * @param string $forClass Optionally filter by class name.
      * @return PropertyMapping[]
      */
-    public function getPropertyMappings(): array
+    public function getPropertyMappings(string $forClass = ''): array
     {
-        return $this->properties;
+        if ($forClass) {
+            return $this->propertiesByClass[$forClass] ?? [];
+        } else {
+            return $this->properties;
+        }
     }
 
     public function getPropertyMapping(string $propertyPath): ?PropertyMapping
@@ -111,6 +121,7 @@ class MappingCollection
         $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
         $this->properties[$propertyMapping->getPropertyPath()] = $propertyMapping;
         $this->classes[$propertyMapping->className] = $propertyMapping->table;
+        $this->propertiesByClass[$propertyMapping->className][$propertyMapping->getPropertyPath()] = $propertyMapping;
         if ($propertyMapping->column->isPrimaryKey ?? false) {
             $this->primaryKeyProperties[$propertyMapping->className][$propertyMapping->propertyName] = $propertyMapping;
         }

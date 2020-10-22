@@ -53,20 +53,18 @@ final class ObjectBinder
         }
         
         $entity = $this->entityFactory->createEntity($entityClassName);
-        foreach ($this->mappingCollection->getPropertyMappings() as $propertyMapping) {
-            if ($propertyMapping->className == $entityClassName) {
-                if ($propertyMapping->isScalarValue()) {
-                    $value = $row[$propertyMapping->getShortColumnName()] ?? null;
-                    $type = $propertyMapping->column->type;
-                    $format = $propertyMapping->column->format;
-                } elseif ($propertyMapping->getChildClassName()) {
-                    $value = $this->bindRowToEntity($row, $propertyMapping->getChildClassName());
-                    $type = $propertyMapping->getChildClassName();
-                    $format = '';
-                }
-                $name = $propertyMapping->propertyName;
-                ObjectHelper::setValueOnObject($entity, $name, $value, $type, $format);
+        foreach ($this->mappingCollection->getPropertyMappings($entityClassName) as $propertyMapping) {
+            if ($propertyMapping->isScalarValue()) {
+                $value = $row[$propertyMapping->getShortColumnName()] ?? null;
+                $type = $propertyMapping->column->type;
+                $format = $propertyMapping->column->format;
+            } elseif ($propertyMapping->getChildClassName()) {
+                $value = $this->bindRowToEntity($row, $propertyMapping->getChildClassName());
+                $type = $propertyMapping->getChildClassName();
+                $format = '';
             }
+            $name = $propertyMapping->propertyName;
+            ObjectHelper::setValueOnObject($entity, $name, $value, $type, $format);
         }
         
         return $entity;
