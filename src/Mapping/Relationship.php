@@ -198,6 +198,16 @@ class Relationship
         return $eager;
     }
 
+    /**
+     * Determines whether child is loaded in same query as parent, or in a separate query.
+     * ToMany relationships and lazy loaded ones require a separate query.
+     * @return bool
+     */
+    public function isLateBound(): bool
+    {
+        return $this->isToMany() || !$this->isEager();
+    }
+
     public function isScalarJoin(): bool
     {
         return $this->targetScalarValueColumn ? true : false;
@@ -206,7 +216,7 @@ class Relationship
     public function validate(PropertyMapping $propertyMapping)
     {
         $errorMessage = '';
-        if ($this->isEager()) {
+        //if ($this->isEager()) {
             if (!$this->joinTable) {
                 $errorMessage = 'Could not determine join table for relationship from %1$s to %2$s';
             } elseif (!$this->sourceJoinColumn) {
@@ -220,7 +230,7 @@ class Relationship
                     $errorMessage = 'On the relationship between %1$s and %2$s, the join consists of more than one column (this can happen automatically if there is a composite primary key). There must be an equal number of columns on both sides of the join. You can specify multiple columns in your mapping by separating them with a comma.';
                 }
             }
-        }
+        //}
 
         if ($errorMessage) {
             $errorMessage = sprintf(

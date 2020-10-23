@@ -69,12 +69,12 @@ class MappingCollection
         $this->entityClassName = $entityClassName;
     }
 
-    public function setPrimaryTableMapping(Table $table)
+    public function setPrimaryTableMapping(Table $table): void
     {
         $this->table = $table;
     }
 
-    public function getPrimaryTableMapping()
+    public function getPrimaryTableMapping(): Table
     {
         return $this->table;
     }
@@ -84,11 +84,17 @@ class MappingCollection
         return $this->entityClassName;
     }
 
+    /**
+     * @return PropertyMapping[]
+     */
     public function getColumnDefinitions(): array
     {
         return $this->columns;
     }
 
+    /**
+     * @return PropertyMapping[]
+     */
     public function getRelationships(): array
     {
         if (!$this->relationshipMappingDone) {
@@ -163,26 +169,11 @@ class MappingCollection
         return $this->columns[$columnAlias] ?? '';
     }
 
-    /**
-     * If the relationship is not already mapped, and is to be eager loaded, returns true
-     * @param array $parentProperties
-     * @param string $propertyName
-     * @param bool $eagerLoadToOne
-     * @param bool $eagerLoadToMany
-     * @return bool
-     */
-    public function isRelationshipEligibleForMapping(
-        array $parentProperties,
-        string $propertyName,
-        bool $eagerLoadToOne,
-        bool $eagerLoadToMany
-    ): bool {
+    public function isRelationshipAlreadyMapped(array $parentProperties, string $propertyName): bool
+    {
         $propertyPath = implode('.', array_merge($parentProperties, [$propertyName]));
-        if (!($this->propertiesByParent[$propertyPath] ?? false)) {
-            //We don't already have any children - see if we are eager loading
-            $propertyMapping = $this->getPropertyMapping($propertyPath);
-            $relationship = $propertyMapping->relationship;
-            return $relationship->isEager($eagerLoadToOne, $eagerLoadToMany);
+        if (($this->propertiesByParent[$propertyPath] ?? false)) {
+            return true;
         }
 
         return false;
@@ -248,7 +239,7 @@ class MappingCollection
             if (!$relationship->joinSql) {
                 if (!$relationship->sourceJoinColumn && $relationship->mappedBy) {
                     //Get it from the other side...
-                    $otherSidePropertyPath = $relationshipMapping->propertyName . '.' . $relationship->mappedBy;
+                    $otherSidePropertyPath = $relationshipMapping->getPropertyPath() . '.' . $relationship->mappedBy;
                     $otherSideMapping = $this->getPropertyMapping($otherSidePropertyPath);
                     if ($otherSideMapping && $otherSideMapping->relationship) {
                         $relationship->sourceJoinColumn = $relationship->sourceJoinColumn ?: $otherSideMapping->relationship->targetJoinColumn;

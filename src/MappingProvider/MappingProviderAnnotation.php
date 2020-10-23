@@ -31,9 +31,10 @@ class MappingProviderAnnotation implements MappingProviderInterface
     /**
      * Populate a Table mapping class based on annotations.
      * @param \ReflectionClass $reflectionClass
+     * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      * @return object | null
      */
-    public function getTableMapping(\ReflectionClass $reflectionClass, bool &$wasMapped): Table
+    public function getTableMapping(\ReflectionClass $reflectionClass, bool &$wasMapped = null): Table
     {
         $table = $this->mappingProvider->getTableMapping($reflectionClass, $wasMapped);
         $objectiphyTable = $this->annotationReader->getClassAnnotation($reflectionClass, Table::class);
@@ -47,9 +48,10 @@ class MappingProviderAnnotation implements MappingProviderInterface
     /**
      * Populate a Column mapping class based on annotations.
      * @param \ReflectionProperty $reflectionProperty
+     * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      * @return object | null
      */
-    public function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped): Column
+    public function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Column
     {
         $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $wasMapped);
         $objectiphyColumn = $this->annotationReader->getPropertyAnnotation($reflectionProperty, Column::class);
@@ -63,9 +65,10 @@ class MappingProviderAnnotation implements MappingProviderInterface
     /**
      * Populate a Relationship mapping class based on annotations.
      * @param \ReflectionProperty $reflectionProperty
+     * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      * @return object | null
      */
-    public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped): Relationship
+    public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Relationship
     {
         $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $wasMapped);
         $objectiphyRelationship = $this->annotationReader->getPropertyAnnotation($reflectionProperty, Relationship::class);

@@ -65,6 +65,9 @@ final class ObjectBinder
                 $valueFound = $value ? true : false;
                 $type = $propertyMapping->getChildClassName();
                 $format = '';
+            } elseif ($propertyMapping->getChildClassName()) {
+                //Late binding...
+                $stop = true;
             }
             if ($valueFound) {
                 $name = $propertyMapping->propertyName;

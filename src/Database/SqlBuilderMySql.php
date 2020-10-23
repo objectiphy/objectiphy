@@ -266,33 +266,45 @@ class SqlBuilderMySql implements SqlBuilderInterface
     {
         $sql = '';
         $relationshipProperties = $this->options->mappingCollection->getRelationships();
-        /** @var PropertyMapping $propertyMapping */
         foreach ($relationshipProperties as $propertyMapping) {
+            if ($propertyMapping->relationship->isLateBound()) {
+                continue;
+            }
+            if ($this->options->count
+                && !$this->options->getCriteria()
+                && ($propertyMapping->relationship->joinType ?: 'LEFT') == 'LEFT'
+            ) {
+                continue; //No need for left joins if there is no criteria and we are just counting records
+            }
             $sourceJoinColumns = $propertyMapping->getSourceJoinColumns();
             $targetJoinColumns = $propertyMapping->getTargetJoinColumns();
             if (!$propertyMapping->relationship->joinSql && !$sourceJoinColumns && !$targetJoinColumns) {
                 //Shouldn't happen, but if it does, don't try to add it, as we know for sure the SQL is invalid
                 continue;
             }
-            if ($this->options->count && !$this->options->getCriteria() && ($propertyMapping->relationship->joinType ?: 'LEFT') == 'LEFT') {
-                continue; //No need for left joins if there is no criteria and we are just counting records
-            }
-            $sql .= " " . ($propertyMapping->relationship->joinType ?: 'LEFT') . " JOIN ";
-            $sql .= $this->delimit($propertyMapping->relationship->joinTable) . " ";
-            $sql .= $this->delimit($propertyMapping->getTableAlias(true));
-            $sql .= " ON ";
-            if ($propertyMapping->relationship->joinSql) {
-                $sql .= $propertyMapping->relationship->joinSql;
-            } else {
-                $joinSql = [];
-                foreach ($sourceJoinColumns as $index => $sourceJoinColumn) {
-                    $joinSql[] = $this->delimit($sourceJoinColumn) . ' = ' . $this->delimit($targetJoinColumns[$index]);
-                }
-                $sql .= implode(' AND ', $joinSql);
-            }
+            $sql .= $this->buildJoinSql($propertyMapping, $sourceJoinColumns, $targetJoinColumns);
         }
 
         return $this->overrideQueryPart('joins', $sql, $this->getQueryParams());
+    }
+
+    private function buildJoinSql(PropertyMapping $propertyMapping, array $sourceJoinColumns, array $targetJoinColumns): string
+    {
+        $sql = " " . ($propertyMapping->relationship->joinType ?: 'LEFT') . " JOIN ";
+        $sql .= $this->delimit($propertyMapping->relationship->joinTable) . " ";
+        $sql .= $this->delimit($propertyMapping->getTableAlias(true));
+        $sql .= " ON ";
+        if ($propertyMapping->relationship->joinSql) {
+            $sql .= $propertyMapping->relationship->joinSql;
+        } else {
+            $joinSql = [];
+            foreach ($sourceJoinColumns as $index => $sourceJoinColumn) {
+                $joinSql[] = $this->delimit($sourceJoinColumn) . ' = ' . $this->delimit($targetJoinColumns[$index]);
+            }
+            $sql .= implode(' AND ', $joinSql);
+        }
+
+        return $sql;
     }
 
     /**

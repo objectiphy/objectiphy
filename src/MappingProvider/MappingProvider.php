@@ -22,7 +22,7 @@ class MappingProvider implements MappingProviderInterface
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      * @return Table
      */
-    public function getTableMapping(\ReflectionClass $reflectionClass, bool &$wasMapped): Table
+    public function getTableMapping(\ReflectionClass $reflectionClass, bool &$wasMapped = null): Table
     {
         $wasMapped = false;
         return new Table();
@@ -34,7 +34,7 @@ class MappingProvider implements MappingProviderInterface
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      * @return Column
      */
-    public function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped): Column
+    public function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Column
     {
         $wasMapped = false;
         return new Column();
@@ -46,7 +46,7 @@ class MappingProvider implements MappingProviderInterface
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      * @return Relationship
      */
-    public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped): Relationship
+    public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Relationship
     {
         $wasMapped = false;
         return new Relationship(Relationship::UNDEFINED);

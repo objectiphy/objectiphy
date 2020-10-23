@@ -9,8 +9,11 @@ use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface as NSI;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Mapping\Column;
+use Objectiphy\Objectiphy\Mapping\LateBinding;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
+use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Mapping\Table;
 
 /**
@@ -115,24 +118,46 @@ final class ObjectMapper
 
     private function populateRelationalMappings(string $topClassName, \ReflectionClass $reflectionClass, array $parentProperties)
     {
-        $mappingCollection = $this->mappingCollection[$topClassName];
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-            $relationshipIsMapped = false;
-            $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $relationshipIsMapped);
-            if ($relationship->isDefined()
-                && $mappingCollection->isRelationshipEligibleForMapping(
-                    $parentProperties,
-                    $reflectionProperty->getName(),
-                    $this->eagerLoadToOne,
-                    $this->eagerLoadToMany
-                )) {
-                $childParentProperties = array_merge($parentProperties, [$reflectionProperty->getName()]);
-                $this->populateMappingCollection(
-                    $topClassName,
-                    $relationship->childClassName,
-                    $childParentProperties
-                );
+            $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty);
+            $relationship->setConfigOptions($this->eagerLoadToOne, $this->eagerLoadToMany);
+            if ($relationship->isDefined()) {
+                $propertyName = $reflectionProperty->getName();
+                $this->mapRelationship($topClassName, $propertyName, $relationship, $reflectionClass, $parentProperties);
             }
+        }
+    }
+
+    private function mapRelationship(string $topClassName, string $propertyName, Relationship $relationship, \ReflectionClass $reflectionClass, array $parentProperties)
+    {
+        $mappingCollection = $this->mappingCollection[$topClassName];
+        if ($relationship->isLateBound() || $mappingCollection->isRelationshipAlreadyMapped($parentProperties, $propertyName)) {
+            //Go this far, but no further
+            $propertyMapping = new PropertyMapping(
+                $reflectionClass->getName(),
+                $propertyName,
+                $this->getTableMapping($reflectionClass, true),
+                new Column(),
+                $relationship,
+                $parentProperties
+            );
+            $mappingCollection->addMapping($propertyMapping);
+            if ($relationship->mappedBy) { //Well, ok, we have to go a little bit further
+                $childReflectionClass = new \ReflectionClass($relationship->childClassName);
+                $childReflectionProperty = $childReflectionClass->getProperty($relationship->mappedBy);
+                $propertyMapping = new PropertyMapping(
+                    $relationship->childClassName,
+                    $relationship->mappedBy,
+                    $this->getTableMapping($childReflectionClass, true),
+                    new Column(),
+                    $this->mappingProvider->getRelationshipMapping($childReflectionProperty),
+                    array_merge($parentProperties, [$propertyName])
+                );
+                $mappingCollection->addMapping($propertyMapping);
+            }
+        } else { //if (!$mappingCollection->isRelationshipAlreadyMapped($parentProperties, $propertyName)) {
+            $childParentProperties = array_merge($parentProperties, [$propertyName]);
+            $this->populateMappingCollection($topClassName, $relationship->childClassName, $childParentProperties);
         }
     }
 

@@ -35,7 +35,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      * @return Table
      */
-    public function getTableMapping(\ReflectionClass $reflectionClass, bool &$wasMapped): Table
+    public function getTableMapping(\ReflectionClass $reflectionClass, bool &$wasMapped = null): Table
     {
         $table = $this->mappingProvider->getTableMapping($reflectionClass, $wasMapped);
         if (class_exists('Doctrine\ORM\Mapping\Table')) {
@@ -56,7 +56,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      * @return Column
      */
-    public function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped): Column
+    public function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Column
     {
         $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $wasMapped);
         $this->populateFromDoctrineColumn($reflectionProperty, $column, $wasMapped);
@@ -71,7 +71,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      * @return Relationship
      */
-    public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped): Relationship
+    public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Relationship
     {
         $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $wasMapped);
         foreach (Relationship::getRelationshipTypes() as $relationshipType) {
@@ -89,7 +89,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
      * Read a Doctrine Column annotation.
      * @param \ReflectionProperty $reflectionProperty
      * @param Column $column
-     * @param bool $wasMapped
+     * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      */
     private function populateFromDoctrineColumn(
         \ReflectionProperty $reflectionProperty, 
@@ -111,7 +111,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
      * Read a Doctrine Id annotation.
      * @param \ReflectionProperty $reflectionProperty
      * @param Column $column
-     * @param bool $wasMapped
+     * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      */
     private function populateFromDoctrineId(
         \ReflectionProperty $reflectionProperty, 
@@ -132,7 +132,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
      * Read a Doctrine OrderBy annotation.
      * @param \ReflectionProperty $reflectionProperty
      * @param Relationship $relationship
-     * @param bool $wasMapped
+     * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      */
     private function populateFromDoctrineOrderBy(
         \ReflectionProperty $reflectionProperty,
@@ -154,7 +154,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
      * @param \ReflectionProperty $reflectionProperty
      * @param Relationship $relationship
      * @param string $relationshipType
-     * @param bool $wasMapped
+     * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      */
     private function populateFromDoctrineRelationship(
         \ReflectionProperty $reflectionProperty,
@@ -178,7 +178,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
      * Read a Doctrine JoinColumn annotation.
      * @param \ReflectionProperty $reflectionProperty
      * @param Relationship $relationship
-     * @param bool $wasMapped
+     * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      */
     private function populateFromDoctrineJoinColumn(
         \ReflectionProperty $reflectionProperty,
@@ -197,7 +197,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
      * Read a Doctrine Embedded annotation.
      * @param \ReflectionProperty $reflectionProperty
      * @param Relationship $relationship
-     * @param bool $wasMapped
+     * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      */
     private function populateFromDoctrineEmbedded(
         \ReflectionProperty $reflectionProperty,
