@@ -95,6 +95,16 @@ class Relationship
      */
     private string $collectionFactoryClass = '';
 
+    /**
+     * @var bool Global config setting (ie. the default value if not defined on this relationship)
+     */
+    private bool $eagerLoadToOne;
+
+    /**
+     * @var bool Global config setting (ie. the default value if not defined on this relationship)
+     */
+    private bool $eagerLoadToMany;
+
     public function __construct(string $relationshipType)
     {
         if (!in_array($relationshipType, self::getRelationshipTypes())) {
@@ -107,6 +117,12 @@ class Relationship
         }
         
         $this->relationshipType = $relationshipType;
+    }
+
+    public function setConfigOptions(bool $eagerLoadToOne, bool $eagerLoadToMany): void
+    {
+        $this->eagerLoadToOne = $eagerLoadToOne;
+        $this->eagerLoadToMany = $eagerLoadToMany;
     }
 
     /**
@@ -172,11 +188,11 @@ class Relationship
      * Determines whether or not to eager load the child.
      * @return bool
      */
-    public function isEager(bool $eagerLoadToOne, bool $eagerLoadToMany): bool
+    public function isEager(): bool
     {
         $eager = !$this->lazyLoad;
         if ($this->lazyLoad === null) {
-            $eager = ($eagerLoadToOne && $this->isToOne()) || ($eagerLoadToMany && $this->isToMany());
+            $eager = ($this->eagerLoadToOne && $this->isToOne()) || ($this->eagerLoadToMany && $this->isToMany());
         }
 
         return $eager;
@@ -190,17 +206,19 @@ class Relationship
     public function validate(PropertyMapping $propertyMapping)
     {
         $errorMessage = '';
-        if (!$this->joinTable) {
-            $errorMessage = 'Could not determine join table for relationship from %1$s to %2$s';
-        } elseif (!$this->sourceJoinColumn) {
-            $errorMessage = 'Could not determine source join column for relationship from %1$s to %2$s';
-        } elseif (!$this->targetJoinColumn) {
-            $errorMessage = 'Could not determine target join column for relationship from %1$s to %2$s';
-        } else {
-            $sourceColumnCount = count(explode(',', $this->sourceJoinColumn));
-            $targetColumnCount = count(explode(',', $this->targetJoinColumn));
-            if ($sourceColumnCount != $targetColumnCount) {
-                $errorMessage = 'On the relationship between %1$s and %2$s, the join consists of more than one column (this can happen automatically if there is a composite primary key). There must be an equal number of columns on both sides of the join. You can specify multiple columns in your mapping by separating them with a comma.';
+        if ($this->isEager()) {
+            if (!$this->joinTable) {
+                $errorMessage = 'Could not determine join table for relationship from %1$s to %2$s';
+            } elseif (!$this->sourceJoinColumn) {
+                $errorMessage = 'Could not determine source join column for relationship from %1$s to %2$s';
+            } elseif (!$this->targetJoinColumn) {
+                $errorMessage = 'Could not determine target join column for relationship from %1$s to %2$s';
+            } else {
+                $sourceColumnCount = count(explode(',', $this->sourceJoinColumn));
+                $targetColumnCount = count(explode(',', $this->targetJoinColumn));
+                if ($sourceColumnCount != $targetColumnCount) {
+                    $errorMessage = 'On the relationship between %1$s and %2$s, the join consists of more than one column (this can happen automatically if there is a composite primary key). There must be an equal number of columns on both sides of the join. You can specify multiple columns in your mapping by separating them with a comma.';
+                }
             }
         }
 
@@ -208,7 +226,7 @@ class Relationship
             $errorMessage = sprintf(
                 $errorMessage,
                 $propertyMapping->className . '::' . $propertyMapping->propertyName,
-                $relationship->type
+                $this->type
             );
             throw new MappingException($errorMessage);
         }

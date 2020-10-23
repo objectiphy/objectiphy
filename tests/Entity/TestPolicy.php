@@ -29,50 +29,59 @@ class TestPolicy
      * @Groups({"Default"})
      */
     protected $id;
+    
     /**
      * @var TestUnderwriter
      * @Mapping\Relationship(sourceJoinColumn="underwriter_id",childClassName="TestUnderwriter",relationshipType="one_to_one")
      */
     protected $underwriter;
+    
     /**
      * @var string
      * @Groups({"Default"})
      * @ORM\Column(type="string", name="policy_number")
      */
     protected $policyNo;
+    
     /**
      * @var \DateTime
      * @Groups({"Default"})
      * @ORM\Column(type="datetime")
      */
     protected $effectiveStartDateTime;
+    
     /**
      * @var \DateTime
      * @Groups({"Default"})
      * @ORM\Column(type="datetime")
      */
     protected $effectiveEndDateTime;
+    
     /**
      * @var string
      * @ORM\Column(type="string",name="policy_status")
      */
     protected $status;
+    
     /**
      * @var string
      * @ORM\Column(type="string")
      */
     protected $modification;
+    
     /**
      * @var TestContact
      * @Mapping\Relationship(sourceJoinColumn="contact_id",childClassName="TestContact",relationshipType="one_to_one")
      */
     protected $contact;
+    
     /**
      * @var TestVehicle
      * @Groups({"Default"})
-     * @ORM\OneToOne(targetEntity="TestVehicle",mappedBy="policy")
+     * @ORM\OneToOne(targetEntity="TestVehicle",mappedBy="policy",fetch="EAGER")
      */
     protected $vehicle;
+    
     /**
      * @var integer
      * @ORM\Column(type="integer")

@@ -322,7 +322,6 @@ class ObjectRepository implements ObjectRepositoryInterface
     protected function doFindBy()
     {
         $this->assertClassNameSet();
-                
         return $this->objectFetcher->doFindBy();
     }
 

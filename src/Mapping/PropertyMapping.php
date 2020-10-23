@@ -98,14 +98,18 @@ class PropertyMapping
         return ltrim($result, $separator);
     }
     
-    public function isScalarValue()
+    public function isScalarValue(): bool
     {
         return !$this->relationship->isDefined() || $this->relationship->isScalarJoin();
     }
     
-    public function getChildClassName()
+    public function getChildClassName(bool $eagerLoadedOnly = false): string
     {
-        return $this->relationship->childClassName;
+        if ($eagerLoadedOnly && !$this->relationship->isEager()) {
+            return '';
+        } else {
+            return $this->relationship->childClassName;
+        }
     }
 
     /**
@@ -180,14 +184,16 @@ class PropertyMapping
     {
         $joinColumns = [];
         foreach (explode(',', $sourceOrTargetColumn) as $thisJoinColumn) {
-            $joinColumn = '';
-            if (strpos($thisJoinColumn, '.') === false) { //Table not specified in mapping definition
-                $joinColumn = $table;
-                $joinColumn = $joinColumn ?: $this->table->name; //No alias, so assume root
-                $joinColumn .= ".";
+            if (trim($thisJoinColumn)) {
+                $joinColumn = '';
+                if (strpos($thisJoinColumn, '.') === false) { //Table not specified in mapping definition
+                    $joinColumn = $table;
+                    $joinColumn = $joinColumn ?: $this->table->name; //No alias, so assume root
+                    $joinColumn .= ".";
+                }
+                $joinColumn .= trim($thisJoinColumn);
+                $joinColumns[] = $joinColumn;
             }
-            $joinColumn .= trim($thisJoinColumn);
-            $joinColumns[] = $joinColumn;
         }
 
         return $joinColumns;

@@ -43,6 +43,11 @@ class MappingCollection
     private array $propertiesByClass = [];
 
     /**
+     * @var PropertyMapping[] Property mappings keyed by parent property path then property name.
+     */
+    private array $propertiesByParent = [];
+
+    /**
      * @var PropertyMapping[] Property mappings for primary keys - indexed arrays of property mappings, keyed on class name, eg.
      * ['My\Class' => [0 => PropertyMapping, 1 => PropertyMapping], 'My\Child\Class' => [0 => PropertyMapping]
      */
@@ -122,6 +127,8 @@ class MappingCollection
         $this->properties[$propertyMapping->getPropertyPath()] = $propertyMapping;
         $this->classes[$propertyMapping->className] = $propertyMapping->table;
         $this->propertiesByClass[$propertyMapping->className][$propertyMapping->getPropertyPath()] = $propertyMapping;
+        $parentPropertyPath = implode('.', $propertyMapping->parentProperties);
+        $this->propertiesByParent[$parentPropertyPath][$propertyMapping->propertyName] = $propertyMapping;
         if ($propertyMapping->column->isPrimaryKey ?? false) {
             $this->primaryKeyProperties[$propertyMapping->className][$propertyMapping->propertyName] = $propertyMapping;
         }
@@ -157,23 +164,28 @@ class MappingCollection
     }
 
     /**
-     * Whether or not a relationship between two classes has already been added (prevents infinite recursion).
-     * @param \Objectiphy\Objectiphy\Mapping\PropertyMapping $propertyMapping
+     * If the relationship is not already mapped, and is to be eager loaded, returns true
+     * @param array $parentProperties
+     * @param string $propertyName
      * @param bool $eagerLoadToOne
      * @param bool $eagerLoadToMany
      * @return bool
      */
-    public function isRelationshipMapped(PropertyMapping $propertyMapping, bool $eagerLoadToOne, bool $eagerLoadToMany)
-    {
-        $result = false;
-        $relationship = $propertyMapping->relationship;
-        $parentProperty = end($propertyMapping->parentProperties);
-        if ($relationship->childClassName ?? false && $relationship->isEager($eagerLoadToOne, $eagerLoadToMany)) {
-            $relationshipKey = $this->getRelationshipKey($propertyMapping);
-            $result = array_key_exists($relationshipKey, $this->relationships);
+    public function isRelationshipEligibleForMapping(
+        array $parentProperties,
+        string $propertyName,
+        bool $eagerLoadToOne,
+        bool $eagerLoadToMany
+    ): bool {
+        $propertyPath = implode('.', array_merge($parentProperties, [$propertyName]));
+        if (!($this->propertiesByParent[$propertyPath] ?? false)) {
+            //We don't already have any children - see if we are eager loading
+            $propertyMapping = $this->getPropertyMapping($propertyPath);
+            $relationship = $propertyMapping->relationship;
+            return $relationship->isEager($eagerLoadToOne, $eagerLoadToMany);
         }
 
-        return $result;
+        return false;
     }
     
     /**
@@ -236,7 +248,13 @@ class MappingCollection
             if (!$relationship->joinSql) {
                 if (!$relationship->sourceJoinColumn && $relationship->mappedBy) {
                     //Get it from the other side...
-                    $stop = true;
+                    $otherSidePropertyPath = $relationshipMapping->propertyName . '.' . $relationship->mappedBy;
+                    $otherSideMapping = $this->getPropertyMapping($otherSidePropertyPath);
+                    if ($otherSideMapping && $otherSideMapping->relationship) {
+                        $relationship->sourceJoinColumn = $relationship->sourceJoinColumn ?: $otherSideMapping->relationship->targetJoinColumn;
+                        $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: $otherSideMapping->relationship->sourceJoinColumn;
+                        $relationship->joinTable = $relationship->joinTable ?: $otherSideMapping->getTableAlias();
+                    }
                 } elseif (!$relationship->targetJoinColumn) {
                     $relationship->targetJoinColumn = implode(',',
                         $this->getPrimaryKeyProperties(

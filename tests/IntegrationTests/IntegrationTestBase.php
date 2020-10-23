@@ -27,10 +27,13 @@ class IntegrationTestBase extends TestCase
         }
         $this->pdo = new \PDO('mysql:host=' . $config['DB_HOST'] . ';dbname=' . $config['DB_NAME'], $config['DB_USER'], $config['DB_PASSWORD']);
         $this->createFixtures();
+        $start = microtime(true);
         $configOptions = new ConfigOptions();
         $configOptions->commonProperty = 'loginId';
         $repositoryFactory = new RepositoryFactory($this->pdo, $configOptions);
         $this->objectRepository = $repositoryFactory->createRepository(TestPolicy::class);
+        $setupTime = round(microtime(true) - $start, 3);
+        echo "Objectiphy setup time: $setupTime seconds.\n";
         $this->startTime = microtime(true);
     }
 

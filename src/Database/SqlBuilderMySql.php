@@ -181,10 +181,10 @@ class SqlBuilderMySql implements SqlBuilderInterface
      * @throws MappingException
      * @throws \ReflectionException
      */
-    public function getSelect(array $criteria = [])
+    public function getSelect()
     {
         $this->countWithoutGroups = false;
-        $sql = $this->getCountSql($criteria);
+        $sql = $this->getCountSql($this->options->getCriteria());
         
         if (!$sql) {
             $columns = [];
@@ -268,6 +268,12 @@ class SqlBuilderMySql implements SqlBuilderInterface
         $relationshipProperties = $this->options->mappingCollection->getRelationships();
         /** @var PropertyMapping $propertyMapping */
         foreach ($relationshipProperties as $propertyMapping) {
+            $sourceJoinColumns = $propertyMapping->getSourceJoinColumns();
+            $targetJoinColumns = $propertyMapping->getTargetJoinColumns();
+            if (!$propertyMapping->relationship->joinSql && !$sourceJoinColumns && !$targetJoinColumns) {
+                //Shouldn't happen, but if it does, don't try to add it, as we know for sure the SQL is invalid
+                continue;
+            }
             if ($this->options->count && !$this->options->getCriteria() && ($propertyMapping->relationship->joinType ?: 'LEFT') == 'LEFT') {
                 continue; //No need for left joins if there is no criteria and we are just counting records
             }
@@ -278,8 +284,6 @@ class SqlBuilderMySql implements SqlBuilderInterface
             if ($propertyMapping->relationship->joinSql) {
                 $sql .= $propertyMapping->relationship->joinSql;
             } else {
-                $sourceJoinColumns = $propertyMapping->getSourceJoinColumns();
-                $targetJoinColumns = $propertyMapping->getTargetJoinColumns();
                 $joinSql = [];
                 foreach ($sourceJoinColumns as $index => $sourceJoinColumn) {
                     $joinSql[] = $this->delimit($sourceJoinColumn) . ' = ' . $this->delimit($targetJoinColumns[$index]);

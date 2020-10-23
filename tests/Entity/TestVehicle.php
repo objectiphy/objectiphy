@@ -25,37 +25,44 @@ class TestVehicle
      * @ORM\GeneratedValue(strategy="AUTO")
      */
     protected $id;
+    
     /**
      * @Groups({"Default"})
      * @ORM\Column(type="string",name="abi_code")
      */
     protected $abiCode;
+    
     /**
      * @Groups({"Default"})
      * @ORM\Column(type="string",name="reg_no")
      */
     protected $regNo;
+    
     /**
      * @Groups({"Default"})
      * @ORM\Column(type="string",name="make")
      */
     protected $makeDesc;
+    
     /**
      * @Groups({"Default"})
      * @ORM\Column(type="string",name="model")
      */
     protected $modelDesc;
+    
     /**
      * @var TestPolicy
      * @ORM\OneToOne(targetEntity="TestPolicy",inversedBy="vehicle")
      * @ORM\JoinColumn(name="policy_id")
      */
     protected $policy;
+    
     /**
      * @var TestTelematicsBox
      * @ORM\OneToOne(targetEntity="TestTelematicsBox",mappedBy="vehicle")
      */
     protected $telematicsBox;
+    
     /**
      * @var TestCollection $wheels
      * @ORM\OneToMany(targetEntity="TestWheel",mappedBy="vehicle")

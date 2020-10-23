@@ -38,7 +38,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
     public function getTableMapping(\ReflectionClass $reflectionClass, bool &$wasMapped): Table
     {
         $table = $this->mappingProvider->getTableMapping($reflectionClass, $wasMapped);
-        if (class_exists('\Doctrine\ORM\Mapping\Table')) {
+        if (class_exists('Doctrine\ORM\Mapping\Table')) {
             $doctrineTable = $this->annotationReader->getClassAnnotation(
                 $reflectionClass,
                 \Doctrine\ORM\Mapping\Table::class
@@ -96,7 +96,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         Column &$column, 
         bool &$wasMapped
     ): void {
-        if (class_exists('\Doctrine\ORM\Mapping\Column')) {
+        if (class_exists('Doctrine\ORM\Mapping\Column')) {
             $doctrineColumn = $this->annotationReader->getPropertyAnnotation(
                 $reflectionProperty,
                 \Doctrine\ORM\Mapping\Column::class
@@ -118,7 +118,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         Column &$column,
         bool &$wasMapped
     ): void {
-        if (class_exists('\Doctrine\ORM\Mapping\Id')) {
+        if (class_exists('Doctrine\ORM\Mapping\Id')) {
             $doctrineId = $this->annotationReader->getPropertyAnnotation(
                 $reflectionProperty,
                 \Doctrine\ORM\Mapping\Id::class
@@ -139,7 +139,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         Relationship &$relationship,
         bool &$wasMapped
     ): void {
-        if (class_exists('\Doctrine\ORM\Mapping\OrderBy')) {
+        if (class_exists('Doctrine\ORM\Mapping\OrderBy')) {
             $doctrineOrderBy = $this->annotationReader->getPropertyAnnotation(
                 $reflectionProperty,
                 \Doctrine\ORM\Mapping\OrderBy::class
@@ -162,11 +162,15 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         string $relationshipType,
         bool &$wasMapped
     ): void {
-        $doctrineClass = '\Doctrine\ORM\Mapping\\' .  str_replace('_', '', ucwords($relationshipType, '_'));
+        $doctrineClass = 'Doctrine\ORM\Mapping\\' .  str_replace('_', '', ucwords($relationshipType, '_'));
         if (class_exists($doctrineClass)) {
             $doctrineRelationship = $this->annotationReader->getPropertyAnnotation($reflectionProperty, $doctrineClass);
             $wasMapped = $wasMapped || $doctrineRelationship;
             $relationship->relationshipType = $doctrineRelationship ? $relationshipType : $relationship->relationshipType;
+            $relationship->mappedBy = $doctrineRelationship->mappedBy ?? $relationship->mappedBy;
+            $relationship->lazyLoad = isset($doctrineRelationship->fetch) ? $doctrineRelationship->fetch == 'LAZY' : $relationship->lazyLoad;
+            $relationship->orphanRemoval = $doctrineRelationship->orphanRemoval ?? $relationship->orphanRemoval;
+            $relationship->childClassName = $doctrineRelationship->targetEntity ?? $relationship->childClassName;
         }
     }
 
@@ -181,7 +185,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         Relationship &$relationship,
         bool &$wasMapped
     ): void {
-        if (class_exists('\Doctrine\ORM\Mapping\JoinColumn')) {
+        if (class_exists('Doctrine\ORM\Mapping\JoinColumn')) {
             $doctrineJoinColumn = $this->annotationReader->getPropertyAnnotation($reflectionProperty, JoinColumn::class);
             $wasMapped = $wasMapped || $doctrineJoinColumn;
             $relationship->sourceJoinColumn = $doctrineJoinColumn->name ?? $relationship->sourceJoinColumn;
@@ -200,7 +204,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         Relationship &$relationship,
         bool &$wasMapped
     ): void {
-        if (class_exists('\Doctrine\ORM\Mapping\Embedded')) {
+        if (class_exists('Doctrine\ORM\Mapping\Embedded')) {
             $doctrineEmbedded = $this->annotationReader->getPropertyAnnotation($reflectionProperty, Embedded::class);
             $wasMapped = $wasMapped || $doctrineEmbedded;
             $relationship->isEmbedded = $doctrineEmbedded ?? $relationship->isEmbedded;
