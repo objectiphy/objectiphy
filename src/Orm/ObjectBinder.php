@@ -21,6 +21,12 @@ final class ObjectBinder
     
     /** @var ConfigEntity[] */
     private array $entityConfigOptions;
+
+    /**
+     * @var array All the entities we have already created, keyed by class name, then
+     * primary key value(s), eg. ['My\Entity' => ['1stKeyPart:2ndKeyPart' => $object]]
+     */
+    private array $boundObjects = [];
     
     public function __construct()
     {
@@ -51,30 +57,13 @@ final class ObjectBinder
         if (!isset($this->mappingCollection)) {
             throw new MappingException('Mapping collection has not been supplied to the object binder.');
         }
-        
+
         $entity = $this->entityFactory->createEntity($entityClassName);
-        foreach ($this->mappingCollection->getPropertyMappings($entityClassName) as $propertyMapping) {
-            $valueFound = false;
-            if ($propertyMapping->isScalarValue()) {
-                $valueFound = isset($row[$propertyMapping->getShortColumnName()]);
-                $value = $row[$propertyMapping->getShortColumnName()] ?? null;
-                $type = $propertyMapping->column->type;
-                $format = $propertyMapping->column->format;
-            } elseif ($propertyMapping->getChildClassName(true)) {
-                $value = $this->bindRowToEntity($row, $propertyMapping->getChildClassName());
-                $valueFound = $value ? true : false;
-                $type = $propertyMapping->getChildClassName();
-                $format = '';
-            } elseif ($propertyMapping->getChildClassName()) {
-                //Late binding...
-                $stop = true;
-            }
-            if ($valueFound) {
-                $name = $propertyMapping->propertyName;
-                ObjectHelper::setValueOnObject($entity, $name, $value, $type, $format);
-            }
+        $this->bindScalarProperties($entityClassName, $entity, $row);
+        if (!$this->getEntityFromLocalCache($entityClassName, $entity)) {
+            $this->bindRelationalProperties($entityClassName, $entity, $row);
         }
-        
+
         return $entity;
     }
 
@@ -92,5 +81,61 @@ final class ObjectBinder
         }
         
         return $entities;
+    }
+
+    private function getEntityFromLocalCache(string $entityClassName, object $entity): bool
+    {
+        $pkProperties = $this->mappingCollection->getPrimaryKeyProperties(true, $entityClassName);
+        $pkValues = [];
+        foreach ($pkProperties as $pkProperty) {
+            $pkValues[] = ObjectHelper::getValueFromObject($entity, $pkProperty);
+        }
+        $pkKey = implode(':', $pkValues);
+
+        if ($pkKey && isset($this->boundObjects[$entityClassName][$pkKey])) {
+            $entity = $this->boundObjects[$entityClassName][$pkKey];
+            return true;
+        } else {
+            $this->boundObjects[$entityClassName][$pkKey] = $entity;
+            return false;
+        }
+    }
+
+    private function bindScalarProperties(string $entityClassName, object $entity, array $row): void
+    {
+        foreach ($this->mappingCollection->getPropertyMappings($entityClassName) as $propertyMapping) {
+            $valueFound = false;
+            if ($propertyMapping->isScalarValue()) {
+                $valueFound = isset($row[$propertyMapping->getShortColumnName()]);
+                $value = $row[$propertyMapping->getShortColumnName()] ?? null;
+                $type = $propertyMapping->column->type;
+                $format = $propertyMapping->column->format;
+            }
+            if ($valueFound) {
+                $name = $propertyMapping->propertyName;
+                ObjectHelper::setValueOnObject($entity, $name, $value, $type, $format);
+            }
+        }
+    }
+
+    private function bindRelationalProperties(string $entityClassName, object $entity, array $row): void
+    {
+        foreach ($this->mappingCollection->getPropertyMappings($entityClassName) as $propertyMapping) {
+            $valueFound = false;
+            $value = null;
+            if ($propertyMapping->getChildClassName(true)) {
+                $value = $this->bindRowToEntity($row, $propertyMapping->getChildClassName());
+                $valueFound = $value ? true : false;
+                $type = $propertyMapping->getChildClassName();
+                $format = '';
+            } elseif ($propertyMapping->getChildClassName()) {
+                //Late binding... (or existing object?)
+                $stop = true;
+            }
+            if ($valueFound) {
+                $name = $propertyMapping->propertyName;
+                ObjectHelper::setValueOnObject($entity, $name, $value, $type, $format);
+            }
+        }
     }
 }

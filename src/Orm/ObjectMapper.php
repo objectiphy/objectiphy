@@ -128,10 +128,17 @@ final class ObjectMapper
         }
     }
 
-    private function mapRelationship(string $topClassName, string $propertyName, Relationship $relationship, \ReflectionClass $reflectionClass, array $parentProperties)
-    {
+    private function mapRelationship(
+        string $topClassName,
+        string $propertyName,
+        Relationship $relationship,
+        \ReflectionClass $reflectionClass,
+        array $parentProperties
+    ) {
         $mappingCollection = $this->mappingCollection[$topClassName];
-        if ($relationship->isLateBound() || $mappingCollection->isRelationshipAlreadyMapped($parentProperties, $propertyName)) {
+        if ($relationship->isLateBound()
+            || $mappingCollection->isRelationshipAlreadyMapped($parentProperties, $propertyName)
+        ) {
             //Go this far, but no further
             $propertyMapping = new PropertyMapping(
                 $reflectionClass->getName(),
@@ -155,7 +162,7 @@ final class ObjectMapper
                 );
                 $mappingCollection->addMapping($propertyMapping);
             }
-        } else { //if (!$mappingCollection->isRelationshipAlreadyMapped($parentProperties, $propertyName)) {
+        } else {
             $childParentProperties = array_merge($parentProperties, [$propertyName]);
             $this->populateMappingCollection($topClassName, $relationship->childClassName, $childParentProperties);
         }
