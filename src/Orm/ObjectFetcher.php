@@ -7,6 +7,7 @@ namespace Objectiphy\Objectiphy\Orm;
 use http\Exception\RuntimeException;
 use Marmalade\Objectiphy\IterableResult;
 use Objectiphy\Objectiphy\Config\ConfigEntity;
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
@@ -51,17 +52,9 @@ final class ObjectFetcher
         $this->objectBinder->setMappingCollection($findOptions->mappingCollection);
     }
 
-    /**
-     * @param ConfigEntity[] $entityConfigOptions
-     */
-    public function setEntityConfigOptions(array $entityConfigOptions)
+    public function setConfigOptions(ConfigOptions $configOptions)
     {
-        foreach ($entityConfigOptions as $option) {
-            if (!($option instanceof ConfigEntity)) {
-                throw new ObjectiphyException('Invalid entity config option set on object fetcher.');
-            }
-        }
-        $this->objectBinder->setEntityConfigOptions($entityConfigOptions);
+        $this->objectBinder->setConfigOptions($configOptions);
     }
 
     /**

@@ -103,13 +103,9 @@ class PropertyMapping
         return !$this->relationship->isDefined() || $this->relationship->isScalarJoin();
     }
     
-    public function getChildClassName(bool $eagerLoadedOnly = false): string
+    public function getChildClassName(): string
     {
-        if ($eagerLoadedOnly && !$this->relationship->isEager()) {
-            return '';
-        } else {
-            return $this->relationship->childClassName;
-        }
+        return $this->relationship->childClassName;
     }
 
     /**
@@ -165,6 +161,12 @@ class PropertyMapping
         $columnName = $columnName ?: $this->column->name;
 
         return $columnName;
+    }
+
+    public function pointsToParent(): bool
+    {
+        $parentPropertyMapping = $this->parentCollection->getPropertyMapping(implode('.', $this->parentProperties));
+        return $parentPropertyMapping && $parentPropertyMapping->relationship->mappedBy == $this->propertyName;
     }
 
     public function getSourceJoinColumns(): array

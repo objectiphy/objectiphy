@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
+use Objectiphy\Objectiphy\Query\QB;
 
 /**
  * @package Objectiphy\Objectiphy
@@ -16,11 +18,10 @@ use Objectiphy\Objectiphy\Mapping\PropertyMapping;
  */
 final class ObjectBinder
 {
+    private RepositoryFactory $repositoryFactory;
     private EntityFactoryInterface $entityFactory;
     private MappingCollection $mappingCollection;
-    
-    /** @var ConfigEntity[] */
-    private array $entityConfigOptions;
+    private ConfigOptions $configOptions;
 
     /**
      * @var array All the entities we have already created, keyed by class name, then
@@ -28,8 +29,9 @@ final class ObjectBinder
      */
     private array $boundObjects = [];
     
-    public function __construct()
+    public function __construct(RepositoryFactory $repositoryFactory)
     {
+        $this->repositoryFactory = $repositoryFactory;
         $this->entityFactory = new EntityFactory();
     }
 
@@ -38,21 +40,17 @@ final class ObjectBinder
         $this->mappingCollection = $mappingCollection;
     }
     
-    /**
-     * These will already have been validated by the fetcher
-     * @param ConfigEntity[] $entityConfigOptions
-     */
-    public function setEntityConfigOptions(array $entityConfigOptions)
+    public function setConfigOptions(ConfigOptions $configOptions)
     {
-        $this->entityConfigOptions = $entityConfigOptions;
-        foreach ($entityConfigOptions as $className => $configEntity) {
+        $this->configOptions = $configOptions;
+        foreach ($configOptions->getConfigOption('entityConfig') as $className => $configEntity) {
             if ($configEntity->entityFactory) {
                 $this->entityFactory->registerCustomEntityFactory($className, $configEntity->entityFactory);
             }
         }
     }
 
-    public function bindRowToEntity(array $row, string $entityClassName): object
+    public function bindRowToEntity(array $row, string $entityClassName, ?object $parentEntity = null): object
     {
         if (!isset($this->mappingCollection)) {
             throw new MappingException('Mapping collection has not been supplied to the object binder.');
@@ -61,7 +59,7 @@ final class ObjectBinder
         $entity = $this->entityFactory->createEntity($entityClassName);
         $this->bindScalarProperties($entityClassName, $entity, $row);
         if (!$this->getEntityFromLocalCache($entityClassName, $entity)) {
-            $this->bindRelationalProperties($entityClassName, $entity, $row);
+            $this->bindRelationalProperties($entityClassName, $entity, $row, $parentEntity);
         }
 
         return $entity;
@@ -118,24 +116,65 @@ final class ObjectBinder
         }
     }
 
-    private function bindRelationalProperties(string $entityClassName, object $entity, array $row): void
+    private function bindRelationalProperties(string $entityClassName, object $entity, array $row, ?object $parentEntity): void
     {
         foreach ($this->mappingCollection->getPropertyMappings($entityClassName) as $propertyMapping) {
             $valueFound = false;
             $value = null;
-            if ($propertyMapping->getChildClassName(true)) {
-                $value = $this->bindRowToEntity($row, $propertyMapping->getChildClassName());
+            if ($propertyMapping->getChildClassName()) {
+                if ($propertyMapping->pointsToParent()) {
+                    $value = $parentEntity;
+                } elseif ($propertyMapping->relationship->isLateBound()) {
+                    $value = $this->createLateBoundClosure($propertyMapping, $row);
+                } else {
+                    $value = $this->bindRowToEntity($row, $propertyMapping->getChildClassName(), $entity);
+                }
                 $valueFound = $value ? true : false;
                 $type = $propertyMapping->getChildClassName();
                 $format = '';
-            } elseif ($propertyMapping->getChildClassName()) {
-                //Late binding... (or existing object?)
-                $stop = true;
             }
             if ($valueFound) {
                 $name = $propertyMapping->propertyName;
                 ObjectHelper::setValueOnObject($entity, $name, $value, $type, $format);
             }
         }
+    }
+
+    private function createLateBoundClosure(PropertyMapping $propertyMapping, array $row)
+    {
+        //$closure = function() use ($propertyMapping) {
+            $configOptions = $this->configOptions;
+            $className = $propertyMapping->getChildClassName();
+            $repositoryClassName = $propertyMapping->table->repositoryClassName;
+            $repository = $this->repositoryFactory->createRepository($className, $repositoryClassName, $configOptions);
+
+            //We don't need multiple join columns, as we are using properties and there can only be one parent property
+            //for this child. So we just need to get the parent value and the property on the child to search for ... ?
+
+//            $targetJoinColumns = $propertyMapping->getTargetJoinColumns();
+//            $valueColumns = $propertyMapping->getSourceJoinColumns();
+//
+            $qb = QB::create();
+//            foreach ($targetJoinColumns as $index => $targetJoinColumn) {
+//                $sourceProperty = $propertyMapping->parentCollection->getPropertyForColumn($valueColumns[$index]);
+//                $targetProperty = $propertyMapping->parentCollection->getPropertyForColumn($targetJoinColumn);
+//                $rowValue = $row[$sourceProperty] ?? null;
+//                if ($rowValue !== null) {
+//                    $qb->andWhere($targetProperty, '=', $rowValue);
+//                }
+//            }
+            $criteria = $qb->build();
+
+            if ($propertyMapping->relationship->isToOne()) {
+                $result = $repository->findOneBy($criteria);
+            } else {
+                $orderBy = $propertyMapping->relationship->orderBy;
+                $result = $repository->findBy($criteria, $orderBy);
+            }
+
+            return $result;
+        //};
+
+        //return $propertyMapping->relationship->isEager() ? $closure() : $closure;
     }
 }

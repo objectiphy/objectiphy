@@ -120,7 +120,7 @@ class RepositoryFactory
 
     protected final function createObjectBinder()
     {
-        return new ObjectBinder();
+        return new ObjectBinder($this);
     }
 
     protected final function createStorage()

@@ -368,8 +368,6 @@ class ObjectRepository implements ObjectRepositoryInterface
             $this->configOptions->columnNamingStrategy
         );
         
-        $this->objectFetcher->setEntityConfigOptions(
-            $this->configOptions->getConfigOption('entityConfig')
-        );
+        $this->objectFetcher->setConfigOptions($this->configOptions);
     }
 }
