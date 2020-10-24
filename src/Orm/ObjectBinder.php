@@ -11,6 +11,8 @@ use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Query\QB;
+use Objectiphy\Objectiphy\Factory\EntityFactory;
+use Objectiphy\Objectiphy\Factory\RepositoryFactory;
 
 /**
  * @package Objectiphy\Objectiphy
@@ -170,6 +172,7 @@ final class ObjectBinder
                 } else {
                     $orderBy = $propertyMapping->relationship->orderBy;
                     $result = $repository->findBy($criteria, $orderBy);
+                    $result = $propertyMapping->relationship->getCollection($result);                    
                 }
             }
 

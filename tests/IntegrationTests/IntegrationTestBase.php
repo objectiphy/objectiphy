@@ -3,7 +3,7 @@
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
 use Objectiphy\Objectiphy\Config\ConfigOptions;
-use Objectiphy\Objectiphy\Orm\RepositoryFactory;
+use Objectiphy\Objectiphy\Factory\RepositoryFactory;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\ObjectRepository;
 use PHPUnit\Framework\TestCase;

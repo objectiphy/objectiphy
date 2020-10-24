@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Mapping;
 
+use Objectiphy\Objectiphy\Factory\CollectionFactory;
 use Objectiphy\Objectiphy\Contract\CollectionFactoryInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
@@ -87,11 +88,16 @@ class Relationship
     /** @var bool Orphan control (if child is removed from parent, delete the child, not just the relationship) */
     public bool $orphanRemoval = false;
 
+    /** @var string Optionally specify a class to use to hold collections for toMany associations (defaults to a plain
+     * old PHP array).
+     */
+    public string $collectionClass = 'array';
+
     /**
      * @var string Name of a factory class that can be used to create custom collection classes for collections of
      * entities (for properties with a to-many relationship only). If supplied, this must be the fully qualified class
-     * name of a class that implements CollectionFactoryInterface. Defaults to a plain old PHP array for collections
-     * if no factory class supplied.
+     * name of a class that implements CollectionFactoryInterface. Defaults to a collection factory that passes an
+     * array to the constructor of the collection class named in the mapping information.
      */
     private string $collectionFactoryClass = '';
 
@@ -117,6 +123,7 @@ class Relationship
         }
         
         $this->relationshipType = $relationshipType;
+        $this->setCollectionFactoryClass(CollectionFactory::class);
     }
 
     public function setConfigOptions(bool $eagerLoadToOne, bool $eagerLoadToMany): void
@@ -144,9 +151,9 @@ class Relationship
      * @param string $factoryClassName
      * @throws ObjectiphyException
      */
-    public function setCollectionFactoryClass(string $factoryClassName)
+    public function setCollectionFactoryClass(string $factoryClassName): void
     {
-        if ($factoryClassName 
+        if ($factoryClassName
             && $factoryClassName != 'array' 
             && !is_a($factoryClassName, CollectionFactoryInterface::class, true)
         ) {
@@ -161,7 +168,7 @@ class Relationship
      * Getter for custom collection class factory.
      * @return string
      */
-    public function getCollectionFactoryClass()
+    public function getCollectionFactoryClass(): CollectionFactoryInterface
     {
         return $this->collectionFactoryClass;
     }
@@ -211,6 +218,17 @@ class Relationship
     public function isScalarJoin(): bool
     {
         return $this->targetScalarValueColumn ? true : false;
+    }
+
+    public function getCollection(array $entities)
+    {
+        $collection = $entities;
+        if ($this->collectionClass && $this->collectionClass != 'array') {
+            $collectionFactory = $this->getCollectionFactoryClass();
+            $collection = $collectionFactory->createCollection($this->collectionClass, $entities);
+        }
+
+        return $collection;
     }
 
     public function validate(PropertyMapping $propertyMapping)

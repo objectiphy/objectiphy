@@ -11,5 +11,5 @@ interface CollectionFactoryInterface
      * @param array $entities
      * @return \Traversable
      */
-    public function createCollection(array $entities): \Traversable;
+    public function createCollection(string $collectionClassName, array $entities): \Traversable;
 }

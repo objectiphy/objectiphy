@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy\Orm;
+namespace Objectiphy\Objectiphy\Factory;
 
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 
@@ -219,7 +219,7 @@ final class ProxyFactory
         ?\ReflectionMethod $setterMethod,
         ?\ReflectionMethod $issetMethod
     ) {
-        $classDefinition = file_get_contents(__DIR__ . '/EntityProxy.php');
+        $classDefinition = file_get_contents(__DIR__ . '/../Orm/EntityProxy.php');
 
         $defaultGetter = $getterDeclaration = 'public function &__get(string $objectiphyGetPropertyName)';
         $defaultSetter = $setterDeclaration = 'public function __set(string $objectiphySetPropertyName, $objectiphySetValue): void';

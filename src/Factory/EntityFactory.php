@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy\Orm;
+namespace Objectiphy\Objectiphy\Factory;
 
 use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;

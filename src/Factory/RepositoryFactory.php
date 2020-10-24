@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy\Orm;
+namespace Objectiphy\Objectiphy\Factory;
 
 use Objectiphy\Annotations\AnnotationReader;
 use Objectiphy\Annotations\DocParser;
@@ -16,6 +16,12 @@ use Objectiphy\Objectiphy\MappingProvider\MappingProviderAnnotation;
 use Objectiphy\Objectiphy\MappingProvider\MappingProviderDoctrineAnnotation;
 use Objectiphy\Objectiphy\Database\SqlBuilderInterface;
 use Objectiphy\Objectiphy\Database\SqlBuilderMySql;
+use Objectiphy\Objectiphy\Orm\ObjectRepository;
+use Objectiphy\Objectiphy\Orm\ObjectMapper;
+use Objectiphy\Objectiphy\Orm\ObjectBinder;
+use Objectiphy\Objectiphy\Orm\ObjectFetcher;
+use Objectiphy\Objectiphy\Orm\ObjectPersister;
+use Objectiphy\Objectiphy\Orm\ObjectRemover;
 
 /**
  * @package Objectiphy\Objectiphy
