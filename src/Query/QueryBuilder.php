@@ -44,6 +44,7 @@ class QueryBuilder
     protected array $expressions = [];
     protected array $params = [];
     protected array $translatedFieldNames = [];
+    protected array $joins = [];
 
     /** @var string $joinWith How we join our expressions with a parent Criteria Builder */
     private string $joinWith = 'AND';
@@ -376,8 +377,8 @@ class QueryBuilder
             $args[self::VALUE_2],
             $nestedCriteria ? $nestedCriteria->getAndExpressions() : [],
             $nestedCriteria ? $nestedCriteria->getOrExpressions() : [],
-            $aggregateFunction,
-            $aggregateGroupByProperty
+            $aggregateFunction ?? '',
+            $aggregateGroupByProperty ?? ''
         );
         $this->translatedFieldNames[$args[self::ALIAS]] = $propertyName; //Doesn't matter if alias is empty
         $this->translatedFieldNames[$args[self::ALIAS_2]] = $propertyName;

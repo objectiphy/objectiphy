@@ -27,7 +27,8 @@ class RepositoryFactory
     private ConfigOptions $configOptions;
     private MappingProviderInterface $mappingProvider;
     private SqlBuilderInterface $sqlBuilder;
-    
+    private array $repositories = [];
+
     public function __construct(\PDO $pdo, ?ConfigOptions $configOptions = null)
     {
         $this->pdo = $pdo;
@@ -46,7 +47,7 @@ class RepositoryFactory
     {
         $this->sqlBuilder = $sqlBuilder;
     }
-    
+
     public function setMappingProvider(MappingProviderInterface $mappingProvider)
     {
         $this->mappingProvider = $mappingProvider;
@@ -76,21 +77,26 @@ class RepositoryFactory
         string $repositoryClassName = null,
         ?ConfigOptions $configOptions = null
     ) {
-        $repositoryClassName = $this->getRepositoryClassName($repositoryClassName, $entityClassName);
+        $configOptions ??= $this->configOptions;
+        $configHash = $configOptions->getHash();
+        if (!isset($this->repositories[$entityClassName][$configHash])) {
+            $repositoryClassName = $this->getRepositoryClassName($repositoryClassName, $entityClassName);
 
-        /** @var ObjectRepository $objectRepository */
-        $objectRepository = new $repositoryClassName(
-            $this->createObjectMapper(),
-            $this->createObjectFetcher(),
-            $this->createObjectPersister(),
-            $this->createObjectRemover(),
-            $configOptions ?? $this->configOptions
-        );
-        if ($entityClassName) {
-            $objectRepository->setClassName($entityClassName);
+            /** @var ObjectRepository $objectRepository */
+            $objectRepository = new $repositoryClassName(
+                $this->createObjectMapper(),
+                $this->createObjectFetcher($configOptions),
+                $this->createObjectPersister(),
+                $this->createObjectRemover(),
+                $configOptions
+            );
+            if ($entityClassName) {
+                $objectRepository->setClassName($entityClassName);
+            }
+            $this->repositories[$entityClassName][$configHash] = $objectRepository;
         }
 
-        return $objectRepository;
+        return $this->repositories[$entityClassName][$configHash];
     }
 
     protected final function createObjectMapper()
@@ -98,11 +104,11 @@ class RepositoryFactory
         return new ObjectMapper($this->mappingProvider);
     }
 
-    protected final function createObjectFetcher()
+    protected final function createObjectFetcher(?ConfigOptions $configOptions = null)
     {
         $sqlBuilder = $this->getSqlBuilder();
         $objectMapper = $this->createObjectMapper();
-        $objectBinder = $this->createObjectBinder();
+        $objectBinder = $this->createObjectBinder($configOptions);
         $storage = $this->createStorage();
 
         return new ObjectFetcher($sqlBuilder, $objectMapper, $objectBinder, $storage);
@@ -118,11 +124,22 @@ class RepositoryFactory
         return new ObjectRemover($this->getSqlBuilder());
     }
 
-    protected final function createObjectBinder()
+    protected final function createObjectBinder(?ConfigOptions $configOptions = null)
     {
-        return new ObjectBinder($this);
+        return new ObjectBinder($this, $this->createEntityFactory($configOptions));
     }
 
+    protected final function createEntityFactory(?ConfigOptions $configOptions = null)
+    {
+        return new EntityFactory($this->createProxyFactory($configOptions));
+    }
+
+    protected final function createProxyFactory(?ConfigOptions $configOptions = null)
+    {
+        $configOptions ??= $this->configOptions;
+        return new ProxyFactory($configOptions->productionMode, $configOptions->cacheDirectory);
+    }
+    
     protected final function createStorage()
     {
         return new PdoStorage($this->pdo);

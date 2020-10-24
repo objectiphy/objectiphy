@@ -42,7 +42,11 @@ class ObjectHelper
                 }
                 $reflectionProperty = new \ReflectionProperty($object, $propertyName);
                 $reflectionProperty->setAccessible(true);
-                $value = $reflectionProperty->getValue($object);
+                if ($reflectionProperty->isInitialized($object) === false) {
+                    $value = null;
+                } else {
+                    $value = $reflectionProperty->getValue($object);
+                }
             } elseif ($object && $lookForGetter && method_exists($object, 'get' . ucfirst($propertyName))) {
                 $reflectionMethod = new \ReflectionMethod(ObjectHelper::getObjectClassName($object), 'get' . ucfirst($propertyName));
                 if ($reflectionMethod->isPublic() && $reflectionMethod->getNumberOfRequiredParameters() == 0) {

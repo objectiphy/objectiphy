@@ -11,20 +11,36 @@ use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-class EntityFactory implements EntityFactoryInterface
+class EntityFactory 
 {
+    private ProxyFactory $proxyFactory;
     private array $entityFactories = [];
 
-    public function registerCustomEntityFactory(string $className, EntityFactoryInterface $entityFactory)
+    public function __construct(ProxyFactory $proxyFactory)
+    {
+        $this->proxyFactory = $proxyFactory;
+    }
+
+    public function registerCustomEntityFactory(string $className, EntityFactoryInterface $entityFactory): void
     {
         $this->entityFactories[$className] = $entityFactory;
     }
 
-    public function createEntity(string $className): object
+    public function createEntity(string $className, bool $requiresProxy = false): object
     {
+        $entity = null;
+        if ($requiresProxy) {
+            $proxyClassName = $this->proxyFactory->createEntityProxy($className);
+        }
         if (isset($this->entityFactories[$className])) {
             $entity = $this->entityFactories[$className]->createEntity($className);
-        } else {
+            if ($requiresProxy) {
+                $entity = $this->createProxyFromInstance($proxyClassName, $entity);
+            }
+        }
+        
+        if (!$entity) {
+            $className = $requiresProxy ? $proxyClassName : $className;
             try {
                 $entity = new $className();
             } catch (\Exception $ex) {
@@ -48,5 +64,20 @@ class EntityFactory implements EntityFactoryInterface
         }
 
         return $entity;
+    }
+    
+    private function createProxyFromInstance(string $proxyClassName, object $entity): ?EntityProxyInterface
+    {
+        try {
+            $serialized = serialize($entity);
+            $length = strlen($proxyClassName);
+            $hackedString = preg_replace('/^O:\d+:"[^"]++"/', "O:$length:\"$proxyClassName\"", $serialized);
+            $proxy = unserialize($hackedString);
+        } catch (\Exception $ex) {
+            //Tried to use a custom entity factory for an entity that is not serializable :(
+            $proxy = null;
+        }
+        
+        return $proxy ?: null;
     }
 }

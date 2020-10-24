@@ -236,7 +236,21 @@ class ObjectRepository implements ObjectRepositoryInterface
         ?string $keyProperty = null,
         bool $fetchOnDemand = false
     ): ?iterable {
-        return null;
+        $this->setOrderBy(array_filter($orderBy ?? $this->orderBy ?? []));
+        if ($limit) { //Only for Doctrine compatibility
+            //$this->pagination = new Pagination($limit, round($offset / $limit) + 1);
+        }
+
+        $findOptions = FindOptions::create($this->mappingCollection, [
+            'multiple' => true,
+            'criteria' => $criteria,
+            'keyProperty' => $keyProperty ?? '',
+            'onDemand' => $fetchOnDemand,
+            'pagination' => $this->pagination ?? null,
+        ]);
+        $this->objectFetcher->setFindOptions($findOptions);
+
+        return $this->doFindBy();
     }
 
     /**
@@ -369,5 +383,14 @@ class ObjectRepository implements ObjectRepositoryInterface
         );
         
         $this->objectFetcher->setConfigOptions($this->configOptions);
+    }
+
+    private function throwException(\Exception $ex)
+    {
+        if ($ex instanceof ObjectiphyException) {
+            throw $ex;
+        } else {
+            throw new ObjectiphyException($ex->getMessage() . ' at ' . $ex->getFile() . ':' . $ex->getLine(), $ex->getCode(), $ex);
+        }
     }
 }

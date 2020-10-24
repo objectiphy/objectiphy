@@ -99,12 +99,19 @@ final class ObjectMapper
             $relationshipIsMapped = false;
             $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $columnIsMapped);
             $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $relationshipIsMapped);
-            $relationship->setConfigOptions($this->eagerLoadToOne, $this->eagerLoadToMany);
-            if (($columnIsMapped || $relationshipIsMapped) && $column->name != 'IGNORE') {
+            //Even relationships get their column mapped here - the child properties will be mapped separately afterwards.
+            if ($columnIsMapped || $relationshipIsMapped && $column->name != 'IGNORE') {
+                $relationship->setConfigOptions($this->eagerLoadToOne, $this->eagerLoadToMany);
+                $childTable = null;
+                if ($relationship->childClassName) {
+                    $childReflectionClass = new \ReflectionClass($relationship->childClassName);
+                    $childTable = $this->mappingProvider->getTableMapping($childReflectionClass);
+                }
                 $propertyMapping = new PropertyMapping(
                     $reflectionClass->getName(),
                     $reflectionProperty->getName(),
                     $table,
+                    $childTable,
                     $column,
                     $relationship,
                     $parentProperties
@@ -120,8 +127,8 @@ final class ObjectMapper
     {
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
             $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty);
-            $relationship->setConfigOptions($this->eagerLoadToOne, $this->eagerLoadToMany);
             if ($relationship->isDefined()) {
+                $relationship->setConfigOptions($this->eagerLoadToOne, $this->eagerLoadToMany);
                 $propertyName = $reflectionProperty->getName();
                 $this->mapRelationship($topClassName, $propertyName, $relationship, $reflectionClass, $parentProperties);
             }
@@ -139,23 +146,14 @@ final class ObjectMapper
         if ($relationship->isLateBound()
             || $mappingCollection->isRelationshipAlreadyMapped($parentProperties, $propertyName)
         ) {
-            //Go this far, but no further
-            $propertyMapping = new PropertyMapping(
-                $reflectionClass->getName(),
-                $propertyName,
-                $this->getTableMapping($reflectionClass, true),
-                new Column(),
-                $relationship,
-                $parentProperties
-            );
-            $mappingCollection->addMapping($propertyMapping);
-            if ($relationship->mappedBy) { //Well, ok, we have to go a little bit further
+            if ($relationship->mappedBy) { //Go this far, but no further
                 $childReflectionClass = new \ReflectionClass($relationship->childClassName);
                 $childReflectionProperty = $childReflectionClass->getProperty($relationship->mappedBy);
                 $propertyMapping = new PropertyMapping(
                     $relationship->childClassName,
                     $relationship->mappedBy,
                     $this->getTableMapping($childReflectionClass, true),
+                    null,
                     new Column(),
                     $this->mappingProvider->getRelationshipMapping($childReflectionProperty),
                     array_merge($parentProperties, [$propertyName])
@@ -233,6 +231,10 @@ final class ObjectMapper
                     $propertyMapping
                 );
             }
+        }
+
+        if ($relationship->isDefined() && !$column->name) {
+            $column->name = $relationship->sourceJoinColumn; //Also retrieve the value in case of late binding
         }
     }
 }

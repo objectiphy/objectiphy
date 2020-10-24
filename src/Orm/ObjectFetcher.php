@@ -99,8 +99,8 @@ final class ObjectFetcher
      */
     private function doCount(): void
     {
-        if ($this->options->multiple && $this->findOptions->pagination) {
-            $countSql = $this->sqlBuilder->getSelectQuery($this->options->criteria, $this->options->multiple, $this->options->latest, true);
+        if ($this->options->multiple && $this->options->pagination) {
+            $countSql = $this->sqlBuilder->getSelectQuery($this->options->getCriteria(), $this->options->multiple, $this->options->latest, true);
             $recordCount = intval($this->fetchValue($countSql, $this->sqlBuilder->getQueryParams()));
             $this->options->pagination->setTotalRecords($recordCount);
         }
@@ -116,7 +116,7 @@ final class ObjectFetcher
 
         if ($this->options->multiple && $this->options->onDemand && $this->options->scalarProperty) {
             $result = $this->fetchIterableValues($sql, $params);
-        } elseif ($this->options->multiple && $this->options->iterable) {
+        } elseif ($this->options->multiple && $this->options->onDemand) {
             $result = $this->fetchIterableResult($sql, $params);
         } elseif ($this->options->multiple && $this->options->scalarProperty) {
             $result = $this->fetchValues($sql, $params);

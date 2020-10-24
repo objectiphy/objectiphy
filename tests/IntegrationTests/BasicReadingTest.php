@@ -96,6 +96,8 @@ class BasicReadingTest extends IntegrationTestBase
         $this->assertEquals('P123456', $policy->policyNo);
         $this->assertEquals('Skywalker', $policy->contact->lastName);
         $this->assertEquals(5, count($policy->vehicle->wheels));
+        $v = $policy->telematicsBox->vehicle;
+
         $this->assertEquals(TestCollection::class, get_class($policy->vehicle->wheels));
 
         //Find by child property (not possible in Doctrine)

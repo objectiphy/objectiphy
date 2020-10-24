@@ -45,6 +45,11 @@ class PropertyMapping
     public Table $table;
 
     /**
+     * @var Table If this property represents a relationship to a child entity, the table annotation for the child.
+     */
+    public ?Table $childTable;
+
+    /**
      * @var Column If the value of this property is stored in a column on the entity's table, the column
      * annotation.
      */
@@ -69,6 +74,7 @@ class PropertyMapping
         string $className,
         string $propertyName,
         Table $table,
+        ?Table $childTable,
         Column $column,
         Relationship $relationship,
         array $parentProperties = []
@@ -76,6 +82,7 @@ class PropertyMapping
         $this->className = $className;
         $this->propertyName = $propertyName;
         $this->table = $table;
+        $this->childTable = $childTable;
         $this->column = $column;
         $this->relationship = $relationship;
         $this->parentProperties = $parentProperties;

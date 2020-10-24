@@ -299,6 +299,11 @@ class SqlBuilderMySql implements SqlBuilderInterface
         } else {
             $joinSql = [];
             foreach ($sourceJoinColumns as $index => $sourceJoinColumn) {
+
+                // TODO: Check if either of these is a literal value (ie. property does not exist) - if so,
+                // delimit with quotes.
+                // NOTE: Will have to intercept earlier than this, as we have already added a table prefix.
+
                 $joinSql[] = $this->delimit($sourceJoinColumn) . ' = ' . $this->delimit($targetJoinColumns[$index]);
             }
             $sql .= implode(' AND ', $joinSql);

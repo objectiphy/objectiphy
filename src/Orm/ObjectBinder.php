@@ -6,7 +6,7 @@ namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Config\ConfigEntity;
-use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
+use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
@@ -19,7 +19,7 @@ use Objectiphy\Objectiphy\Query\QB;
 final class ObjectBinder
 {
     private RepositoryFactory $repositoryFactory;
-    private EntityFactoryInterface $entityFactory;
+    private EntityFactory $entityFactory;
     private MappingCollection $mappingCollection;
     private ConfigOptions $configOptions;
 
@@ -29,10 +29,10 @@ final class ObjectBinder
      */
     private array $boundObjects = [];
     
-    public function __construct(RepositoryFactory $repositoryFactory)
+    public function __construct(RepositoryFactory $repositoryFactory, EntityFactory $entityFactory)
     {
         $this->repositoryFactory = $repositoryFactory;
-        $this->entityFactory = new EntityFactory();
+        $this->entityFactory = $entityFactory;
     }
 
     public function setMappingCollection(MappingCollection $mappingCollection)
@@ -56,9 +56,10 @@ final class ObjectBinder
             throw new MappingException('Mapping collection has not been supplied to the object binder.');
         }
 
-        $entity = $this->entityFactory->createEntity($entityClassName);
+        $requiresProxy = $this->mappingCollection->classHasLateBoundProperties($entityClassName);
+        $entity = $this->entityFactory->createEntity($entityClassName, $requiresProxy);
         $this->bindScalarProperties($entityClassName, $entity, $row);
-        if (!$this->getEntityFromLocalCache($entityClassName, $entity)) {
+        if (!$this->getEntityFromLocalCache($entityClassName, $entity)) { //TODO: Could be more efficient by doing this earlier
             $this->bindRelationalProperties($entityClassName, $entity, $row, $parentEntity);
         }
 
@@ -135,46 +136,46 @@ final class ObjectBinder
             }
             if ($valueFound) {
                 $name = $propertyMapping->propertyName;
-                ObjectHelper::setValueOnObject($entity, $name, $value, $type, $format);
+                if ($entity instanceof EntityProxyInterface && $value instanceof \Closure) {
+                    $entity->setLazyLoader($name, $value);
+                } else {
+                    ObjectHelper::setValueOnObject($entity, $name, $value, $type, $format);
+                }
             }
         }
     }
 
     private function createLateBoundClosure(PropertyMapping $propertyMapping, array $row)
     {
-        //$closure = function() use ($propertyMapping) {
+        $closure = function() use ($propertyMapping, $row) {
+            $result = null;
             $configOptions = $this->configOptions;
             $className = $propertyMapping->getChildClassName();
             $repositoryClassName = $propertyMapping->table->repositoryClassName;
             $repository = $this->repositoryFactory->createRepository($className, $repositoryClassName, $configOptions);
 
-            //We don't need multiple join columns, as we are using properties and there can only be one parent property
-            //for this child. So we just need to get the parent value and the property on the child to search for ... ?
+            if ($propertyMapping->relationship->mappedBy) {
+                $whereProperty = $propertyMapping->relationship->mappedBy;
+                $pkProperties = $this->mappingCollection->getPrimaryKeyProperties(false, $propertyMapping->className);
+                $valueKey = reset($pkProperties)->getAlias(); //Not sure if we can do multiple join columns here...?
+                $value = $row[$valueKey] ?? null;
+                if ($value !== null) {
+                    $criteria = QB::create()->where($whereProperty, '=', $value)->build();
+                }
+            }
 
-//            $targetJoinColumns = $propertyMapping->getTargetJoinColumns();
-//            $valueColumns = $propertyMapping->getSourceJoinColumns();
-//
-            $qb = QB::create();
-//            foreach ($targetJoinColumns as $index => $targetJoinColumn) {
-//                $sourceProperty = $propertyMapping->parentCollection->getPropertyForColumn($valueColumns[$index]);
-//                $targetProperty = $propertyMapping->parentCollection->getPropertyForColumn($targetJoinColumn);
-//                $rowValue = $row[$sourceProperty] ?? null;
-//                if ($rowValue !== null) {
-//                    $qb->andWhere($targetProperty, '=', $rowValue);
-//                }
-//            }
-            $criteria = $qb->build();
-
-            if ($propertyMapping->relationship->isToOne()) {
-                $result = $repository->findOneBy($criteria);
-            } else {
-                $orderBy = $propertyMapping->relationship->orderBy;
-                $result = $repository->findBy($criteria, $orderBy);
+            if (isset($criteria)) {
+                if ($propertyMapping->relationship->isToOne()) {
+                    $result = $repository->findOneBy($criteria);
+                } else {
+                    $orderBy = $propertyMapping->relationship->orderBy;
+                    $result = $repository->findBy($criteria, $orderBy);
+                }
             }
 
             return $result;
-        //};
+        };
 
-        //return $propertyMapping->relationship->isEager() ? $closure() : $closure;
+        return $propertyMapping->relationship->isEager() ? $closure() : $closure;
     }
 }

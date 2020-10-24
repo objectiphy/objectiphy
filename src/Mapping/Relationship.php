@@ -191,7 +191,7 @@ class Relationship
     public function isEager(): bool
     {
         $eager = !$this->lazyLoad;
-        if ($this->lazyLoad === null) {
+        if ($this->isDefined() && $this->lazyLoad === null) {
             $eager = ($this->eagerLoadToOne && $this->isToOne()) || ($this->eagerLoadToMany && $this->isToMany());
         }
 
@@ -216,21 +216,19 @@ class Relationship
     public function validate(PropertyMapping $propertyMapping)
     {
         $errorMessage = '';
-        //if ($this->isEager()) {
-            if (!$this->joinTable) {
-                $errorMessage = 'Could not determine join table for relationship from %1$s to %2$s';
-            } elseif (!$this->sourceJoinColumn) {
-                $errorMessage = 'Could not determine source join column for relationship from %1$s to %2$s';
-            } elseif (!$this->targetJoinColumn) {
-                $errorMessage = 'Could not determine target join column for relationship from %1$s to %2$s';
-            } else {
-                $sourceColumnCount = count(explode(',', $this->sourceJoinColumn));
-                $targetColumnCount = count(explode(',', $this->targetJoinColumn));
-                if ($sourceColumnCount != $targetColumnCount) {
-                    $errorMessage = 'On the relationship between %1$s and %2$s, the join consists of more than one column (this can happen automatically if there is a composite primary key). There must be an equal number of columns on both sides of the join. You can specify multiple columns in your mapping by separating them with a comma.';
-                }
+        if (!$this->joinTable) {
+            $errorMessage = 'Could not determine join table for relationship from %1$s to %2$s';
+        } elseif (!$this->sourceJoinColumn) {
+            $errorMessage = 'Could not determine source join column for relationship from %1$s to %2$s';
+        } elseif (!$this->targetJoinColumn) {
+            $errorMessage = 'Could not determine target join column for relationship from %1$s to %2$s';
+        } else {
+            $sourceColumnCount = count(explode(',', $this->sourceJoinColumn));
+            $targetColumnCount = count(explode(',', $this->targetJoinColumn));
+            if ($sourceColumnCount != $targetColumnCount) {
+                $errorMessage = 'On the relationship between %1$s and %2$s, the join consists of more than one column (this can happen automatically if there is a composite primary key). There must be an equal number of columns on both sides of the join. You can specify multiple columns in your mapping by separating them with a comma.';
             }
-        //}
+        }
 
         if ($errorMessage) {
             $errorMessage = sprintf(

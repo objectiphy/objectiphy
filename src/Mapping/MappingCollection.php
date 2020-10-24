@@ -48,7 +48,8 @@ class MappingCollection
     private array $propertiesByParent = [];
 
     /**
-     * @var PropertyMapping[] Property mappings for primary keys - indexed arrays of property mappings, keyed on class name, eg.
+     * @var PropertyMapping[] Property mappings for primary keys - indexed arrays of property mappings, keyed on
+     * class name, eg.
      * ['My\Class' => [0 => PropertyMapping, 1 => PropertyMapping], 'My\Child\Class' => [0 => PropertyMapping]
      */
     private array $primaryKeyProperties = [];
@@ -59,8 +60,8 @@ class MappingCollection
     private array $relationships = [];
 
     /**
-     * @var bool Whether relationship join information has been populated (we have to
-     * wait until all relationships are added).
+     * @var bool Whether relationship join information has been populated (we have to wait until all
+     * relationships are added).
      */
     private bool $relationshipMappingDone = false;
 
@@ -123,7 +124,7 @@ class MappingCollection
     }
     
     /**
-     * Add the mapping information for a property to the collection and index it by both column and property names.
+     * Add the mapping information for a property to the collection and index it in various ways.
      * @param PropertyMapping $propertyMapping
      */
     public function addMapping(PropertyMapping $propertyMapping)
@@ -132,6 +133,9 @@ class MappingCollection
         $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
         $this->properties[$propertyMapping->getPropertyPath()] = $propertyMapping;
         $this->classes[$propertyMapping->className] = $propertyMapping->table;
+        if ($propertyMapping->childTable && $propertyMapping->relationship->childClassName) {
+            $this->classes[$propertyMapping->relationship->childClassName] = $propertyMapping->childTable;
+        }
         $this->propertiesByClass[$propertyMapping->className][$propertyMapping->getPropertyPath()] = $propertyMapping;
         $parentPropertyPath = implode('.', $propertyMapping->parentProperties);
         $this->propertiesByParent[$parentPropertyPath][$propertyMapping->propertyName] = $propertyMapping;
@@ -139,8 +143,7 @@ class MappingCollection
             $this->primaryKeyProperties[$propertyMapping->className][$propertyMapping->propertyName] = $propertyMapping;
         }
         if ($propertyMapping->relationship->isDefined()) {
-            $relationshipKey = $this->getRelationshipKey($propertyMapping);
-            $this->relationships[$relationshipKey] = $propertyMapping;
+            $this->relationships[] = $propertyMapping;
         }
     }
 
@@ -209,18 +212,15 @@ class MappingCollection
         return false;
     }
 
-    /**
-     * Generate a key describing the relationship to prevent infinite recursion
-     */
-    private function getRelationshipKey(PropertyMapping $propertyMapping)
+    public function classHasLateBoundProperties(string $className): bool
     {
-        $parentProperties = $propertyMapping->parentProperties ?? [''];
-        $parentProperty = end($parentProperties);
-        $relationshipKey = $parentProperty;
-        $relationshipKey .= ':' . $propertyMapping->className;
-        $relationshipKey .= ':' . $propertyMapping->propertyName;
+        foreach ($this->getPropertyMappings($className) as $propertyMapping) {
+            if ($propertyMapping->relationship->isLateBound()) {
+                return true;
+            }
+        }
 
-        return $relationshipKey;
+        return false;
     }
 
     /**
@@ -228,10 +228,9 @@ class MappingCollection
      * each relationship (ie. if not specified explicitly in the mapping information,
      * work it out).
      */
-    private function finaliseRelationshipMappings()
+    private function finaliseRelationshipMappings(): void
     {
-        /** @var PropertyMapping $relationshipMapping */
-        foreach ($this->relationships as $relationshipMapping) {
+        foreach ($this->relationships ?? [] as $relationshipMapping) {
             $relationship = $relationshipMapping->relationship;
             if (!$relationship->joinTable) {
                 $relationship->joinTable = $this->classes[$relationship->childClassName]->name ?? '';
@@ -247,16 +246,14 @@ class MappingCollection
                         $relationship->joinTable = $relationship->joinTable ?: $otherSideMapping->getTableAlias();
                     }
                 } elseif (!$relationship->targetJoinColumn) {
-                    $relationship->targetJoinColumn = implode(',',
-                        $this->getPrimaryKeyProperties(
-                            true,
-                            $relationship->childClassName
-                        )
-                    );
+                    $pkPropertyNames = $this->getPrimaryKeyProperties(true, $relationship->childClassName);
+                    $relationship->targetJoinColumn = implode(',', $pkPropertyNames);
                 }
             }
+            $relationship->validate($relationshipMapping);
         }
-        $relationship->validate($relationshipMapping);
-        $this->relationshipMappingDone = true;
+        if (isset($relationship)) {
+            $this->relationshipMappingDone = true;
+        }
     }
 }
