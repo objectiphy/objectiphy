@@ -90,7 +90,8 @@ class MappingProviderAnnotation implements MappingProviderInterface
     {
         if ($decorator) {
             if (get_class($component) == get_class($decorator)) {
-                $attributesRead = $this->annotationReader->getAttributesRead($hostClassName, 'p:' . $hostProperty, get_class($decorator));
+                $itemName = $hostProperty ? $itemName = 'p:' . $hostProperty : 'c';
+                $attributesRead = $this->annotationReader->getAttributesRead($hostClassName, $itemName, get_class($decorator));
                 foreach ($attributesRead as $property => $value) {
                     ObjectHelper::populateFromObject($decorator, $property, $component);
                 }

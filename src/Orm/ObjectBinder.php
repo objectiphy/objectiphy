@@ -52,7 +52,7 @@ final class ObjectBinder
         }
     }
 
-    public function bindRowToEntity(array $row, string $entityClassName, ?object $parentEntity = null): object
+    public function bindRowToEntity(array $row, string $entityClassName, array $parentProperties = [], ?object $parentEntity = null): object
     {
         if (!isset($this->mappingCollection)) {
             throw new MappingException('Mapping collection has not been supplied to the object binder.');
@@ -60,9 +60,9 @@ final class ObjectBinder
 
         $requiresProxy = $this->mappingCollection->classHasLateBoundProperties($entityClassName);
         $entity = $this->entityFactory->createEntity($entityClassName, $requiresProxy);
-        $this->bindScalarProperties($entityClassName, $entity, $row);
+        $this->bindScalarProperties($entityClassName, $entity, $row, $parentProperties);
         if (!$this->getEntityFromLocalCache($entityClassName, $entity)) { //TODO: Could be more efficient by doing this earlier
-            $this->bindRelationalProperties($entityClassName, $entity, $row, $parentEntity);
+            $this->bindRelationalProperties($entityClassName, $entity, $row, $parentProperties, $parentEntity);
         }
 
         return $entity;
@@ -84,7 +84,7 @@ final class ObjectBinder
         return $entities;
     }
 
-    private function getEntityFromLocalCache(string $entityClassName, object $entity): bool
+    private function getEntityFromLocalCache(string $entityClassName, object &$entity): bool
     {
         $pkProperties = $this->mappingCollection->getPrimaryKeyProperties(true, $entityClassName);
         $pkValues = [];
@@ -102,9 +102,9 @@ final class ObjectBinder
         }
     }
 
-    private function bindScalarProperties(string $entityClassName, object $entity, array $row): void
+    private function bindScalarProperties(string $entityClassName, object $entity, array $row, array $parentProperties): void
     {
-        foreach ($this->mappingCollection->getPropertyMappings($entityClassName) as $propertyMapping) {
+        foreach ($this->mappingCollection->getPropertyMappings($entityClassName, $parentProperties) as $propertyMapping) {
             $valueFound = false;
             if ($propertyMapping->isScalarValue()) {
                 $valueFound = isset($row[$propertyMapping->getShortColumnName()]);
@@ -119,9 +119,9 @@ final class ObjectBinder
         }
     }
 
-    private function bindRelationalProperties(string $entityClassName, object $entity, array $row, ?object $parentEntity): void
+    private function bindRelationalProperties(string $entityClassName, object $entity, array $row, array $parentProperties, ?object $parentEntity): void
     {
-        foreach ($this->mappingCollection->getPropertyMappings($entityClassName) as $propertyMapping) {
+        foreach ($this->mappingCollection->getPropertyMappings($entityClassName, $parentProperties) as $propertyMapping) {
             $valueFound = false;
             $value = null;
             if ($propertyMapping->getChildClassName()) {
@@ -130,7 +130,8 @@ final class ObjectBinder
                 } elseif ($propertyMapping->relationship->isLateBound()) {
                     $value = $this->createLateBoundClosure($propertyMapping, $row);
                 } else {
-                    $value = $this->bindRowToEntity($row, $propertyMapping->getChildClassName(), $entity);
+                    $parentProperties = array_merge($propertyMapping->parentProperties, [$propertyMapping->propertyName]);
+                    $value = $this->bindRowToEntity($row, $propertyMapping->getChildClassName(), $parentProperties, $entity);
                 }
                 $valueFound = $value ? true : false;
                 $type = $propertyMapping->getChildClassName();
@@ -172,7 +173,7 @@ final class ObjectBinder
                 } else {
                     $orderBy = $propertyMapping->relationship->orderBy;
                     $result = $repository->findBy($criteria, $orderBy);
-                    $result = $propertyMapping->relationship->getCollection($result);                    
+                    $result = $propertyMapping->getCollection($result);                    
                 }
             }
 

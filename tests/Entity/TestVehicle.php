@@ -67,7 +67,7 @@ class TestVehicle
      * @var TestCollection $wheels
      * @ORM\OneToMany(targetEntity="TestWheel",mappedBy="vehicle")
      */
-    protected $wheels = [];
+    protected TestCollection $wheels;
 
     //This property is unmapped and used to test that a factory can be used even when we need a proxy
     public $factoryTest = '';

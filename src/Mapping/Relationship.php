@@ -168,7 +168,7 @@ class Relationship
      * Getter for custom collection class factory.
      * @return string
      */
-    public function getCollectionFactoryClass(): CollectionFactoryInterface
+    public function getCollectionFactoryClass(): string
     {
         return $this->collectionFactoryClass;
     }
@@ -220,19 +220,11 @@ class Relationship
         return $this->targetScalarValueColumn ? true : false;
     }
 
-    public function getCollection(array $entities)
-    {
-        $collection = $entities;
-        if ($this->collectionClass && $this->collectionClass != 'array') {
-            $collectionFactory = $this->getCollectionFactoryClass();
-            $collection = $collectionFactory->createCollection($this->collectionClass, $entities);
-        }
-
-        return $collection;
-    }
-
     public function validate(PropertyMapping $propertyMapping)
     {
+        if ($this->isEmbedded) {
+            return true; //Temporary measure until we support embedables.
+        }
         $errorMessage = '';
         if (!$this->joinTable) {
             $errorMessage = 'Could not determine join table for relationship from %1$s to %2$s';
@@ -252,7 +244,7 @@ class Relationship
             $errorMessage = sprintf(
                 $errorMessage,
                 $propertyMapping->className . '::' . $propertyMapping->propertyName,
-                $this->type
+                $this->childClassName
             );
             throw new MappingException($errorMessage);
         }

@@ -40,12 +40,12 @@ class TestParent
     public $pets;
     /**
      * var int
-     * @Mapping\Column(aggregateFunction="COUNT", aggregateCollection="pets")
+     * @Mapping\Column(aggregateFunctionName="COUNT", aggregateCollection="pets")
      */
     public $numberOfPets;
     /**
      * @var int
-     * @Mapping\Column(aggregateFunction="SUM", aggregateCollection="pets", aggregateProperty="weightInGrams")
+     * @Mapping\Column(aggregateFunctionName="SUM", aggregateCollection="pets", aggregateProperty="weightInGrams")
      */
     public $totalWeightOfPets;
     /**

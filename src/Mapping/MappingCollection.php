@@ -60,6 +60,11 @@ class MappingCollection
     private array $relationships = [];
 
     /**
+     * @var bool[] Record which relationships have been processed, to prevent recursion
+     */
+    private array $mappedRelationships = [];
+
+    /**
      * @var bool Whether relationship join information has been populated (we have to wait until all
      * relationships are added).
      */
@@ -109,10 +114,20 @@ class MappingCollection
      * @param string $forClass Optionally filter by class name.
      * @return PropertyMapping[]
      */
-    public function getPropertyMappings(string $forClass = ''): array
+    public function getPropertyMappings(string $forClass = '', ?array $parentProperties = null): array
     {
         if ($forClass) {
-            return $this->propertiesByClass[$forClass] ?? [];
+            if ($parentProperties === null) {
+                $filteredProperties = $this->propertiesByClass[$forClass] ?? [];
+            } else {
+                $filteredProperties = [];
+                foreach ($this->propertiesByClass[$forClass] ?? [] as $propertyPath => $propertyMapping) {
+                    if ($propertyMapping->parentProperties == $parentProperties) {
+                        $filteredProperties[$propertyPath] = $propertyMapping;
+                    }
+                }
+            }
+            return $filteredProperties;
         } else {
             return $this->properties;
         }
@@ -143,6 +158,8 @@ class MappingCollection
             $this->primaryKeyProperties[$propertyMapping->className][$propertyMapping->propertyName] = $propertyMapping;
         }
         if ($propertyMapping->relationship->isDefined()) {
+//            $relationshipKey = $propertyMapping->getRelationshipKey();
+//            $this->relationships[$relationshipKey] = $propertyMapping;
             $this->relationships[] = $propertyMapping;
         }
     }
@@ -172,11 +189,33 @@ class MappingCollection
         return $this->columns[$columnAlias] ?? '';
     }
 
-    public function isRelationshipAlreadyMapped(array $parentProperties, string $propertyName): bool
+    public function markRelationshipMapped(string $propertyName, string $className): void 
     {
-        $propertyPath = implode('.', array_merge($parentProperties, [$propertyName]));
+        $this->mappedRelationships[$className . ':' . $propertyName] = true;
+    } 
+    
+    public function isRelationshipAlreadyMapped(array $parentProperties, string $propertyName, string $className): bool
+    {
+        $allParts = array_merge($parentProperties, [$propertyName]);
+        $propertyPath = implode('.', $allParts);
         if (($this->propertiesByParent[$propertyPath] ?? false)) {
             return true;
+        }
+
+        if (isset($this->mappedRelationships[$className . ':' . $propertyName])) {
+            return true;
+        }
+
+        //If repeating pattern is detected, return true (eg. parent.child.parent.child)
+        if (count($allParts) > 1) {
+            $adjacents = [];
+            for ($i = 0; $i < count($allParts) - 1; $i++) {
+                $adjacent = $allParts[$i] . '.' . $allParts[$i + 1];
+                if (isset($adjacents[$adjacent])) {
+                    return true;
+                }
+                $adjacents[$adjacent] = true;
+            }
         }
 
         return false;
@@ -193,6 +232,9 @@ class MappingCollection
     {
         $className = $className ?? $this->entityClassName;
         $pkProperties = $this->primaryKeyProperties[$className] ?? [];
+        if (!$pkProperties && isset($this->properties['id'])) { //If none specified, use 'id' if it exists
+            $pkProperties = ['id' => $this->properties['id']];
+        }
 
         return $namesOnly ? array_keys($pkProperties) : $pkProperties;
     }
@@ -242,7 +284,11 @@ class MappingCollection
                     $otherSideMapping = $this->getPropertyMapping($otherSidePropertyPath);
                     if ($otherSideMapping && $otherSideMapping->relationship) {
                         $relationship->sourceJoinColumn = $relationship->sourceJoinColumn ?: $otherSideMapping->relationship->targetJoinColumn;
+                        //If empty, use primary key of $relationshipMapping's class
+                        $relationship->sourceJoinColumn = $relationship->sourceJoinColumn ?: implode(',', $this->getPrimaryKeyProperties(true, $relationshipMapping->className));
                         $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: $otherSideMapping->relationship->sourceJoinColumn;
+                        //If empty, use primary key of child class
+                        $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: implode(',', $this->getPrimaryKeyProperties(true, $relationship->childClassName));
                         $relationship->joinTable = $relationship->joinTable ?: $otherSideMapping->getTableAlias();
                     }
                 } elseif (!$relationship->targetJoinColumn) {

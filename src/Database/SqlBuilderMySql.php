@@ -278,7 +278,11 @@ class SqlBuilderMySql implements SqlBuilderInterface
             }
             $sourceJoinColumns = $propertyMapping->getSourceJoinColumns();
             $targetJoinColumns = $propertyMapping->getTargetJoinColumns();
-            if (!$propertyMapping->relationship->joinSql && !$sourceJoinColumns && !$targetJoinColumns) {
+            if (!$propertyMapping->relationship->joinSql && (
+                (!$sourceJoinColumns && !$targetJoinColumns)
+                ||
+                (count($sourceJoinColumns) != count($targetJoinColumns))
+            )) {
                 //Shouldn't happen, but if it does, don't try to add it, as we know for sure the SQL is invalid
                 continue;
             }
@@ -304,7 +308,9 @@ class SqlBuilderMySql implements SqlBuilderInterface
                 // delimit with quotes.
                 // NOTE: Will have to intercept earlier than this, as we have already added a table prefix.
 
-                $joinSql[] = $this->delimit($sourceJoinColumn) . ' = ' . $this->delimit($targetJoinColumns[$index]);
+                if (isset($targetJoinColumns[$index])) {
+                    $joinSql[] = $this->delimit($sourceJoinColumn) . ' = ' . $this->delimit($targetJoinColumns[$index]);
+                }
             }
             $sql .= implode(' AND ', $joinSql);
         }

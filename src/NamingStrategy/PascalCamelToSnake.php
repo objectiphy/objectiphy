@@ -27,7 +27,7 @@ class PascalCamelToSnake implements NamingStrategyInterface
     public function convertName(
         string $name,
         int $type,
-        ?PropertyMapping $propertyMapping
+        ?PropertyMapping $propertyMapping = null
     ): string {
         $converted = ltrim(strtolower(preg_replace('/[A-Z]([A-Z](?![a-z]))*/', '_$0', $name)), '_');
         if ($type == self::TYPE_RELATIONSHIP_PROPERTY) {

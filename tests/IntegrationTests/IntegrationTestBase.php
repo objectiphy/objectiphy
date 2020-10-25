@@ -5,7 +5,7 @@ namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Factory\RepositoryFactory;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
-use Objectiphy\Objectiphy\ObjectRepository;
+use Objectiphy\Objectiphy\Orm\ObjectRepository;
 use PHPUnit\Framework\TestCase;
 
 class IntegrationTestBase extends TestCase

@@ -18,9 +18,8 @@ class PropertyMapping
      */
     public string $className;
 
-    /**
-     * @var string Well, duh.
-     */
+    public \ReflectionProperty $reflectionProperty;
+
     public string $propertyName;
 
     /**
@@ -72,7 +71,7 @@ class PropertyMapping
 
     public function __construct(
         string $className,
-        string $propertyName,
+        \ReflectionProperty $reflectionProperty,
         Table $table,
         ?Table $childTable,
         Column $column,
@@ -80,7 +79,8 @@ class PropertyMapping
         array $parentProperties = []
     ) {
         $this->className = $className;
-        $this->propertyName = $propertyName;
+        $this->reflectionProperty = $reflectionProperty;
+        $this->propertyName = $reflectionProperty->getName();
         $this->table = $table;
         $this->childTable = $childTable;
         $this->column = $column;
@@ -115,6 +115,11 @@ class PropertyMapping
         return $this->relationship->childClassName;
     }
 
+//    public function getRelationshipKey()
+//    {
+//        return $this->className . ':' . $this->propertyName;
+//    }
+    
     /**
      * Try to use a nice alias with underscores. If there are clashes (due to property names that already contain
      * underscores), we have to get ugly and use an alternative separator that is never likely to appear in a property
@@ -155,6 +160,11 @@ class PropertyMapping
 
     public function getFullColumnName(): string
     {
+        if ($this->relationship->isEmbedded) {
+            return ''; //Temporary measure until we support embedables.
+        } elseif ($this->column->aggregateFunctionName) {
+            return ''; //Temporary measure until we support aggregates.
+        }
         $table = $this->getTableAlias();
         $table = $table ?: $this->table->name;
         $column = $this->column->name;
@@ -170,6 +180,28 @@ class PropertyMapping
         return $columnName;
     }
 
+    public function getCollection(array $entities): iterable
+    {
+        $collection = $entities;
+        try {
+            $collectionClass = $this->relationship->collectionClass;
+            if (!$collectionClass || $collectionClass == 'array') {
+                //Try to get it from type hint
+                if ($this->reflectionProperty->hasType()) {
+                    $collectionClass = $this->reflectionProperty->getType()->getName();
+                }
+            }
+
+            if ($collectionClass && $collectionClass != 'array') {
+                $collectionFactoryClassName = $this->relationship->getCollectionFactoryClass();
+                $collectionFactory = new $collectionFactoryClassName();
+                $collection = $collectionFactory->createCollection($collectionClass, $entities);
+            }
+        } finally {
+            return $collection;
+        }
+    }
+    
     public function pointsToParent(): bool
     {
         $parentPropertyMapping = $this->parentCollection->getPropertyMapping(implode('.', $this->parentProperties));
