@@ -145,6 +145,24 @@ class MappingCollection
         }
     }
 
+    /**
+     * Given a property mapping, find a sibling that maps to the given column name (used to work out
+     * which properties to use for late bound joins).
+     * @param \Objectiphy\Objectiphy\Mapping\PropertyMapping $property
+     * @param string $columnName
+     */
+    public function getSiblingPropertyByColumn(PropertyMapping $property, string $columnName): ?PropertyMapping
+    {
+        $siblings = $this->getPropertyMappings($property->className, $property->parentProperties);
+        foreach ($siblings ?? [] as $sibling) {
+            if ($sibling->column->name == $columnName) {
+                return $sibling;
+            }
+        }
+        
+        return null;
+    }
+
     public function getPropertyMapping(string $propertyPath): ?PropertyMapping
     {
         return $this->properties[$propertyPath] ?? null;

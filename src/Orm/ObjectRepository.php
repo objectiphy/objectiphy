@@ -244,6 +244,7 @@ class ObjectRepository implements ObjectRepositoryInterface
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => true,
             'criteria' => $criteria,
+            'orderBy' => $this->orderBy,
             'keyProperty' => $keyProperty ?? '',
             'onDemand' => $fetchOnDemand,
             'pagination' => $this->pagination ?? null,
