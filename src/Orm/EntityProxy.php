@@ -46,7 +46,7 @@ class EntityProxy implements EntityProxyInterface
     {
         $this->triggerLazyLoad($objectiphyGetPropertyName);
 
-        if (property_exists($this, $objectiphyGetPropertyName)) {
+        if (property_exists($this, $objectiphyGetPropertyName) && isset($this->$objectiphyGetPropertyName)) {
             $value =& $this->$objectiphyGetPropertyName;
         } elseif (is_callable('parent::__get')) {
             $reflectionMethod = (new \ReflectionClass($this))->getParentClass()->getMethod('__get');

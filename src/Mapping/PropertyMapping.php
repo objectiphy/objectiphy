@@ -93,16 +93,20 @@ class PropertyMapping
      * @param bool $includingPropertyName
      * @return string
      */
-    public function getPropertyPath(bool $includingPropertyName = true, $separator = '.'): string
+    public function getPropertyPath($separator = '.', bool $includingPropertyName = true): string
     {
         if (!$this->propertyPath) {
             $this->propertyPath = implode('.', $this->parentProperties);
         }
-
         $result = $separator == '.' ? $this->propertyPath : str_replace('.', $separator, $this->propertyPath);
         $result .= $includingPropertyName ? $separator . $this->propertyName : '';
 
         return ltrim($result, $separator);
+    }
+
+    public function getParentPath($separator = '.')
+    {
+        return $this->getPropertyPath($separator, false);
     }
     
     public function isScalarValue(): bool
@@ -115,10 +119,10 @@ class PropertyMapping
         return $this->relationship->childClassName;
     }
 
-//    public function getRelationshipKey()
-//    {
-//        return $this->className . ':' . $this->propertyName;
-//    }
+    public function getRelationshipKey()
+    {
+        return $this->className . ':' . $this->propertyName;
+    }
     
     /**
      * Try to use a nice alias with underscores. If there are clashes (due to property names that already contain
@@ -129,9 +133,9 @@ class PropertyMapping
     public function getAlias(): string
     {
         if (empty($this->alias)) {
-            $this->alias = $this->getPropertyPath(true, '_');
-            if (array_key_exists($this->alias, $this->parentCollection->getColumnDefinitions())) {
-                $this->alias = $this->getPropertyPath(true, '_-_');
+            $this->alias = $this->getPropertyPath('_');
+            if (array_key_exists($this->alias, $this->parentCollection->getColumns(false))) {
+                $this->alias = $this->getPropertyPath('_-_');
             }
         }
 
@@ -204,8 +208,12 @@ class PropertyMapping
     
     public function pointsToParent(): bool
     {
-        $parentPropertyMapping = $this->parentCollection->getPropertyMapping(implode('.', $this->parentProperties));
-        return $parentPropertyMapping && $parentPropertyMapping->relationship->mappedBy == $this->propertyName;
+        $parentPropertyMapping = $this->parentCollection->getPropertyMapping($this->getParentPath());
+        if ($parentPropertyMapping) {
+            return $parentPropertyMapping->relationship->mappedBy == $this->propertyName;
+        }
+
+        return false;
     }
 
     public function getSourceJoinColumns(): array

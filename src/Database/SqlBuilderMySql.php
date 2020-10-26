@@ -188,8 +188,8 @@ class SqlBuilderMySql implements SqlBuilderInterface
         
         if (!$sql) {
             $columns = [];
-            $columnDefinitions = $this->options->mappingCollection->getColumnDefinitions();
-            foreach ($columnDefinitions as $alias => $propertyMapping) {
+            $columnMappings = $this->options->mappingCollection->getColumns();
+            foreach ($columnMappings as $alias => $propertyMapping) {
                 if ($columnName = $propertyMapping->getFullColumnName()) {
                     $columns[] = $this->delimit($columnName) . ' AS ' . $this->delimit($alias);
                 }

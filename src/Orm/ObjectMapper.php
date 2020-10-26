@@ -83,8 +83,11 @@ final class ObjectMapper
         // otherwise recursive mappings will be detected and stopped on the child instead of the parent.
         $className = $className ?: $topClassName;
         $reflectionClass = new \ReflectionClass($className);
-        $this->populateScalarMappings($topClassName, $reflectionClass, $parentProperties);
+        if (!$parentProperties) { //If a parent is present, we will already have done the scalar mappings
+            $this->populateScalarMappings($topClassName, $reflectionClass, $parentProperties);
+        }
         $this->populateRelationalMappings($topClassName, $reflectionClass, $parentProperties);
+        $this->populateRelationalMappings($topClassName, $reflectionClass, $parentProperties, true);
     }
 
     private function populateScalarMappings(string $topClassName, \ReflectionClass $reflectionClass, array $parentProperties)
@@ -100,7 +103,7 @@ final class ObjectMapper
             $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $columnIsMapped);
             $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $relationshipIsMapped);
             $relationship->setConfigOptions($this->eagerLoadToOne, $this->eagerLoadToMany);
-            //Even relationships get their column mapped here - the child properties will be mapped separately afterwards.
+            //Even relationships get their scalar values mapped here - the child properties will be fully mapped separately afterwards.
             if (($columnIsMapped || $relationshipIsMapped) && $column->name != 'IGNORE') {
                 $childTable = null;
                 if ($relationship->childClassName) {
@@ -119,11 +122,16 @@ final class ObjectMapper
                 $mappingCollection->addMapping($propertyMapping);
                 //Resolve name *after* adding to collection so that naming strategies have access to the collection.
                 $this->resolveColumnName($propertyMapping);
+//                if ($relationship->isDefined() && $relationship->childClassName && !$relationship->isLateBound()) {
+//                    $childReflectionClass = new \ReflectionClass($relationship->childClassName);
+//                    $childParentProperties = array_merge($parentProperties, [$propertyMapping->propertyName]);
+//                    $this->populateScalarMappings($topClassName, $childReflectionClass, $childParentProperties);
+//                }
             }
         }
     }
 
-    private function populateRelationalMappings(string $topClassName, \ReflectionClass $reflectionClass, array $parentProperties)
+    private function populateRelationalMappings(string $topClassName, \ReflectionClass $reflectionClass, array $parentProperties, bool $drillDown = false)
     {
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
             $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty);
@@ -132,9 +140,8 @@ final class ObjectMapper
                 if ($relationship->isEmbedded) {
                     continue; //Temporary measure until we support embedables.
                 }
-                $relationship->setConfigOptions($this->eagerLoadToOne, $this->eagerLoadToMany);
                 $propertyName = $reflectionProperty->getName();
-                $this->mapRelationship($topClassName, $propertyName, $relationship, $reflectionClass, $parentProperties);
+                $this->mapRelationship($topClassName, $propertyName, $relationship, $reflectionClass, $parentProperties, $drillDown);
             }
         }
     }
@@ -144,7 +151,8 @@ final class ObjectMapper
         string $propertyName,
         Relationship $relationship,
         \ReflectionClass $reflectionClass,
-        array $parentProperties
+        array $parentProperties,
+        bool $drillDown = false
     ) {
         $mappingCollection = $this->mappingCollection[$topClassName];
         if ($relationship->isLateBound()
@@ -168,8 +176,14 @@ final class ObjectMapper
             }
         } else {
             $childParentProperties = array_merge($parentProperties, [$propertyName]);
-            $mappingCollection->markRelationshipMapped($propertyName, $reflectionClass->getName());
-            $this->populateMappingCollection($topClassName, $relationship->childClassName, $childParentProperties);
+            if (!$drillDown) {
+                //Just do the scalar properties and return
+                $childReflectionClass = new \ReflectionClass($relationship->childClassName);
+                $this->populateScalarMappings($topClassName, $childReflectionClass, $childParentProperties);
+            } else {
+                $mappingCollection->markRelationshipMapped($propertyName, $reflectionClass->getName(), $childParentProperties);
+                $this->populateMappingCollection($topClassName, $relationship->childClassName, $childParentProperties);
+            }
         }
     }
 

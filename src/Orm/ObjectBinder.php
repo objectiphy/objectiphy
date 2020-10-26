@@ -58,7 +58,7 @@ final class ObjectBinder
             throw new MappingException('Mapping collection has not been supplied to the object binder.');
         }
 
-        $requiresProxy = $this->mappingCollection->classHasLateBoundProperties($entityClassName);
+        $requiresProxy = $this->mappingCollection->classHasLateBoundProperties($entityClassName, $parentProperties);
         $entity = $this->entityFactory->createEntity($entityClassName, $requiresProxy);
         $this->bindScalarProperties($entityClassName, $entity, $row, $parentProperties);
         if (!$this->getEntityFromLocalCache($entityClassName, $entity)) { //TODO: Could be more efficient by doing this earlier
@@ -150,7 +150,8 @@ final class ObjectBinder
 
     private function createLateBoundClosure(PropertyMapping $propertyMapping, array $row)
     {
-        $closure = function() use ($propertyMapping, $row) {
+        $mappingCollection = $this->mappingCollection;
+        $closure = function() use ($mappingCollection, $propertyMapping, $row) {
             $result = null;
             $configOptions = $this->configOptions;
             $className = $propertyMapping->getChildClassName();
@@ -159,7 +160,7 @@ final class ObjectBinder
 
             if ($propertyMapping->relationship->mappedBy) {
                 $whereProperty = $propertyMapping->relationship->mappedBy;
-                $pkProperties = $this->mappingCollection->getPrimaryKeyProperties(false, $propertyMapping->className);
+                $pkProperties = $mappingCollection->getPrimaryKeyProperties(false, $propertyMapping->className);
                 $valueKey = reset($pkProperties)->getAlias(); //Not sure if we can do multiple join columns here...?
                 $value = $row[$valueKey] ?? null;
                 if ($value !== null) {

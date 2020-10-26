@@ -70,6 +70,12 @@ class MappingCollection
      */
     private bool $relationshipMappingDone = false;
 
+    /**
+     * @var bool Whether information about which columns to fetch has been populated (we have to wait until all
+     * relationships are defined so that we know which joins are available).
+     */
+    private bool $columnMappingDone = false;
+
     public function __construct(string $entityClassName)
     {
         $this->entityClassName = $entityClassName;
@@ -91,10 +97,16 @@ class MappingCollection
     }
 
     /**
+     * @param bool $finalised Whether to finalise before returning - only set this to false during the building
+     * of the mapping information. After mapping is defined, we only want to return finalised columns.
      * @return PropertyMapping[]
      */
-    public function getColumnDefinitions(): array
+    public function getColumns(bool $finalised = true): array
     {
+        if ($finalised && !$this->columnMappingDone) {
+            $this->finaliseColumnMappings();
+        }
+
         return $this->columns;
     }
 
@@ -145,22 +157,25 @@ class MappingCollection
     public function addMapping(PropertyMapping $propertyMapping)
     {
         $propertyMapping->parentCollection = $this;
-        $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
+        if (!$propertyMapping->relationship->isDefined()/* && !isset($this->columns[$propertyMapping->getAlias()])*/) {
+            $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
+        }
         $this->properties[$propertyMapping->getPropertyPath()] = $propertyMapping;
         $this->classes[$propertyMapping->className] = $propertyMapping->table;
         if ($propertyMapping->childTable && $propertyMapping->relationship->childClassName) {
             $this->classes[$propertyMapping->relationship->childClassName] = $propertyMapping->childTable;
         }
         $this->propertiesByClass[$propertyMapping->className][$propertyMapping->getPropertyPath()] = $propertyMapping;
-        $parentPropertyPath = implode('.', $propertyMapping->parentProperties);
+        $parentPropertyPath = $propertyMapping->getParentPath();
         $this->propertiesByParent[$parentPropertyPath][$propertyMapping->propertyName] = $propertyMapping;
         if ($propertyMapping->column->isPrimaryKey ?? false) {
-            $this->primaryKeyProperties[$propertyMapping->className][$propertyMapping->propertyName] = $propertyMapping;
+            $this->primaryKeyProperties[$propertyMapping->className][$propertyMapping->propertyName] ??= $propertyMapping;
         }
         if ($propertyMapping->relationship->isDefined()) {
-//            $relationshipKey = $propertyMapping->getRelationshipKey();
-//            $this->relationships[$relationshipKey] = $propertyMapping;
-            $this->relationships[] = $propertyMapping;
+            $relationshipKey = $propertyMapping->getRelationshipKey();
+            if (!isset($this->relationships[$relationshipKey])) {
+                $this->relationships[$relationshipKey] = $propertyMapping;
+            }
         }
     }
 
@@ -189,33 +204,15 @@ class MappingCollection
         return $this->columns[$columnAlias] ?? '';
     }
 
-    public function markRelationshipMapped(string $propertyName, string $className): void 
+    public function markRelationshipMapped(string $propertyName, string $className): void
     {
         $this->mappedRelationships[$className . ':' . $propertyName] = true;
     } 
     
     public function isRelationshipAlreadyMapped(array $parentProperties, string $propertyName, string $className): bool
     {
-        $allParts = array_merge($parentProperties, [$propertyName]);
-        $propertyPath = implode('.', $allParts);
-        if (($this->propertiesByParent[$propertyPath] ?? false)) {
-            return true;
-        }
-
         if (isset($this->mappedRelationships[$className . ':' . $propertyName])) {
             return true;
-        }
-
-        //If repeating pattern is detected, return true (eg. parent.child.parent.child)
-        if (count($allParts) > 1) {
-            $adjacents = [];
-            for ($i = 0; $i < count($allParts) - 1; $i++) {
-                $adjacent = $allParts[$i] . '.' . $allParts[$i + 1];
-                if (isset($adjacents[$adjacent])) {
-                    return true;
-                }
-                $adjacents[$adjacent] = true;
-            }
         }
 
         return false;
@@ -263,6 +260,36 @@ class MappingCollection
         }
 
         return false;
+    }
+
+    /**
+     * Remove any non-fetchable columns from the column list (ie. columns that will need to be lazy loaded
+     * even if the mapping doesn't specify that - to prevent recursion). We won't know which columns can be
+     * eager fetched until all the relationship mapping is done.
+     */
+    private function finaliseColumnMappings(): void
+    {
+        $relationships = $this->getRelationships();
+
+        //Check if we can get each column
+        foreach ($this->columns as $columnAlias => $propertyMapping) {
+            if ($propertyMapping->parentProperties) {
+                $canFetch = false;
+                foreach ($relationships as $relationship) {
+                    if ($relationship->getPropertyPath() == $propertyMapping->getParentPath()) {
+                        $canFetch = true;
+                        break;
+                    }
+                }
+                if (!$canFetch) {
+                    unset($this->columns[$columnAlias]);
+                }
+            }
+        }
+
+        if (isset($columnAlias)) {
+            $this->columnMappingDone = true;
+        }
     }
 
     /**
