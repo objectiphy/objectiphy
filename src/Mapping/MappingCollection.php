@@ -38,11 +38,6 @@ class MappingCollection
     private array $properties = [];
 
     /**
-     * @var PropertyMapping[] Property mappings keyed by class name then property path.
-     */
-    private array $propertiesByClass = [];
-
-    /**
      * @var PropertyMapping[] Property mappings keyed by parent property path then property name.
      */
     private array $propertiesByParent = [];
@@ -123,41 +118,47 @@ class MappingCollection
     }
 
     /**
-     * @param string $forClass Optionally filter by class name.
+     * @param string $forClass Optionally filter by parent.
      * @return PropertyMapping[]
      */
-    public function getPropertyMappings(string $forClass = '', ?array $parentProperties = null): array
+    public function getPropertyMappings(?array $parentProperties = null): array
     {
-        if ($forClass) {
-            if ($parentProperties === null) {
-                $filteredProperties = $this->propertiesByClass[$forClass] ?? [];
-            } else {
-                $filteredProperties = [];
-                foreach ($this->propertiesByClass[$forClass] ?? [] as $propertyPath => $propertyMapping) {
-                    if ($propertyMapping->parentProperties == $parentProperties) {
-                        $filteredProperties[$propertyPath] = $propertyMapping;
-                    }
-                }
-            }
-            return $filteredProperties;
-        } else {
+        if ($parentProperties === null) {
             return $this->properties;
+        } else {
+            $parentPropertyPath = implode('.', $parentProperties);
+            return $this->propertiesByParent[$parentPropertyPath] ?? [];
         }
     }
 
     /**
      * Given a property mapping, find a sibling that maps to the given column name (used to work out
      * which properties to use for late bound joins).
-     * @param \Objectiphy\Objectiphy\Mapping\PropertyMapping $property
+     * @param PropertyMapping $property
      * @param string $columnName
      */
-    public function getSiblingPropertyByColumn(PropertyMapping $property, string $columnName): ?PropertyMapping
-    {
-        $siblings = $this->getPropertyMappings($property->className, $property->parentProperties);
+    public function getSiblingPropertyByColumn(
+        PropertyMapping $property,
+        string $columnName,
+        bool $exceptionIfNotFound = true
+    ): ?PropertyMapping {
+        $siblings = $this->getPropertyMappings($property->parentProperties);
         foreach ($siblings ?? [] as $sibling) {
             if ($sibling->column->name == $columnName) {
                 return $sibling;
             }
+        }
+
+        if ($exceptionIfNotFound) {
+            $sourceProperty = $property->className . '::' . $property->propertyName;
+            $targetProperty = $property->getChildClassName() . '::' . $property->relationship->mappedBy;
+            $message = sprintf('The join between %1$s and %2$s cannot be late bound because there is no property on %3$s that maps to the join column `%4$s`. Please ensure you have defined a property for each column that is used in the join.',
+                $sourceProperty,
+                $targetProperty,
+                $property->className,
+                $columnName
+            );
+            throw new MappingException($message);
         }
         
         return null;
@@ -175,25 +176,21 @@ class MappingCollection
     public function addMapping(PropertyMapping $propertyMapping)
     {
         $propertyMapping->parentCollection = $this;
-        if (!$propertyMapping->relationship->isDefined()/* && !isset($this->columns[$propertyMapping->getAlias()])*/) {
-            $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
-        }
         $this->properties[$propertyMapping->getPropertyPath()] = $propertyMapping;
+        $parentPath = $propertyMapping->getParentPath();
+        $this->propertiesByParent[$parentPath][$propertyMapping->propertyName] = $propertyMapping;
         $this->classes[$propertyMapping->className] = $propertyMapping->table;
-        if ($propertyMapping->childTable && $propertyMapping->relationship->childClassName) {
-            $this->classes[$propertyMapping->relationship->childClassName] = $propertyMapping->childTable;
+        if ($propertyMapping->childTable && $propertyMapping->getChildClassName()) {
+            $this->classes[$propertyMapping->getChildClassName()] = $propertyMapping->childTable;
         }
-        $this->propertiesByClass[$propertyMapping->className][$propertyMapping->getPropertyPath()] = $propertyMapping;
-        $parentPropertyPath = $propertyMapping->getParentPath();
-        $this->propertiesByParent[$parentPropertyPath][$propertyMapping->propertyName] = $propertyMapping;
         if ($propertyMapping->column->isPrimaryKey ?? false) {
             $this->primaryKeyProperties[$propertyMapping->className][$propertyMapping->propertyName] ??= $propertyMapping;
         }
         if ($propertyMapping->relationship->isDefined()) {
             $relationshipKey = $propertyMapping->getRelationshipKey();
-            if (!isset($this->relationships[$relationshipKey])) {
-                $this->relationships[$relationshipKey] = $propertyMapping;
-            }
+            $this->relationships[$relationshipKey] ??= $propertyMapping;
+        } else {
+            $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
         }
     }
 
@@ -210,16 +207,6 @@ class MappingCollection
         }
         
         return null;
-    }
-
-    /**
-     * Return the property mapping that matches the given column alias
-     * @param string $columnAlias
-     * @return string
-     */
-    public function getPropertyForColumn(string $columnAlias): string
-    {
-        return $this->columns[$columnAlias] ?? '';
     }
 
     public function markRelationshipMapped(string $propertyName, string $className): void
@@ -269,10 +256,10 @@ class MappingCollection
         return false;
     }
 
-    public function classHasLateBoundProperties(string $className): bool
+    public function parentHasLateBoundProperties(array $parentProperties): bool
     {
-        foreach ($this->getPropertyMappings($className) as $propertyMapping) {
-            if ($propertyMapping->relationship->isLateBound()) {
+        foreach ($this->getPropertyMappings($parentProperties) as $propertyMapping) {
+            if ($propertyMapping->isLateBound()) {
                 return true;
             }
         }

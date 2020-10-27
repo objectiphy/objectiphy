@@ -184,6 +184,30 @@ class PropertyMapping
         return $columnName;
     }
 
+    public function isLateBound(): bool
+    {
+        if ($this->relationship->isLateBound()) {
+            return true;
+        } else {
+            //If we have to lazy load to avoid recursion...
+
+            //else
+            return false;
+        }
+    }
+
+    public function isEager(): bool
+    {
+        if ($this->relationship->isEager()) {
+            //If we have to lazy load to avoid recursion...
+
+            //else
+            return true;
+        }
+
+        return false;
+    }
+
     public function getCollection(array $entities): iterable
     {
         $collection = $entities;
@@ -218,8 +242,7 @@ class PropertyMapping
 
     public function getSourceJoinColumns(): array
     {
-        $table = $this->getTableAlias();
-        $table = $table ?: $this->table->name;
+        $table = $this->getTableAlias() ?: $this->table->name;
         return $this->getJoinColumns($this->relationship->sourceJoinColumn, $table);
     }
 

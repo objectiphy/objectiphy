@@ -58,11 +58,11 @@ final class ObjectBinder
             throw new MappingException('Mapping collection has not been supplied to the object binder.');
         }
 
-        $requiresProxy = $this->mappingCollection->classHasLateBoundProperties($entityClassName, $parentProperties);
+        $requiresProxy = $this->mappingCollection->parentHasLateBoundProperties($parentProperties);
         $entity = $this->entityFactory->createEntity($entityClassName, $requiresProxy);
-        $this->bindScalarProperties($entityClassName, $entity, $row, $parentProperties);
+        $this->bindScalarProperties($entity, $row, $parentProperties);
         if (!$this->getEntityFromLocalCache($entityClassName, $entity)) { //TODO: Could be more efficient by doing this earlier
-            $this->bindRelationalProperties($entityClassName, $entity, $row, $parentProperties, $parentEntity);
+            $this->bindRelationalProperties($entity, $row, $parentProperties, $parentEntity);
         }
 
         return $entity;
@@ -102,9 +102,9 @@ final class ObjectBinder
         }
     }
 
-    private function bindScalarProperties(string $entityClassName, object $entity, array $row, array $parentProperties): void
+    private function bindScalarProperties(object $entity, array $row, array $parentProperties): void
     {
-        foreach ($this->mappingCollection->getPropertyMappings($entityClassName, $parentProperties) as $propertyMapping) {
+        foreach ($this->mappingCollection->getPropertyMappings($parentProperties) as $propertyMapping) {
             $valueFound = false;
             if ($propertyMapping->isScalarValue()) {
                 $valueFound = isset($row[$propertyMapping->getShortColumnName()]);
@@ -119,15 +119,15 @@ final class ObjectBinder
         }
     }
 
-    private function bindRelationalProperties(string $entityClassName, object $entity, array $row, array $parentProperties, ?object $parentEntity): void
+    private function bindRelationalProperties(object $entity, array $row, array $parentProperties, ?object $parentEntity): void
     {
-        foreach ($this->mappingCollection->getPropertyMappings($entityClassName, $parentProperties) as $propertyMapping) {
+        foreach ($this->mappingCollection->getPropertyMappings($parentProperties) as $propertyMapping) {
             $valueFound = false;
             $value = null;
             if ($propertyMapping->getChildClassName()) {
                 if ($propertyMapping->pointsToParent()) {
                     $value = $parentEntity;
-                } elseif ($propertyMapping->relationship->isLateBound()) {
+                } elseif ($propertyMapping->isLateBound()) {
                     $value = $this->createLateBoundClosure($propertyMapping, $row);
                 } else {
                     $parentProperties = array_merge($propertyMapping->parentProperties, [$propertyMapping->propertyName]);
@@ -160,20 +160,17 @@ final class ObjectBinder
 
             if ($propertyMapping->relationship->mappedBy) {
                 $whereProperty = $propertyMapping->relationship->mappedBy;
-
                 $sourceJoinColumns = $propertyMapping->relationship->sourceJoinColumn ?? null;
                 foreach (explode(',', $sourceJoinColumns) as $index => $sourceJoinColumn) {
                     $sibling = $mappingCollection->getSiblingPropertyByColumn($propertyMapping, trim($sourceJoinColumn));
                     $valueKey[$index] = $sibling->getAlias();
                 }
-
 //                if (!$valueKey) { //Use primary key (not sure if we will ever hit this?)
 //                    $pkProperties = $mappingCollection->getPrimaryKeyProperties(false, $propertyMapping->className);
 //                    foreach ($pkProperties ?? [] as $index => $pkProperty) {
 //                        $valueKey[$index] = $pkProperty->getAlias();
 //                    }
 //                }
-
                 $qb = QB::create();
                 foreach ($valueKey as $alias) {
                     $value = $row[$alias] ?? null;
@@ -182,7 +179,6 @@ final class ObjectBinder
                     }
                 }
                 $criteria = $qb->build();
-                
             }
 
             if (isset($criteria)) {
@@ -198,6 +194,6 @@ final class ObjectBinder
             return $result;
         };
 
-        return $propertyMapping->relationship->isEager() ? $closure() : $closure;
+        return $propertyMapping->isEager() ? $closure() : $closure;
     }
 }

@@ -283,6 +283,7 @@ DROP TABLE IF EXISTS `parent_of_non_pk_child`;
 CREATE TABLE `parent_of_non_pk_child` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) DEFAULT NULL,
+  `unmapped` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
 
@@ -290,8 +291,8 @@ CREATE TABLE `parent_of_non_pk_child` (
 --  Records of `parent_of_non_pk_child`
 -- ----------------------------
 
-INSERT INTO `parent_of_non_pk_child` VALUES ('1', 'Angus');
-INSERT INTO `parent_of_non_pk_child` VALUES ('2', 'Eselbeth');
+INSERT INTO `parent_of_non_pk_child` VALUES ('1', 'Angus', null);
+INSERT INTO `parent_of_non_pk_child` VALUES ('2', 'Eselbeth', null);
 
 -- ----------------------------
 --  Table structure for `pets`

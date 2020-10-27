@@ -122,11 +122,6 @@ final class ObjectMapper
                 $mappingCollection->addMapping($propertyMapping);
                 //Resolve name *after* adding to collection so that naming strategies have access to the collection.
                 $this->resolveColumnName($propertyMapping);
-//                if ($relationship->isDefined() && $relationship->childClassName && !$relationship->isLateBound()) {
-//                    $childReflectionClass = new \ReflectionClass($relationship->childClassName);
-//                    $childParentProperties = array_merge($parentProperties, [$propertyMapping->propertyName]);
-//                    $this->populateScalarMappings($topClassName, $childReflectionClass, $childParentProperties);
-//                }
             }
         }
     }
