@@ -55,6 +55,11 @@ class PropertyMapping
     public Column $column;
 
     /**
+     * @var bool Whether or not this is used in a join
+     */
+    public bool $isForeignKey = false;
+
+    /**
      * @var string Locally cached fully qualified property path using dot notation.
      */
     private string $propertyPath = '';
@@ -86,6 +91,9 @@ class PropertyMapping
         $this->column = $column;
         $this->relationship = $relationship;
         $this->parentProperties = $parentProperties;
+        if ($this->relationship->sourceJoinColumn) {
+            $this->isForeignKey = true;
+        }
     }
 
     /**
@@ -168,7 +176,14 @@ class PropertyMapping
             return ''; //Temporary measure until we support embedables.
         } elseif ($this->column->aggregateFunctionName) {
             return ''; //Temporary measure until we support aggregates.
-        }
+        } /*elseif (!$this->column->name && $this->getChildClassName()) {
+            //Defer to primary key
+            $childPk = $this->parentCollection->getPrimaryKeyProperties(false, $this->getChildClassName());
+            if ($childPk) {
+                $firstKey = reset($childPk);
+                return $firstKey->getFullColumnName();
+            }
+        }*/
         $table = $this->getTableAlias();
         $table = $table ?: $this->table->name;
         $column = $this->column->name;
@@ -189,20 +204,16 @@ class PropertyMapping
         if ($this->relationship->isLateBound()) {
             return true;
         } else {
-            //If we have to lazy load to avoid recursion...
-
-            //else
-            return false;
+            //If we have to lazy load to avoid recursion, it will be late bound
+            return !$this->parentCollection->isPropertyFetchable($this);
         }
     }
 
     public function isEager(): bool
     {
         if ($this->relationship->isEager()) {
-            //If we have to lazy load to avoid recursion...
-
-            //else
-            return true;
+            //Only if we can get it without recursion
+            return $this->parentCollection->isPropertyFetchable($this);
         }
 
         return false;

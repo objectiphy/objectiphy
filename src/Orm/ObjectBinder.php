@@ -159,23 +159,32 @@ final class ObjectBinder
             $repository = $this->repositoryFactory->createRepository($className, $repositoryClassName, $configOptions);
 
             if ($propertyMapping->relationship->mappedBy) {
-                $whereProperty = $propertyMapping->relationship->mappedBy;
+                //$whereProperty = $propertyMapping->relationship->mappedBy;
                 $sourceJoinColumns = $propertyMapping->relationship->sourceJoinColumn ?? null;
                 foreach (explode(',', $sourceJoinColumns) as $index => $sourceJoinColumn) {
-                    $sibling = $mappingCollection->getSiblingPropertyByColumn($propertyMapping, trim($sourceJoinColumn));
+                    $sibling = $mappingCollection->getSiblingPropertyByColumn(
+                        $propertyMapping,
+                        trim($sourceJoinColumn)
+                    );
+                    //$whereProperty[$index] = $sibling->propertyName;
+                    $whereProperty[$index] = $propertyMapping->relationship->mappedBy;
                     $valueKey[$index] = $sibling->getAlias();
                 }
-//                if (!$valueKey) { //Use primary key (not sure if we will ever hit this?)
-//                    $pkProperties = $mappingCollection->getPrimaryKeyProperties(false, $propertyMapping->className);
-//                    foreach ($pkProperties ?? [] as $index => $pkProperty) {
-//                        $valueKey[$index] = $pkProperty->getAlias();
-//                    }
-//                }
+            } else { //Use primary key (must be a single value, as it is mapped by a single property on the parent)
+                //$whereProperty = $propertyMapping->propertyName;
+                $pkProperties = $mappingCollection->getPrimaryKeyProperties(false, $propertyMapping->className);
+                $firstPk = reset($pkProperties);
+                if ($firstPk) {
+                    $whereProperty[0] = $firstPk->propertyName;
+                    $valueKey[0] = $propertyMapping->getAlias();
+                }
+            }
+            if (!empty($whereProperty) && !empty($valueKey)) {
                 $qb = QB::create();
-                foreach ($valueKey as $alias) {
+                foreach ($valueKey as $index => $alias) {
                     $value = $row[$alias] ?? null;
                     if ($value !== null) {
-                        $qb->andWhere($whereProperty, '=', $value)->build();
+                        $qb->andWhere($whereProperty[$index], '=', $value)->build();
                     }
                 }
                 $criteria = $qb->build();

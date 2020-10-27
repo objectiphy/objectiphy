@@ -50,6 +50,11 @@ class MappingCollection
     private array $primaryKeyProperties = [];
 
     /**
+     * @var bool[] Key = property path, value = whether we can fetch children of the given property
+     */
+    private array $fetchableProperties = [];
+
+    /**
      * @var PropertyMapping[] Property mappings for relationships keyed by parent class and property name
      */
     private array $relationships = [];
@@ -103,6 +108,28 @@ class MappingCollection
         }
 
         return $this->columns;
+    }
+
+    /**
+     * Whether or not we can get any properties for the given property (that represents a relationship)
+     * @param PropertyMapping $propertyMapping
+     * @return bool
+     */
+    public function isPropertyFetchable(PropertyMapping $propertyMapping): bool
+    {
+        if (!isset($this->fetchableProperties[$propertyMapping->getPropertyPath()])) {
+            $parentPropertiesToFind = array_merge($propertyMapping->parentProperties, [$propertyMapping->propertyName]);
+            $columns = $this->getColumns();
+            foreach ($columns as $fetchable) {
+                if ($fetchable->parentProperties == $parentPropertiesToFind) {
+                    $this->fetchableProperties[$propertyMapping->getPropertyPath()] = true;
+                    return true;
+                }
+            }
+            $this->fetchableProperties[$propertyMapping->getPropertyPath()] = false;
+        }
+
+        return $this->fetchableProperties[$propertyMapping->getPropertyPath()];
     }
 
     /**
@@ -189,7 +216,8 @@ class MappingCollection
         if ($propertyMapping->relationship->isDefined()) {
             $relationshipKey = $propertyMapping->getRelationshipKey();
             $this->relationships[$relationshipKey] ??= $propertyMapping;
-        } else {
+        }
+        if (!$propertyMapping->relationship->isDefined() || $propertyMapping->isForeignKey) {
             $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
         }
     }
