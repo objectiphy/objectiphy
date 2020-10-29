@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Contract\ExplanationInterface;
@@ -55,6 +56,11 @@ class ObjectRepository implements ObjectRepositoryInterface
     {
         $this->configOptions = $configOptions;
         $this->updateConfig();
+    }
+    
+    public function getConfiguration(): ConfigOptions
+    {
+        return $this->configOptions;
     }
 
     /**
@@ -126,12 +132,12 @@ class ObjectRepository implements ObjectRepositoryInterface
      * Find a single record (and hydrate it as an entity) with the given primary key value. Compatible with the
      * equivalent method in Doctrine.
      * @param mixed $id Primary key value - for composite keys, can be an array
-     * @return object|null
+     * @return object|array|null
      */
-    public function find($id): ?object
+    public function find($id)
     {
         $this->assertClassNameSet();
-        $pkProperties = $this->mappingCollection->getPrimaryKeyProperties(true);
+        $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
         if (!$pkProperties) {
             $errorMessage = sprintf('The current entity (`%1$s`) does not have a primary key, so you cannot use the find method. Either specify a primary key in the mapping information, or use findOneBy instead.', $this->getClassName());
             $this->throwException(new ObjectiphyException($errorMessage));
@@ -145,11 +151,15 @@ class ObjectRepository implements ObjectRepositoryInterface
      * in Doctrine.
      * @param array $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
-     * @return object|null
+     * @return object|array|null
      */
-    public function findOneBy(array $criteria = []): ?object
+    public function findOneBy(array $criteria = [])
     {
-        $findOptions = FindOptions::create($this->mappingCollection, ['multiple' => false, 'criteria' => $criteria]);
+        $findOptions = FindOptions::create($this->mappingCollection, [
+            'multiple' => false,
+            'criteria' => $criteria,
+            'bindToEntities' => $this->configOptions->bindToEntities,
+        ]);
         $this->objectFetcher->setFindOptions($findOptions);
 
         return $this->doFindBy();
@@ -163,20 +173,21 @@ class ObjectRepository implements ObjectRepositoryInterface
      * setCommonProperty method).
      * @param string|null $recordAgeIndicator Fully qualified database column or expression that determines record age
      * (see also the setCommonProperty method).
-     * @return object|null
+     * @return object|array|null
      */
     public function findLatestOneBy(
         array $criteria = [],
         ?string $commonProperty = null,
         ?string $recordAgeIndicator = null
-    ): ?object {
+    ) {
 
         //TODO: common property/age indicator
 
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => false,
             'latest' => true,
-            'criteria' => $criteria
+            'criteria' => $criteria,
+            'bindToEntities' => $this->configOptions->bindToEntities,
         ]);
         $this->objectFetcher->setFindOptions($findOptions);
 
@@ -248,6 +259,7 @@ class ObjectRepository implements ObjectRepositoryInterface
             'keyProperty' => $keyProperty ?? '',
             'onDemand' => $fetchOnDemand,
             'pagination' => $this->pagination ?? null,
+            'bindToEntities' => $this->configOptions->bindToEntities,
         ]);
         $this->objectFetcher->setFindOptions($findOptions);
 
@@ -344,7 +356,7 @@ class ObjectRepository implements ObjectRepositoryInterface
     {
         $pkProperty = '';
         if (is_int(array_key_first($criteria) && is_scalar(reset($criteria)))) { //Plain list of primary keys passed in
-            $pkProperties = $this->mappingCollection->getPrimaryKeyProperties(true);
+            $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
             if (!$pkProperties || count($pkProperties) !== 1) {
                 $message = sprintf('The criteria passed in is a plain list of values, but entity \'%1$s\' has a composite key so there is insufficient information to identify which records to return.', $this->getClassName());
                 throw new ObjectiphyException($message);
@@ -376,6 +388,7 @@ class ObjectRepository implements ObjectRepositoryInterface
     protected function updateConfig()
     {
         $this->objectMapper->setConfigOptions(
+            $this->configOptions->productionMode,
             $this->configOptions->eagerLoadToOne,
             $this->configOptions->eagerLoadToMany,
             $this->configOptions->guessMappings,

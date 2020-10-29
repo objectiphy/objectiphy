@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Config;
 
-use Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 
 /**
  * @package Objectiphy\Objectiphy

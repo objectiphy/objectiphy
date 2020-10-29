@@ -30,7 +30,7 @@ class TestParent
     /**
      * @var TestChild
      * @Objectiphy\Groups({"Full"})
-     * @Mapping\Relationshiop(childClassName="TestChild", mappedBy="parent", relationshipType="one_to_one")
+     * @Mapping\Relationship(childClassName="TestChild", mappedBy="parent", relationshipType="one_to_one")
      */
     protected $child;
     /**

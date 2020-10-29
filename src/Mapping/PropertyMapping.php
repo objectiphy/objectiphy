@@ -176,14 +176,7 @@ class PropertyMapping
             return ''; //Temporary measure until we support embedables.
         } elseif ($this->column->aggregateFunctionName) {
             return ''; //Temporary measure until we support aggregates.
-        } /*elseif (!$this->column->name && $this->getChildClassName()) {
-            //Defer to primary key
-            $childPk = $this->parentCollection->getPrimaryKeyProperties(false, $this->getChildClassName());
-            if ($childPk) {
-                $firstKey = reset($childPk);
-                return $firstKey->getFullColumnName();
-            }
-        }*/
+        } 
         $table = $this->getTableAlias();
         $table = $table ?: $this->table->name;
         $column = $this->column->name;

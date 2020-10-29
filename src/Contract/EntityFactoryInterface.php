@@ -13,5 +13,5 @@ namespace Objectiphy\Objectiphy\Contract;
  */
 interface EntityFactoryInterface
 {
-    public function createEntity(string $entityClassName): object;
+    public function createEntity(string $entityClassName): ?object;
 }

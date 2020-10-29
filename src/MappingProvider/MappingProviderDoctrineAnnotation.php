@@ -7,6 +7,7 @@ namespace Objectiphy\Objectiphy\MappingProvider;
 use Doctrine\ORM\Mapping\Embedded;
 use Doctrine\ORM\Mapping\JoinColumn;
 use Doctrine\ORM\Mapping\OrderBy;
+use Objectiphy\Annotations\AnnotationReaderException;
 use Objectiphy\Annotations\AnnotationReaderInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Mapping\Column;
@@ -20,8 +21,10 @@ use Objectiphy\Objectiphy\Mapping\Table;
  */
 class MappingProviderDoctrineAnnotation implements MappingProviderInterface
 {
-    private MappingProviderInterface $mappingProvider;
-    private AnnotationReaderInterface $annotationReader;
+    use MappingProviderExceptionTrait;
+
+    protected MappingProviderInterface $mappingProvider;
+    protected AnnotationReaderInterface $annotationReader;
 
     public function __construct(MappingProviderInterface $mappingProvider, AnnotationReaderInterface $annotationReader)
     {
@@ -37,17 +40,23 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
      */
     public function getTableMapping(\ReflectionClass $reflectionClass, bool &$wasMapped = null): Table
     {
-        $table = $this->mappingProvider->getTableMapping($reflectionClass, $wasMapped);
-        if (class_exists('Doctrine\ORM\Mapping\Table')) {
-            $doctrineTable = $this->annotationReader->getClassAnnotation(
-                $reflectionClass,
-                \Doctrine\ORM\Mapping\Table::class
-            );
-            $wasMapped = $wasMapped || $doctrineTable;
-            $table->name = $doctrineTable->name ?? $table->name;
-        }
+        try {
+            $this->annotationReader->setThrowExceptions($this->throwExceptions);
+            $table = $this->mappingProvider->getTableMapping($reflectionClass, $wasMapped);
+            if (class_exists('Doctrine\ORM\Mapping\Table')) {
+                $doctrineTable = $this->annotationReader->getClassAnnotation(
+                    $reflectionClass,
+                    \Doctrine\ORM\Mapping\Table::class
+                );
+                $wasMapped = $wasMapped || $doctrineTable;
+                $table->name = $doctrineTable->name ?? $table->name;
+            }
 
-        return $table;
+            return $table;
+        } catch (\Exception $ex) {
+            $this->handleException($ex);
+            return new Table();
+        }
     }
 
     /**
@@ -58,11 +67,16 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
      */
     public function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Column
     {
-        $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $wasMapped);
-        $this->populateFromDoctrineColumn($reflectionProperty, $column, $wasMapped);
-        $this->populateFromDoctrineId($reflectionProperty, $column, $wasMapped);
-
-        return $column;
+        try {
+            $this->annotationReader->setThrowExceptions($this->throwExceptions);
+            $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $wasMapped);
+            $this->populateFromDoctrineColumn($reflectionProperty, $column, $wasMapped);
+            $this->populateFromDoctrineId($reflectionProperty, $column, $wasMapped);
+            return $column;
+        } catch (\Exception $ex) {
+            $this->handleException($ex);
+            return new Column();
+        }
     }
 
     /**
@@ -73,16 +87,26 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
      */
     public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Relationship
     {
-        $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $wasMapped);
-        foreach (Relationship::getRelationshipTypes() as $relationshipType) {
-            $this->populateFromDoctrineRelationship($reflectionProperty, $relationship, $relationshipType, $wasMapped);
+        try {
+            $this->annotationReader->setThrowExceptions($this->throwExceptions);
+            $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $wasMapped);
+            foreach (Relationship::getRelationshipTypes() as $relationshipType) {
+                $this->populateFromDoctrineRelationship(
+                    $reflectionProperty,
+                    $relationship,
+                    $relationshipType,
+                    $wasMapped
+                );
+            }
+            $this->populateFromDoctrineJoinColumn($reflectionProperty, $relationship, $wasMapped);
+            $this->populateFromDoctrineOrderBy($reflectionProperty, $relationship, $wasMapped);
+            $this->populateFromDoctrineEmbedded($reflectionProperty, $relationship, $wasMapped);
+
+            return $relationship;
+        } catch (\Exception $ex) {
+            $this->handleException($ex);
+            return new Relationship();
         }
-        $this->populateFromDoctrineJoinColumn($reflectionProperty, $relationship, $wasMapped);
-        $this->populateFromDoctrineOrderBy($reflectionProperty, $relationship, $wasMapped);
-        $this->populateFromDoctrineEmbedded($reflectionProperty, $relationship, $wasMapped);
-
-        return $relationship;
-
     }
 
     /**

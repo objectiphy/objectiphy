@@ -392,7 +392,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
 
             if ($orderBy === null) {
                 //See if we can order by primary key of main entity
-                $pkProperties = $this->options->mappingCollection->getPrimaryKeyProperties(true);
+                $pkProperties = $this->options->mappingCollection->getPrimaryKeyProperties();
                 $orderBy = array_combine($pkProperties, array_fill(0, count($pkProperties), 'ASC'));
 
             }

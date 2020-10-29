@@ -48,6 +48,7 @@ final class ObjectBinder
         foreach ($configOptions->getConfigOption('entityConfig') as $className => $configEntity) {
             if ($configEntity->entityFactory) {
                 $this->entityFactory->registerCustomEntityFactory($className, $configEntity->entityFactory);
+                unset($this->boundObjects[$className]);
             }
         }
     }
@@ -86,7 +87,7 @@ final class ObjectBinder
 
     private function getEntityFromLocalCache(string $entityClassName, object &$entity): bool
     {
-        $pkProperties = $this->mappingCollection->getPrimaryKeyProperties(true, $entityClassName);
+        $pkProperties = $this->mappingCollection->getPrimaryKeyProperties($entityClassName);
         $pkValues = [];
         foreach ($pkProperties as $pkProperty) {
             $pkValues[] = ObjectHelper::getValueFromObject($entity, $pkProperty);
@@ -130,19 +131,28 @@ final class ObjectBinder
                 } elseif ($propertyMapping->isLateBound()) {
                     $value = $this->createLateBoundClosure($propertyMapping, $row);
                 } else {
-                    $parentProperties = array_merge($propertyMapping->parentProperties, [$propertyMapping->propertyName]);
-                    $value = $this->bindRowToEntity($row, $propertyMapping->getChildClassName(), $parentProperties, $entity);
+                    $parentProperties = array_merge(
+                        $propertyMapping->parentProperties,
+                        [$propertyMapping->propertyName]
+                    );
+                    $value = $this->bindRowToEntity(
+                        $row,
+                        $propertyMapping->getChildClassName(),
+                        $parentProperties,
+                        $entity
+                    );
                 }
                 $valueFound = $value ? true : false;
                 $type = $propertyMapping->getChildClassName();
                 $format = '';
-            }
-            if ($valueFound) {
-                $name = $propertyMapping->propertyName;
-                if ($entity instanceof EntityProxyInterface && $value instanceof \Closure) {
-                    $entity->setLazyLoader($name, $value);
-                } else {
-                    ObjectHelper::setValueOnObject($entity, $name, $value, $type, $format);
+
+                if ($valueFound) {
+                    $name = $propertyMapping->propertyName;
+                    if ($entity instanceof EntityProxyInterface && $value instanceof \Closure) {
+                        $entity->setLazyLoader($name, $value);
+                    } else {
+                        ObjectHelper::setValueOnObject($entity, $name, $value, $type, $format);
+                    }
                 }
             }
         }
@@ -159,23 +169,20 @@ final class ObjectBinder
             $repository = $this->repositoryFactory->createRepository($className, $repositoryClassName, $configOptions);
 
             if ($propertyMapping->relationship->mappedBy) {
-                //$whereProperty = $propertyMapping->relationship->mappedBy;
                 $sourceJoinColumns = $propertyMapping->relationship->sourceJoinColumn ?? null;
                 foreach (explode(',', $sourceJoinColumns) as $index => $sourceJoinColumn) {
                     $sibling = $mappingCollection->getSiblingPropertyByColumn(
                         $propertyMapping,
                         trim($sourceJoinColumn)
                     );
-                    //$whereProperty[$index] = $sibling->propertyName;
                     $whereProperty[$index] = $propertyMapping->relationship->mappedBy;
                     $valueKey[$index] = $sibling->getAlias();
                 }
             } else { //Use primary key (must be a single value, as it is mapped by a single property on the parent)
-                //$whereProperty = $propertyMapping->propertyName;
-                $pkProperties = $mappingCollection->getPrimaryKeyProperties(false, $propertyMapping->className);
+                $pkProperties = $mappingCollection->getPrimaryKeyProperties($propertyMapping->getChildClassName());
                 $firstPk = reset($pkProperties);
                 if ($firstPk) {
-                    $whereProperty[0] = $firstPk->propertyName;
+                    $whereProperty[0] = $firstPk;
                     $valueKey[0] = $propertyMapping->getAlias();
                 }
             }

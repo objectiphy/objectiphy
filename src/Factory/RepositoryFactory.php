@@ -16,6 +16,7 @@ use Objectiphy\Objectiphy\MappingProvider\MappingProviderAnnotation;
 use Objectiphy\Objectiphy\MappingProvider\MappingProviderDoctrineAnnotation;
 use Objectiphy\Objectiphy\Database\SqlBuilderInterface;
 use Objectiphy\Objectiphy\Database\SqlBuilderMySql;
+use Objectiphy\Objectiphy\NamingStrategy\NameResolver;
 use Objectiphy\Objectiphy\Orm\ObjectRepository;
 use Objectiphy\Objectiphy\Orm\ObjectMapper;
 use Objectiphy\Objectiphy\Orm\ObjectBinder;
@@ -73,6 +74,7 @@ class RepositoryFactory
             $baseMappingProvider = new MappingProvider();
             $doctrineMappingProvider = new MappingProviderDoctrineAnnotation($baseMappingProvider, $annotationReader);
             $this->mappingProvider = new MappingProviderAnnotation($doctrineMappingProvider, $annotationReader);
+            $this->mappingProvider->setThrowExceptions(!$this->configOptions->productionMode);
         }
 
         return $this->mappingProvider;
@@ -107,7 +109,7 @@ class RepositoryFactory
 
     protected final function createObjectMapper()
     {
-        return new ObjectMapper($this->mappingProvider);
+        return new ObjectMapper($this->mappingProvider, $this->createNameResolver());
     }
 
     protected final function createObjectFetcher(?ConfigOptions $configOptions = null)
@@ -118,6 +120,11 @@ class RepositoryFactory
         $storage = $this->createStorage();
 
         return new ObjectFetcher($sqlBuilder, $objectMapper, $objectBinder, $storage);
+    }
+
+    protected final function createNameResolver()
+    {
+        return new NameResolver();
     }
 
     protected final function createObjectPersister()

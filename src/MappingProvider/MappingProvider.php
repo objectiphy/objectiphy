@@ -16,6 +16,19 @@ use Objectiphy\Objectiphy\Mapping\Table;
  */
 class MappingProvider implements MappingProviderInterface
 {
+    protected $throwExceptions = false;
+    protected $lastErrorMessage = '';
+    
+    public function setThrowExceptions(bool $value): void
+    {
+        $this->throwExceptions = $value;
+    }
+    
+    public function getLastErrorMessage(): string
+    {
+        return $this->lastErrorMessage;
+    }
+
     /**
      * Just return a new Table mapping object without populating it.
      * @param \ReflectionClass $reflectionClass

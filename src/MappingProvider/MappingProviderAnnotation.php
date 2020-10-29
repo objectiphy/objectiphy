@@ -19,8 +19,10 @@ use Objectiphy\Objectiphy\Orm\ObjectHelper;
  */
 class MappingProviderAnnotation implements MappingProviderInterface
 {
-    private MappingProviderInterface $mappingProvider;
-    private AnnotationReaderInterface $annotationReader;
+    use MappingProviderExceptionTrait;
+    
+    protected MappingProviderInterface $mappingProvider;
+    protected AnnotationReaderInterface $annotationReader;
 
     public function __construct(MappingProviderInterface $mappingProvider, AnnotationReaderInterface $annotationReader)
     {
@@ -32,51 +34,72 @@ class MappingProviderAnnotation implements MappingProviderInterface
      * Populate a Table mapping class based on annotations.
      * @param \ReflectionClass $reflectionClass
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
-     * @return object | null
+     * @return Table
      */
     public function getTableMapping(\ReflectionClass $reflectionClass, bool &$wasMapped = null): Table
     {
-        $table = $this->mappingProvider->getTableMapping($reflectionClass, $wasMapped);
-        $objectiphyTable = $this->annotationReader->getClassAnnotation($reflectionClass, Table::class);
-        $wasMapped = $wasMapped || $objectiphyTable;
-        $hostClassName = $reflectionClass->getName();
-        $hostProperty = '';
+        try {
+            $this->annotationReader->setThrowExceptions($this->throwExceptions);
+            $table = $this->mappingProvider->getTableMapping($reflectionClass, $wasMapped);
+            $objectiphyTable = $this->annotationReader->getClassAnnotation($reflectionClass, Table::class);
+            $wasMapped = $wasMapped || $objectiphyTable;
+            $hostClassName = $reflectionClass->getName();
+            $hostProperty = '';
 
-        return $this->decorate($hostClassName, $hostProperty, $table, $objectiphyTable);
+            return $this->decorate($hostClassName, $hostProperty, $table, $objectiphyTable);
+        } catch (\Exception $ex) {
+            $this->handleException($ex);
+            return new Table();
+        }
     }
 
     /**
      * Populate a Column mapping class based on annotations.
      * @param \ReflectionProperty $reflectionProperty
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
-     * @return object | null
+     * @return Column
      */
     public function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Column
     {
-        $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $wasMapped);
-        $objectiphyColumn = $this->annotationReader->getPropertyAnnotation($reflectionProperty, Column::class);
-        $wasMapped = $wasMapped || $objectiphyColumn;
-        $hostClassName = $reflectionProperty->getDeclaringClass()->getName();
-        $hostProperty = $reflectionProperty->getName();
+        try {
+            $this->annotationReader->setThrowExceptions($this->throwExceptions);
+            $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $wasMapped);
+            $objectiphyColumn = $this->annotationReader->getPropertyAnnotation($reflectionProperty, Column::class);
+            $wasMapped = $wasMapped || $objectiphyColumn;
+            $hostClassName = $reflectionProperty->getDeclaringClass()->getName();
+            $hostProperty = $reflectionProperty->getName();
 
-        return $this->decorate($hostClassName, $hostProperty, $column, $objectiphyColumn);
+            return $this->decorate($hostClassName, $hostProperty, $column, $objectiphyColumn);
+        } catch (\Exception $ex) {
+            $this->handleException($ex);
+            return new Column();
+        }
     }
 
     /**
      * Populate a Relationship mapping class based on annotations.
      * @param \ReflectionProperty $reflectionProperty
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
-     * @return object | null
+     * @return Relationship
      */
     public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Relationship
     {
-        $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $wasMapped);
-        $objectiphyRelationship = $this->annotationReader->getPropertyAnnotation($reflectionProperty, Relationship::class);
-        $wasMapped = $wasMapped || $objectiphyRelationship;
-        $hostClassName = $reflectionProperty->getDeclaringClass()->getName();
-        $hostProperty = $reflectionProperty->getName();
-        
-        return $this->decorate($hostClassName, $hostProperty, $relationship, $objectiphyRelationship);
+        try {
+            $this->annotationReader->setThrowExceptions($this->throwExceptions);
+            $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $wasMapped);
+            $objectiphyRelationship = $this->annotationReader->getPropertyAnnotation(
+                $reflectionProperty,
+                Relationship::class
+            );
+            $wasMapped = $wasMapped || $objectiphyRelationship;
+            $hostClassName = $reflectionProperty->getDeclaringClass()->getName();
+            $hostProperty = $reflectionProperty->getName();
+
+            return $this->decorate($hostClassName, $hostProperty, $relationship, $objectiphyRelationship);
+        } catch (\Exception $ex) {
+            $this->handleException($ex);
+            return new Relationship();
+        }
     }
 
     /**

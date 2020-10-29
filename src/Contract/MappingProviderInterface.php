@@ -19,6 +19,16 @@ use Objectiphy\Objectiphy\Mapping\Table;
 interface MappingProviderInterface
 {
     /**
+     * @param bool $value Whether or not to throw exceptions if there is an error parsing mapping information.
+     */
+    public function setThrowExceptions(bool $value): void;
+
+    /**
+     * @return string If not throwing exceptions, store any errors and return them from this method.
+     */
+    public function getLastErrorMessage(): string;
+    
+    /**
      * Get table mapping information for a class.
      * @param \ReflectionClass $reflectionClass
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.

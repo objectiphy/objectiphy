@@ -210,15 +210,20 @@ class MappingCollection
         if ($propertyMapping->childTable && $propertyMapping->getChildClassName()) {
             $this->classes[$propertyMapping->getChildClassName()] = $propertyMapping->childTable;
         }
-        if ($propertyMapping->column->isPrimaryKey ?? false) {
-            $this->primaryKeyProperties[$propertyMapping->className][$propertyMapping->propertyName] ??= $propertyMapping;
-        }
+        $this->addPrimaryKeyMapping($propertyMapping->className, $propertyMapping->propertyName, $propertyMapping->column);
         if ($propertyMapping->relationship->isDefined()) {
             $relationshipKey = $propertyMapping->getRelationshipKey();
             $this->relationships[$relationshipKey] ??= $propertyMapping;
         }
         if (!$propertyMapping->relationship->isDefined() || $propertyMapping->isForeignKey) {
             $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
+        }
+    }
+    
+    public function addPrimaryKeyMapping(string $className, string $propertyName, Column $column)
+    {
+        if ($column->isPrimaryKey ?? false) {
+            $this->primaryKeyProperties[$className][$propertyName] ??= $column;
         }
     }
 
@@ -253,20 +258,18 @@ class MappingCollection
     
     /**
      * Return list of properties that are marked as being part of the primary key.
-     * @param bool $namesOnly Whether or not to just return a list of property names as strings (defaults to returning
-     * a list of PropertyMapping objects).
      * @param string $className Optionally specify a child class name (defaults to parent entity).
      * @return array
      */
-    public function getPrimaryKeyProperties($namesOnly = false, ?string $className = null): array
+    public function getPrimaryKeyProperties(?string $className = null): array
     {
         $className = $className ?? $this->entityClassName;
         $pkProperties = $this->primaryKeyProperties[$className] ?? [];
         if (!$pkProperties && isset($this->properties['id'])) { //If none specified, use 'id' if it exists
-            $pkProperties = ['id' => $this->properties['id']];
+            $pkProperties = ['id' => true]; //Value doesn't matter
         }
 
-        return $namesOnly ? array_keys($pkProperties) : $pkProperties;
+        return array_keys($pkProperties);
     }
 
     /**
@@ -345,14 +348,14 @@ class MappingCollection
                     if ($otherSideMapping && $otherSideMapping->relationship) {
                         $relationship->sourceJoinColumn = $relationship->sourceJoinColumn ?: $otherSideMapping->relationship->targetJoinColumn;
                         //If empty, use primary key of $relationshipMapping's class
-                        $relationship->sourceJoinColumn = $relationship->sourceJoinColumn ?: implode(',', $this->getPrimaryKeyProperties(true, $relationshipMapping->className));
+                        $relationship->sourceJoinColumn = $relationship->sourceJoinColumn ?: implode(',', $this->getPrimaryKeyProperties($relationshipMapping->className));
                         $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: $otherSideMapping->relationship->sourceJoinColumn;
                         //If empty, use primary key of child class
-                        $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: implode(',', $this->getPrimaryKeyProperties(true, $relationship->childClassName));
+                        $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: implode(',', $this->getPrimaryKeyProperties($relationship->childClassName));
                         $relationship->joinTable = $relationship->joinTable ?: $otherSideMapping->getTableAlias();
                     }
                 } elseif (!$relationship->targetJoinColumn) {
-                    $pkPropertyNames = $this->getPrimaryKeyProperties(true, $relationship->childClassName);
+                    $pkPropertyNames = $this->getPrimaryKeyProperties($relationship->childClassName);
                     $relationship->targetJoinColumn = implode(',', $pkPropertyNames);
                 }
             }

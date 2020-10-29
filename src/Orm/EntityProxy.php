@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
+
 /**
  * This is a template file for creating proxy object classes. This class will not be instantiated directly.
  */

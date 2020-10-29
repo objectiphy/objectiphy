@@ -2,6 +2,8 @@
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
+
 /**
  * This class only contains static methods. In order to prevent hidden dependencies and brittle code, the only methods
  * allowed here are ones which do not change application state (except for on arguments that are passed into the method
@@ -128,11 +130,6 @@ class ObjectHelper
                     $reflectionProperty = new \ReflectionProperty($object, $propertyName);
                     $reflectionProperty->setAccessible(true);
                     $reflectionProperty->setValue($object, $valueToSet);
-                    if ($object instanceof EntityProxyInterface && !empty($object->getEntity())) {
-                        $reflectionProperty = new \ReflectionProperty($object->getEntity(), $propertyName);
-                        $reflectionProperty->setAccessible(true);
-                        $reflectionProperty->setValue($object->getEntity(), $valueToSet);
-                    }
                 } catch (\Exception $ex) {
                     if ($lookForSetter) {
                         if (method_exists($object, 'set' . ucfirst($propertyName))) {

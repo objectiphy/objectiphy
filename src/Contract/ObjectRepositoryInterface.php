@@ -50,18 +50,18 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * Find a single record (and hydrate it as an entity) with the given primary key value. Compatible with the
      * equivalent method in Doctrine.
      * @param mixed $id Primary key value - for composite keys, can be an array
-     * @return object|null
+     * @return object|array|null
      */
-    public function find($id): ?object;
+    public function find($id);
 
     /**
      * Find a single record (and hydrate it as an entity) for the given criteria. Compatible with the equivalent method
      * in Doctrine.
      * @param array $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
-     * @return object|null
+     * @return object|array|null
      */
-    public function findOneBy(array $criteria = []): ?object;
+    public function findOneBy(array $criteria = []);
 
     /**
      * Return the latest record from a group
@@ -71,13 +71,13 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * setCommonProperty method).
      * @param string|null $recordAgeIndicator Fully qualified database column or expression that determines record age
      * (see also the setCommonProperty method).
-     * @return object|null
+     * @return object|array|null
      */
     public function findLatestOneBy(
         array $criteria = [], 
         ?string $commonProperty = null,
         ?string $recordAgeIndicator = null
-    ): ?object;
+    );
 
     /**
      * Return the latest record from each group
