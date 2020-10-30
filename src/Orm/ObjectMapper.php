@@ -15,6 +15,7 @@ use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Mapping\Table;
 use Objectiphy\Objectiphy\NamingStrategy\NameResolver;
+use Objectiphy\Objectiphy\Query\CriteriaExpression;
 
 /**
  * Loads mapping information from the supplied mapping provider (typically annotations, but the mapping information 
@@ -73,6 +74,48 @@ final class ObjectMapper
     }
 
     /**
+     * Depending on the criteria, we might need additional mappings - eg. to search on the value of
+     * a late bound child object.
+     * @param string $className Name of top-level class
+     * @param array | null $criteria
+     */
+    public function addCriteriaMappings(string $className, ?array $criteria = null)
+    {
+        foreach ($criteria ?? [] as $criteriaExpression) {
+            if ($criteriaExpression instanceof CriteriaExpression) {
+                foreach($criteriaExpression->getPropertyPathsUsed() as $propertyPath) {
+                    $this->addMappingForProperty($className, $propertyPath);
+                }
+            }
+        }
+    }
+
+    private function addMappingForProperty(string $className, string $propertyPath)
+    {
+        $mappingCollection = $this->mappingCollections[$className];
+        if (!$mappingCollection->getColumnForPropertyPath($propertyPath)) {
+            $parts = explode('.', $propertyPath);
+            $property = '';
+            $parent = null;
+            foreach ($parts as $part) {
+                $property .= ((strlen($property) > 0) ? '.' : '') . $part;
+                $existingParent = $mappingCollection->getPropertyMapping($property);
+                if ($parent && $parent->getChildClassName() && !$existingParent) {
+                    //Add to $parent
+                    $reflectionProperty = new \ReflectionProperty($parent->getChildClassName(), $part);
+                    $table = $this->getTableMapping(new \ReflectionClass($parent->getChildClassName()));
+                    $parents = array_merge($parent->parents, [$parent->propertyName]);
+                    //Mark it as early bound...
+                    $parent->forceEarlyBindingForJoin(); //We need to join even if it is to-many, so we can filter
+                    $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents, true);
+                } else {
+                    $parent = $existingParent;
+                }
+            }
+        }
+    }
+
+    /**
      * Get mapping for class and loop through its properties to get their mappings too. Recursively populate mappings 
      * for child objects until we detect a loop or hit something that should be lazy loaded.
      * @throws \ReflectionException
@@ -93,6 +136,13 @@ final class ObjectMapper
         $this->populateRelationalMappings($mappingCollection, $reflectionClass, $parents, true);
     }
 
+    /**
+     * @param MappingCollection $mappingCollection
+     * @param \ReflectionClass $reflectionClass
+     * @param array $parents
+     * @param string $propertyName Restricts mapping to a single property (used for criteria joins)
+     * @throws ObjectiphyException
+     */
     private function populateScalarMappings(
         MappingCollection $mappingCollection,
         \ReflectionClass $reflectionClass,
@@ -105,9 +155,6 @@ final class ObjectMapper
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
             $propertyMapping = $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents);
             if ($propertyMapping) {
-                $mappingCollection->addMapping($propertyMapping);
-                //Resolve name *after* adding to collection so that naming strategies have access to the collection.
-                $this->nameResolver->resolveColumnName($propertyMapping);
                 //For lazy loading, we must have the primary key so we can load the child
                 if ($propertyMapping->relationship->isLateBound()
                     && !$propertyMapping->relationship->mappedBy
@@ -126,13 +173,14 @@ final class ObjectMapper
         MappingCollection $mappingCollection,
         \ReflectionProperty $reflectionProperty,
         Table $table,
-        array $parents
+        array $parents,
+        bool $suppressFetch = false
     ): ?PropertyMapping {
         $columnIsMapped = false;
         $relationshipIsMapped = false;
         $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $columnIsMapped);
         $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $relationshipIsMapped);
-        $relationship->setConfigOptions($this->eagerLoadToOne, $this->eagerLoadToMany);
+        $this->initialiseRelationship($relationship);
         if (($columnIsMapped || $relationshipIsMapped) && $column->name != 'IGNORE') {
             $childTable = null;
             if ($relationship->childClassName) {
@@ -148,6 +196,9 @@ final class ObjectMapper
                 $relationship,
                 $parents
             );
+            $mappingCollection->addMapping($propertyMapping, $suppressFetch);
+            //Resolve name *after* adding to collection so that naming strategies have access to the collection.
+            $this->nameResolver->resolveColumnName($propertyMapping);
 
             return $propertyMapping;
         }
@@ -174,10 +225,14 @@ final class ObjectMapper
     ): void {
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
             $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty);
-            $relationship->setConfigOptions($this->eagerLoadToOne, $this->eagerLoadToMany);
+            $this->initialiseRelationship($relationship);
             if ($relationship->isDefined()) {
                 if ($relationship->isEmbedded) {
                     continue; //Temporary measure until we support embedables.
+                }
+                if ($relationship->targetJoinColumn) {
+                    $targetProperty = $this->findTargetProperty($relationship);
+                    $relationship->setTargetProperty($targetProperty);
                 }
                 $propertyName = $reflectionProperty->getName();
                 $this->mapRelationship($mappingCollection, $propertyName, $relationship, $reflectionClass, $parents, $drillDown);
@@ -200,7 +255,7 @@ final class ObjectMapper
                 $childReflectionClass = new \ReflectionClass($relationship->childClassName);
                 $childReflectionProperty = $childReflectionClass->getProperty($relationship->mappedBy);
                 $childRelationship = $this->mappingProvider->getRelationshipMapping($childReflectionProperty);
-                $childRelationship->setConfigOptions($this->eagerLoadToOne, $this->eagerLoadToMany);
+                $this->initialiseRelationship($childRelationship);
                 $childTable = $this->getTableMapping($childReflectionClass, true);
                 $propertyMapping = new PropertyMapping(
                     $relationship->childClassName,
@@ -212,7 +267,11 @@ final class ObjectMapper
                     array_merge($parents, [$propertyName])
                 );
                 $mappingCollection->addMapping($propertyMapping);
-            }
+            } /*elseif ($relationship->targetJoinColumn && !$mappingCollection->getPropertyByColumn($relationship->targetJoinColumn, null, $relationship->childClassName, false)) {
+                $childReflectionClass = new \ReflectionClass($relationship->childClassName);
+
+                $stop = true;
+            }*/
         } else {
             $childParents = array_merge($parents, [$propertyName]);
             if (!$drillDown) {
@@ -224,6 +283,42 @@ final class ObjectMapper
                 $this->populateMappingCollection($mappingCollection, $relationship->childClassName, $childParents);
             }
         }
+    }
+
+    private function initialiseRelationship(Relationship $relationship): void
+    {
+        $relationship->setConfigOptions($this->eagerLoadToOne, $this->eagerLoadToMany);
+        if ($relationship->targetJoinColumn) {
+            $targetProperty = $this->findTargetProperty($relationship);
+            $relationship->setTargetProperty($targetProperty);
+        }
+    }
+
+    /**
+     * In case of lazy loading, we need to know which properties to use for the target, even if we don't map them.
+     * @param Relationship $relationship
+     * @return string|void
+     * @throws \ReflectionException
+     */
+    private function findTargetProperty(Relationship $relationship)
+    {
+        $properties = [];
+        $reflectionClass = new \ReflectionClass($relationship->childClassName);
+        $targetColumns = explode(',', $relationship->targetJoinColumn);
+        foreach ($reflectionClass->getProperties() as $reflectionProperty) {
+            $columnMapping = $this->mappingProvider->getColumnMapping($reflectionProperty);
+            foreach ($targetColumns as $targetColumn) {
+                if ($columnMapping->name == trim($targetColumn)) {
+                    $properties[] = $reflectionProperty->getName();
+                    break;
+                }
+            }
+            if (count($properties) == count($targetColumns)) {
+                break;
+            }
+        }
+
+        return implode(',', $properties);
     }
 
     /**

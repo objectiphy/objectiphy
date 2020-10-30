@@ -34,6 +34,7 @@ class RepositoryFactory
     private ConfigOptions $configOptions;
     private MappingProviderInterface $mappingProvider;
     private SqlBuilderInterface $sqlBuilder;
+    private ObjectMapper $objectMapper;
     private array $repositories = [];
 
     public function __construct(\PDO $pdo, ?ConfigOptions $configOptions = null)
@@ -92,7 +93,7 @@ class RepositoryFactory
 
             /** @var ObjectRepository $objectRepository */
             $objectRepository = new $repositoryClassName(
-                $this->createObjectMapper(),
+                $this->getObjectMapper(),
                 $this->createObjectFetcher($configOptions),
                 $this->createObjectPersister(),
                 $this->createObjectRemover(),
@@ -107,6 +108,15 @@ class RepositoryFactory
         return $this->repositories[$entityClassName][$configHash];
     }
 
+    protected final function getObjectMapper()
+    {
+        if (!isset($this->objectMapper)) {
+            $this->objectMapper = $this->createObjectMapper();
+        }
+
+        return $this->objectMapper;
+    }
+
     protected final function createObjectMapper()
     {
         return new ObjectMapper($this->mappingProvider, $this->createNameResolver());
@@ -115,7 +125,7 @@ class RepositoryFactory
     protected final function createObjectFetcher(?ConfigOptions $configOptions = null)
     {
         $sqlBuilder = $this->getSqlBuilder();
-        $objectMapper = $this->createObjectMapper();
+        $objectMapper = $this->getObjectMapper();
         $objectBinder = $this->createObjectBinder($configOptions);
         $storage = $this->createStorage();
 

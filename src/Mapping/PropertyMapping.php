@@ -25,7 +25,7 @@ class PropertyMapping
     /**
      * @var array Indexed array of parent property names.
      */
-    public array $parentProperties = [];
+    public array $parents = [];
 
     /**
      * @var MappingCollection Collection to which this mapping belongs
@@ -36,6 +36,11 @@ class PropertyMapping
      * @var Relationship If this property represents a relationship to a child entity, the relationship annotation.
      */
     public Relationship $relationship;
+
+    /**
+     * @var array Names of the properties on the target class for a join
+     */
+    public array $targetJoinProperties;
 
     /**
      * @var Table If the value of this property is stored in a column on the entity's table, the table
@@ -74,6 +79,11 @@ class PropertyMapping
      */
     private string $tableAlias = '';
 
+    /**
+     * @var bool If children of this property are used in criteria, force it to join even if it wouldn't normally.
+     */
+    private bool $forcedEarlyBindingForJoin = false;
+
     public function __construct(
         string $className,
         \ReflectionProperty $reflectionProperty,
@@ -81,7 +91,7 @@ class PropertyMapping
         ?Table $childTable,
         Column $column,
         Relationship $relationship,
-        array $parentProperties = []
+        array $parents = []
     ) {
         $this->className = $className;
         $this->reflectionProperty = $reflectionProperty;
@@ -90,7 +100,7 @@ class PropertyMapping
         $this->childTable = $childTable;
         $this->column = $column;
         $this->relationship = $relationship;
-        $this->parentProperties = $parentProperties;
+        $this->parents = $parents;
         if ($this->relationship->sourceJoinColumn) {
             $this->isForeignKey = true;
         }
@@ -104,7 +114,7 @@ class PropertyMapping
     public function getPropertyPath($separator = '.', bool $includingPropertyName = true): string
     {
         if (!$this->propertyPath) {
-            $this->propertyPath = implode('.', $this->parentProperties);
+            $this->propertyPath = implode('.', $this->parents);
         }
         $result = $separator == '.' ? $this->propertyPath : str_replace('.', $separator, $this->propertyPath);
         $result .= $includingPropertyName ? $separator . $this->propertyName : '';
@@ -153,9 +163,9 @@ class PropertyMapping
     public function getTableAlias(bool $forJoin = false): string
     {
         if (empty($this->tableAlias)
-            && count($this->parentProperties) > 0 //No need to alias scalar properties of main entity
+            && count($this->parents) > 0 //No need to alias scalar properties of main entity
             && strpos($this->column->name, '.') === false) { //Already mapped to an alias manually, so don't mess 
-            $this->tableAlias = rtrim('obj_alias_' . implode('_', $this->parentProperties), '_');
+            $this->tableAlias = rtrim('obj_alias_' . implode('_', $this->parents), '_');
         }
         $tableAlias = $this->tableAlias;
         
@@ -192,9 +202,16 @@ class PropertyMapping
         return $columnName;
     }
 
-    public function isLateBound(): bool
+    public function forceEarlyBindingForJoin()
     {
-        if ($this->relationship->isLateBound()) {
+        $this->forcedEarlyBindingForJoin = true;
+    }
+
+    public function isLateBound(bool $forJoin = false): bool
+    {
+        if ($forJoin && $this->forcedEarlyBindingForJoin) {
+            return false;
+        } elseif ($this->relationship->isLateBound()) {
             return true;
         } else {
             //If we have to lazy load to avoid recursion, it will be late bound

@@ -267,7 +267,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
         $sql = '';
         $relationshipProperties = $this->options->mappingCollection->getRelationships();
         foreach ($relationshipProperties as $propertyMapping) {
-            if ($propertyMapping->isLateBound()) {
+            if ($propertyMapping->isLateBound(true)) {
                 continue;
             }
             if ($this->options->count

@@ -118,10 +118,10 @@ class MappingCollection
     public function isPropertyFetchable(PropertyMapping $propertyMapping): bool
     {
         if (!isset($this->fetchableProperties[$propertyMapping->getPropertyPath()])) {
-            $parentPropertiesToFind = array_merge($propertyMapping->parentProperties, [$propertyMapping->propertyName]);
+            $parentsToFind = array_merge($propertyMapping->parents, [$propertyMapping->propertyName]);
             $columns = $this->getColumns();
             foreach ($columns as $fetchable) {
-                if ($fetchable->parentProperties == $parentPropertiesToFind) {
+                if ($fetchable->parents == $parentsToFind) {
                     $this->fetchableProperties[$propertyMapping->getPropertyPath()] = true;
                     return true;
                 }
@@ -148,31 +148,41 @@ class MappingCollection
      * @param string $forClass Optionally filter by parent.
      * @return PropertyMapping[]
      */
-    public function getPropertyMappings(?array $parentProperties = null): array
+    public function getPropertyMappings(?array $parents = null): array
     {
-        if ($parentProperties === null) {
+        if ($parents === null) {
             return $this->properties;
         } else {
-            $parentPropertyPath = implode('.', $parentProperties);
+            $parentPropertyPath = implode('.', $parents);
             return $this->propertiesByParent[$parentPropertyPath] ?? [];
         }
     }
 
     /**
-     * Given a property mapping, find a sibling that maps to the given column name (used to work out
-     * which properties to use for late bound joins).
+     * Given a property mapping, find a sibling that maps to the given column name, or given a class name,
+     * just find the first property defined for that class with that column name (used to work out which properties 
+     * to use for late bound joins).
      * @param PropertyMapping $property
      * @param string $columnName
      */
-    public function getSiblingPropertyByColumn(
-        PropertyMapping $property,
+    public function getPropertyByColumn(
         string $columnName,
+        PropertyMapping $siblingProperty = null,
+        string $className = '',
         bool $exceptionIfNotFound = true
     ): ?PropertyMapping {
-        $siblings = $this->getPropertyMappings($property->parentProperties);
-        foreach ($siblings ?? [] as $sibling) {
-            if ($sibling->column->name == $columnName) {
-                return $sibling;
+        if ($siblingProperty) {
+            $siblings = $this->getPropertyMappings($siblingProperty->parents);
+            foreach ($siblings ?? [] as $sibling) {
+                if ($sibling->column->name == $columnName) {
+                    return $sibling;
+                }
+            }
+        } elseif ($className) {
+            foreach ($this->properties as $property) {
+                if ($property->className == $className && $property->column->name == $columnName) {
+                    return $property;
+                }
             }
         }
 
@@ -199,8 +209,10 @@ class MappingCollection
     /**
      * Add the mapping information for a property to the collection and index it in various ways.
      * @param PropertyMapping $propertyMapping
+     * @param bool $suppressFetch If the column is only being added for a join to filter criteria, we don't fetch it
+     * (as any sibling properties will not be present and you would get a partially hydrated object).
      */
-    public function addMapping(PropertyMapping $propertyMapping)
+    public function addMapping(PropertyMapping $propertyMapping, bool $suppressFetch = false)
     {
         $propertyMapping->parentCollection = $this;
         $this->properties[$propertyMapping->getPropertyPath()] = $propertyMapping;
@@ -215,7 +227,7 @@ class MappingCollection
             $relationshipKey = $propertyMapping->getRelationshipKey();
             $this->relationships[$relationshipKey] ??= $propertyMapping;
         }
-        if (!$propertyMapping->relationship->isDefined() || $propertyMapping->isForeignKey) {
+        if (!$suppressFetch && !$propertyMapping->relationship->isDefined() || $propertyMapping->isForeignKey) {
             $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
         }
     }
@@ -247,7 +259,7 @@ class MappingCollection
         $this->mappedRelationships[$className . ':' . $propertyName] = true;
     } 
     
-    public function isRelationshipAlreadyMapped(array $parentProperties, string $propertyName, string $className): bool
+    public function isRelationshipAlreadyMapped(array $parents, string $propertyName, string $className): bool
     {
         if (isset($this->mappedRelationships[$className . ':' . $propertyName])) {
             return true;
@@ -287,9 +299,9 @@ class MappingCollection
         return false;
     }
 
-    public function parentHasLateBoundProperties(array $parentProperties): bool
+    public function parentHasLateBoundProperties(array $parents): bool
     {
-        foreach ($this->getPropertyMappings($parentProperties) as $propertyMapping) {
+        foreach ($this->getPropertyMappings($parents) as $propertyMapping) {
             if ($propertyMapping->isLateBound()) {
                 return true;
             }
@@ -309,7 +321,7 @@ class MappingCollection
 
         //Check if we can get each column
         foreach ($this->columns as $columnAlias => $propertyMapping) {
-            if ($propertyMapping->parentProperties) {
+            if ($propertyMapping->parents) {
                 $canFetch = false;
                 foreach ($relationships as $relationship) {
                     if ($relationship->getPropertyPath() == $propertyMapping->getParentPath()) {

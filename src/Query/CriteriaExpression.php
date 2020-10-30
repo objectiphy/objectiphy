@@ -285,6 +285,15 @@ class CriteriaExpression implements \JsonSerializable
         return false;
     }
 
+    public function getPropertyPathsUsed(): array
+    {
+        $paths = [$this->propertyName];
+        $this->addPropertyPath($paths, $this->value);
+        $this->addPropertyPath($paths, $this->value2);
+
+        return $paths;
+    }
+
     public function __toString(): string
     {
         $string = $this->propertyName . ' ' . $this->operator . ' ';
@@ -300,6 +309,16 @@ class CriteriaExpression implements \JsonSerializable
         }
 
         return $string;
+    }
+
+    private function addPropertyPath(array &$paths, $value): void
+    {
+        $match = [];
+        preg_match('/`(.*?)`/', strval($value), $match);
+        $property = $match[0] ?? '';
+        if ($property) {
+            $paths[] = substr($property, 1, strlen($property) - 2);
+        }
     }
 
     private function dealWithNulls($property, $exceptionOnInvalidNull): void

@@ -14,7 +14,7 @@ class NameResolver
     private NamingStrategyInterface $tableNamingStrategy;
     private NamingStrategyInterface $columnNamingStrategy;
     private bool $guessMappings;
-    
+
     public function setConfigOptions(
         bool $guessMappings = true,
         NamingStrategyInterface $tableNamingStrategy, 

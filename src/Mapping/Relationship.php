@@ -24,16 +24,24 @@ class Relationship
     const MANY_TO_ONE = 'many_to_one';
     const MANY_TO_MANY = 'many_to_many';
 
-    /** @var bool Whether this relationship is part of the primary key. */
+    /** 
+     * @var bool Whether this relationship is part of the primary key. 
+     */
     public bool $isPrimaryKey = false;
 
-    /** @var string One of the class constant values (eg. "one_to_one"). */
+    /** 
+     * @var string One of the class constant values (eg. "one_to_one"). 
+     */
     public string $relationshipType = '';
     
-    /** @var string Data type (applicable to scalar joins only) */
+    /** 
+     * @var string Data type (applicable to scalar joins only) 
+     */
     public string $type = '';
 
-    /** @var string Child entity class name. */
+    /** 
+     * @var string Child entity class name. 
+     */
     public string $childClassName = '';
 
     /**
@@ -55,16 +63,24 @@ class Relationship
      */
     public string $joinTable = '';
 
-    /** @var string Name of column to join with on the source table (parent entity). */
+    /** 
+     * @var string Name of column to join with on the source table (parent entity). 
+     */
     public string $sourceJoinColumn = '';
 
-    /** @var string Name of column to join with on the target table (child entity). */
+    /** 
+     * @var string Name of column to join with on the target table (child entity). 
+     */
     public string $targetJoinColumn = '';
     
-    /** @var string Name of column that holds the value for a scalar join. */
+    /** 
+     * @var string Name of column that holds the value for a scalar join. 
+     */
     public string $targetScalarValueColumn = '';
     
-    /** @var string "INNER" or "LEFT". */
+    /** 
+     * @var string "INNER" or "LEFT". 
+     */
     public string $joinType = 'LEFT';
     
     /**
@@ -73,26 +89,42 @@ class Relationship
      */
     public string $joinSql = '';
     
-    /** @var bool Whether this is actually an embedded (value) object that maps to several columns */
+    /** 
+     * @var bool Whether this is actually an embedded (value) object that maps to several columns 
+     */
     public bool $isEmbedded = false;
     
-    /** @var string Prefix to apply to embedded object column names */
+    /** 
+     * @var string Prefix to apply to embedded object column names 
+     */
     public string $embeddedColumnPrefix = '';
     
-    /** @var array Properties to order children by (eg. ['modifiedDateTime' => 'DESC', 'id' => 'ASC']) */
+    /** 
+     * @var array Properties to order children by (eg. ['modifiedDateTime' => 'DESC', 'id' => 'ASC']) 
+     */
     public array $orderBy = [];
 
-    /** @var bool Cascade deletes (if parent object is deleted, delete any children also) */
+    /** 
+     * @var bool Cascade deletes (if parent object is deleted, delete any children also) 
+     */
     public bool $cascadeDeletes = false;
     
-    /** @var bool Orphan control (if child is removed from parent, delete the child, not just the relationship) */
+    /** 
+     * @var bool Orphan control (if child is removed from parent, delete the child, not just the relationship) 
+     */
     public bool $orphanRemoval = false;
 
-    /** @var string Optionally specify a class to use to hold collections for toMany associations (defaults to a plain
+    /** 
+     * @var string Optionally specify a class to use to hold collections for toMany associations (defaults to a plain
      * old PHP array).
      */
     public string $collectionClass = 'array';
 
+    /**
+     * @var string 
+     */
+    private string $targetPropertyName = '';
+    
     /**
      * @var string Name of a factory class that can be used to create custom collection classes for collections of
      * entities (for properties with a to-many relationship only). If supplied, this must be the fully qualified class
@@ -218,6 +250,16 @@ class Relationship
     public function isScalarJoin(): bool
     {
         return $this->targetScalarValueColumn ? true : false;
+    }
+    
+    public function setTargetProperty(string $value): void
+    {
+        $this->targetPropertyName = $value;
+    }
+    
+    public function getTargetProperty(): string
+    {
+        return $this->targetPropertyName;
     }
 
     public function validate(PropertyMapping $propertyMapping)

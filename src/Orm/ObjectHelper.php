@@ -111,7 +111,7 @@ class ObjectHelper
                 break;
             default:
                 if ($dataType === null
-                    || (($dataType == '\Traversable' || $dataType == 'array') && (is_array($value) || $value instanceof \Traversable))
+                    || (in_array($dataType, ['\iterable', '\Traversable', 'array']) && (is_array($value) || $value instanceof \Traversable))
                     || $value instanceof $dataType
                     || ($value === null && class_exists($dataType))
                     || ($dataType != 'array' && !class_exists($dataType) && !is_object($value) && !is_object(self::getValueFromObject($object, $propertyName)))

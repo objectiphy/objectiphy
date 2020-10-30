@@ -68,6 +68,7 @@ final class ObjectFetcher
     public function doFindBy() 
     {
         $this->validate();
+        $this->objectMapper->addCriteriaMappings($this->options->getClassName(), $this->options->getCriteria());
         $this->doCount();
         $result = $this->doFetch();
 
