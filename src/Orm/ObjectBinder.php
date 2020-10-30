@@ -37,12 +37,12 @@ final class ObjectBinder
         $this->entityFactory = $entityFactory;
     }
 
-    public function setMappingCollection(MappingCollection $mappingCollection)
+    public function setMappingCollection(MappingCollection $mappingCollection): void
     {
         $this->mappingCollection = $mappingCollection;
     }
     
-    public function setConfigOptions(ConfigOptions $configOptions)
+    public function setConfigOptions(ConfigOptions $configOptions): void
     {
         $this->configOptions = $configOptions;
         foreach ($configOptions->getConfigOption('entityConfig') as $className => $configEntity) {

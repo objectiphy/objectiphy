@@ -25,7 +25,7 @@ use Objectiphy\Objectiphy\Query\CriteriaExpression;
  */
 final class ObjectMapper
 {
-    /* @var $mappingCollection MappingCollection[] */
+    /* @var MappingCollection[] $mappingCollection */
     private array $mappingCollections;
     private MappingProviderInterface $mappingProvider;
     private bool $productionMode;
@@ -83,13 +83,22 @@ final class ObjectMapper
     {
         foreach ($criteria ?? [] as $criteriaExpression) {
             if ($criteriaExpression instanceof CriteriaExpression) {
-                foreach($criteriaExpression->getPropertyPathsUsed() as $propertyPath) {
+                foreach ($criteriaExpression->getPropertyPathsUsed() as $propertyPath) {
                     $this->addMappingForProperty($className, $propertyPath);
                 }
             }
         }
     }
 
+    /**
+     * Add a property that would not normally need to be mapped, but is required for the criteria to filter on.
+     * If there are any parent properties in between the deepest one we have already mapped, and the one we 
+     * want, we will have to add those too.
+     * @param string $className
+     * @param string $propertyPath
+     * @throws ObjectiphyException
+     * @throws \ReflectionException
+     */
     private function addMappingForProperty(string $className, string $propertyPath)
     {
         $mappingCollection = $this->mappingCollections[$className];
@@ -140,7 +149,6 @@ final class ObjectMapper
      * @param MappingCollection $mappingCollection
      * @param \ReflectionClass $reflectionClass
      * @param array $parents
-     * @param string $propertyName Restricts mapping to a single property (used for criteria joins)
      * @throws ObjectiphyException
      */
     private function populateScalarMappings(
@@ -169,6 +177,16 @@ final class ObjectMapper
         }
     }
 
+    /**
+     * Create a property mapping and add it to the collection.
+     * @param MappingCollection $mappingCollection
+     * @param \ReflectionProperty $reflectionProperty
+     * @param Table $table
+     * @param array $parents
+     * @param bool $suppressFetch
+     * @return PropertyMapping|null
+     * @throws \ReflectionException
+     */
     private function mapProperty(
         MappingCollection $mappingCollection,
         \ReflectionProperty $reflectionProperty,
@@ -206,6 +224,12 @@ final class ObjectMapper
         return null;
     }
 
+    /**
+     * Add minimal information about any primary keys
+     * @param MappingCollection $mappingCollection
+     * @param string $className
+     * @throws \ReflectionException
+     */
     private function populatePrimaryKeyMappings(MappingCollection $mappingCollection, string $className): void
     {
         $reflectionClass = new \ReflectionClass($className);
@@ -217,6 +241,14 @@ final class ObjectMapper
         }
     }
 
+    /**
+     * Loop through relationships and map them.
+     * @param MappingCollection $mappingCollection
+     * @param \ReflectionClass $reflectionClass
+     * @param array $parents
+     * @param bool $drillDown
+     * @throws \ReflectionException
+     */
     private function populateRelationalMappings(
         MappingCollection $mappingCollection,
         \ReflectionClass $reflectionClass,
@@ -230,16 +262,23 @@ final class ObjectMapper
                 if ($relationship->isEmbedded) {
                     continue; //Temporary measure until we support embedables.
                 }
-                if ($relationship->targetJoinColumn) {
-                    $targetProperty = $this->findTargetProperty($relationship);
-                    $relationship->setTargetProperty($targetProperty);
-                }
                 $propertyName = $reflectionProperty->getName();
                 $this->mapRelationship($mappingCollection, $propertyName, $relationship, $reflectionClass, $parents, $drillDown);
             }
         }
     }
 
+    /**
+     * Map relationship properties, avoiding infinite recursion, and only if needed (early bound).
+     * @param MappingCollection $mappingCollection
+     * @param string $propertyName
+     * @param Relationship $relationship
+     * @param \ReflectionClass $reflectionClass
+     * @param array $parents
+     * @param bool $drillDown
+     * @throws ObjectiphyException
+     * @throws \ReflectionException
+     */
     private function mapRelationship(
         MappingCollection $mappingCollection,
         string $propertyName,
@@ -267,11 +306,7 @@ final class ObjectMapper
                     array_merge($parents, [$propertyName])
                 );
                 $mappingCollection->addMapping($propertyMapping);
-            } /*elseif ($relationship->targetJoinColumn && !$mappingCollection->getPropertyByColumn($relationship->targetJoinColumn, null, $relationship->childClassName, false)) {
-                $childReflectionClass = new \ReflectionClass($relationship->childClassName);
-
-                $stop = true;
-            }*/
+            }
         } else {
             $childParents = array_merge($parents, [$propertyName]);
             if (!$drillDown) {
@@ -285,6 +320,11 @@ final class ObjectMapper
         }
     }
 
+    /**
+     * Set config and if we use a non-standard column to join on, work out the equivalent property.
+     * @param Relationship $relationship
+     * @throws \ReflectionException
+     */
     private function initialiseRelationship(Relationship $relationship): void
     {
         $relationship->setConfigOptions($this->eagerLoadToOne, $this->eagerLoadToMany);
