@@ -44,11 +44,11 @@ final class ObjectBinder
     
     public function setConfigOptions(ConfigOptions $configOptions)
     {
-        $this->boundObjects = [];
         $this->configOptions = $configOptions;
         foreach ($configOptions->getConfigOption('entityConfig') as $className => $configEntity) {
             if ($configEntity->entityFactory) {
                 $this->entityFactory->registerCustomEntityFactory($className, $configEntity->entityFactory);
+                unset($this->boundObjects[$className]);
             }
         }
     }

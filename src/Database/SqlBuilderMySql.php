@@ -680,6 +680,10 @@ class SqlBuilderMySql implements SqlBuilderInterface
             $operator = $expression->getCriteriaOperator() ?: '=';
             if ($value !== null || $operator == 'IS' || $operator == 'IS NOT') { //Only filter if value supplied
                 $propertyMapping = $this->options->mappingCollection->getPropertyMapping($expression->propertyName);
+                if (!$propertyMapping) {
+                    $errorMessage = 'No property mapping was found for %1$s. Please check your search criteria.';
+                    throw new ObjectiphyException(sprintf($errorMessage, $expression->propertyName));
+                }
                 $columnName = $propertyMapping->getFullColumnName();
                 $format = $propertyMapping->column->format;
                 $isDateString = in_array($propertyMapping->column->type, ['datetimestring', 'datestring']);
