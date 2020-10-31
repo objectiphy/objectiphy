@@ -99,8 +99,6 @@ class BasicReadingTest extends IntegrationTestBase
         $this->assertEquals('P123456', $policy->policyNo);
         $this->assertEquals('Skywalker', $policy->contact->lastName);
         $this->assertEquals(5, count($policy->vehicle->wheels));
-        //$v = $policy->telematicsBox->vehicle;
-
         $this->assertEquals(TestCollection::class, get_class($policy->vehicle->wheels));
 
         //Find by child property (not possible in Doctrine)
@@ -223,7 +221,6 @@ class BasicReadingTest extends IntegrationTestBase
 
         //Get some arrays
         $this->objectRepository->setConfigOption('bindToEntities', false);
-//        $this->objectRepository->setBindToEntities(false);
         $policy = $this->objectRepository->findOneBy(['contact' => 123]);
         $this->assertEquals(123, $policy['contact_id']);
         $this->assertEquals('Skywalker', $policy['contact_lastName']);
