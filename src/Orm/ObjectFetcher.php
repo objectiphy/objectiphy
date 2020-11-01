@@ -74,6 +74,11 @@ final class ObjectFetcher
 
         return $result;
     }
+    
+    public function clearCache(): void
+    {
+        $this->objectBinder->clearCache();
+    }
 
     /**
      * Ensure find options have been set and that we have CriteriaExpressions in the criteria array 
@@ -101,9 +106,11 @@ final class ObjectFetcher
     private function doCount(): void
     {
         if ($this->options->multiple && $this->options->pagination) {
+            $this->options->count = true;
             $countSql = $this->sqlBuilder->getSelectQuery($this->options->getCriteria(), $this->options->multiple, $this->options->latest, true);
             $recordCount = intval($this->fetchValue($countSql, $this->sqlBuilder->getQueryParams()));
             $this->options->pagination->setTotalRecords($recordCount);
+            $this->options->count = false;
         }
     }
 
@@ -235,5 +242,14 @@ final class ObjectFetcher
         $result = new IterableResult($storage, null, null, true);
 
         return $result;
+    }
+
+    /**
+     * Just passing through.
+     * @param array $queryOverrides
+     */
+    public function overrideQueryParts(array $queryOverrides)
+    {
+        $this->sqlBuilder->overrideQueryParts($queryOverrides);
     }
 }

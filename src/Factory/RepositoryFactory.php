@@ -71,7 +71,12 @@ class RepositoryFactory
         if (!isset($this->mappingProvider)) {
             //Decorate a mapping provider for Doctrine/Objectiphy annotations
             $annotationReader = new AnnotationReader();
-            $annotationReader->setClassNameAttributes(['childClassName', 'targetEntity']);
+            $annotationReader->setClassNameAttributes([
+                'childClassName',
+                'targetEntity',
+                'collectionClass',
+                'collectionFactoryClass'
+            ]);
             $baseMappingProvider = new MappingProvider();
             $doctrineMappingProvider = new MappingProviderDoctrineAnnotation($baseMappingProvider, $annotationReader);
             $this->mappingProvider = new MappingProviderAnnotation($doctrineMappingProvider, $annotationReader);
@@ -87,7 +92,7 @@ class RepositoryFactory
         ?ConfigOptions $configOptions = null
     ) {
         $configOptions ??= $this->configOptions;
-        $configHash = $configOptions->getHash();
+        $configHash = $configOptions->getHash($repositoryClassName ?: '');
         if (!isset($this->repositories[$entityClassName][$configHash])) {
             $repositoryClassName = $this->getRepositoryClassName($repositoryClassName, $entityClassName);
 
@@ -119,7 +124,7 @@ class RepositoryFactory
 
     protected final function createObjectMapper()
     {
-        return new ObjectMapper($this->mappingProvider, $this->createNameResolver());
+        return new ObjectMapper($this->getMappingProvider(), $this->createNameResolver());
     }
 
     protected final function createObjectFetcher(?ConfigOptions $configOptions = null)

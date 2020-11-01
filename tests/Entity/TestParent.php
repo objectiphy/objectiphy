@@ -3,6 +3,7 @@
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
 use Objectiphy\Objectiphy\Mapping;
+use Objectiphy\Objectiphy\Tests\Entity\TestCollection;
 
 /**
  * @Mapping\Table(name="objectiphy_test.parent")
@@ -34,10 +35,10 @@ class TestParent
      */
     protected $child;
     /**
-     * @var TestPet[]
-     * @Mapping\Relationship(childClassName="TestPet", mappedBy="parent", relationshipType="one_to_many", orderBy={"name"="ASC","type"="DESC"}, cascadeDeletes=true, orphanRemoval=true)
+     * @var TestCollection
+     * @Mapping\Relationship(childClassName="TestPet", collectionClass="TestCollection", mappedBy="parent", relationshipType="one_to_many", orderBy={"name"="ASC","type"="DESC"}, cascadeDeletes=true, orphanRemoval=true)
      */
-    public $pets;
+    public TestCollection $pets;
     /**
      * var int
      * @Mapping\Column(aggregateFunctionName="COUNT", aggregateCollection="pets")

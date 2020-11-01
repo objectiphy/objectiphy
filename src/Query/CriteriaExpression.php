@@ -314,10 +314,12 @@ class CriteriaExpression implements \JsonSerializable
     private function addPropertyPath(array &$paths, $value): void
     {
         $match = [];
-        preg_match('/`(.*?)`/', strval($value), $match);
-        $property = $match[0] ?? '';
-        if ($property) {
-            $paths[] = substr($property, 1, strlen($property) - 2);
+        if (is_string($value)) {
+            preg_match('/`(.*?)`/', $value, $match);
+            $property = $match[0] ?? '';
+            if ($property) {
+                $paths[] = substr($property, 1, strlen($property) - 2);
+            }
         }
     }
 

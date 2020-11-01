@@ -103,10 +103,10 @@ class ConfigBase
      * Returns a hash uniquely representing the config options that are currently set (to be used as a cache key for
      * mapping information that uses this particular set of config options).
      */
-    public function getHash()
+    public function getHash(string $suffix = '')
     {
         ksort($this->nonDefaults);
-        return sha1(serialize($this->nonDefaults));
+        return sha1(serialize($this->nonDefaults) . $suffix);
     }
 
     /**

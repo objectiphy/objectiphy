@@ -235,7 +235,7 @@ class PropertyMapping
         try {
             $collectionClass = $this->relationship->collectionClass;
             if (!$collectionClass || $collectionClass == 'array') {
-                //Try to get it from type hint
+                //Try to get it from type hint (note: reflectionType seems buggy at times - safer to use annotations)
                 if ($this->reflectionProperty->hasType()) {
                     $collectionClass = $this->reflectionProperty->getType()->getName();
                 }

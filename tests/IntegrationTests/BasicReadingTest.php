@@ -3,11 +3,7 @@
 //TODO:
 //Map properties without ambiguity as per documentation
 //Respect setGuessMappings(false)
-//remove valueAssignments?
-//Check why so many levels on mentor/mentee/mentee etc.
 //Make sure custom respositories work when specified on table annotations
-//Value matching - refactor
-//More refactoring
 
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 

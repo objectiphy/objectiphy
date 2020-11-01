@@ -257,8 +257,8 @@ final class ObjectMapper
     ): void {
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
             $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty);
-            $this->initialiseRelationship($relationship);
             if ($relationship->isDefined()) {
+                $this->initialiseRelationship($relationship);
                 if ($relationship->isEmbedded) {
                     continue; //Temporary measure until we support embedables.
                 }
@@ -372,12 +372,12 @@ final class ObjectMapper
     {
         $tableIsMapped = false;
         $table = $this->mappingProvider->getTableMapping($reflectionClass, $tableIsMapped);
+        $this->nameResolver->resolveTableName($reflectionClass, $table);
         if ($exceptionIfUnmapped && !$tableIsMapped) {
             $message = 'Cannot populate mapping collection for class %1$s as there is no table mapping specified. Did you forget to add a Table annotation to your entity class?';
             throw new ObjectiphyException(sprintf($message, $reflectionClass->getName()));
         }
-        $this->nameResolver->resolveTableName($reflectionClass, $table);
-        
+
         return $table;
     }
 }

@@ -184,7 +184,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
     public function getSelect()
     {
         $this->countWithoutGroups = false;
-        $sql = $this->getCountSql($this->options->getCriteria());
+        $sql = $this->getCountSql();
         
         if (!$sql) {
             $columns = [];
@@ -212,7 +212,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
      */
     public function getFrom()
     {
-        $sql = "FROM " . $this->delimit($this->mainTable);
+        $sql = " FROM " . $this->delimit($this->mainTable);
 
         return $this->overrideQueryPart('from', $sql, $this->getQueryParams());
     }
@@ -397,7 +397,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
 
             }
             if (!empty($orderBy)) {
-                $sql = " ORDER BY ";
+                $sql = ' ORDER BY ';
                 foreach ($orderBy as $property => $direction) {
                     $propertyMapping = $this->options->mappingCollection->getPropertyMapping($property);
                     if ($propertyMapping) {
@@ -615,6 +615,14 @@ class SqlBuilderMySql implements SqlBuilderInterface
     }
 
     /**
+     * @param array $queryOverrides
+     */
+    public function overrideQueryParts(array $queryOverrides)
+    {
+        $this->queryOverrides = $queryOverrides;
+    }
+    
+    /**
      * Replace prepared statement parameters with actual values (for debugging output only, not for execution!)
      * @param string $query Parameterised SQL string
      * @param array $params Parameter values to replace tokens with
@@ -639,12 +647,12 @@ class SqlBuilderMySql implements SqlBuilderInterface
         return $query;
     }
 
-    protected function getCountSql(array $criteria = [])
+    protected function getCountSql()
     {
         $sql = '';
         if ($this->options->count && empty($this->queryOverrides)) { //See if we can do a more efficient count
-            $groupBy = trim(str_replace('GROUP BY', '', $this->getGroupBy($criteria, true)));
-            $baseGroupBy = trim(str_replace('GROUP BY', '', $this->baseGroupBy($criteria, true)));
+            $groupBy = trim(str_replace('GROUP BY', '', $this->getGroupBy(true)));
+            $baseGroupBy = trim(str_replace('GROUP BY', '', $this->baseGroupBy(true)));
             if ($groupBy) {
                 if (!$this->mappingCollection->hasAggregateFunctions() && $groupBy == $baseGroupBy) {
                     $sql .= "SELECT COUNT(DISTINCT " . $groupBy . ") ";
@@ -689,7 +697,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
                 $isDateString = in_array($propertyMapping->column->type, ['datetimestring', 'datestring']);
                 $isDateString = $isDateString ?: strpos(strtolower($propertyMapping->propertyName), 'date') !== false;
                 $dateFormat = $isDateString ? $format : '';
-                $sql .= $joiner . ' (' . $this->applyCriteriaValue($columnName, $operator, $value, $value2, $dateFormat);
+                $sql .= ' ' . $joiner . ' (' . $this->applyCriteriaValue($columnName, $operator, $value, $value2, $dateFormat);
 
 //                $parentClassMapping = null;
 //                $propertyMapping = $this->objectMapper->getPropertyMapping(
@@ -911,7 +919,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
             ? $this->queryOverrides[strtolower($part)]
             : $generatedQuery;
         if (is_callable($override)) {
-            $override = call_user_func_array($override, [$generatedQuery, $this->options->criteria, $params]);
+            $override = call_user_func_array($override, [$generatedQuery, $this->options->getCriteria(), $params]);
         } elseif (!is_string($override)) { //We don't know what the heck this is - just use our generated query
             $override = $generatedQuery;
         }

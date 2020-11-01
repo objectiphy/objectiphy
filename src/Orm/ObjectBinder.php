@@ -58,19 +58,20 @@ final class ObjectBinder
         string $entityClassName,
         array $parents = [],
         ?object $parentEntity = null
-    ): object {
+    ): ?object {
         if (!isset($this->mappingCollection)) {
             throw new MappingException('Mapping collection has not been supplied to the object binder.');
         }
 
         $requiresProxy = $this->mappingCollection->parentHasLateBoundProperties($parents);
         $entity = $this->entityFactory->createEntity($entityClassName, $requiresProxy);
-        $this->bindScalarProperties($entity, $row, $parents);
+        $propertiesMapped = $this->bindScalarProperties($entity, $row, $parents);
         if (!$this->getEntityFromLocalCache($entityClassName, $entity)) { //TODO: Could be more efficient by doing this earlier
-            $this->bindRelationalProperties($entity, $row, $parents, $parentEntity);
+            $relationalPropertiesMapped = $this->bindRelationalProperties($entity, $row, $parents, $parentEntity);
+            $propertiesMapped = $propertiesMapped ?: $relationalPropertiesMapped;
         }
 
-        return $entity;
+        return $propertiesMapped ? $entity : null;
     }
 
     public function bindRowsToEntities(array $rows, string $entityClassName, string $keyProperty): array
@@ -87,6 +88,11 @@ final class ObjectBinder
         }
         
         return $entities;
+    }
+
+    public function clearCache(): void
+    {
+        $this->boundObjects = [];
     }
 
     private function getEntityFromLocalCache(string $entityClassName, object &$entity): bool
@@ -107,20 +113,24 @@ final class ObjectBinder
         }
     }
 
-    private function bindScalarProperties(object $entity, array $row, array $parents): void
+    private function bindScalarProperties(object $entity, array $row, array $parents): bool
     {
+        $propertiesMapped = false;
         foreach ($this->mappingCollection->getPropertyMappings($parents) as $propertyMapping) {
             $valueFound = false;
             if ($propertyMapping->isScalarValue()) {
                 if (array_key_exists($propertyMapping->getShortColumnName(), $row)) {
                     $value = $row[$propertyMapping->getShortColumnName()];
                     $this->applyValue($entity, $propertyMapping, $value);
+                    $propertiesMapped = true;
                 }
             }
         }
+
+        return $propertiesMapped;
     }
 
-    private function bindRelationalProperties(object $entity, array $row, array $parents, ?object $parentEntity): void
+    private function bindRelationalProperties(object $entity, array $row, array $parents, ?object $parentEntity): bool
     {
         foreach ($this->mappingCollection->getPropertyMappings($parents) as $propertyMapping) {
             $valueFound = false;
@@ -139,13 +149,15 @@ final class ObjectBinder
                     $parents = array_merge($propertyMapping->parents, [$propertyMapping->propertyName]);
                     $childClass = $propertyMapping->getChildClassName();
                     $value = $this->bindRowToEntity($row, $childClass, $parents, $entity);
-                    $valueFound = true;
+                    $valueFound = $value ? true : false;
                 }
                 if ($valueFound) {
                     $this->applyValue($entity, $propertyMapping, $value);
                 }
             }
         }
+
+        return $valueFound;
     }
 
     private function applyValue(object $entity, PropertyMapping $propertyMapping, $value)
@@ -184,23 +196,24 @@ final class ObjectBinder
             $repository = $this->repositoryFactory->createRepository($className, $repositoryClassName, $configOptions);
 
             //Work out what to search for
-            if ($propertyMapping->relationship->mappedBy) { //Child owns the relationship
-                $sourceJoinColumns = explode(',', $propertyMapping->relationship->sourceJoinColumn) ?? [];
+            $relationshipMapping = $mappingCollection->getRelationships()[$propertyMapping->getRelationshipKey()];
+            if ($relationshipMapping->relationship->mappedBy) { //Child owns the relationship
+                $sourceJoinColumns = explode(',', $relationshipMapping->relationship->sourceJoinColumn) ?? [];
                 foreach ($sourceJoinColumns as $index => $sourceJoinColumn) {
                     $sibling = $mappingCollection->getPropertyByColumn(
                         trim($sourceJoinColumn),
                         $propertyMapping
                     );
-                    $whereProperty[$index] = $propertyMapping->relationship->mappedBy;
+                    $whereProperty[$index] = $relationshipMapping->relationship->mappedBy;
                     if (count($sourceJoinColumns) > 1) {
                         $whereProperty[$index] .= '.' . $sibling->propertyName;
                     }
                     $valueKey[$index] = $sibling->getAlias();
                 }
             } else {
-                if ($propertyMapping->relationship->getTargetProperty()) { //Not joining to primary key
-                    $sourceJoinColumns = explode(',', $propertyMapping->relationship->sourceJoinColumn) ?? [];
-                    $targetProperties = explode(',', $propertyMapping->relationship->getTargetProperty()) ?? [];
+                if ($relationshipMapping->relationship->getTargetProperty()) { //Not joining to primary key
+                    $sourceJoinColumns = explode(',', $relationshipMapping->relationship->sourceJoinColumn) ?? [];
+                    $targetProperties = explode(',', $relationshipMapping->relationship->getTargetProperty()) ?? [];
                     foreach ($targetProperties as $index => $targetProperty) {
                         $sourceProperty = $mappingCollection->getPropertyByColumn(
                             $sourceJoinColumns[$index],

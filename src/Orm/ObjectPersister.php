@@ -10,5 +10,12 @@ namespace Objectiphy\Objectiphy\Orm;
  */
 final class ObjectPersister
 {
-
+    /**
+     * Just passing through.
+     * @param array $queryOverrides
+     */
+    public function overrideQueryParts(array $queryOverrides)
+    {
+        $this->sqlBuilder->overrideQueryParts($queryOverrides);
+    }
 }

@@ -19,7 +19,7 @@ class TestChild
     protected $id;
     /**
      * @var TestUser
-     * @Objectiphy\Column(childClassName="TestUser", sourceJoinColumn="user_id", relationshipType="one_to_one")
+     * @Mapping\Relationship(childClassName="TestUser", sourceJoinColumn="user_id", relationshipType="one_to_one")
      */
     protected $user;
     /**
