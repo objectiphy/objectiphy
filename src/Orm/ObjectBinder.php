@@ -6,6 +6,7 @@ namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Config\ConfigEntity;
+use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
@@ -24,17 +25,19 @@ final class ObjectBinder
     private EntityFactory $entityFactory;
     private MappingCollection $mappingCollection;
     private ConfigOptions $configOptions;
-
-    /**
-     * @var array All the entities we have already created, keyed by class name, then
-     * primary key value(s), eg. ['My\Entity' => ['1stKeyPart:2ndKeyPart' => $object]]
-     */
-    private array $boundObjects = [];
+    private EntityTracker $entityTracker;
+    private DataTypeHandlerInterface $dataTypeHandler;
     
-    public function __construct(RepositoryFactory $repositoryFactory, EntityFactory $entityFactory)
-    {
+    public function __construct(
+        RepositoryFactory $repositoryFactory, 
+        EntityFactory $entityFactory,
+        EntityTracker $entityTracker,
+        DataTypeHandlerInterface $dataTypeHandler
+    ) {
         $this->repositoryFactory = $repositoryFactory;
         $this->entityFactory = $entityFactory;
+        $this->entityTracker = $entityTracker;
+        $this->dataTypeHandler = $dataTypeHandler;
     }
 
     public function setMappingCollection(MappingCollection $mappingCollection): void
@@ -48,7 +51,7 @@ final class ObjectBinder
         foreach ($configOptions->getConfigOption('entityConfig') as $className => $configEntity) {
             if ($configEntity->entityFactory) {
                 $this->entityFactory->registerCustomEntityFactory($className, $configEntity->entityFactory);
-                unset($this->boundObjects[$className]);
+                $this->entityTracker->clear($className);
             }
         }
     }
@@ -62,7 +65,6 @@ final class ObjectBinder
         if (!isset($this->mappingCollection)) {
             throw new MappingException('Mapping collection has not been supplied to the object binder.');
         }
-
         $requiresProxy = $this->mappingCollection->parentHasLateBoundProperties($parents);
         $entity = $this->entityFactory->createEntity($entityClassName, $requiresProxy);
         $propertiesMapped = $this->bindScalarProperties($entity, $row, $parents);
@@ -90,11 +92,6 @@ final class ObjectBinder
         return $entities;
     }
 
-    public function clearCache(): void
-    {
-        $this->boundObjects = [];
-    }
-
     private function getEntityFromLocalCache(string $entityClassName, object &$entity): bool
     {
         $pkProperties = $this->mappingCollection->getPrimaryKeyProperties($entityClassName);
@@ -102,13 +99,16 @@ final class ObjectBinder
         foreach ($pkProperties as $pkProperty) {
             $pkValues[] = ObjectHelper::getValueFromObject($entity, $pkProperty);
         }
-        $pkKey = implode(':', $pkValues);
 
-        if ($pkKey && isset($this->boundObjects[$entityClassName][$pkKey])) {
-            $entity = $this->boundObjects[$entityClassName][$pkKey];
-            return true;
+        if ($pkValues) {
+            if ($this->entityTracker->hasEntity($entityClassName, $pkValues)) {
+                $entity = $this->entityTracker->getEntity($entityClassName, $pkValues);
+                return true;
+            } else {
+                $this->entityTracker->storeEntity($entity, $pkValues);
+                return false;
+            }
         } else {
-            $this->boundObjects[$entityClassName][$pkKey] = $entity;
             return false;
         }
     }
@@ -173,7 +173,9 @@ final class ObjectBinder
         if ($entity instanceof EntityProxyInterface && $value instanceof \Closure) {
             $entity->setLazyLoader($propertyMapping->propertyName, $value);
         } else {
-            ObjectHelper::setValueOnObject($entity, $propertyMapping->propertyName, $value, $type, $format);
+            if ($this->dataTypeHandler->toObjectValue($value, $type, $format)) {
+                ObjectHelper::setValueOnObject($entity, $propertyMapping->propertyName, $value);
+            }
         }
     }
 
@@ -196,6 +198,7 @@ final class ObjectBinder
             $repository = $this->repositoryFactory->createRepository($className, $repositoryClassName, $configOptions);
 
             //Work out what to search for
+            $usePrimaryKey = false;
             $relationshipMapping = $mappingCollection->getRelationships()[$propertyMapping->getRelationshipKey()];
             if ($relationshipMapping->relationship->mappedBy) { //Child owns the relationship
                 $sourceJoinColumns = explode(',', $relationshipMapping->relationship->sourceJoinColumn) ?? [];
@@ -211,7 +214,7 @@ final class ObjectBinder
                     $valueKey[$index] = $sibling->getAlias();
                 }
             } else {
-                if ($relationshipMapping->relationship->getTargetProperty()) { //Not joining to primary key
+                if ($relationshipMapping->relationship->getTargetProperty()) { //Not joining to single primary key
                     $sourceJoinColumns = explode(',', $relationshipMapping->relationship->sourceJoinColumn) ?? [];
                     $targetProperties = explode(',', $relationshipMapping->relationship->getTargetProperty()) ?? [];
                     foreach ($targetProperties as $index => $targetProperty) {
@@ -223,12 +226,13 @@ final class ObjectBinder
                         $valueKey[$index] = $sourceProperty->getAlias();
                     }
                 }
-                if (empty($whereProperty) || empty($valueKey)) {
+                if (empty($whereProperty) || empty($valueKey)) { //Single primary key
                     $pkProperties = $mappingCollection->getPrimaryKeyProperties($propertyMapping->getChildClassName());
                     $firstPk = reset($pkProperties);
                     if ($firstPk) {
                         $whereProperty[0] = $firstPk;
                         $valueKey[0] = $propertyMapping->getAlias();
+                        $usePrimaryKey = true;
                     }
                 }
             }
@@ -248,7 +252,11 @@ final class ObjectBinder
             //Do the search
             if (isset($criteria)) {
                 if ($propertyMapping->relationship->isToOne()) {
-                    $result = $repository->findOneBy($criteria);
+                    if ($usePrimaryKey) {
+                        $result = $repository->find($criteria[0]->value);
+                    } else {
+                        $result = $repository->findOneBy($criteria);
+                    }
                 } else {
                     $orderBy = $propertyMapping->relationship->orderBy;
                     $result = $repository->findBy($criteria, $orderBy);

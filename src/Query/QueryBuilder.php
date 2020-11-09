@@ -65,11 +65,22 @@ class QueryBuilder
         string $propertyName,
         string $operator,
         $value,
-        ?QueryBuilder $nestedCriteria = null,
-        ?string $aggregateFunction = null,
-        ?string $aggregateGroupByProperty = null
+        ?QueryBuilder $nestedCriteria = null
     ): QueryBuilder {
-        return $this->andWhere($propertyName, $operator, $value, $nestedCriteria, $aggregateFunction, $aggregateGroupByProperty);
+        return $this->andWhere($propertyName, $operator, $value, $nestedCriteria);
+    }
+
+    /**
+     * Specify first line of criteria (this is actually just an alias for andWhereExpression, as they do the same thing)
+     * @throws Exception\CriteriaException
+     */
+    public function whereExpression(
+        FieldExpression $expression,
+        string $operator,
+        $value,
+        ?QueryBuilder $nestedCriteria = null
+    ): QueryBuilder {
+        return $this->andWhereExpression($expression, $operator, $value, $nestedCriteria);
     }
 
     /**
@@ -85,14 +96,25 @@ class QueryBuilder
      * @return $this Returns $this to allow chained method calls
      * @throws Exception\CriteriaException
      */
-    public function andWhere(string $propertyName,
+    public function andWhere(
+        string $propertyName,
         string $operator,
         $value,
-        ?QueryBuilder $nestedCriteria = null,
-        ?string $aggregateFunction = null,
-        ?string $aggregateGroupByProperty = null
+        ?QueryBuilder $nestedCriteria = null
     ): QueryBuilder {
-        $this->buildExpression($propertyName, $operator, $value, $nestedCriteria, 'AND', $aggregateFunction, $aggregateGroupByProperty);
+        $fieldExpression = new FieldExpression($propertyName);
+        $this->andWhereExpression($fieldExpression, $operator, $value, $nestedCriteria);
+
+        return $this;
+    }
+
+    public function andWhereExpression(
+        FieldExpression $expression,
+        string $operator,
+        $value,
+        ?QueryBuilder $nestedCriteria = null
+    ): QueryBuilder {
+        $this->buildExpression($expression, $operator, $value, $nestedCriteria, 'AND');
 
         return $this;
     }
@@ -114,12 +136,21 @@ class QueryBuilder
         string $propertyName, 
         string $operator, 
         $value, 
-        ?QueryBuilder $nestedCriteria = null, 
-        ?string $aggregateFunction = null, 
-        ?string $aggregateGroupByProperty = null
+        ?QueryBuilder $nestedCriteria = null
     ): QueryBuilder {
-        $this->buildExpression($propertyName, $operator, $value, $nestedCriteria, 'OR', $aggregateFunction, $aggregateGroupByProperty);
+        $fieldExpression = new FieldExpression($propertyName);
+        $this->orWhereExpression($fieldExpression, $operator, $value, $nestedCriteria);
 
+        return $this;
+    }
+
+    public function orWhereExpression(
+        FieldExpression $expression,
+        string $operator,
+        $value,
+        ?QueryBuilder $nestedCriteria = null
+    ): QueryBuilder {
+        $this->buildExpression($expression, $operator, $value, $nestedCriteria, 'OR');
         return $this;
     }
 
@@ -160,7 +191,9 @@ class QueryBuilder
 
         foreach ($this->joins as $join) {
             /** @var JoinExpression $join */
-            $join->extraCriteria = $join->extraCriteriaBuilder ? $join->extraCriteriaBuilder->build($params, $removeUnbound, $exceptionOnInvalidNull) : [];
+            $join->extraCriteria = $join->extraCriteriaBuilder
+                ? $join->extraCriteriaBuilder->build($params, $removeUnbound, $exceptionOnInvalidNull)
+                : [];
         }
 
         return array_merge($this->expressions, $this->joins);
@@ -250,23 +283,21 @@ class QueryBuilder
         }
 
         if ($idCount && $idCount == count($criteria)) {
-            $expression = new CriteriaExpression($pkProperty, null, 'IN', array_values($criteria));
+            $expression = new CriteriaExpression(new FieldExpression($pkProperty), null, 'IN', array_values($criteria));
             $normalizedCriteria[] = $expression;
         } else {
             foreach ($criteria as $propertyName=>$expression) {
                 if (!($expression instanceof CriteriaExpression) && !($expression instanceof JoinExpression)) {
                     $value = isset($expression['value']) ? $expression['value'] : $expression;
                     $expression = new CriteriaExpression(
-                        $propertyName,
+                        new FieldExpression($propertyName),
                         !empty($expression['alias']) ? $expression['alias'] : null,
                         !empty($expression['operator']) ? $expression['operator'] : ($value === null ? 'IS' : '='),
                         $value,
                         !empty($expression['alias2']) ? $expression['alias2'] : null,
                         isset($expression['value2']) ? $expression['value2'] : null,
                         !empty($expression['and']) ? $this->normalize($expression['and']) : [],
-                        !empty($expression['or']) ? $this->normalize($expression['or']) : [],
-                        !empty($expression['aggregateFunction']) ? $expression['aggregateFunction'] : '',
-                        !empty($expression['aggregateGroupByProperty']) ? $expression['aggregateGroupByProperty'] : ''
+                        !empty($expression['or']) ? $this->normalize($expression['or']) : []
                     );
                 }
                 $normalizedCriteria[] = $expression;
@@ -284,7 +315,7 @@ class QueryBuilder
         //First line of criteria must link a property on the alias to a property of a known entity
         /** @var CriteriaExpression $firstExpression */
         $firstExpression = array_shift($on->expressions);
-        $firstProperty = $firstExpression ? $firstExpression->propertyName : '';
+        $firstProperty = $firstExpression ? $firstExpression->property : '';
         $firstValue = $firstExpression ? $firstExpression->value : '';
 
         if (strpos($firstProperty, $alias . '.') !== 0) {
@@ -359,7 +390,7 @@ class QueryBuilder
      * @throws Exception\CriteriaException
      */
     private function buildExpression(
-        string $propertyName, 
+        FieldExpression $property,
         string $operator, 
         $values, 
         ?QueryBuilder $nestedCriteria = null, 
@@ -369,7 +400,7 @@ class QueryBuilder
     ): void {
         $args = $this->getAliasesAndValues($values, in_array($operator, [self::IN, self::NOT_IN]));
         $expression = new CriteriaExpression(
-            $propertyName,
+            $property,
             $args[self::ALIAS],
             $operator,
             $args[self::VALUE],
@@ -380,8 +411,8 @@ class QueryBuilder
             $aggregateFunction ?? '',
             $aggregateGroupByProperty ?? ''
         );
-        $this->translatedFieldNames[$args[self::ALIAS]] = $propertyName; //Doesn't matter if alias is empty
-        $this->translatedFieldNames[$args[self::ALIAS_2]] = $propertyName;
+        $this->translatedFieldNames[$args[self::ALIAS]] = $property; //Doesn't matter if alias is empty
+        $this->translatedFieldNames[$args[self::ALIAS_2]] = $property;
         if (!empty($this->expressions)) {
             $parentExpression = $this->expressions[count($this->expressions) - 1];
             if ($joinWith == 'OR') {

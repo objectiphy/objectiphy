@@ -90,13 +90,17 @@ class BasicReadingTest extends IntegrationTestBase
         //Find by ID, as per doctrine
         $start = microtime(true);
         $policy = $this->objectRepository->find(19071974);
-        $time = round(microtime(true) - $start, 3);
+        $time = round(microtime(true) - $start, 5);
 
         $this->assertEquals('P123456', $policy->policyNo);
         $this->assertEquals('Skywalker', $policy->contact->lastName);
         $this->assertEquals(5, count($policy->vehicle->wheels));
         $this->assertEquals(TestCollection::class, get_class($policy->vehicle->wheels));
 
+        //Calling find again with the same ID should return the same instance (no db lookup needed)
+        $policya = $this->objectRepository->find(19071974);
+        $this->assertSame($policy, $policya);
+        
         //Find by child property (not possible in Doctrine)
         $policy2 = $this->objectRepository->findOneBy(['vehicle.regNo' => 'PJ63LXR']);
         $this->assertEquals('PJ63LXR', $policy2->vehicle->regNo);

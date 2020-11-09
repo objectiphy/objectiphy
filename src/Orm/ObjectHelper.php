@@ -2,6 +2,7 @@
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 
 /**
@@ -13,6 +14,8 @@ use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
  */
 class ObjectHelper
 {
+    public static DataTypeHandlerInterface $dataTypeHandler;
+
     /**
      * Try various techniques for getting a property value - see if there is a getter, a public property, or use
      * reflection to access a protected or private property. If values cannot be obtained, optionally return a
@@ -55,7 +58,7 @@ class ObjectHelper
                     $value = $object->{'get' . ucfirst($propertyName)}();
                 }
             }
-        } catch (\Exception $ex) {
+        } catch (\Throwable $ex) {
             //Don't panic, just use the default value provided
             $value = $defaultValueIfNotFound;
         }
@@ -78,50 +81,8 @@ class ObjectHelper
     public static function setValueOnObject(
         $object,
         string $propertyName,
-        $value,
-        ?string $dataType = null,
-        string $format = '',
-        bool $lookForSetter = true
+        $valueToSet
     ): void {
-        switch (strtolower($dataType)) {
-            case 'datetime':
-            case '\datetime':
-            case 'datetimeimmutable':
-            case '\datetimeimmutable':
-            case 'date':
-            case 'date_time':
-                $valueToSet = $value === null ? null : ($value instanceof \DateTimeInterface ? $value : new \DateTime($value));
-                break;
-            case 'datetimestring':
-            case 'date_time_string':
-                $format = $format ?: 'Y-m-d H:i:s';
-                $dateValue =  ($value instanceof \DateTimeInterface ? $value : new \DateTime($value));
-                $valueToSet = $dateValue ? $dateValue->format($format) : $value;
-                break;
-            case 'int':
-            case 'integer':
-                $valueToSet = intval($value);
-                break;
-            case 'bool':
-            case 'boolean':
-                $valueToSet = $value ? (in_array(strtolower($value), ['false', '0']) ? false : true) : false;
-                break;
-            case 'string':
-                $valueToSet = $format ? sprintf($format, $value) : strval($value);
-                break;
-            default:
-                if ($dataType === null
-                    || (in_array($dataType, ['\iterable', '\Traversable', 'array']) && (is_array($value) || $value instanceof \Traversable))
-                    || $value instanceof $dataType
-                    || ($value === null && class_exists($dataType))
-                    || ($dataType != 'array' && !class_exists($dataType) && !is_object($value) && !is_object(self::getValueFromObject($object, $propertyName)))
-                    || ($value instanceof \Closure && $object instanceof EntityProxyInterface)
-                ) {
-                    $valueToSet = $value;
-                }
-                break;
-        }
-
         if (array_key_exists('valueToSet', get_defined_vars())) { //isset no good here, as $valueToSet can be null
             if ($valueToSet instanceof \Closure && $object instanceof EntityProxyInterface) {
                 $object->setLazyLoader($propertyName, $valueToSet);
@@ -130,25 +91,26 @@ class ObjectHelper
                     $reflectionProperty = new \ReflectionProperty($object, $propertyName);
                     $reflectionProperty->setAccessible(true);
                     $reflectionProperty->setValue($object, $valueToSet);
-                } catch (\Exception $ex) {
-                    if ($lookForSetter) {
-                        if (method_exists($object, 'set' . ucfirst($propertyName))) {
-                            $reflectionMethod = new \ReflectionMethod(ObjectHelper::getObjectClassName($object),
-                                'set' . ucfirst($propertyName));
-                            if ($reflectionMethod->isPublic() && $reflectionMethod->getNumberOfParameters() >= 1 && $reflectionMethod->getNumberOfRequiredParameters() <= 1) {
-                                //Check whether type hint compatible with value, if applicable
-                                $typeHint = $reflectionMethod->getParameters()[0]->getClass();
-                                $typeHintString = $typeHint ? $typeHint->getName() : '';
-                                if (!$typeHintString
-                                    || ($reflectionMethod->getParameters()[0]->isOptional() && $valueToSet === null)
-                                    || (!$typeHintString && $value)
-                                    || ($typeHint && $value instanceof $typeHintString)
-                                ) {
-                                    $object->{'set' . ucfirst($propertyName)}($valueToSet);
-                                }
-
-                                return;
+                } catch (\Throwable $ex) {
+                    if (method_exists($object, 'set' . ucfirst($propertyName))) {
+                        $className = ObjectHelper::getObjectClassName($object);
+                        $reflectionMethod = new \ReflectionMethod($className, 'set' . ucfirst($propertyName));
+                        if ($reflectionMethod->isPublic()
+                            && $reflectionMethod->getNumberOfParameters() >= 1
+                            && $reflectionMethod->getNumberOfRequiredParameters() <= 1
+                        ) {
+                            //Check whether type hint compatible with value, if applicable
+                            $typeHint = $reflectionMethod->getParameters()[0]->getClass();
+                            $typeHintString = $typeHint ? $typeHint->getName() : '';
+                            if (!$typeHintString
+                                || ($reflectionMethod->getParameters()[0]->isOptional() && $valueToSet === null)
+                                || (!$typeHintString && $value)
+                                || ($typeHint && $value instanceof $typeHintString)
+                            ) {
+                                $object->{'set' . ucfirst($propertyName)}($valueToSet);
                             }
+
+                            return;
                         }
                     }
                 }

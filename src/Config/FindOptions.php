@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Config;
 
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
+use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
+use Objectiphy\Objectiphy\Query\FieldExpression;
 use Objectiphy\Objectiphy\Query\QB;
+use Objectiphy\Objectiphy\Query\Query;
 
 class FindOptions
 {
@@ -20,14 +23,15 @@ class FindOptions
     public bool $onDemand = false;
     public string $keyProperty = '';
     public string $scalarProperty = '';
+    public ?Query $query = null;
 
     /**
      * @var array As per Doctrine, but with properties of children also allowed, eg.
-     * ['contact.lastName'=>'ASC', 'policyNo'=>'DESC']
+     * ['contact.lastName'=>'ASC', 'policyNo'=>'DESC']. Stored here just for reference - it
+     * gets added to the query.
      */
-    private ?array $orderBy = null;
-    private array $criteria = [];
-    
+    private array $orderBy = [];
+
     public function __construct(MappingCollection $mappingCollection)
     {
         $this->mappingCollection = $mappingCollection;
@@ -51,18 +55,20 @@ class FindOptions
     {
         return $this->mappingCollection->getEntityClassName();
     }
-    
-    public function setCriteria(array $criteria): void
-    {
-        $this->criteria = QB::create()->normalize($criteria);
-    }
 
-    /**
-     * @return CriteriaExpression[]
-     */
-    public function getCriteria(): array
+    public function setCriteria($criteria): void
     {
-        return $this->criteria;
+        if ($criteria instanceof Query) {
+            $this->query = $criteria;
+        } elseif (is_array($criteria)) {
+            $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
+            $normalizedCriteria = QB::create()->normalize($criteria, $pkProperties[0] ?? 'id');
+            $this->query = new Query();
+            $this->query->setWhere(...$normalizedCriteria);
+        } else {
+            throw new QueryException('Invalid criteria specified');
+        }
+        $this->setOrderBy($this->orderBy);
     }
 
     public function setOrderBy(array $orderBy): void
@@ -75,10 +81,15 @@ class FindOptions
             } elseif (!in_array(strtoupper($direction), ['ASC', 'DESC'])) {
                 $direction = 'ASC';
             }
-            $sanitisedOrderBy[$property] = $direction;
+            $field = new FieldExpression('`' . $property . '` ' . $direction);
+            $this->orderBy[$property] = $direction;
+            $sanitisedOrderBy[] = $field;
         }
 
-        $this->orderBy = $sanitisedOrderBy;
+        if (!$this->query) {
+            $this->query = new Query();
+        }
+        $this->query->setOrderBy(...$sanitisedOrderBy);
     }
 
     public function getOrderBy(): ?array

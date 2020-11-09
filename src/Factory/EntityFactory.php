@@ -44,7 +44,7 @@ class EntityFactory
             $className = $requiresProxy ? $proxyClassName : $className;
             try {
                 $entity = new $className();
-            } catch (\Exception $ex) {
+            } catch (\Throwable $ex) {
                 try {
                     //If constructor requires any objects, see if we can create them
                     $reflectionClass = new \ReflectionClass($className);
@@ -57,7 +57,7 @@ class EntityFactory
                         }
                     }
                     $entity = new $className(...$args);
-                } catch (\Exception $ex2) {
+                } catch (\Throwable $ex2) {
                     //That didn't work - just throw the original exception
                     throw $ex;
                 }
@@ -74,7 +74,7 @@ class EntityFactory
             $length = strlen($proxyClassName);
             $hackedString = preg_replace('/^O:\d+:"[^"]++"/', "O:$length:\"$proxyClassName\"", $serialized);
             $proxy = unserialize($hackedString);
-        } catch (\Exception $ex) {
+        } catch (\Throwable $ex) {
             //Tried to use a custom entity factory for an entity that is not serializable :(
             $proxy = null;
         }

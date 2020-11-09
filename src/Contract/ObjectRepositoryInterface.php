@@ -158,24 +158,20 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
     /**
      * Insert or update the supplied entity.
      * @param object $entity The entity to insert or update.
-     * @param bool $updateChildren Whether or not to also update any child objects.
-     * @param bool $replace Allow for insert even if primary key has a value (typically for use where the primary key is
-     * also a foreign key)
+     * @param bool $saveChildren Whether or not to also update any child objects.
      * @return int Number of rows affected.
      * @throws \Exception
      */
-    public function saveEntity(object $entity, bool $updateChildren = true, bool $replace = false): ?int;
+    public function saveEntity(object $entity, ?bool $saveChildren = null): ?int;
 
     /**
      * Insert or update the supplied entities.
      * @param array $entities Array of entities to insert or update.
-     * @param bool $updateChildren Whether or not to also insert any new child objects.
-     * @param bool $replace Allow for insert even if primary key has a value (typically for use where the primary key is
-     * also a foreign key)
+     * @param bool $saveChildren Whether or not to also insert any new child objects.
      * @return int Number of rows affected.
      * @throws \Exception
      */
-    public function saveEntities(array $entities, bool $updateChildren = true, bool $replace = false): ?int;
+    public function saveEntities(array $entities, ?bool $saveChildren = null): ?int;
 
     /**
      * Create a proxy class for an object so that it does not have to be fully hydrated just to save it as a child of

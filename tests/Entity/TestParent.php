@@ -36,7 +36,7 @@ class TestParent
     protected $child;
     /**
      * @var TestCollection
-     * @Mapping\Relationship(childClassName="TestPet", collectionClass="TestCollection", mappedBy="parent", relationshipType="one_to_many", orderBy={"name"="ASC","type"="DESC"}, cascadeDeletes=true, orphanRemoval=true)
+     * @Mapping\Relationship(childClassName="TestPet", mappedBy="parent", relationshipType="one_to_many", orderBy={"name"="ASC","type"="DESC"}, cascadeDeletes=true, orphanRemoval=true)
      */
     public TestCollection $pets;
     /**
@@ -70,7 +70,7 @@ class TestParent
 
     public function __construct()
     {
-        $this->pets = new TestCollection();
+        //$this->pets = new TestCollection();
     }
 
     public function getId()
@@ -134,7 +134,11 @@ class TestParent
 
     public function &getPets()
     {
-        $pets = $this->pets; //Older PHP versions complain that only variables can be passed by ref if we don't do this
+        if (isset($this->pets)) {
+            $pets = $this->pets; //Older PHP versions complain that only variables can be passed by ref if we don't do this
+        } else {
+            $pets = null;
+        }
         return $pets;
     }
 

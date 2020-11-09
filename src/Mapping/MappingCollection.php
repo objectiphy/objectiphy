@@ -8,6 +8,7 @@ use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Relationship;
+use Objectiphy\Objectiphy\Orm\ObjectHelper;
 
 /**
  * Represents the full mapping information for the entire object hierarchy of a given parent class.
@@ -277,13 +278,30 @@ class MappingCollection
     {
         $className = $className ?? $this->entityClassName;
         $pkProperties = $this->primaryKeyProperties[$className] ?? [];
-        if (!$pkProperties && isset($this->properties['id'])) { //If none specified, use 'id' if it exists
+        if (!$pkProperties && property_exists($className, 'id')) { //If none specified, use 'id' if it exists
             $pkProperties = ['id' => true]; //Value doesn't matter
         }
 
         return array_keys($pkProperties);
     }
 
+    /**
+     * Return a list of primary key values for the given entity
+     * @param object $entity
+     * @return array
+     */
+    public function getPrimaryKeyValues(object $entity): array 
+    {
+        $pkValues = [];
+        $className = ObjectHelper::getObjectClassName($entity);
+        $pkProperties = $this->getPrimaryKeyProperties($className);
+        foreach ($pkProperties as $pkProperty) {
+            $pkValues[$pkProperty] = ObjectHelper::getValueFromObject($entity, $pkProperty);
+        }
+        
+        return $pkValues;
+    }
+    
     /**
      * Whether or not any of the properties in this collection use an aggregate function
      * @return bool

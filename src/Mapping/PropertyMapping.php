@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Mapping;
 
+use Objectiphy\Objectiphy\Exception\MappingException;
+
 /**
  * Mapping information for a particular property in context (ie. the same property
  * on different instances of the same class will have different context such as
@@ -232,22 +234,45 @@ class PropertyMapping
     public function getCollection(array $entities): iterable
     {
         $collection = $entities;
-        try {
-            $collectionClass = $this->relationship->collectionClass;
-            if (!$collectionClass || $collectionClass == 'array') {
-                //Try to get it from type hint (note: reflectionType seems buggy at times - safer to use annotations)
-                if ($this->reflectionProperty->hasType()) {
-                    $collectionClass = $this->reflectionProperty->getType()->getName();
+        $collectionClass = $this->relationship->collectionClass;
+        if (!$collectionClass || $collectionClass == 'array') {
+            if ($this->reflectionProperty->hasType()) {
+                $collectionClass = $this->reflectionProperty->getType()->getName(); //Sometimes returns gibberish
+                if ($collectionClass && (!class_exists($collectionClass) || !is_a($collectionClass, '\Traversable', true))) {
+                    $collectionClass = $this->getTypeHacky($collectionClass);
                 }
             }
+        }
 
-            if ($collectionClass && $collectionClass != 'array') {
-                $collectionFactoryClassName = $this->relationship->getCollectionFactoryClass();
-                $collectionFactory = new $collectionFactoryClassName();
-                $collection = $collectionFactory->createCollection($collectionClass, $entities);
+        if ($collectionClass && $collectionClass != 'array') {
+            $collectionFactoryClassName = $this->relationship->getCollectionFactoryClass();
+            $collectionFactory = new $collectionFactoryClassName();
+            $collection = $collectionFactory->createCollection($collectionClass, $entities);
+        }
+
+        return $collection;
+    }
+
+    private function getTypeHacky(string $collectionClass)
+    {
+        //PHP ReflectionType seems buggy at times (on a Mac at least) - try a hacky way of checking the type
+        try {
+            $className = $this->className;
+            $property = $this->propertyName;
+            $hackyClass = new $className();
+            $hackyClass->$property = 1; //Should cause an exception containing the actual type in the message
+        } catch (\Throwable $ex) {
+            $classStart = strpos($ex->getMessage(), 'must be an instance of ');
+            if ($classStart !== false) {
+                $classEnd = strpos($ex->getMessage(), ',') ?: strlen($ex->getMessage());
+                $length = $classEnd - ($classStart + 23);
+                $className = substr($ex->getMessage(), $classStart + 23, $length);
+                if (class_exists($className) && is_a($className, '\Traversable', true)) {
+                    return $className;
+                }
             }
-        } finally {
-            return $collection;
+            $errorMessage = 'Could not determine collection class for %1$s. Please try adding a collectionClass attribute to the Relationship mapping for this property.';
+            throw new MappingException(sprintf($errorMessage, $this->className . '::' . $this->propertyName));
         }
     }
     

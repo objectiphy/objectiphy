@@ -16,6 +16,7 @@ use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Mapping\Table;
 use Objectiphy\Objectiphy\NamingStrategy\NameResolver;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
+use Objectiphy\Objectiphy\Query\Query;
 
 /**
  * Loads mapping information from the supplied mapping provider (typically annotations, but the mapping information 
@@ -77,15 +78,13 @@ final class ObjectMapper
      * Depending on the criteria, we might need additional mappings - eg. to search on the value of
      * a late bound child object.
      * @param string $className Name of top-level class
-     * @param array | null $criteria
+     * @param Query $criteria
      */
-    public function addCriteriaMappings(string $className, ?array $criteria = null)
+    public function addQueryMappings(string $className, ?Query $query = null)
     {
-        foreach ($criteria ?? [] as $criteriaExpression) {
-            if ($criteriaExpression instanceof CriteriaExpression) {
-                foreach ($criteriaExpression->getPropertyPathsUsed() as $propertyPath) {
-                    $this->addMappingForProperty($className, $propertyPath);
-                }
+        if ($query) {
+            foreach ($query->getPropertyPaths() ?? [] as $propertyPath) {
+                $this->addMappingForProperty($className, $propertyPath);
             }
         }
     }

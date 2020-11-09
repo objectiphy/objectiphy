@@ -3,6 +3,7 @@
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Query\FieldExpression;
 use Objectiphy\Objectiphy\Tests\Entity\TestCollection;
 use Objectiphy\Objectiphy\Tests\Entity\TestEmployee;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
@@ -123,9 +124,9 @@ class CriteriaReadingTest extends IntegrationTestBase
 //        $this->assertEquals(19071988, $policies2[0]->id);
 //        $this->assertNotEmpty($policies2[0]->underwriter->id);
 
-        $expression = (new CriteriaExpression('contact.lastName', null, '=', 'Skywalker'))
+        $expression = (new CriteriaExpression(new FieldExpression('contact.lastName'), null, '=', 'Skywalker'))
             ->orWhere(
-                (new CriteriaExpression('status', null, '=', 'PAID'))
+                (new CriteriaExpression(new FieldExpression('status'), null, '=', 'PAID'))
                     ->andWhere(['effectiveStartDateTime', null, '>', new \DateTime('2018-12-15')])
             )
             ->orWhere(['id', null, '=', 19072010]);

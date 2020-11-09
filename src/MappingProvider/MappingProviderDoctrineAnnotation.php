@@ -53,7 +53,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
             }
 
             return $table;
-        } catch (\Exception $ex) {
+        } catch (\Throwable $ex) {
             $this->handleException($ex);
             return new Table();
         }
@@ -73,7 +73,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
             $this->populateFromDoctrineColumn($reflectionProperty, $column, $wasMapped);
             $this->populateFromDoctrineId($reflectionProperty, $column, $wasMapped);
             return $column;
-        } catch (\Exception $ex) {
+        } catch (\Throwable $ex) {
             $this->handleException($ex);
             return new Column();
         }
@@ -103,7 +103,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
             $this->populateFromDoctrineEmbedded($reflectionProperty, $relationship, $wasMapped);
 
             return $relationship;
-        } catch (\Exception $ex) {
+        } catch (\Throwable $ex) {
             $this->handleException($ex);
             return new Relationship();
         }

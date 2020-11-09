@@ -32,7 +32,7 @@ final class ProxyFactory
                 //Won't do any harm to try and create this directory
                 try {
                     @mkdir($cacheDirectory, 0755, true);
-                } catch (\Exception $ex) {
+                } catch (\Throwable $ex) {
                     //Fall through
                 }
             }
@@ -207,7 +207,7 @@ final class ProxyFactory
     {
         try {
             return $reflectionClass->getMethod($methodName);
-        } catch (\Exception $ex) {
+        } catch (\Throwable $ex) {
             return null;
         };
     }
@@ -314,7 +314,7 @@ final class ProxyFactory
                 $this->proxyClasses[] = $className;
 
                 return true;
-            } catch (\Exception $ex) {
+            } catch (\Throwable $ex) {
                 //Class definition has probably changed - create a new proxy
             }
         }

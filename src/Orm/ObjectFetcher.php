@@ -10,9 +10,9 @@ use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
+use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
-use Objectiphy\Objectiphy\Database\SqlBuilderInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\JoinExpression;
@@ -24,22 +24,25 @@ use Objectiphy\Objectiphy\Query\QB;
  */
 final class ObjectFetcher
 {
-    private SqlBuilderInterface $sqlBuilder;
+    private SqlSelectorInterface $sqlSelector;
     private StorageInterface $storage;
     private ObjectMapper $objectMapper;
     private ObjectBinder $objectBinder;
+    private EntityTracker $entityTracker;
     private FindOptions $options;
     
     public function __construct(
-        SqlBuilderInterface $sqlBuilder,
+        SqlSelectorInterface $sqlSelector,
         ObjectMapper $objectMapper,
         ObjectBinder $objectBinder,
-        StorageInterface $storage
+        StorageInterface $storage,
+        EntityTracker $entityTracker
     ) {
-        $this->sqlBuilder = $sqlBuilder;
+        $this->sqlSelector = $sqlSelector;
         $this->storage = $storage;
         $this->objectMapper = $objectMapper;
         $this->objectBinder = $objectBinder;
+        $this->entityTracker = $entityTracker;
     }
 
     /**
@@ -48,13 +51,23 @@ final class ObjectFetcher
     public function setFindOptions(FindOptions $findOptions) 
     {
         $this->options = $findOptions;
-        $this->sqlBuilder->setFindOptions($findOptions);
+        $this->sqlSelector->setFindOptions($findOptions);
         $this->objectBinder->setMappingCollection($findOptions->mappingCollection);
     }
 
     public function setConfigOptions(ConfigOptions $configOptions)
     {
         $this->objectBinder->setConfigOptions($configOptions);
+        $this->sqlSelector->overrideQueryParts($configOptions->queryOverrides);
+    }
+
+    public function getExistingEntity(string $className, $pkValues)
+    {
+        if (!is_array($pkValues)) {
+            $pkValues = [$pkValues];
+        }
+        
+        return $this->entityTracker->getEntity($className, $pkValues);
     }
 
     /**
@@ -68,35 +81,25 @@ final class ObjectFetcher
     public function doFindBy() 
     {
         $this->validate();
-        $this->objectMapper->addCriteriaMappings($this->options->getClassName(), $this->options->getCriteria());
+        $this->objectMapper->addQueryMappings($this->options->getClassName(), $this->options->query);
         $this->doCount();
         $result = $this->doFetch();
 
         return $result;
     }
     
-    public function clearCache(): void
+    public function clearCache(?string $className = null): void
     {
-        $this->objectBinder->clearCache();
+        $this->entityTracker->clear($className);
     }
 
     /**
-     * Ensure find options have been set and that we have CriteriaExpressions in the criteria array 
-     * (indicates that it has been normalised). To save time, we won't check every element of the 
-     * criteria array - if the first item is OK, the rest will almost certainly be fine - not worth 
-     * checking them all.
+     * Ensure find options have been set.
      */
     private function validate(): void
     {
         if (empty($this->options)) {
             throw new ObjectiphyException('Find options have not been set on the object fetcher.');
-        }
-        $criteria = $this->options->getCriteria();
-        if (!empty($criteria)
-            && !(reset($criteria) instanceof CriteriaExpression)
-            && !(reset($criteria) instanceof JoinExpression)
-        ) {
-            throw new QueryException('Invalid criteria passed to ObjectFetcher::doFindBy.');
         }
     }
 
@@ -107,8 +110,8 @@ final class ObjectFetcher
     {
         if ($this->options->multiple && $this->options->pagination) {
             $this->options->count = true;
-            $countSql = $this->sqlBuilder->getSelectQuery($this->options->getCriteria(), $this->options->multiple, $this->options->latest, true);
-            $recordCount = intval($this->fetchValue($countSql, $this->sqlBuilder->getQueryParams()));
+            $countSql = $this->sqlSelector->getSelectSql();
+            $recordCount = intval($this->fetchValue($countSql, $this->sqlSelector->getQueryParams()));
             $this->options->pagination->setTotalRecords($recordCount);
             $this->options->count = false;
         }
@@ -119,8 +122,8 @@ final class ObjectFetcher
      */
     private function doFetch()
     {
-        $sql = $this->sqlBuilder->getSelectQuery();
-        $params = $this->sqlBuilder->getQueryParams();
+        $sql = $this->sqlSelector->getSelectSql();
+        $params = $this->sqlSelector->getQueryParams();
 
         if ($this->options->multiple && $this->options->onDemand && $this->options->scalarProperty) {
             $result = $this->fetchIterableValues($sql, $params);
@@ -242,14 +245,5 @@ final class ObjectFetcher
         $result = new IterableResult($storage, null, null, true);
 
         return $result;
-    }
-
-    /**
-     * Just passing through.
-     * @param array $queryOverrides
-     */
-    public function overrideQueryParts(array $queryOverrides)
-    {
-        $this->sqlBuilder->overrideQueryParts($queryOverrides);
     }
 }

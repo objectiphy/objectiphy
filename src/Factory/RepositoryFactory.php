@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * @todo Make this better. Possibly create objects in a generic way (autowiring), or split into smaller factories.
+ */
 declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Factory;
@@ -7,22 +10,31 @@ namespace Objectiphy\Objectiphy\Factory;
 use Objectiphy\Annotations\AnnotationReader;
 use Objectiphy\Annotations\DocParser;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
+use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
+use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
+use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
+use Objectiphy\Objectiphy\Contract\StorageInterface;
+use Objectiphy\Objectiphy\Database\DataTypeHandlerMySql;
 use Objectiphy\Objectiphy\Database\PdoStorage;
+use Objectiphy\Objectiphy\Database\SelectorMySql;
+use Objectiphy\Objectiphy\Database\SqlSelectorMySql;
+use Objectiphy\Objectiphy\Database\SqlUpdaterMySql;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\MappingProvider\MappingProvider;
 use Objectiphy\Objectiphy\MappingProvider\MappingProviderAnnotation;
 use Objectiphy\Objectiphy\MappingProvider\MappingProviderDoctrineAnnotation;
-use Objectiphy\Objectiphy\Database\SqlBuilderInterface;
 use Objectiphy\Objectiphy\Database\SqlBuilderMySql;
 use Objectiphy\Objectiphy\NamingStrategy\NameResolver;
+use Objectiphy\Objectiphy\Orm\EntityTracker;
 use Objectiphy\Objectiphy\Orm\ObjectRepository;
 use Objectiphy\Objectiphy\Orm\ObjectMapper;
 use Objectiphy\Objectiphy\Orm\ObjectBinder;
 use Objectiphy\Objectiphy\Orm\ObjectFetcher;
 use Objectiphy\Objectiphy\Orm\ObjectPersister;
 use Objectiphy\Objectiphy\Orm\ObjectRemover;
+use Objectiphy\Objectiphy\Orm\ObjectUnbinder;
 
 /**
  * @package Objectiphy\Objectiphy
@@ -33,8 +45,12 @@ class RepositoryFactory
     private \PDO $pdo;
     private ConfigOptions $configOptions;
     private MappingProviderInterface $mappingProvider;
-    private SqlBuilderInterface $sqlBuilder;
+    private SqlSelectorInterface $sqlSelector;
+    private SqlUpdaterInterface $sqlUpdater;
+    private DataTypeHandlerInterface $dataTypeHandler;
     private ObjectMapper $objectMapper;
+    private StorageInterface $storage;
+    private EntityTracker $entityTracker;
     private array $repositories = [];
 
     public function __construct(\PDO $pdo, ?ConfigOptions $configOptions = null)
@@ -51,9 +67,10 @@ class RepositoryFactory
         $this->configOptions = $configOptions;
     }
 
-    public function setSqlBuilder(SqlBuilderInterface $sqlBuilder)
+    public function setSqlBuilder(SqlSelectorInterface $sqlSelector, DataTypeHandlerInterface $dataTypeHandler)
     {
-        $this->sqlBuilder = $sqlBuilder;
+        $this->sqlSelector = $sqlSelector;
+        $this->dataTypeHandler = $dataTypeHandler;
     }
 
     public function setMappingProvider(MappingProviderInterface $mappingProvider)
@@ -122,6 +139,24 @@ class RepositoryFactory
         return $this->objectMapper;
     }
 
+    protected final function getEntityTracker()
+    {
+        if (!isset($this->entityTracker)) {
+            $this->entityTracker = $this->createEntityTracker();
+        }
+
+        return $this->entityTracker;
+    }
+
+    protected final function getStorage()
+    {
+        if (!isset($this->storage)) {
+            $this->storage = $this->createStorage();
+        }
+
+        return $this->storage;
+    }
+    
     protected final function createObjectMapper()
     {
         return new ObjectMapper($this->getMappingProvider(), $this->createNameResolver());
@@ -129,12 +164,13 @@ class RepositoryFactory
 
     protected final function createObjectFetcher(?ConfigOptions $configOptions = null)
     {
-        $sqlBuilder = $this->getSqlBuilder();
+        $sqlSelector = $this->getSqlSelector();
         $objectMapper = $this->getObjectMapper();
         $objectBinder = $this->createObjectBinder($configOptions);
-        $storage = $this->createStorage();
+        $entityTracker = $this->getEntityTracker();
+        $storage = $this->getStorage();
 
-        return new ObjectFetcher($sqlBuilder, $objectMapper, $objectBinder, $storage);
+        return new ObjectFetcher($sqlSelector, $objectMapper, $objectBinder, $storage, $entityTracker);
     }
 
     protected final function createNameResolver()
@@ -144,19 +180,38 @@ class RepositoryFactory
 
     protected final function createObjectPersister()
     {
-        return new ObjectPersister($this->getSqlBuilder());
+        $sqlUpdater = $this->getSqlUpdater();
+        $objectMapper = $this->getObjectMapper();
+        $objectUnbinder = $this->createObjectUnbinder();
+        $storage = $this->getStorage();
+        $entityTracker = $this->getEntityTracker();
+        return new ObjectPersister($sqlUpdater, $objectMapper, $objectUnbinder, $storage, $entityTracker);
     }
 
     protected final function createObjectRemover()
     {
-        return new ObjectRemover($this->getSqlBuilder());
+        return new ObjectRemover();
+    }
+
+    protected final function createEntityTracker()
+    {
+        return new EntityTracker();
     }
 
     protected final function createObjectBinder(?ConfigOptions $configOptions = null)
     {
-        return new ObjectBinder($this, $this->createEntityFactory($configOptions));
+        $entityFactory = $this->createEntityFactory($configOptions);
+        $entityTracker = $this->getEntityTracker();
+        $dataTypeHandler = $this->getDataTypeHandler();
+        return new ObjectBinder($this, $entityFactory, $entityTracker, $dataTypeHandler);
     }
 
+    protected final function createObjectUnbinder()
+    {
+        $dataTypeHandler = $this->getDataTypeHandler();
+        return new ObjectUnbinder($this->getEntityTracker(), $dataTypeHandler);
+    }
+    
     protected final function createEntityFactory(?ConfigOptions $configOptions = null)
     {
         return new EntityFactory($this->createProxyFactory($configOptions));
@@ -227,12 +282,30 @@ class RepositoryFactory
         return $repositoryClassName ? true : false;
     }
     
-    private function getSqlBuilder()
+    private function getSqlSelector()
     {
-        if (!isset($this->sqlBuilder)) {
-            $this->sqlBuilder = new SqlBuilderMySql();
+        if (!isset($this->sqlSelector)) {
+            $this->sqlSelector = new SqlSelectorMySql();
         }
         
-        return $this->sqlBuilder;
+        return $this->sqlSelector;
+    }
+
+    private function getSqlUpdater()
+    {
+        if (!isset($this->sqlUpdater)) {
+            $this->sqlUpdater = new SqlUpdaterMySql();
+        }
+
+        return $this->sqlUpdater;
+    }
+
+    private function getDataTypeHandler()
+    {
+        if (!isset($this->dataTypeHandler)) {
+            $this->dataTypeHandler = new DataTypeHandlerMySql();
+        }
+
+        return $this->dataTypeHandler;
     }
 }

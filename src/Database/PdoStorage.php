@@ -102,7 +102,7 @@ class PdoStorage implements StorageInterface
             $this->pdo->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, !$iterable);
             $this->stm = $this->pdo->prepare($sql);
             $success = $this->stm->execute($params);
-        } catch (\Exception $ex) {
+        } catch (\Throwable $ex) {
             throw new StorageException('PDO Error: ' . $ex->getMessage() . ' (' . $query . ') ' . print_r($params, true), intval($ex->getCode()), $ex);
         }
 

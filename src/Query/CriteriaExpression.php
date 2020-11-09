@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Query;
 
 use Objectiphy\Objectiphy\Exception\CriteriaException;
+use Objectiphy\Objectiphy\Exception\QueryException;
 
 /**
  * Represents a line of criteria to filter on, optionally with a collection of child (nested) criteria lines
@@ -14,72 +15,85 @@ use Objectiphy\Objectiphy\Exception\CriteriaException;
  */
 class CriteriaExpression implements \JsonSerializable
 {
+    public FieldExpression $property;
     public string $operator;
-    public string $propertyName;
-    public string $aggregateFunction = '';
-    public string $aggregateGroupByProperty = '';
-    public ?string $alias = '';
-    /** @var mixed $value */
     public $value;
-    public ?string $alias2;
-    /** @var mixed $value2 */
+    public ?string $alias = '';
     public $value2;
-    /** @var CriteriaExpression[] */
+    public ?string $alias2;
+    /**
+     * @var CriteriaExpression[]
+     */
     public array $andExpressions = [];
-    /** @var CriteriaExpression[] */
+    /**
+     * @var CriteriaExpression[]
+     */
     public array $orExpressions = [];
     public CriteriaExpression $parentExpression;
 
     /**
-     * @param string $propertyName Name of the property being filtered on.
-     * @param string|null $alias If supplying values in an array to the applyValues method, and the array key does not
-     * match the property name, you can specify an alias.
+     * @param FieldExpression $property The property being filtered on.
      * @param string $operator Operator to use (normal MySQL operators, plus special: BEGINSWITH, ENDSWITH, and
      * CONTAINS).
-     * @param null $value Optionally supply the value to filter by up-front (if not using the applyValues method to set
+     * @param mixed $value Optionally supply the value to filter by up-front (if not using the applyValues method to set
      * all the values in one go).
-     * @param null $alias2 If operator takes more than one value (BETWEEN), and values are being supplied via the
-     * applyValues method, specify the array key that holds the second value.
-     * @param null $value2 For BETWEEN operator, a second value is required, and can be supplied up-front here if not
+     * @param string|null $alias If supplying values in an array to the applyValues method, and the array key does not
+     * match the property name, you can specify an alias.
+     * @param mixed $value2 For BETWEEN operator, a second value is required, and can be supplied up-front here if not
      * using the applyValues method.
+     * @param string|null $alias2 If operator takes more than one value (BETWEEN), and values are being supplied via the
+     * applyValues method, specify the array key that holds the second value.
      * @param array $andExpressions An array of CriteriaExpression objects that should be ANDed together with this one.
      * @param array $orExpressions An array of CritieraExpression objects that should be ORed together with this one.
-     * @param string $aggregateFunction
-     * @param string $aggregateGroupByProperty
      * @throws CriteriaException
      */
     public function __construct(
-        string $propertyName,
+        $property,
         ?string $alias = null,
         string $operator = '=',
         $value = null,
         ?string $alias2 = null,
         $value2 = null,
         array $andExpressions = [],
-        array $orExpressions = [],
-        string $aggregateFunction = '',
-        string $aggregateGroupByProperty = ''
+        array $orExpressions = []
     ) {
+        if (is_string($property)) {
+            $this->property = new FieldExpression($property);
+        } elseif ($property instanceof FieldExpression) {
+            $this->property = $property;
+        } else {
+            throw new QueryException('Property of a CriteriaExpression must be a string or a FieldExpression object.');
+        }
         $this->operator = strtoupper($operator);
-        $this->propertyName = $propertyName;
         $this->alias = $alias;
         $this->value = $value;
         $this->alias2 = $alias2;
         $this->value2 = $value2;
-        $this->aggregateFunction = $aggregateFunction;
-        $this->aggregateGroupByProperty = $aggregateGroupByProperty;
+        $this->populateAnds($andExpressions);
+        $this->populateOrs($orExpressions);
+        $this->validate();
+    }
+
+    private function populateAnds(array $andExpressions): void
+    {
         foreach ($andExpressions as $andExpression) {
-            $andExpression = $andExpression instanceof CriteriaExpression ? $andExpression : new CriteriaExpression(...$andExpression);
+            $andExpression = $andExpression instanceof CriteriaExpression
+                ? $andExpression
+                : new CriteriaExpression(...$andExpression);
             $andExpression->parentExpression = $this;
             $this->andExpressions[] = $andExpression;
         }
+    }
+
+    private function populateOrs(array $orExpressions): void
+    {
         foreach ($orExpressions as $orExpression) {
-            $orExpression = $orExpression instanceof CriteriaExpression ? $orExpression : new CriteriaExpression(...$orExpression);
+            $orExpression = $orExpression instanceof CriteriaExpression
+                ? $orExpression
+                : new CriteriaExpression(...$orExpression);
             $orExpression->parentExpression = $this;
             $this->orExpressions[] = $orExpression;
         }
-
-        $this->validate();
     }
 
     /**
@@ -87,9 +101,10 @@ class CriteriaExpression implements \JsonSerializable
      * @param $values
      * @param bool $overwrite If true, any existing values (eg. specified when the constructor was called) will be
      * overwritten with the new ones.
-     * @param bool $removeUnbound
-     * @param bool $exceptionOnInvalidNull If value is null, and operator does not require null, whether to throw an exception
-     * (if false, it will be converted to an empty string so as not to break the SQL).
+     * @param bool $removeUnbound If there are any aliases that have not been given a value in the values array,
+     * the corresponding expression can be removed (useful where optional filters are being applied).
+     * @param bool $exceptionOnInvalidNull If value is null, and operator does not require null, whether to throw an
+     * exception (if false, it will be converted to an empty string so as not to break the query).
      */
     public function applyValues(
         $values,
@@ -102,18 +117,15 @@ class CriteriaExpression implements \JsonSerializable
         } else {
             foreach ($values as $key => $value) {
                 if ($this->alias == $key) {
-                    $this->value = empty($this->value) || $overwrite ? ($this->requireNull(
-                    ) ? null : $value) : $this->value;
+                    $this->value = empty($this->value) || $overwrite ? ($this->requireNull() ? null : $value) : $this->value;
                     $this->dealWithNulls('value', $exceptionOnInvalidNull);
                     $this->alias = null;
                 } elseif ($this->alias2 == $key) {
-                    $this->value2 = empty($this->value2) || $overwrite ? ($this->requireNull(
-                    ) ? null : $value) : $this->value2;
+                    $this->value2 = empty($this->value2) || $overwrite ? ($this->requireNull() ? null : $value) : $this->value2;
                     $this->dealWithNulls('value2', $exceptionOnInvalidNull);
                     $this->alias2 = null;
-                } elseif ($this->propertyName == $key) {
-                    $this->value = empty($this->value) || $overwrite ? ($this->requireNull(
-                    ) ? null : $value) : $this->value;
+                } elseif ((string) $this->property == $key) {
+                    $this->value = empty($this->value) || $overwrite ? ($this->requireNull() ? null : $value) : $this->value;
                     $this->dealWithNulls('value', $exceptionOnInvalidNull);
                 } elseif (is_array($this->value)) {
                     foreach ($this->value as $index => $inValue) {
@@ -264,20 +276,24 @@ class CriteriaExpression implements \JsonSerializable
      * @return bool Whether or not any of the criteria (including nested and/or criteria) makes reference to an
      * aggregate function.
      */
-    public function hasAggregateFunction(): bool
+    public function hasAggregateGroup(): bool
     {
-        if ($this->aggregateFunction) {
+        if ($this->property->aggregateGroupByProperty) {
+            return true;
+        } elseif ($this->value instanceof FieldExpression && $this->value->aggregateGroupByProperty) {
+            return true;
+        } elseif ($this->value2 instanceof FieldExpression && $this->value2->aggregateGroupByProperty) {
             return true;
         }
-        
+
         foreach ($this->andExpressions as $andExpression) {
-            if ($andExpression->hasAggregateFunction()) {
+            if ($andExpression->hasAggregateGroup()) {
                 return true;
             }
         }
 
         foreach ($this->orExpressions as $orExpression) {
-            if ($orExpression->hasAggregateFunction()) {
+            if ($orExpression->hasAggregateGroup()) {
                 return true;
             }
         }
@@ -287,9 +303,13 @@ class CriteriaExpression implements \JsonSerializable
 
     public function getPropertyPathsUsed(): array
     {
-        $paths = [$this->propertyName];
-        $this->addPropertyPath($paths, $this->value);
-        $this->addPropertyPath($paths, $this->value2);
+        $paths = $this->property->getPropertyPathsUsed();
+        if ($this->value instanceof FieldExpression) {
+            $paths = array_merge($paths, $this->value->getPropertyPathsUsed());
+        }
+        if ($this->value2 instanceof FieldExpression) {
+            $paths = array_merge($paths, $this->value2->getPropertyPathsUsed());
+        }
 
         return $paths;
     }
@@ -309,18 +329,6 @@ class CriteriaExpression implements \JsonSerializable
         }
 
         return $string;
-    }
-
-    private function addPropertyPath(array &$paths, $value): void
-    {
-        $match = [];
-        if (is_string($value)) {
-            preg_match('/`(.*?)`/', $value, $match);
-            $property = $match[0] ?? '';
-            if ($property) {
-                $paths[] = substr($property, 1, strlen($property) - 2);
-            }
-        }
     }
 
     private function dealWithNulls($property, $exceptionOnInvalidNull): void

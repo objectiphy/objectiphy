@@ -47,7 +47,7 @@ class MappingProviderAnnotation implements MappingProviderInterface
             $hostProperty = '';
 
             return $this->decorate($hostClassName, $hostProperty, $table, $objectiphyTable);
-        } catch (\Exception $ex) {
+        } catch (\Throwable $ex) {
             $this->handleException($ex);
             return new Table();
         }
@@ -70,7 +70,7 @@ class MappingProviderAnnotation implements MappingProviderInterface
             $hostProperty = $reflectionProperty->getName();
 
             return $this->decorate($hostClassName, $hostProperty, $column, $objectiphyColumn);
-        } catch (\Exception $ex) {
+        } catch (\Throwable $ex) {
             $this->handleException($ex);
             return new Column();
         }
@@ -96,7 +96,7 @@ class MappingProviderAnnotation implements MappingProviderInterface
             $hostProperty = $reflectionProperty->getName();
 
             return $this->decorate($hostClassName, $hostProperty, $relationship, $objectiphyRelationship);
-        } catch (\Exception $ex) {
+        } catch (\Throwable $ex) {
             $this->handleException($ex);
             return new Relationship();
         }

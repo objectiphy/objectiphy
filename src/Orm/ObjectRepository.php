@@ -7,6 +7,7 @@ namespace Objectiphy\Objectiphy\Orm;
 use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Config\FindOptions;
+use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\ExplanationInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
@@ -14,7 +15,9 @@ use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Criteria\CB;
+use Objectiphy\Objectiphy\Query\Pagination;
 use Objectiphy\Objectiphy\Query\QB;
+use Objectiphy\Objectiphy\Query\Query;
 
 /**
  * Main entry point for all ORM operations
@@ -100,6 +103,8 @@ class ObjectRepository implements ObjectRepositoryInterface
         $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
         $findOptions = FindOptions::create($this->mappingCollection);
         $this->objectFetcher->setFindOptions($findOptions);
+        $saveOptions = SaveOptions::create($this->mappingCollection);
+        $this->objectPersister->setSaveOptions($saveOptions);
     }
 
     /**
@@ -138,9 +143,16 @@ class ObjectRepository implements ObjectRepositoryInterface
     public function find($id)
     {
         $this->assertClassNameSet();
+        $existingEntity = $this->objectFetcher->getExistingEntity($this->getClassName(), $id);
+        if ($existingEntity) {
+            return $existingEntity;
+        }
         $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
         if (!$pkProperties) {
-            $errorMessage = sprintf('The current entity (`%1$s`) does not have a primary key, so you cannot use the find method. Either specify a primary key in the mapping information, or use findOneBy instead.', $this->getClassName());
+            $errorMessage = sprintf(
+                'The current entity (`%1$s`) does not have a primary key, so you cannot use the find method. Either specify a primary key in the mapping information, or use findOneBy instead.',
+                $this->getClassName()
+            );
             $this->throwException(new ObjectiphyException($errorMessage));
         }
 
@@ -150,11 +162,11 @@ class ObjectRepository implements ObjectRepositoryInterface
     /**
      * Find a single record (and hydrate it as an entity) for the given criteria. Compatible with the equivalent method
      * in Doctrine.
-     * @param array $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
+     * @param array|Query $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @return object|array|null
      */
-    public function findOneBy(array $criteria = [])
+    public function findOneBy($criteria = [])
     {
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => false,
@@ -168,7 +180,7 @@ class ObjectRepository implements ObjectRepositoryInterface
 
     /**
      * Return the latest record from a group
-     * @param array $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
+     * @param array|Query $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @param string|null $commonProperty Property on root entity whose value you want to group by (see also the
      * setCommonProperty method).
@@ -177,7 +189,7 @@ class ObjectRepository implements ObjectRepositoryInterface
      * @return object|array|null
      */
     public function findLatestOneBy(
-        array $criteria = [],
+        $criteria = [],
         ?string $commonProperty = null,
         ?string $recordAgeIndicator = null
     ) {
@@ -197,7 +209,7 @@ class ObjectRepository implements ObjectRepositoryInterface
 
     /**
      * Return the latest record from each group
-     * @param array $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
+     * @param array|Query $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @param string|null $commonProperty Property on root entity whose value you want to group by (see also the
      * setCommonProperty method).
@@ -213,7 +225,7 @@ class ObjectRepository implements ObjectRepositoryInterface
      * @return iterable
      */
     public function findLatestBy(
-        array $criteria,
+        $criteria = [],
         ?string $commonProperty = null,
         ?string $recordAgeIndicator = null,
         ?string $keyProperty = null,
@@ -226,7 +238,7 @@ class ObjectRepository implements ObjectRepositoryInterface
     /**
      * Find all records that match the given criteria (and hydrate them as entities). Compatible with the equivalent
      * method in Doctrine.
-     * @param array $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
+     * @param array|Query $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @param array|null $orderBy Array of properties and optionally sort directions (eg. ['child.name'=>'DESC',
      * 'date']).
@@ -241,7 +253,7 @@ class ObjectRepository implements ObjectRepositoryInterface
      * @return array|object|null
      */
     public function findBy(
-        array $criteria,
+        $criteria = [],
         ?array $orderBy = null,
         $limit = null,
         $offset = null,
@@ -250,9 +262,8 @@ class ObjectRepository implements ObjectRepositoryInterface
     ): ?iterable {
         $this->setOrderBy(array_filter($orderBy ?? $this->orderBy ?? []));
         if ($limit) { //Only for Doctrine compatibility
-            //$this->pagination = new Pagination($limit, round($offset / $limit) + 1);
+            $this->pagination = new Pagination($limit, round($offset / $limit) + 1);
         }
-
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => true,
             'criteria' => $criteria,
@@ -270,12 +281,13 @@ class ObjectRepository implements ObjectRepositoryInterface
     /**
      * Alias for findBy but automatically sets the $fetchOnDemand flag to true and avoids needing to supply null values
      * for the arguments that are not applicable (findBy thus remains compatible with Doctrine).
-     * @param array $criteria
+     * @param array|Query $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
+     * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @param array|null $orderBy
      * @return array|null
      */
     public function findOnDemandBy(
-        array $criteria,
+        array $criteria = [],
         ?array $orderBy = null
     ): ?iterable {
         return null;
@@ -293,20 +305,30 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     public function findAll(?array $orderBy = null, ?string $keyProperty = null, bool $fetchOnDemand = false): ?iterable
     {
-        return null;
+        return $this->findBy([], $orderBy, null, null, $keyProperty, $fetchOnDemand);
     }
 
     /**
      * Insert or update the supplied entity.
      * @param object $entity The entity to insert or update.
-     * @param bool $updateChildren Whether or not to also update any child objects.
-     * @param bool $replace Allow for insert even if primary key has a value (typically for use where the primary key is
-     * also a foreign key)
-     * @return int Number of rows affected.
-     * @throws \Exception
+     * @param bool $saveChildren Whether or not to also update any child objects. You can set a default value as a 
+     * config option (defaults to true).
+     * @return int|null Number of rows affected.
+     * @throws \Throwable
      */
-    public function saveEntity(object $entity, bool $updateChildren = true, bool $replace = false): ?int
+    public function saveEntity(object $entity, ?bool $saveChildren = null): ?int
     {
+        try {
+            $this->setClassName(ObjectHelper::getObjectClassName($entity));
+            $saveChildren = $saveChildren ?? $this->configOptions->saveChildrenByDefault;
+            $saveOptions = SaveOptions::create($this->mappingCollection, ['saveChildren' => $saveChildren]);
+            $return = $this->objectPersister->saveEntity($entity, $saveOptions);
+            
+            return $return;
+        } catch (\Throwable $ex) {
+            $this->throwException($ex);
+        }
+        
         return null;
     }
 
@@ -314,14 +336,20 @@ class ObjectRepository implements ObjectRepositoryInterface
      * Insert or update the supplied entities.
      * @param array $entities Array of entities to insert or update.
      * @param bool $updateChildren Whether or not to also insert any new child objects.
-     * @param bool $replace Allow for insert even if primary key has a value (typically for use where the primary key is
-     * also a foreign key)
      * @return int Number of rows affected.
      * @throws \Exception
      */
-    public function saveEntities(array $entities, bool $updateChildren = true, bool $replace = false): ?int
+    public function saveEntities(array $entities, bool $saveChildren = null): ?int
     {
-        return null;
+        try {
+            $saveChildren = $saveChildren ?? $this->configOptions->saveChildrenByDefault;
+            $saveOptions = SaveOptions::create($this->mappingCollection, ['saveChildren' => $saveChildren]);
+            $return = $this->objectPersister->saveEntities($entities, $saveOptions);
+            
+            return $return;
+        } catch (\Throwable $ex) {
+            $this->throwException($ex);
+        }
     }
 
     /**
@@ -347,31 +375,35 @@ class ObjectRepository implements ObjectRepositoryInterface
         return null;
     }
     
-    public function clearCache(): void
+    public function clearCache(?string $className = null): void
     {
-        $this->objectFetcher->clearCache();
+        $this->objectFetcher->clearCache($className);
     }
 
     /**
-     * When using a custom repository that extends this one, you can override one or more parts of the SQL generated by
-     * the SqlBuilder class, by supplying your own SQL (or a closure to manipulate the generated SQL), keyed on the part
-     * of the query you want to override. Available parts are:
-     * select, from, joinsForLatestRecord, joins, where, groupBy, having, orderBy, limit, insert, update
-     * If the value supplied is a string, it will be used instead of the generated SQL. If the value supplied is a
-     * closure, the closure will be executed, and will be given 3 parameters (in this order): the generated SQL,
-     * the $criteria array, and the array of parameters for binding (so you can tweak the generated SQL and return your
-     * replacement). Even if there is no criteria, or no params (or the params have not been populated yet), all 3
-     * arguments will always be passed to a closure (with empty arrays if necessary). The insert and update keys relate
-     * to entire queries, not just parts, and there might be multiple queries to run (eg. to insert child objects), so
-     * the override will be applied multiple times (it therefore makes sense that you would only use closures, not
-     * strings, for those two, unless you are certain you will not have multiple queries).
-     * @param array $queryOverrides Eg. ['select'=>'SELECT contact.*', 'from'=>'contact']
+     * Manually begin a transaction (if supported by the storage engine)
      */
-    protected function overrideQueryParts(array $queryOverrides)
+    public function beginTransaction()
     {
-        $this->objectFetcher->overrideQueryParts(array_change_key_case($queryOverrides));
+        $this->objectPersister->beginTransaction();
     }
-    
+
+    /**
+     * Commit a transaction that was started manually (if supported by the storage engine)
+     */
+    public function commit()
+    {
+        $this->objectPersister->commitTransaction();
+    }
+
+    /**
+     * Rollback a transaction that was started manually (if supported by the storage engine)
+     */
+    public function rollback()
+    {
+        $this->objectPersister->rollbackTransaction();
+    }
+
     protected function doFindBy()
     {
         $this->assertClassNameSet();
@@ -402,7 +434,7 @@ class ObjectRepository implements ObjectRepositoryInterface
     {
         if (!$this->getClassName()) {
             $callingMethod = debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['function'] ?? 'Unknown method';
-            $message = sprintf('Please call setEntityClassName before calling %1$s.', $callingMethod);
+            $message = sprintf('Please call setClassName before calling %1$s.', $callingMethod);
             throw new ObjectiphyException($message);
         }
     }
@@ -425,7 +457,7 @@ class ObjectRepository implements ObjectRepositoryInterface
         $this->objectFetcher->setConfigOptions($this->configOptions);
     }
 
-    private function throwException(\Exception $ex)
+    private function throwException(\Throwable $ex)
     {
         if ($ex instanceof ObjectiphyException) {
             throw $ex;

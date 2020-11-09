@@ -2,6 +2,7 @@
 
 namespace Objectiphy\Objectiphy\Tests\Repository;
 
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Orm\ObjectRepository;
 
 class CustomRepository extends ObjectRepository
@@ -50,5 +51,10 @@ class CustomRepository extends ObjectRepository
         $replacement = str_replace('`user` `obj_alias_user`', '`user_alternative` `obj_alias_user`', $sql);
         
         return $replacement;
+    }
+
+    private function overrideQueryParts(array $overrides)
+    {
+        $this->setConfigOption(ConfigOptions::QUERY_OVERRIDES, $overrides);
     }
 }

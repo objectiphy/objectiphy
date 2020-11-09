@@ -12,8 +12,9 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\QB;
+use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 
-class SqlBuilderMySql implements SqlBuilderInterface
+class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterface
 {
     private bool $disableMySqlCache = false;
     private FindOptions $options;
@@ -35,11 +36,6 @@ class SqlBuilderMySql implements SqlBuilderInterface
     public function getFindOptions(): FindOptions
     {
         return $this->options;
-    }
-
-    public function setSaveOptions(): void
-    {
-        //None yet...
     }
 
     /**
@@ -143,7 +139,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
      * Get the SQL query necessary to select the records that will be used to hydrate the given entity.
      * @return string The SQL query to execute.
      */
-    public function getSelectQuery()
+    public function getSelectSql(): string
     {
         if (!isset($this->options->mappingCollection)) {
             throw new ObjectiphyException('SQL Builder has not been initialised. There is no mapping information!');
@@ -271,7 +267,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
                 continue;
             }
             if ($this->options->count
-                && !$this->options->getCriteria()
+                && (!$this->options->query || !$this->options->query->getWhere())
                 && ($propertyMapping->relationship->joinType ?: 'LEFT') == 'LEFT'
             ) {
                 continue; //No need for left joins if there is no criteria and we are just counting records
@@ -334,10 +330,11 @@ class SqlBuilderMySql implements SqlBuilderInterface
             //$sql .= " AND $this->latestAlias." . $this->objectMapper->getIdColumn(false) . " IS NULL ";
         }
 
-        foreach ($this->options->getCriteria() as $criteriaExpression) {
-            $sql .= $this->applyCriteria($criteriaExpression, 'AND');
+        if ($this->options->query) {
+            foreach ($this->options->query->getWhere() as $criteriaExpression) {
+                $sql .= $this->applyCriteria($criteriaExpression, 'AND');
+            }
         }
-
         //$sql .= $this->customWhereClause ? " AND ($this->customWhereClause) " : "";
 
         return $this->overrideQueryPart('where', $sql, $this->getQueryParams());
@@ -449,115 +446,6 @@ class SqlBuilderMySql implements SqlBuilderInterface
         return $this->overrideQueryPart('offset', $sql, $this->getQueryParams());
     }
 
-    public function setQueryParams(array $params = [])
-    {
-        $this->params = $params;
-    }
-
-    /**
-     * Return the parameter values to bind to the SQL statement. Where more than one SQL statement is involved, the
-     * index identifies which one we are dealing with.
-     * @param int|null $index Index of the SQL query.
-     * @return array Parameter key/value pairs to bind to the prepared statement.
-     */
-    public function getQueryParams($index = null)
-    {
-        $params = [];
-        if ($index !== null && ($index != 0 || isset($this->params[$index]))) {
-            $params = $this->params[$index] ?: [];
-        } else {
-            $params = !empty($this->params) ? $this->params : [];
-        }
-
-        return $params;
-    }
-
-    /**
-     * Get the SQL statements necessary to insert the given row.
-     * @param array $row The row to insert.
-     * @param bool $replace Whether or not to update the row if the primary key already exists.
-     * @return array An array of SQL queries to execute for inserting this record (base implementation will always
-     * return a single SQL statement, but extended classes might need to execute multiple queries).
-     */
-    public function getInsertQueries(array $row, $replace = false)
-    {
-        $this->params = [];
-
-        if (!empty($row['table']) && !empty($row['data'])) {
-            $sql = "INSERT INTO " . $this->delimit($row['table']) . " SET ";
-            $assignments = '';
-            foreach ($row['data'] as $column => $value) {
-                $value = $value instanceof ObjectReferenceInterface ? $value->getPrimaryKeyValue() : $value;
-                $paramName = 'param_' . strval(count($this->params));
-                $assignments .= $this->delimit($column) . " = :" . $paramName . ',';
-                $this->params[$paramName] = $value;
-            }
-            $assignments = rtrim($assignments, ",");
-            $sql .= $assignments;
-            if ($replace || !empty($row['isScalarJoin'])) {
-                $sql .= ' ON DUPLICATE KEY UPDATE ' . $assignments;
-            }
-
-            return [$this->overrideQueryPart('insert', $sql, [], $this->params)];
-        }
-
-        return [];
-    }
-
-    /**
-     * This is just an alias of getInsertQueries, for backward compatibility purposes
-     * @param array $row
-     * @param bool $replace
-     * @return array
-     */
-    public function getInsertSql(array $row, $replace = false)
-    {
-        return $this->getInsertQueries($row, $replace);
-    }
-
-    /**
-     * Get the SQL statements necessary to update the given row record.
-     * @param string $entityClassName Name of the parent entity class for the record being updated (used to get the
-     * primary key column).
-     * @param array $row Row of data to update.
-     * @param mixed $keyValue Value of primary key for record to update.
-     * @param string $fullKeyColumn
-     * @return array An array of SQL queries to execute for updating the entity.
-     * @throws MappingException
-     * @throws \ReflectionException
-     */
-    public function getUpdateQueries($entityClassName, $row, $keyValue, $fullKeyColumn = '')
-    {
-        $this->params = [];
-
-        if (!empty($row['table']) && !empty($row['data'])) {
-            $sql = (!empty($row['isScalarJoin']) ? "INSERT INTO " : "UPDATE ") . $this->delimit(
-                    $row['table']
-                ) . " SET ";
-            $assignments = '';
-            foreach ($row['data'] as $column => $value) {
-                $value = $value instanceof ObjectReferenceInterface ? $value->getPrimaryKeyValue() : $value;
-                $paramName = 'param_' . strval(count($this->params));
-                $assignments .= $this->delimit($column) . " = :" . $paramName . ',';
-                $this->params[$paramName] = $value;
-            }
-            $assignments = rtrim($assignments, ",");
-            $sql .= $assignments;
-            $paramName = 'param_' . strval(count($this->params));
-            if (!empty($row['isScalarJoin'])) {
-                $sql .= " ON DUPLICATE KEY UPDATE " . $assignments;
-            } else {
-                $this->params[$paramName] = $keyValue;
-                $sql .= ' WHERE ' . $this->delimit(
-                        $fullKeyColumn ?: $this->objectMapper->getIdColumn(true, $entityClassName)
-                    ) . ' = :' . $paramName;
-            }
-
-            return [$this->overrideQueryPart('update', $sql, [], $this->params)];
-        }
-
-        return [];
-    }
 
     /**
      * @param $childClassName
@@ -612,14 +500,6 @@ class SqlBuilderMySql implements SqlBuilderInterface
         }
 
         return array_filter([$sql]);
-    }
-
-    /**
-     * @param array $queryOverrides
-     */
-    public function overrideQueryParts(array $queryOverrides)
-    {
-        $this->queryOverrides = $queryOverrides;
     }
     
     /**
@@ -687,10 +567,10 @@ class SqlBuilderMySql implements SqlBuilderInterface
             $value2 = $expression->getCriteriaValue2();
             $operator = $expression->getCriteriaOperator() ?: '=';
             if ($value !== null || $operator == 'IS' || $operator == 'IS NOT') { //Only filter if value supplied
-                $propertyMapping = $this->options->mappingCollection->getPropertyMapping($expression->propertyName);
+                $propertyMapping = $this->options->mappingCollection->getPropertyMapping((string) $expression->property);
                 if (!$propertyMapping) {
                     $errorMessage = 'No property mapping was found for %1$s. Please check your search criteria.';
-                    throw new ObjectiphyException(sprintf($errorMessage, $expression->propertyName));
+                    throw new ObjectiphyException(sprintf($errorMessage, $expression->property));
                 }
                 $columnName = $propertyMapping->getFullColumnName();
                 $format = $propertyMapping->column->format;
@@ -919,7 +799,7 @@ class SqlBuilderMySql implements SqlBuilderInterface
             ? $this->queryOverrides[strtolower($part)]
             : $generatedQuery;
         if (is_callable($override)) {
-            $override = call_user_func_array($override, [$generatedQuery, $this->options->getCriteria(), $params]);
+            $override = call_user_func_array($override, [$generatedQuery, $this->options->query, $params]);
         } elseif (!is_string($override)) { //We don't know what the heck this is - just use our generated query
             $override = $generatedQuery;
         }

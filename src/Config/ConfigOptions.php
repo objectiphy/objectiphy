@@ -12,9 +12,12 @@ use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
 /**
  * @property bool $productionMode
  * @property string $cacheDirectory
+ * @property array $serializationGroups
+ * @property bool $hydrateUngroupedProperties
  * @property bool $guessMappings
  * @property NamingStrategyInterface $tableNamingStrategy
  * @property NamingStrategyInterface $columnNamingStrategy
+ * @property string $defaultCollectionType
  * @property bool $allowDuplicates
  * @property bool $eagerLoadToOne
  * @property bool $eagerLoadToMany
@@ -24,11 +27,30 @@ use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
  * @property string $recordAgeIndicator
  * @property bool $bindToEntities
  * @property array $queryOverrides
+ * @property bool $saveChildrenByDefault
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
 class ConfigOptions extends ConfigBase
 {
+    public const PRODUCTION_MODE = 'productionMode';
+    public const CACHE_DIRECTORY = 'cacheDirectory';
+    public const SERIALIZATION_GROUPS = 'serializationGroups';
+    public const HYDRATE_UNGROUPED_PROPERTIES = 'hydrateUngroupedProperties';
+    public const GUESS_MAPPINGS = 'guessMappings';
+    public const TABLE_NAMING_STRATEGY = 'tableNamingStrategy';
+    public const COLUMN_NAMING_STRATEGY = 'columnNamingStrategy';
+    public const DEFAULT_COLLECTION_TYPE = 'defaultCollectionType';
+    public const ALLOW_DUPLICATES = 'allowDuplicates';
+    public const EAGER_LOAD_TO_ONE = 'eagerLoadToOne';
+    public const EAGER_LOAD_TO_MANY = 'eagerLoadToMany';
+    public const DISABLE_DELETE_RELATIONSHIPS = 'disableDeleteRelationships';
+    public const DISABLE_DELETE_ENTITIES = 'disableDeleteEntities';
+    public const COMMON_PROPERTY = 'commonProperty';
+    public const RECORD_AGE_INDICATOR = 'recordAgeIndicator';
+    public const BIND_TO_ENTITIES = 'bindToEntities';
+    public const QUERY_OVERRIDES = 'queryOverrides';
+    
     /**
      * @var bool Whether or not we are running in production (proxy classes do not get rebuilt on each run).
      */
@@ -145,6 +167,12 @@ class ConfigOptions extends ConfigBase
      * @var array Entity specific configuration options (ConfigEntity instances), keyed by entity class name.
      */
     protected array $entityConfig = [];
+
+    /**
+     * @var bool Whether or not to save child entities when a parent entity is saved. You can also set this on a 
+     * case by case basis using a flag at the time you call the saveEntity method.
+     */
+    protected bool $saveChildrenByDefault = false;
 
     /**
      * Initialise config options.
