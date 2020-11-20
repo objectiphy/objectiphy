@@ -82,6 +82,51 @@ class MappingCollection
         $this->entityClassName = $entityClassName;
     }
 
+    /**
+     * Add the mapping information for a property to the collection and index it in various ways.
+     * @param PropertyMapping $propertyMapping
+     * @param bool $suppressFetch If the column is only being added for a join to filter criteria, we don't fetch it
+     * (as any sibling properties will not be present and you would get a partially hydrated object).
+     */
+    public function addMapping(PropertyMapping $propertyMapping, bool $suppressFetch = false)
+    {
+        $propertyMapping->parentCollection = $this;
+        $this->properties[$propertyMapping->getPropertyPath()] = $propertyMapping;
+        $parentPath = $propertyMapping->getParentPath();
+        $this->propertiesByParent[$parentPath][$propertyMapping->propertyName] = $propertyMapping;
+        $this->classes[$propertyMapping->className] = $propertyMapping->table;
+        if ($propertyMapping->childTable && $propertyMapping->getChildClassName()) {
+            $this->classes[$propertyMapping->getChildClassName()] = $propertyMapping->childTable;
+        }
+        $this->addPrimaryKeyMapping($propertyMapping->className, $propertyMapping->propertyName, $propertyMapping->column);
+        if ($propertyMapping->relationship->isDefined()) {
+            $relationshipKey = $propertyMapping->getRelationshipKey();
+            $this->relationships[$relationshipKey] ??= $propertyMapping;
+        }
+        if ((!$suppressFetch && !$propertyMapping->relationship->isDefined()) || $propertyMapping->isForeignKey) {
+            $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
+            $this->fetchableProperties[$propertyMapping->getPropertyPath()] = $propertyMapping;
+        } 
+    }
+
+    public function forceFetch(string $propertyPath)
+    {
+        $propertyMapping = $this->getPropertyMapping($propertyPath);
+        if ($propertyMapping->parents) { //Ensure parent is joined
+            $parentPropertyMapping = $this->getPropertyMapping($propertyMapping->getParentPath());
+            $parentPropertyMapping->forceEarlyBindingForJoin();
+        }
+        $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
+        $this->fetchableProperties[$propertyMapping->getPropertyPath()] = $propertyMapping;
+    }
+
+    public function addPrimaryKeyMapping(string $className, string $propertyName, Column $column)
+    {
+        if ($column->isPrimaryKey ?? false) {
+            $this->primaryKeyProperties[$className][$propertyName] ??= $column;
+        }
+    }
+
     public function setPrimaryTableMapping(Table $table): void
     {
         $this->table = $table;
@@ -98,16 +143,11 @@ class MappingCollection
     }
 
     /**
-     * @param bool $finalised Whether to finalise before returning - only set this to false during the building
-     * of the mapping information. After mapping is defined, we only want to return finalised columns.
+     * Fetchable property mappings keyed by column alias
      * @return PropertyMapping[]
      */
-    public function getColumns(bool $finalised = true): array
+    public function getColumns(): array
     {
-        if ($finalised && !$this->columnMappingDone) {
-            $this->finaliseColumnMappings();
-        }
-
         return $this->columns;
     }
 
@@ -118,27 +158,27 @@ class MappingCollection
      */
     public function isPropertyFetchable(PropertyMapping $propertyMapping): bool
     {
-        if (!isset($this->fetchableProperties[$propertyMapping->getPropertyPath()])) {
-            $parentsToFind = array_merge($propertyMapping->parents, [$propertyMapping->propertyName]);
-            $columns = $this->getColumns();
-            foreach ($columns as $fetchable) {
-                if ($fetchable->parents == $parentsToFind) {
-                    $this->fetchableProperties[$propertyMapping->getPropertyPath()] = true;
-                    return true;
-                }
-            }
-            $this->fetchableProperties[$propertyMapping->getPropertyPath()] = false;
+        $value = $this->fetchableProperties[$propertyMapping->getPropertyPath()] ?? false;
+        return $value ? true : false; //$value could be an object
+    }
+    
+    public function getFetchableProperties(): array 
+    {
+        if (!$this->columnMappingDone) {
+            $this->finaliseColumnMappings();
         }
 
-        return $this->fetchableProperties[$propertyMapping->getPropertyPath()];
+        return $this->fetchableProperties;
     }
 
     /**
+     * @param bool $finalise Whether or not to ensure relationships are complete (should be false only while
+     * populating the mapping collection).
      * @return PropertyMapping[]
      */
-    public function getRelationships(): array
+    public function getRelationships(bool $finalise = true): array
     {
-        if (!$this->relationshipMappingDone) {
+        if ($finalise && !$this->relationshipMappingDone) {
             $this->finaliseRelationshipMappings();
         }
 
@@ -207,37 +247,14 @@ class MappingCollection
         return $this->properties[$propertyPath] ?? null;
     }
     
-    /**
-     * Add the mapping information for a property to the collection and index it in various ways.
-     * @param PropertyMapping $propertyMapping
-     * @param bool $suppressFetch If the column is only being added for a join to filter criteria, we don't fetch it
-     * (as any sibling properties will not be present and you would get a partially hydrated object).
-     */
-    public function addMapping(PropertyMapping $propertyMapping, bool $suppressFetch = false)
+    public function getTableForClass(string $className): ?Table
     {
-        $propertyMapping->parentCollection = $this;
-        $this->properties[$propertyMapping->getPropertyPath()] = $propertyMapping;
-        $parentPath = $propertyMapping->getParentPath();
-        $this->propertiesByParent[$parentPath][$propertyMapping->propertyName] = $propertyMapping;
-        $this->classes[$propertyMapping->className] = $propertyMapping->table;
-        if ($propertyMapping->childTable && $propertyMapping->getChildClassName()) {
-            $this->classes[$propertyMapping->getChildClassName()] = $propertyMapping->childTable;
-        }
-        $this->addPrimaryKeyMapping($propertyMapping->className, $propertyMapping->propertyName, $propertyMapping->column);
-        if ($propertyMapping->relationship->isDefined()) {
-            $relationshipKey = $propertyMapping->getRelationshipKey();
-            $this->relationships[$relationshipKey] ??= $propertyMapping;
-        }
-        if (!$suppressFetch && !$propertyMapping->relationship->isDefined() || $propertyMapping->isForeignKey) {
-            $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
-        }
+        return $this->classes[$className] ?? null;
     }
     
-    public function addPrimaryKeyMapping(string $className, string $propertyName, Column $column)
+    public function getTables(): array 
     {
-        if ($column->isPrimaryKey ?? false) {
-            $this->primaryKeyProperties[$className][$propertyName] ??= $column;
-        }
+        return $this->classes;
     }
 
     /**
@@ -343,12 +360,13 @@ class MappingCollection
                 $canFetch = false;
                 foreach ($relationships as $relationship) {
                     if ($relationship->getPropertyPath() == $propertyMapping->getParentPath()) {
-                        $canFetch = true;
+                        $canFetch = !$relationship->isLateBound();// true;
                         break;
                     }
                 }
                 if (!$canFetch) {
                     unset($this->columns[$columnAlias]);
+                    unset($this->fetchableProperties[$propertyMapping->getPropertyPath()]);
                 }
             }
         }
@@ -370,24 +388,22 @@ class MappingCollection
             if (!$relationship->joinTable) {
                 $relationship->joinTable = $this->classes[$relationship->childClassName]->name ?? '';
             }
-            if (!$relationship->joinSql) {
-                if (!$relationship->sourceJoinColumn && $relationship->mappedBy) {
-                    //Get it from the other side...
-                    $otherSidePropertyPath = $relationshipMapping->getPropertyPath() . '.' . $relationship->mappedBy;
-                    $otherSideMapping = $this->getPropertyMapping($otherSidePropertyPath);
-                    if ($otherSideMapping && $otherSideMapping->relationship) {
-                        $relationship->sourceJoinColumn = $relationship->sourceJoinColumn ?: $otherSideMapping->relationship->targetJoinColumn;
-                        //If empty, use primary key of $relationshipMapping's class
-                        $relationship->sourceJoinColumn = $relationship->sourceJoinColumn ?: implode(',', $this->getPrimaryKeyProperties($relationshipMapping->className));
-                        $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: $otherSideMapping->relationship->sourceJoinColumn;
-                        //If empty, use primary key of child class
-                        $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: implode(',', $this->getPrimaryKeyProperties($relationship->childClassName));
-                        $relationship->joinTable = $relationship->joinTable ?: $otherSideMapping->getTableAlias();
-                    }
-                } elseif (!$relationship->targetJoinColumn) {
-                    $pkPropertyNames = $this->getPrimaryKeyProperties($relationship->childClassName);
-                    $relationship->targetJoinColumn = implode(',', $pkPropertyNames);
+            if (!$relationship->sourceJoinColumn && $relationship->mappedBy) {
+                //Get it from the other side...
+                $otherSidePropertyPath = $relationshipMapping->getPropertyPath() . '.' . $relationship->mappedBy;
+                $otherSideMapping = $this->getPropertyMapping($otherSidePropertyPath);
+                if ($otherSideMapping && $otherSideMapping->relationship) {
+                    $relationship->sourceJoinColumn = $relationship->sourceJoinColumn ?: $otherSideMapping->relationship->targetJoinColumn;
+                    //If empty, use primary key of $relationshipMapping's class
+                    $relationship->sourceJoinColumn = $relationship->sourceJoinColumn ?: implode(',', $this->getPrimaryKeyProperties($relationshipMapping->className));
+                    $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: $otherSideMapping->relationship->sourceJoinColumn;
+                    //If empty, use primary key of child class
+                    $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: implode(',', $this->getPrimaryKeyProperties($relationship->childClassName));
+                    $relationship->joinTable = $relationship->joinTable ?: $otherSideMapping->getTableAlias();
                 }
+            } elseif (!$relationship->targetJoinColumn) {
+                $pkPropertyNames = $this->getPrimaryKeyProperties($relationship->childClassName);
+                $relationship->targetJoinColumn = implode(',', $pkPropertyNames);
             }
             $relationship->validate($relationshipMapping);
         }

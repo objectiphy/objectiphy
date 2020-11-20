@@ -100,11 +100,14 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     public function setClassName(string $className): void
     {
-        $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
-        $findOptions = FindOptions::create($this->mappingCollection);
-        $this->objectFetcher->setFindOptions($findOptions);
-        $saveOptions = SaveOptions::create($this->mappingCollection);
-        $this->objectPersister->setSaveOptions($saveOptions);
+        if ($className != $this->getClassName()) {
+            $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
+            //In case of custom repository that does not pass along the find/save options, set defaults here
+            $findOptions = FindOptions::create($this->mappingCollection);
+            $this->objectFetcher->setFindOptions($findOptions);
+            $saveOptions = SaveOptions::create($this->mappingCollection);
+            $this->objectPersister->setSaveOptions($saveOptions);
+        }
     }
 
     /**
@@ -113,7 +116,11 @@ class ObjectRepository implements ObjectRepositoryInterface
      */
     public function getClassName(): string
     {
-        return $this->mappingCollection->getEntityClassName() ?? '';
+        if (isset($this->mappingCollection)) {
+            return $this->mappingCollection->getEntityClassName();
+        }
+
+        return '';
     }
 
     /**
@@ -173,9 +180,8 @@ class ObjectRepository implements ObjectRepositoryInterface
             'criteria' => $criteria,
             'bindToEntities' => $this->configOptions->bindToEntities,
         ]);
-        $this->objectFetcher->setFindOptions($findOptions);
 
-        return $this->doFindBy();
+        return $this->doFindBy($findOptions);
     }
 
     /**
@@ -202,9 +208,8 @@ class ObjectRepository implements ObjectRepositoryInterface
             'criteria' => $criteria,
             'bindToEntities' => $this->configOptions->bindToEntities,
         ]);
-        $this->objectFetcher->setFindOptions($findOptions);
 
-        return $this->doFindBy($criteria);
+        return $this->doFindBy($findOptions);
     }
 
     /**
@@ -273,9 +278,8 @@ class ObjectRepository implements ObjectRepositoryInterface
             'pagination' => $this->pagination ?? null,
             'bindToEntities' => $this->configOptions->bindToEntities,
         ]);
-        $this->objectFetcher->setFindOptions($findOptions);
 
-        return $this->doFindBy();
+        return $this->doFindBy($findOptions);
     }
 
     /**
@@ -404,9 +408,14 @@ class ObjectRepository implements ObjectRepositoryInterface
         $this->objectPersister->rollbackTransaction();
     }
 
-    protected function doFindBy()
+    protected function doFindBy(FindOptions $findOptions)
     {
+        $this->objectFetcher->setFindOptions($findOptions);
+        if (!$this->getClassName() && isset($findOptions->query)) {
+            $this->setClassName($findOptions->query->getFrom());
+        }
         $this->assertClassNameSet();
+        
         return $this->objectFetcher->doFindBy();
     }
 

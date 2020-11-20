@@ -71,14 +71,15 @@ final class ObjectPersister
         $this->objectUnbinder->setMappingCollection($saveOptions->mappingCollection);
     }
 
-    public function saveEntity(object $entity)
+    public function saveEntity(object $entity, SaveOptions $options)
     {
+        $this->setSaveOptions($options);
         $result = null;
 
         //Try to work out if we are inserting or updating
         $update = false;
         $className = $this->options->mappingCollection->getEntityClassName();
-        $pkValues = $this->options->mappingCollection->getPrimaryKeyValues();
+        $pkValues = $this->options->mappingCollection->getPrimaryKeyValues($entity);
         if ($this->entityTracker->hasEntity($className, $pkValues)) {
             //We are tracking it, so it is definitely an update
             $update = true;
@@ -93,6 +94,7 @@ final class ObjectPersister
             $update = true;
         }
 
+        $this->sqlUpdater->setSaveOptions($this->options);
         if ($update) {
             $result = $this->updateEntity($entity, $pkValues);
         } else {
@@ -129,9 +131,11 @@ final class ObjectPersister
         }
 
         $rows = $this->objectUnbinder->unbindEntityToRows($entity, $pkValues, $this->options->saveChildren);
-        $className = ObjectHelper::getObjectClassName($entity);
-        $table =
-        $sql = $this->sqlUpdater->getUpdateSql($className, $row, $pkValues);
+        if ($rows) {
+            $className = ObjectHelper::getObjectClassName($entity);
+            $table = $this->options->mappingCollection->getTableForClass($className);
+            $sql = $this->sqlUpdater->getUpdateSql($table, $rows, $pkValues);
+        }
     }
 
     private function insertEntity(object $entity)

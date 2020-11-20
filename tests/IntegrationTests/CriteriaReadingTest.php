@@ -203,9 +203,9 @@ class CriteriaReadingTest extends IntegrationTestBase
 
         //Read using IS NULL
         $policiesIsNull = $this->objectRepository->findBy(['modification' => ['operator' => 'IS', 'value' => null]]);
-        $this->assertGreaterThan(3, count($policiesIsNull));
-        $policiesNotIsNull = $this->objectRepository->findBy(['policyNo' => ['operator' => 'IS NOT', 'value' => null]]);
-        $this->assertGreaterThan(5, count($policiesNotIsNull));
+        $this->assertEquals(43, count($policiesIsNull));
+        $policiesNotIsNull = $this->objectRepository->findBy(['modification' => ['operator' => 'IS NOT', 'value' => null]]);
+        $this->assertEquals(1, count($policiesNotIsNull));
 
         //Filter based on properties of one-to-many child object
         $this->objectRepository->setClassName(TestParent::class);
@@ -320,18 +320,20 @@ class CriteriaReadingTest extends IntegrationTestBase
         $this->assertEquals('Chidi', $parent->child->getName());
         $this->assertEquals(134, $parent->child->getHeight());
         $customRepository->clearCache();
-        
-        //Override query parts (check count and main query) - use strings and closures
-        $parents = $customRepository->findParentsUsingStringOverrides();
-        $this->assertEquals(3, count($parents));
-        $this->assertNull($parents[0]->getUser()); //User does not get loaded by custom SQL
-        $this->assertEquals('Eleanor Shellstrop', $parents[0]->getName());
 
-        $customRepository->clearCache();
-        $parents2 = $customRepository->findParentsUsingClosureOverrides();
-        $this->assertEquals(3, count($parents2));
-        $this->assertEquals('Eleanor Shellstrop', $parents2[0]->getName());
-        $this->assertEquals('alternative3@example.com', $parents2[0]->getUser()->getEmail());
+        //Removed support for overrides for now...
+
+        //Override query parts (check count and main query) - use strings and closures
+//        $parents = $customRepository->findParentsUsingStringOverrides();
+//        $this->assertEquals(3, count($parents));
+//        $this->assertNull($parents[0]->getUser()); //User does not get loaded by custom SQL
+//        $this->assertEquals('Eleanor Shellstrop', $parents[0]->getName());
+//
+//        $customRepository->clearCache();
+//        $parents2 = $customRepository->findParentsUsingClosureOverrides();
+//        $this->assertEquals(3, count($parents2));
+//        $this->assertEquals('Eleanor Shellstrop', $parents2[0]->getName());
+//        $this->assertEquals('alternative3@example.com', $parents2[0]->getUser()->getEmail());
 
         try {
             $repositoryFactory->createRepository(TestParent::class, 'MadeupRepositoryClassName');

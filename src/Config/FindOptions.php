@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Config;
 
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
+use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 use Objectiphy\Objectiphy\Query\QB;
-use Objectiphy\Objectiphy\Query\Query;
+use Objectiphy\Objectiphy\Query\SelectQuery;
 
-class FindOptions
+class FindOptions implements PropertyPathConsumerInterface
 {
     public MappingCollection $mappingCollection;
     public ?PaginationInterface $pagination = null;
@@ -23,7 +24,7 @@ class FindOptions
     public bool $onDemand = false;
     public string $keyProperty = '';
     public string $scalarProperty = '';
-    public ?Query $query = null;
+    public ?SelectQuery $query = null;
 
     /**
      * @var array As per Doctrine, but with properties of children also allowed, eg.
@@ -58,12 +59,12 @@ class FindOptions
 
     public function setCriteria($criteria): void
     {
-        if ($criteria instanceof Query) {
+        if ($criteria instanceof SelectQuery) {
             $this->query = $criteria;
         } elseif (is_array($criteria)) {
             $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
             $normalizedCriteria = QB::create()->normalize($criteria, $pkProperties[0] ?? 'id');
-            $this->query = new Query();
+            $this->query = new SelectQuery();
             $this->query->setWhere(...$normalizedCriteria);
         } else {
             throw new QueryException('Invalid criteria specified');
@@ -81,13 +82,13 @@ class FindOptions
             } elseif (!in_array(strtoupper($direction), ['ASC', 'DESC'])) {
                 $direction = 'ASC';
             }
-            $field = new FieldExpression('`' . $property . '` ' . $direction);
+            $field = new FieldExpression('`' . $property . '` ' . $direction, false);
             $this->orderBy[$property] = $direction;
             $sanitisedOrderBy[] = $field;
         }
 
         if (!$this->query) {
-            $this->query = new Query();
+            $this->query = new SelectQuery();
         }
         $this->query->setOrderBy(...$sanitisedOrderBy);
     }
@@ -95,5 +96,15 @@ class FindOptions
     public function getOrderBy(): ?array
     {
         return $this->orderBy;
+    }
+
+    public function getPropertyPaths(): array
+    {
+        $paths[] = $this->keyProperty;
+        if ($this->query) {
+            $paths = array_merge($paths, $this->query->getPropertyPaths());
+        }
+        
+        return array_filter(array_unique($paths));
     }
 }

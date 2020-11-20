@@ -76,26 +76,26 @@ class EntityTracker
      */
     public function getDirtyProperties(object $entity, array $pkValues): array
     {
-        $properties = [];
+        $changes = [];
         $className = ObjectHelper::getObjectClassName($entity);
         $pkIndex = $this->getIndexForPk($pkValues);
         if (isset($this->trackedChanges[$className][$pkIndex])) {
             return $this->trackedChanges[$className];
         }
-        $reflectionClass = new \ReflectionClass($className);
-        foreach ($reflectionClass->getProperties() as $property) {
-            $property = $reflectionProperty->getName();
-            $entityValue = ObjectHelper::getValueFromObject($entity, $property);
-            unset($cloneValue);
-            if (isset($this->clones[$className][$pkIndex])) {
-                $cloneValue = ObjectHelper::getValueFromObject($clone, $property);
-            }
-            if (!isset($cloneValue) || $entityValue != $cloneValue) {
-                $changes[$property] = $entityValue;
+        if (isset($this->clones[$className][$pkIndex])) {
+            $clone = $this->clones[$className][$pkIndex];
+            $reflectionClass = new \ReflectionClass($className);
+            foreach ($reflectionClass->getProperties() as $reflectionProperty) {
+                $property = $reflectionProperty->getName();
+                $entityValue = ObjectHelper::getValueFromObject($entity, $property);
+                $cloneValue = ObjectHelper::getValueFromObject($clone, $property, '**!VALUE_NOT_FOUND!**');
+                if ($entityValue != $cloneValue) {
+                    $changes[$property] = $entityValue;
+                }
             }
         }
-        
-        return $properties;
+
+        return $changes;
     }
     
     /**

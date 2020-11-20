@@ -7,6 +7,7 @@ namespace Objectiphy\Objectiphy\Orm;
 use Objectiphy\Annotations\AnnotationReader;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
+use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\Column;
 use Objectiphy\Objectiphy\Mapping\LateBinding;
@@ -17,6 +18,7 @@ use Objectiphy\Objectiphy\Mapping\Table;
 use Objectiphy\Objectiphy\NamingStrategy\NameResolver;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\Query;
+use Objectiphy\Objectiphy\Query\SelectQuery;
 
 /**
  * Loads mapping information from the supplied mapping provider (typically annotations, but the mapping information 
@@ -80,11 +82,11 @@ final class ObjectMapper
      * @param string $className Name of top-level class
      * @param Query $criteria
      */
-    public function addQueryMappings(string $className, ?Query $query = null)
+    public function addExtraMappings(string $className, PropertyPathConsumerInterface $pathConsumer = null)
     {
-        if ($query) {
-            foreach ($query->getPropertyPaths() ?? [] as $propertyPath) {
-                $this->addMappingForProperty($className, $propertyPath);
+        if ($pathConsumer) {
+            foreach ($pathConsumer->getPropertyPaths() ?? [] as $propertyPath) {
+                $this->addMappingForProperty($className, $propertyPath, true);
             }
         }
     }
@@ -98,10 +100,10 @@ final class ObjectMapper
      * @throws ObjectiphyException
      * @throws \ReflectionException
      */
-    private function addMappingForProperty(string $className, string $propertyPath)
+    private function addMappingForProperty(string $className, string $propertyPath, bool $forceJoins = false)
     {
         $mappingCollection = $this->mappingCollections[$className];
-        if (!$mappingCollection->getColumnForPropertyPath($propertyPath)) {
+        if (!$mappingCollection->getColumnForPropertyPath($propertyPath) || $forceJoins) {
             $parts = explode('.', $propertyPath);
             $property = '';
             $parent = null;
@@ -118,6 +120,9 @@ final class ObjectMapper
                     $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents, true);
                 } else {
                     $parent = $existingParent;
+                    if ($forceJoins) {
+                        $parent->forceEarlyBindingForJoin();
+                    }
                 }
             }
         }
@@ -161,9 +166,10 @@ final class ObjectMapper
         }
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
             $propertyMapping = $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents);
-            if ($propertyMapping) {
+            if ($propertyMapping && $propertyMapping->relationship->isDefined()) {
                 //For lazy loading, we must have the primary key so we can load the child
-                if ($propertyMapping->relationship->isLateBound()
+                if ((!isset($mappingCollection->getRelationships(false)[$propertyMapping->getRelationshipKey()])
+                    || $propertyMapping->relationship->isLateBound())
                     && !$propertyMapping->relationship->mappedBy
                     && !$propertyMapping->relationship->isEmbedded
                 ) {

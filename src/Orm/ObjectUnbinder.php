@@ -27,14 +27,16 @@ final class ObjectUnbinder
     public function unbindEntityToRows(object $entity, array $pkValues = [], bool $processChildren = false): array
     {
         $rows = [];
-        $properties = $this->entityTracker->getDirtyProperties($entity);
+        $properties = $this->entityTracker->getDirtyProperties($entity, $pkValues);
         foreach ($properties as $property => $value) {
             $propertyMapping = $this->mappingCollection->getPropertyMapping($property);
-            $columnName = $propertyMapping->getFullColumnName();
-            if ($columnName) {
-                $column = $propertyMapping->column;
-                if ($this->dataTypeHandler->toPersistenceValue($value, $column->type, $column->format)) {
-                    $rows[$columnName] = $value;
+            if ($processChildren || !$propertyMapping->getChildClassName()) {
+                $columnName = $propertyMapping->getFullColumnName();
+                if ($columnName) {
+                    $column = $propertyMapping->column;
+                    if ($this->dataTypeHandler->toPersistenceValue($value, $column->type, $column->format)) {
+                        $rows[$columnName] = $value;
+                    }
                 }
             }
         }

@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Query;
 
+use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
+use Objectiphy\Objectiphy\Contract\QueryPartInterface;
 use Objectiphy\Objectiphy\Exception\CriteriaException;
 use Objectiphy\Objectiphy\Exception\QueryException;
+use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
 /**
  * Represents a line of criteria to filter on, optionally with a collection of child (nested) criteria lines
@@ -13,7 +16,7 @@ use Objectiphy\Objectiphy\Exception\QueryException;
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-class CriteriaExpression implements \JsonSerializable
+class CriteriaExpression implements \JsonSerializable, QueryPartInterface, PropertyPathConsumerInterface
 {
     public FieldExpression $property;
     public string $operator;
@@ -30,6 +33,7 @@ class CriteriaExpression implements \JsonSerializable
      */
     public array $orExpressions = [];
     public CriteriaExpression $parentExpression;
+    
 
     /**
      * @param FieldExpression $property The property being filtered on.
@@ -301,31 +305,81 @@ class CriteriaExpression implements \JsonSerializable
         return false;
     }
 
-    public function getPropertyPathsUsed(): array
+    public function getPropertyPaths(): array
     {
-        $paths = $this->property->getPropertyPathsUsed();
+        $paths = $this->property->getPropertyPaths();
         if ($this->value instanceof FieldExpression) {
-            $paths = array_merge($paths, $this->value->getPropertyPathsUsed());
+            $paths = array_merge($paths, $this->value->getPropertyPaths());
         }
         if ($this->value2 instanceof FieldExpression) {
-            $paths = array_merge($paths, $this->value2->getPropertyPathsUsed());
+            $paths = array_merge($paths, $this->value2->getPropertyPaths());
         }
 
         return $paths;
     }
 
+    public function finalise(MappingCollection $mappingCollection, ?string $className = null)
+    {
+        //Not sure there is anything to do here...?
+    }
+
+    /**
+     * Return query with parameters resolved (for display only, NOT for execution!)
+     * @return string
+     */
     public function __toString(): string
     {
-        $string = $this->propertyName . ' ' . $this->operator . ' ';
-        $string .= is_array($this->value) ? implode(',', $this->value) : strval($this->value);
-        if ($this->value === null) {
-            $string .= 'null';
+        $params = [];
+        $queryString = $this->toString($params);
+        foreach ($params as $key => $value) {
+            $queryString = str_replace(':' . $key, "'" . $value . "'", $queryString);
+        }
+
+        return $queryString;
+    }
+
+    /**
+     * Return parameterised query
+     * @param array $params
+     * @return string
+     */
+    public function toString(array &$params = [])
+    {
+        $string = $this->property . ' ' . $this->operator . ' ';
+        if (is_array($this->value)) {
+            $string .= '(';
+        }
+        $values = is_array($this->value) ? $this->value : [$this->value];
+        $stringValues = [];
+        foreach ($values as $value) {
+            if ($value === null) {
+                $stringValues[] = 'null';
+            } else {
+                $paramCount = count($params) + 1;
+                $params['param_' . $paramCount] = $this->convertValue($value);
+                $stringValues[] = ':param_' . $paramCount;
+            }
+        }
+        $string .= implode(',', $stringValues);
+        if (is_array($this->value)) {
+            $string .= ')';
         }
         if ($this->operator == QB::BETWEEN) {
-            $string .= ' AND ' . strval($this->value2);
+            $string .= ' AND ';
             if ($this->value2 === null) {
                 $string .= 'null';
+            } else {
+                $paramCount = count($params) + 1;
+                $params['param_' . $paramCount] = $this->convertValue($this->value2);
+                $string .= ':param_' . $paramCount;
             }
+        }
+        
+        foreach ($this->andExpressions as $andExpression) {
+            $string .= ' AND (' . $andExpression->toString($params) . ')';
+        }
+        foreach ($this->orExpressions as $orExpression) {
+            $string .= ' OR (' . $orExpression->toString($params) . ')';
         }
 
         return $string;

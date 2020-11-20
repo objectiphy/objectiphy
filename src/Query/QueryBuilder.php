@@ -274,7 +274,7 @@ class QueryBuilder
 
         //If $criteria is just a list of IDs, use primary key with IN
         $idCount = 0;
-        foreach ($criteria as $critKey=>$critValue) {
+        foreach ($criteria as $critKey => $critValue) {
             if (is_numeric($critKey) && intval($critKey) == $critKey && is_numeric($critValue) && intval($critValue) == $critValue) {
                 $idCount++;
             } else {
@@ -286,9 +286,9 @@ class QueryBuilder
             $expression = new CriteriaExpression(new FieldExpression($pkProperty), null, 'IN', array_values($criteria));
             $normalizedCriteria[] = $expression;
         } else {
-            foreach ($criteria as $propertyName=>$expression) {
+            foreach ($criteria as $propertyName => $expression) {
                 if (!($expression instanceof CriteriaExpression) && !($expression instanceof JoinExpression)) {
-                    $value = isset($expression['value']) ? $expression['value'] : $expression;
+                    $value = is_array($expression) && array_key_exists('value', $expression) ? $expression['value'] : $expression;
                     $expression = new CriteriaExpression(
                         new FieldExpression($propertyName),
                         !empty($expression['alias']) ? $expression['alias'] : null,

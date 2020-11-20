@@ -83,12 +83,6 @@ class Relationship
      */
     public string $joinType = 'LEFT';
     
-    /**
-     * @var string Custom SQL for join (eg. "vehicle.policy_id = policy.id"). Not usually required, as it will be
-     * generated automatically, but if you have special requirements you can specify something to use instead.
-     */
-    public string $joinSql = '';
-    
     /** 
      * @var bool Whether this is actually an embedded (value) object that maps to several columns 
      */

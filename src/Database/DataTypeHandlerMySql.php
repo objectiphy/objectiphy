@@ -7,6 +7,7 @@ namespace Objectiphy\Objectiphy\Database;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
+use Objectiphy\Objectiphy\Orm\ObjectHelper;
 
 /**
  * Converts PHP data types into MySQL ones (eg. \DateTime to yyyy-mm-dd, boolean to 0 or 1)
@@ -20,7 +21,7 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
      * @param string $format Optionally specify a format string if applicable to the data type.
      * @return bool Whether or not the value was successfully converted.
      */
-    public function toPersistenceValue(&$value, ?string $dataType = null, string $format): bool
+    public function toPersistenceValue(&$value, ?string $dataType = null, string $format = ''): bool
     {
         if (is_object($value)) {
             switch (true) {
@@ -44,7 +45,7 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
         }
 
         //Booleans need to be returned as 0 or 1 to avoid complaints from MySQL
-        switch (strtolower($dataType)) {
+        switch (strtolower($dataType ?? '')) {
             case 'bool':
             case 'boolean':
             case 'int':
@@ -74,7 +75,7 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
      * @param string $format If the data type requires a format (eg. datetimestring), specify it here.
      * @return bool Whether or not the value was successfully converted.
      */
-    public function toObjectValue(&$value, ?string $dataType = null, ?string $format): bool
+    public function toObjectValue(&$value, ?string $dataType = null, ?string $format = null): bool
     {
         switch (strtolower($dataType)) {
             case 'datetime':

@@ -209,16 +209,35 @@ class PropertyMapping
         $this->forcedEarlyBindingForJoin = true;
     }
 
-    public function isLateBound(bool $forJoin = false): bool
+    /**
+     * Check whether this property requires a late bound proxy (because we cannot fetch the properties of its child)
+     * @param bool $forJoin
+     * @param array $row
+     * @return bool
+     */
+    public function isLateBound(bool $forJoin = false, array $row = []): bool
     {
         if ($forJoin && $this->forcedEarlyBindingForJoin) {
             return false;
         } elseif ($this->relationship->isLateBound()) {
             return true;
-        } else {
+        } elseif (!$this->relationship->mappedBy && !$this->parentCollection->isPropertyFetchable($this)) {
             //If we have to lazy load to avoid recursion, it will be late bound
-            return !$this->parentCollection->isPropertyFetchable($this);
+            return true;
+        } elseif ($this->isForeignKey) {
+            //If we don't have the child primary key, it will be late bound
+            $pkProperties = $this->parentCollection->getPrimaryKeyProperties($this->getChildClassName()) ?? [];
+            $pkProperty = reset($pkProperties);
+            if ($pkProperty) {
+                $childPkPath = $this->getPropertyPath() . '.' . $pkProperty;
+                $childPkPropertyMapping = $this->parentCollection->getPropertyMapping($childPkPath);
+                if (!$childPkPropertyMapping || ($row && !isset($row[$childPkPropertyMapping->getShortColumnName()]))) {
+                    return true;
+                }
+            }
         }
+
+        return false;
     }
 
     public function isEager(): bool

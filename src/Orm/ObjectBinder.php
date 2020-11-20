@@ -68,7 +68,7 @@ final class ObjectBinder
         $requiresProxy = $this->mappingCollection->parentHasLateBoundProperties($parents);
         $entity = $this->entityFactory->createEntity($entityClassName, $requiresProxy);
         $propertiesMapped = $this->bindScalarProperties($entity, $row, $parents);
-        if (!$this->getEntityFromLocalCache($entityClassName, $entity)) { //TODO: Could be more efficient by doing this earlier
+        if (!$this->getEntityFromLocalCache($entityClassName, $entity)) {
             $relationalPropertiesMapped = $this->bindRelationalProperties($entity, $row, $parents, $parentEntity);
             $propertiesMapped = $propertiesMapped ?: $relationalPropertiesMapped;
         }
@@ -120,7 +120,7 @@ final class ObjectBinder
             $valueFound = false;
             if ($propertyMapping->isScalarValue()) {
                 if (array_key_exists($propertyMapping->getShortColumnName(), $row)) {
-                    $value = $row[$propertyMapping->getShortColumnName()];
+                    $value = $row[$propertyMapping->getShortColumnName()]; //Prioritises alias, falls back to short column
                     $this->applyValue($entity, $propertyMapping, $value);
                     $propertiesMapped = true;
                 }
@@ -132,14 +132,14 @@ final class ObjectBinder
 
     private function bindRelationalProperties(object $entity, array $row, array $parents, ?object $parentEntity): bool
     {
+        $valueFound = false;
         foreach ($this->mappingCollection->getPropertyMappings($parents) as $propertyMapping) {
-            $valueFound = false;
             $value = null;
             if ($propertyMapping->getChildClassName()) {
                 if ($propertyMapping->pointsToParent()) {
                     $value = $parentEntity;
                     $valueFound = true;
-                } elseif ($propertyMapping->isLateBound()) {
+                } elseif ($propertyMapping->isLateBound(false, $row)) {
                     $closure = $this->createLateBoundClosure($propertyMapping, $row);
                     $valueFound = $closure instanceof \Closure;
                     if ($valueFound) {
@@ -250,7 +250,7 @@ final class ObjectBinder
             }
 
             //Do the search
-            if (isset($criteria)) {
+            if ($criteria) {
                 if ($propertyMapping->relationship->isToOne()) {
                     if ($usePrimaryKey) {
                         $result = $repository->find($criteria[0]->value);

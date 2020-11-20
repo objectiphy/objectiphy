@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Query;
 
+use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
+use Objectiphy\Objectiphy\Contract\QueryPartInterface;
+
 /**
  * Yields something that can be resolved to a value - typically just a property path, but can also 
  * accommodate a function - eg. COUNT, AVG(`someOtherToManyPropery`), CONCAT(`property`, '_', `otherProperty`).
  * Might update this later to support sub queries, but that's a bit ambitious for now.
  */
-class FieldExpression
+class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterface
 {
     /**
      * @var mixed $expression Typically a string consisting of just a property path, but could be
@@ -41,7 +44,10 @@ class FieldExpression
 
     public function __toString(): string
     {
-        return strval($this->expression);
+        $expression = $this->isPropertyPath
+            ? '`' . str_replace('`', '', $this->expression) . '`'
+            : $this->expression;
+        return strval($expression);
     }
 
     public function isPropertyPath(): bool
@@ -67,6 +73,7 @@ class FieldExpression
 
     public function setExpression($value): void
     {
+        $this->isPropertyPath = false; //If it turns out to be a property path, it will get changed.
         $this->expression = $value;
         if (is_string($value)) {
             $count = 0;
@@ -82,7 +89,7 @@ class FieldExpression
      * CONCAT(`child.propertyOne`, '_', `otherChild.otherProperty`) would yield the following array:
      * ['child.propertyOne', 'otherChild.otherProperty'].
      */
-    public function getPropertyPathsUsed(): array
+    public function getPropertyPaths(): array
     {
         $paths = [];
         if ($this->isPropertyPath) {
@@ -90,9 +97,9 @@ class FieldExpression
         } elseif (is_string($this->expression)) {
             $match = [];
             preg_match('/`(.*?)`/', $this->expression, $match);
-            $property = $match[0] ?? '';
+            $property = $match[1] ?? '';
             if ($property) {
-                $paths[] = substr($property, 1, strlen($property) - 2);
+                $paths[] = $property;
             }
         }
         if ($this->aggregateGroupByProperty) {

@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Database;
 
+use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
+use Objectiphy\Objectiphy\Mapping\Table;
 
 class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
 {
-    public function setSaveOptions(): void
+    private SaveOptions $options;
+
+    public function setSaveOptions(SaveOptions $options): void
     {
-        //None yet...
+        $this->options = $options;
     }
 
     public function setQueryParams(array $params = []): void
@@ -39,12 +43,12 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
 
     /**
      * Get the SQL statements necessary to insert the given row.
+     * @param Table $table Table to insert into.
      * @param array $row The row to insert.
-     * @param bool $replace Whether or not to update the row if the primary key already exists.
      * @return array An array of SQL queries to execute for inserting this record (base implementation will always
      * return a single SQL statement, but extended classes might need to execute multiple queries).
      */
-    public function getInsertQueries(array $row, $replace = false)
+    public function getInsertSql(Table $table, array $row): array
     {
         $this->params = [];
 
@@ -70,17 +74,6 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
     }
 
     /**
-     * This is just an alias of getInsertQueries, for backward compatibility purposes
-     * @param array $row
-     * @param bool $replace
-     * @return array
-     */
-    public function getInsertSql(array $row, $replace = false): array
-    {
-        return $this->getInsertQueries($row, $replace);
-    }
-
-    /**
      * Get the SQL statements necessary to update the given row record.
      * @param string $className Name of the parent entity class for the record being updated (used to get the
      * primary key column).
@@ -90,43 +83,31 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
      * @throws MappingException
      * @throws \ReflectionException
      */
-    public function getUpdateSql(string $className, array $row, array $pkValues = []): array
+    public function getUpdateSql(Table $table, array $row, array $pkValues = []): array
     {
         $this->params = [];
 
-        $sql = "UPDATE ";
-
-
-        if (!empty($row['table']) && !empty($row['data'])) {
-            $sql = (!empty($row['isScalarJoin']) ? "INSERT INTO " : "UPDATE ") . $this->delimit(
-                    $row['table']
-                ) . " SET ";
-            $assignments = '';
-            foreach ($row['data'] as $column => $value) {
-                $value = $value instanceof ObjectReferenceInterface ? $value->getPrimaryKeyValue() : $value;
-                $paramName = 'param_' . strval(count($this->params));
-                $assignments .= $this->delimit($column) . " = :" . $paramName . ',';
-                $this->params[$paramName] = $value;
-            }
-            $assignments = rtrim($assignments, ",");
-            $sql .= $assignments;
-            $paramName = 'param_' . strval(count($this->params));
-            if (!empty($row['isScalarJoin'])) {
-                $sql .= " ON DUPLICATE KEY UPDATE " . $assignments;
-            } else {
-                $this->params[$paramName] = $keyValue;
-                $sql .= ' WHERE ' . $this->delimit(
-                        $fullKeyColumn ?: $this->objectMapper->getIdColumn(true, $entityClassName)
-                    ) . ' = :' . $paramName;
-            }
-
-            return [$this->overrideQueryPart('update', $sql, [], $this->params)];
+        $sql = 'UPDATE ' . $this->delimit($table->name);
+        $sql .= ' SET ';
+        foreach ($row as $columnName => $value) {
+            $value = $value instanceof ObjectReferenceInterface ? $value->getPrimaryKeyValue() : $value;
+            $paramName = 'param_' . strval(count($this->params) + 1);
+            $this->params[$paramName] = $value;
+            $sql .= $this->delimit($columnName) . ' = :' . $paramName . ',';
+        }
+        $sql = rtrim($sql, ",");
+        $sql .= ' WHERE ';
+        foreach ($pkValues as $property => $value) {
+            $pkColumn = $this->options->mappingCollection->getPropertyMapping($property)->getFullColumnName();
+            $paramName = 'param_' . strval(count($this->params) + 1);
+            $params[$paramName] = $value;
+            $sql .= $this->delimit($pkColumn) . ' = :' . $paramName;
         }
 
-        return [];
+        return [$this->overrideQueryPart('update', $sql, [], $this->params, $this->options->query)];
     }
 
-    public function getReplaceSql(string $className, array $row, array $pkValues): array
+    public function getReplaceSql(Table $table, array $row, array $pkValues): array
     {
         // TODO: Implement getReplaceSql() method.
     }

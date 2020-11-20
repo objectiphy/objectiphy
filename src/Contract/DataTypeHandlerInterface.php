@@ -22,7 +22,7 @@ interface DataTypeHandlerInterface
      * @param string $format Optionally specify a format string if applicable to the data type.
      * @return bool Whether or not the value was successfully converted.
      */
-    public function toPersistenceValue(&$value, ?string $dataType = null, string $format): bool;
+    public function toPersistenceValue(&$value, ?string $dataType = null, string $format = ''): bool;
 
     /**
      * Convert the given value to a format acceptable to a PHP object (eg. from a date string to a \DateTime)
@@ -32,5 +32,5 @@ interface DataTypeHandlerInterface
      * @param string $format If the data type requires a format (eg. datetimestring), specify it here.
      * @return bool Whether or not the value was successfully converted.
      */
-    public function toObjectValue(&$value, ?string $dataType = null, ?string $format): bool;
+    public function toObjectValue(&$value, ?string $dataType = null, ?string $format = null): bool;
 }

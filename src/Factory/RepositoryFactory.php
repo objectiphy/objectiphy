@@ -285,7 +285,7 @@ class RepositoryFactory
     private function getSqlSelector()
     {
         if (!isset($this->sqlSelector)) {
-            $this->sqlSelector = new SqlSelectorMySql();
+            $this->sqlSelector = new SqlSelectorMySql($this->getDataTypeHandler());
         }
         
         return $this->sqlSelector;
