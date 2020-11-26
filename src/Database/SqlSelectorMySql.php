@@ -9,6 +9,7 @@ use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Table;
@@ -285,7 +286,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
                 if (!$this->mappingCollection->hasAggregateFunctions() && $groupBy == $baseGroupBy) {
                     $sql .= "SELECT COUNT(DISTINCT " . $groupBy . ") ";
                     $this->countWithoutGroups = true;
-                } // else: we do the full select, and use it as a sub-query - the count happens outside, in getSelectQuery
+                } // else: we do the full select, and use it as a sub-query - the count happens outside, in getQuery
             } else {
                 $sql .= "SELECT COUNT(*) ";
                 $this->countWithoutGroups = true;
@@ -327,6 +328,9 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
         $propertiesUsed = $this->options->query->getPropertyPaths();
         foreach ($propertiesUsed as $propertyPath) {
             $property = $this->options->mappingCollection->getPropertyMapping($propertyPath);
+            if (!$property) {
+                throw new QueryException('Property mapping not found for: ' . $propertyPath);
+            }
             $this->objectNames[] = '`' . $property->getPropertyPath() . '`';
             $this->databaseNames[] = $this->delimit($property->getFullColumnName());
             //Use alternative delimiter for aliases so we don't accidentally replace them

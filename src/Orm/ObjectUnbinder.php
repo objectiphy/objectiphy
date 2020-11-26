@@ -30,13 +30,15 @@ final class ObjectUnbinder
         $properties = $this->entityTracker->getDirtyProperties($entity, $pkValues);
         foreach ($properties as $property => $value) {
             $propertyMapping = $this->mappingCollection->getPropertyMapping($property);
-            if ($processChildren || !$propertyMapping->getChildClassName()) {
+            if (($processChildren || !$propertyMapping->getChildClassName())
+                && $this->mappingCollection->isPropertyFetchable($propertyMapping)) {
                 $columnName = $propertyMapping->getFullColumnName();
                 if ($columnName) {
-                    $column = $propertyMapping->column;
-                    if ($this->dataTypeHandler->toPersistenceValue($value, $column->type, $column->format)) {
-                        $rows[$columnName] = $value;
-                    }
+                    $rows[$propertyMapping->propertyName] = $value;
+//                    $column = $propertyMapping->column;
+//                    if ($this->dataTypeHandler->toPersistenceValue($value, $column->type, $column->format)) {
+//                        $rows[$columnName] = $value;
+//                    }
                 }
             }
         }

@@ -9,7 +9,7 @@ namespace Objectiphy\Objectiphy\Exception;
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-class QueryException extends \Exception
+class QueryException extends ObjectiphyException
 {
 
 }

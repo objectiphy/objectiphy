@@ -9,6 +9,7 @@ use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
+use Objectiphy\Objectiphy\Query\UpdateQuery;
 
 /**
  * @package Objectiphy\Objectiphy
@@ -71,7 +72,7 @@ final class ObjectPersister
         $this->objectUnbinder->setMappingCollection($saveOptions->mappingCollection);
     }
 
-    public function saveEntity(object $entity, SaveOptions $options)
+    public function saveEntity(object $entity, SaveOptions $options, int &$insertCount, int &$updateCount): int
     {
         $this->setSaveOptions($options);
         $result = null;
@@ -96,9 +97,9 @@ final class ObjectPersister
 
         $this->sqlUpdater->setSaveOptions($this->options);
         if ($update) {
-            $result = $this->updateEntity($entity, $pkValues);
+            $result = $this->updateEntity($entity, $pkValues, $insertCount, $updateCount);
         } else {
-            $result = $this->insertEntity($entity);
+            $result = $this->insertEntity($entity, $insertCount);
         }
 
         return $result;
@@ -124,18 +125,29 @@ final class ObjectPersister
         return $results;
     }
 
-    private function updateEntity(object $entity, array $pkValues): ?int
+    private function updateEntity(object $entity, array $pkValues, int &$insertCount, int &$updateCount): ?int
     {
         if ($this->options->saveChildren) {
             //Insert new child entities first so that we can populate the foreign keys on the parent
-        }
 
+            //Count inserts
+        }
         $rows = $this->objectUnbinder->unbindEntityToRows($entity, $pkValues, $this->options->saveChildren);
         if ($rows) {
             $className = ObjectHelper::getObjectClassName($entity);
-            $table = $this->options->mappingCollection->getTableForClass($className);
-            $sql = $this->sqlUpdater->getUpdateSql($table, $rows, $pkValues);
+
+            //Use the query builder here instead of creating the query directly - use pkValues for criteria...
+            
+            $updateQuery = new UpdateQuery();
+            $updateQuery->finalise($this->options->mappingCollection, $className, $rows);
+
+            $sql = $this->sqlUpdater->getUpdateSql($updateQuery, $params, $this->options->replaceExisting);
+            if ($this->storage->executeQuery($sql, $params)) {
+                $updateCount = $this->storage->getAffectedRecordCount();
+            }
         }
+
+        return $insertCount + $updateCount;
     }
 
     private function insertEntity(object $entity)

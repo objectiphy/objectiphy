@@ -17,7 +17,7 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Criteria\CB;
 use Objectiphy\Objectiphy\Query\Pagination;
 use Objectiphy\Objectiphy\Query\QB;
-use Objectiphy\Objectiphy\Query\Query;
+use Objectiphy\Objectiphy\Query\SelctQuery;
 
 /**
  * Main entry point for all ORM operations
@@ -317,16 +317,24 @@ class ObjectRepository implements ObjectRepositoryInterface
      * @param object $entity The entity to insert or update.
      * @param bool $saveChildren Whether or not to also update any child objects. You can set a default value as a 
      * config option (defaults to true).
-     * @return int|null Number of rows affected.
+     * @param int $insertCount Number of rows inserted.
+     * @param int $updateCount Number of rows updated.
+     * @return int|null Total number of rows affected (inserts + updates).
      * @throws \Throwable
      */
-    public function saveEntity(object $entity, ?bool $saveChildren = null): ?int
-    {
+    public function saveEntity(
+        object $entity,
+        ?bool $saveChildren = null,
+        int &$insertCount = 0,
+        int &$updateCount = 0
+    ): ?int {
         try {
+            $insertCount = 0;
+            $updateCount = 0;
             $this->setClassName(ObjectHelper::getObjectClassName($entity));
             $saveChildren = $saveChildren ?? $this->configOptions->saveChildrenByDefault;
             $saveOptions = SaveOptions::create($this->mappingCollection, ['saveChildren' => $saveChildren]);
-            $return = $this->objectPersister->saveEntity($entity, $saveOptions);
+            $return = $this->objectPersister->saveEntity($entity, $saveOptions, $insertCount, $updateCount);
             
             return $return;
         } catch (\Throwable $ex) {

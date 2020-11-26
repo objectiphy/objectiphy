@@ -9,6 +9,7 @@ namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Factory\RepositoryFactory;
 use Objectiphy\Objectiphy\IterableResult;
 use Objectiphy\Objectiphy\Tests\Entity\TestAddress;
@@ -72,7 +73,7 @@ class BasicReadingTest extends IntegrationTestBase
     public function testReadingExceptions()
     {
         $this->testName = 'Reading exceptions';
-        $this->expectException(ObjectiphyException::class);
+        $this->expectException(QueryException::class);
         $this->objectRepository->findBy(['something invalid'=>'gibberish']);
     }
 

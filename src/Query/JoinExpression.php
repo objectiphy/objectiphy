@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Query;
 
+use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
 use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
 use Objectiphy\Objectiphy\Contract\QueryPartInterface;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 
 class JoinExpression implements QueryPartInterface, PropertyPathConsumerInterface
 {
+    public const JOIN_TYPE_LEFT = 'LEFT';
+    public const JOIN_TYPE_INNER = 'INNER';
+
     public string $sourceProperty;
     public string $sourceEntityClassName;
     public string $operator;
@@ -17,8 +21,13 @@ class JoinExpression implements QueryPartInterface, PropertyPathConsumerInterfac
     public string $targetProperty;
     public string $joinAlias;
     public ?QueryBuilder $extraQueryBuilder = null;
+
+    /**
+     * @var CriteriaPartInterface[]
+     */
     public array $extraCriteria = [];
-    public string $type = 'LEFT';
+
+    public string $type = self::JOIN_TYPE_LEFT;
     public ?PropertyMapping $propertyMapping = null; //For automatically joined relationships
 
     public function __construct(
@@ -28,7 +37,7 @@ class JoinExpression implements QueryPartInterface, PropertyPathConsumerInterfac
         $targetPropertyName,
         $joinAlias,
         QueryBuilder $extraQueryBuilder = null,
-        $type = 'LEFT'
+        $type = self::JOIN_TYPE_LEFT
     ) {
         $this->sourceProperty = $sourceProperty;
         $this->operator = $operator;
@@ -56,14 +65,14 @@ class JoinExpression implements QueryPartInterface, PropertyPathConsumerInterfac
     public function getPropertyPaths(): array
     {
         $paths = [
-            $this->sourceProperty,
-            $this->targetProperty
+            $this->sourceProperty ?? null,
+            $this->targetProperty ?? null
         ];
 
         foreach ($this->extraCriteria as $criteriaExpression) {
             $paths = array_merge($paths, $criteriaExpression->getPropertyPaths());
         }
 
-        return $paths;
+        return array_filter($paths);
     }
 }

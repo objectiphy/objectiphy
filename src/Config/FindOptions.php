@@ -88,7 +88,7 @@ class FindOptions implements PropertyPathConsumerInterface
         }
 
         if (!$this->query) {
-            $this->query = new SelectQuery();
+            $this->query = new Query();
         }
         $this->query->setOrderBy(...$sanitisedOrderBy);
     }

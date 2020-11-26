@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Query;
 
+use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
 use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
@@ -11,28 +12,8 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Relationship;
 
-class SelectQuery implements QueryInterface
+class SelectQuery extends Query implements QueryInterface
 {
-    /**
-     * @var FieldExpression[]
-     */
-    private array $select = [];
-
-    /**
-     * @var string Main (parent) entity class name
-     */
-    private string $from;
-    
-    /**
-     * @var JoinExpression[]
-     */
-    private array $joins = [];
-
-    /**
-     * @var CriteriaExpression[]
-     */
-    private array $where = [];
-
     /**
      * @var FieldExpression[]
      */
@@ -50,47 +31,25 @@ class SelectQuery implements QueryInterface
 
     private ?int $limit = null;
     private ?int $offset = null;
-    private MappingCollection $mappingCollection;
-    private bool $isFinalised = false;
 
-    public function setSelect(FieldExpression ...$fields)
+    public function setSelect(FieldExpression ...$fields): void
     {
-        $this->select = $fields;
+        $this->setFields(...$fields);
     }
-    
+
     public function getSelect(): array
     {
-        return $this->select;
+        return $this->getFields();
     }
 
-    public function setFrom(string $className)
+    public function setFrom(string $className): void
     {
-        $this->from = $className;
-    }
-    
-    public function getFrom(): string 
-    {
-        return $this->from;
-    }
-    
-    public function setJoins(JoinExpression ...$joins)
-    {
-        $this->joins = $joins;
+        $this->setClassName($className);
     }
 
-    public function getJoins(): array
+    public function getFrom(): string
     {
-        return $this->joins;
-    }
-
-    public function setWhere(CriteriaExpression ...$criteria)
-    {
-        $this->where = $criteria;
-    }
-
-    public function getWhere(): array
-    {
-        return $this->where;
+        return $this->getClassName();
     }
 
     public function setGroupBy(FieldExpression ...$fields)
@@ -103,9 +62,9 @@ class SelectQuery implements QueryInterface
         return $this->groupBy;
     }
 
-    public function setHaving(CriteriaExpression ...$critiera)
+    public function setHaving(CriteriaPartInterface ...$criteria)
     {
-        $this->having = $critiera;
+        $this->having = $criteria;
     }
 
     public function getHaving(): array
@@ -145,13 +104,7 @@ class SelectQuery implements QueryInterface
 
     public function getPropertyPaths(): array
     {
-        $paths = [];
-        foreach ($this->select ?? [] as $select) {
-            $paths = array_merge($paths, $select->getPropertyPaths());
-        }
-        foreach ($this->where ?? [] as $where) {
-            $paths = array_merge($paths, $where->getPropertyPaths());
-        }
+        $paths = parent::getPropertyPaths();
         foreach ($this->groupBy ?? []  as $groupBy) {
             $paths = array_merge($paths, $groupBy->getPropertyPaths());
         }
@@ -170,20 +123,18 @@ class SelectQuery implements QueryInterface
     public function finalise(MappingCollection $mappingCollection, ?string $className = null)
     {
         if (!$this->isFinalised) {
-            $this->mappingCollection = $mappingCollection;
-            if (!$this->select) {
+            parent::finalise($mappingCollection, $className);
+            $this->isFinalised = false; //Hold your horses, we're not done yet.
+            if (!$this->getSelect()) {
                 $fetchables = $mappingCollection->getFetchableProperties();
+                $selects = [];
                 foreach ($fetchables as $fetchable) {
                     if ($fetchable->getFullColumnName()) {
-                        $this->select[] = new FieldExpression($fetchable->getPropertyPath());
+                        $selects[] = new FieldExpression($fetchable->getPropertyPath());
                     }
                 }
+                $this->setSelect(...$selects);
             }
-            $relationships = $mappingCollection->getRelationships();
-            foreach ($relationships as $propertyMapping) {
-                $this->populateRelationshipJoin($mappingCollection, $propertyMapping);
-            }
-            $this->from = $this->from ?? $className ?? $mappingCollection->getEntityClassName();
             if (!$this->orderBy) {
                 //See if we can order by primary key of main entity
                 $pkProperties = $mappingCollection->getPrimaryKeyProperties();
@@ -191,7 +142,7 @@ class SelectQuery implements QueryInterface
                     $this->orderBy[] = new FieldExpression('`' . $pkProperty . '` ASC', false);
                 }
             }
-            $this->isFinalised = true;
+            $this->isFinalised = true; //OK, now we're done.
         }
     }
 
@@ -228,29 +179,5 @@ class SelectQuery implements QueryInterface
         }
         
         return $queryString;
-    }
-
-    private function populateRelationshipJoin(MappingCollection $mappingCollection, PropertyMapping $propertyMapping)
-    {
-        if ($propertyMapping->isLateBound(true)) {
-            return;
-        }
-
-        $targetProperty = $propertyMapping->relationship->getTargetProperty();
-        if (!$targetProperty) { //Just joining to single primary key value
-            $pkProperties = $mappingCollection->getPrimaryKeyProperties($propertyMapping->getChildClassName());
-            $targetProperty = reset($pkProperties);
-        }
-
-        $join = new JoinExpression(
-            $propertyMapping->getPropertyPath(),
-            '=',
-            $propertyMapping->getChildClassName(),
-            $targetProperty,
-            'obj_alias_' . str_replace('.', '_', $propertyMapping->getPropertyPath())
-        );
-        $join->propertyMapping = $propertyMapping;
-        
-        $this->joins[] = $join;
     }
 }

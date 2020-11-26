@@ -18,7 +18,6 @@ use Objectiphy\Objectiphy\Mapping\Table;
 use Objectiphy\Objectiphy\NamingStrategy\NameResolver;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\Query;
-use Objectiphy\Objectiphy\Query\SelectQuery;
 
 /**
  * Loads mapping information from the supplied mapping provider (typically annotations, but the mapping information 
@@ -120,7 +119,7 @@ final class ObjectMapper
                     $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents, true);
                 } else {
                     $parent = $existingParent;
-                    if ($forceJoins) {
+                    if ($parent && $forceJoins) {
                         $parent->forceEarlyBindingForJoin();
                     }
                 }

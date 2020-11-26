@@ -85,6 +85,7 @@ final class ObjectFetcher
         if ($this->options->keyProperty) {
             $this->options->mappingCollection->forceFetch($this->options->keyProperty);
         }
+
         $this->doCount();
         $result = $this->doFetch();
 

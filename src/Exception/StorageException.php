@@ -9,7 +9,7 @@ namespace Objectiphy\Objectiphy\Exception;
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-class StorageException extends \Exception
+class StorageException extends ObjectiphyException
 {
 
 }

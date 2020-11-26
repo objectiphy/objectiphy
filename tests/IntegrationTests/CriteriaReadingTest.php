@@ -132,13 +132,22 @@ class CriteriaReadingTest extends IntegrationTestBase
             ->orWhere(['id', null, '=', 19072010]);
 
         //Nicer syntax, same result...  (operators can be strings or you can use the class constants)
+//        $newCriteria = QB::create()
+//            ->where('contact.lastName', QB::EQUALS, ":lastname_alias")
+//            ->orWhere('status', QB::EQUALS, "PAID",
+//                QB::create()->andWhere('effectiveStartDateTime', QB::GREATER_THAN, new \DateTime('2018-12-15')))
+//            ->orWhere('id', '=', 19072010)
+//            ->build(['lastname_alias' => 'Skywalker']);
+        
         $newCriteria = QB::create()
             ->where('contact.lastName', QB::EQUALS, ":lastname_alias")
-            ->orWhere('status', QB::EQUALS, "PAID",
-                QB::create()->andWhere('effectiveStartDateTime', QB::GREATER_THAN, new \DateTime('2018-12-15')))
-            ->orWhere('id', '=', 19072010)
+            ->orStart()
+                ->where('status', QB::EQUALS, "PAID")
+                ->and('effectiveStartDateTime', QB::GREATER_THAN, new \DateTime('2018-12-15'))
+            ->orEnd()
+            ->or('id', '=', 19072010)
             ->build(['lastname_alias' => 'Skywalker']);
-
+        
         $this->assertEquals([$expression], $newCriteria);
 
 //        $this->assertEquals(6, $this->objectRepository->countBy([$expression]));

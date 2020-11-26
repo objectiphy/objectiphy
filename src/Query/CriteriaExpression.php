@@ -11,30 +11,24 @@ use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
 /**
- * Represents a line of criteria to filter on, optionally with a collection of child (nested) criteria lines
- * that are joined together with AND or OR.
+ * Represents a line of criteria to filter on.
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-class CriteriaExpression implements \JsonSerializable, QueryPartInterface, PropertyPathConsumerInterface
+class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, PropertyPathConsumerInterface, \JsonSerializable
 {
+    public const JOINER_AND = 'AND';
+    public const JOINER_OR = 'OR';
+
+    public string $joiner = self::JOINER_AND;
     public FieldExpression $property;
     public string $operator;
     public $value;
     public ?string $alias = '';
     public $value2;
     public ?string $alias2;
-    /**
-     * @var CriteriaExpression[]
-     */
-    public array $andExpressions = [];
-    /**
-     * @var CriteriaExpression[]
-     */
-    public array $orExpressions = [];
     public CriteriaExpression $parentExpression;
     
-
     /**
      * @param FieldExpression $property The property being filtered on.
      * @param string $operator Operator to use (normal MySQL operators, plus special: BEGINSWITH, ENDSWITH, and
@@ -47,8 +41,6 @@ class CriteriaExpression implements \JsonSerializable, QueryPartInterface, Prope
      * using the applyValues method.
      * @param string|null $alias2 If operator takes more than one value (BETWEEN), and values are being supplied via the
      * applyValues method, specify the array key that holds the second value.
-     * @param array $andExpressions An array of CriteriaExpression objects that should be ANDed together with this one.
-     * @param array $orExpressions An array of CritieraExpression objects that should be ORed together with this one.
      * @throws CriteriaException
      */
     public function __construct(
@@ -57,9 +49,7 @@ class CriteriaExpression implements \JsonSerializable, QueryPartInterface, Prope
         string $operator = '=',
         $value = null,
         ?string $alias2 = null,
-        $value2 = null,
-        array $andExpressions = [],
-        array $orExpressions = []
+        $value2 = null
     ) {
         if (is_string($property)) {
             $this->property = new FieldExpression($property);
@@ -73,31 +63,7 @@ class CriteriaExpression implements \JsonSerializable, QueryPartInterface, Prope
         $this->value = $value;
         $this->alias2 = $alias2;
         $this->value2 = $value2;
-        $this->populateAnds($andExpressions);
-        $this->populateOrs($orExpressions);
         $this->validate();
-    }
-
-    private function populateAnds(array $andExpressions): void
-    {
-        foreach ($andExpressions as $andExpression) {
-            $andExpression = $andExpression instanceof CriteriaExpression
-                ? $andExpression
-                : new CriteriaExpression(...$andExpression);
-            $andExpression->parentExpression = $this;
-            $this->andExpressions[] = $andExpression;
-        }
-    }
-
-    private function populateOrs(array $orExpressions): void
-    {
-        foreach ($orExpressions as $orExpression) {
-            $orExpression = $orExpression instanceof CriteriaExpression
-                ? $orExpression
-                : new CriteriaExpression(...$orExpression);
-            $orExpression->parentExpression = $this;
-            $this->orExpressions[] = $orExpression;
-        }
     }
 
     /**
@@ -111,26 +77,26 @@ class CriteriaExpression implements \JsonSerializable, QueryPartInterface, Prope
      * exception (if false, it will be converted to an empty string so as not to break the query).
      */
     public function applyValues(
-        $values,
+        ?array $values,
         bool $overwrite = false,
         bool $removeUnbound = true,
         bool $exceptionOnInvalidNull = true
     ): void {
         if (!$values && $this->operator) {
-            $this->dealWithNulls('value', $exceptionOnInvalidNull);
+            $this->checkNullValidity('value', $exceptionOnInvalidNull);
         } else {
             foreach ($values as $key => $value) {
                 if ($this->alias == $key) {
                     $this->value = empty($this->value) || $overwrite ? ($this->requireNull() ? null : $value) : $this->value;
-                    $this->dealWithNulls('value', $exceptionOnInvalidNull);
+                    $this->checkNullValidity('value', $exceptionOnInvalidNull);
                     $this->alias = null;
                 } elseif ($this->alias2 == $key) {
                     $this->value2 = empty($this->value2) || $overwrite ? ($this->requireNull() ? null : $value) : $this->value2;
-                    $this->dealWithNulls('value2', $exceptionOnInvalidNull);
+                    $this->checkNullValidity('value2', $exceptionOnInvalidNull);
                     $this->alias2 = null;
                 } elseif ((string) $this->property == $key) {
                     $this->value = empty($this->value) || $overwrite ? ($this->requireNull() ? null : $value) : $this->value;
-                    $this->dealWithNulls('value', $exceptionOnInvalidNull);
+                    $this->checkNullValidity('value', $exceptionOnInvalidNull);
                 } elseif (is_array($this->value)) {
                     foreach ($this->value as $index => $inValue) {
                         if (substr(strval($inValue), 0, 1) == ':' && substr(strval($inValue), 1) == $key) {
@@ -140,25 +106,11 @@ class CriteriaExpression implements \JsonSerializable, QueryPartInterface, Prope
                 }
             }
         }
-        
-        foreach ($this->andExpressions as $andIndex=>$andExpression) {
-            $andExpression->applyValues($values, $overwrite, $removeUnbound, $exceptionOnInvalidNull);
-            if ($removeUnbound && $andExpression->hasUnboundParameters()) {
-                $this->andExpressions[$andIndex] = null;
-            }
-        }
-        $this->andExpressions = array_values(array_filter($this->andExpressions));
-        
-        foreach ($this->orExpressions as $orIndex=>$orExpression) {
-            $orExpression->applyValues($values, $overwrite, $removeUnbound, $exceptionOnInvalidNull);
-            if ($removeUnbound && $orExpression->hasUnboundParameters()) {
-                $this->orExpressions[$orIndex] = null;
-            }
-        }
-        $this->orExpressions = array_values(array_filter($this->orExpressions));
     }
 
     /**
+     * Whether or not there are any criteria values in the query that have parameter placeholders for which
+     * no value has yet been supplied.
      * @return bool
      */
     public function hasUnboundParameters(): bool
@@ -176,81 +128,6 @@ class CriteriaExpression implements \JsonSerializable, QueryPartInterface, Prope
         }
 
         return false;
-    }
-    
-    /**
-     * @return array|bool|float|int|string|null
-     */
-    public function getCriteriaValue()
-    {
-        return $this->convertValue($this->value);
-    }
-
-    /**
-     * @return array|bool|float|int|string|null
-     */
-    public function getCriteriaValue2()
-    {
-        return $this->convertValue($this->value2);
-    }
-
-    /**
-     * Add a child expression to join with this one using AND.
-     * @param CriteriaExpression|array $andExpression
-     * @return $this
-     * @throws CriteriaException
-     */
-    public function andWhere($andExpression): CriteriaExpression
-    {
-        if (is_array($andExpression)) {
-            $andExpression = new CriteriaExpression(...$andExpression);
-        }
-
-        if ($andExpression instanceof CriteriaExpression) {
-            $andExpression->parentExpression = $this;
-            $this->andExpressions[] = $andExpression;
-        } else {
-            throw new CriteriaException("Invalid 'AND' expression");
-        }
-
-        return $this;
-    }
-
-    /**
-     * Add a child expression to join with this one using OR.
-     * @param CriteriaExpression|array $orExpression
-     * @return $this
-     * @throws CriteriaException
-     */
-    public function orWhere($orExpression): CriteriaExpression
-    {
-        if (is_array($orExpression)) {
-            $orExpression = new CriteriaExpression(...$orExpression);
-        }
-
-        if ($orExpression instanceof CriteriaExpression) {
-            $orExpression->parentExpression = $this;
-            $this->orExpressions[] = $orExpression;
-        } else {
-            throw new CriteriaException("Invalid 'OR' expression");
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return string Convert 'special' operators to something MySQL will understand.
-     */
-    public function getCriteriaOperator(): string
-    {
-        switch (strtoupper($this->operator)) {
-            case 'BEGINSWITH':
-            case 'ENDSWITH':
-            case 'CONTAINS':
-                return 'LIKE';
-            default:
-                return strtoupper($this->operator);
-        }
     }
 
     /**
@@ -276,35 +153,6 @@ class CriteriaExpression implements \JsonSerializable, QueryPartInterface, Prope
         return get_object_vars($copy);
     }
 
-    /**
-     * @return bool Whether or not any of the criteria (including nested and/or criteria) makes reference to an
-     * aggregate function.
-     */
-    public function hasAggregateGroup(): bool
-    {
-        if ($this->property->aggregateGroupByProperty) {
-            return true;
-        } elseif ($this->value instanceof FieldExpression && $this->value->aggregateGroupByProperty) {
-            return true;
-        } elseif ($this->value2 instanceof FieldExpression && $this->value2->aggregateGroupByProperty) {
-            return true;
-        }
-
-        foreach ($this->andExpressions as $andExpression) {
-            if ($andExpression->hasAggregateGroup()) {
-                return true;
-            }
-        }
-
-        foreach ($this->orExpressions as $orExpression) {
-            if ($orExpression->hasAggregateGroup()) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-
     public function getPropertyPaths(): array
     {
         $paths = $this->property->getPropertyPaths();
@@ -316,11 +164,6 @@ class CriteriaExpression implements \JsonSerializable, QueryPartInterface, Prope
         }
 
         return $paths;
-    }
-
-    public function finalise(MappingCollection $mappingCollection, ?string $className = null)
-    {
-        //Not sure there is anything to do here...?
     }
 
     /**
@@ -356,7 +199,7 @@ class CriteriaExpression implements \JsonSerializable, QueryPartInterface, Prope
                 $stringValues[] = 'null';
             } else {
                 $paramCount = count($params) + 1;
-                $params['param_' . $paramCount] = $this->convertValue($value);
+                $params['param_' . $paramCount] = $value;
                 $stringValues[] = ':param_' . $paramCount;
             }
         }
@@ -370,22 +213,15 @@ class CriteriaExpression implements \JsonSerializable, QueryPartInterface, Prope
                 $string .= 'null';
             } else {
                 $paramCount = count($params) + 1;
-                $params['param_' . $paramCount] = $this->convertValue($this->value2);
+                $params['param_' . $paramCount] = $this->value2;
                 $string .= ':param_' . $paramCount;
             }
-        }
-        
-        foreach ($this->andExpressions as $andExpression) {
-            $string .= ' AND (' . $andExpression->toString($params) . ')';
-        }
-        foreach ($this->orExpressions as $orExpression) {
-            $string .= ' OR (' . $orExpression->toString($params) . ')';
         }
 
         return $string;
     }
 
-    private function dealWithNulls($property, $exceptionOnInvalidNull): void
+    private function checkNullValidity($property, $exceptionOnInvalidNull): void
     {
         if ($this->$property === null && !$this->requireNull()) {
             if ($exceptionOnInvalidNull) {
@@ -409,62 +245,12 @@ class CriteriaExpression implements \JsonSerializable, QueryPartInterface, Prope
     }
 
     /**
-     * Convert values as required by special operators.
-     * @param $value
-     * @return array|bool|float|int|null|string
-     */
-    private function convertValue($value)
-    {
-        $scalarValue = $this->getScalarValue($value, in_array(strtoupper($this->operator), ['IN', 'NOT IN']));
-
-        switch ($this->operator) {
-            case 'IS':
-            case 'IS NOT':
-                return null;
-            case 'BEGINSWITH':
-                return $scalarValue . '%';
-            case 'ENDSWITH':
-                return '%' . $scalarValue;
-            case 'CONTAINS':
-                return '%' . $scalarValue . '%';
-            default:
-                return $scalarValue;
-        }
-    }
-
-    /**
-     * Ensure the value we are filtering on is scalar, so that MySQL can understand it.
-     * @param $value
-     * @param bool $allowArray
-     * @return array|bool|float|int|null|string
-     */
-    private function getScalarValue($value, bool $allowArray = true)
-    {
-        $value = $value instanceof \DateTimeInterface ? $value->format('Y-m-d H:i:s') : $value;
-        $value = ($allowArray && is_array($value)) || is_scalar($value) ? $value : null;
-
-        //If arrays are allowed, ensure they only contain scalar values, and no nested arrays
-        if (!$allowArray && is_array($value)) {
-            $value = null;
-        } elseif (is_array($value)) {
-            foreach ($value as $index=>$element) {
-                $value[$index] = $this->getScalarValue($element, false);
-            }
-        }
-
-        return $value;
-    }
-
-    /**
      * Make sure we have a valid object - throw exception if not.
      * @throws CriteriaException If the operator is not supported, or the relevant alias and/or value for the
      * second BETWEEN value is not supplied.
      */
     private function validate(): void
     {
-        if (!$this->validateAggregateFunction()) {
-            throw new CriteriaException("Aggregate function '$this->aggregateFunction' is not supported.");
-        }
         if (!$this->validateOperator()) {
             throw new CriteriaException("Operator '$this->operator' is not supported.");
         }
@@ -477,13 +263,6 @@ class CriteriaExpression implements \JsonSerializable, QueryPartInterface, Prope
                 throw new CriteriaException('alias2 is required for between operator (unless you also supply value2 up-front)');
             }
         }
-
-        foreach ($this->andExpressions as $andExpression) {
-            $andExpression->validate();
-        }
-        foreach ($this->orExpressions as $orExpression) {
-            $orExpression->validate();
-        }
     }
 
     /**
@@ -495,19 +274,6 @@ class CriteriaExpression implements \JsonSerializable, QueryPartInterface, Prope
             '=', '>', '>=', '<', '<=', '<>', '!=',
             'BETWEEN', 'IN', 'NOT IN', 'IS', 'IS NOT',
             'LIKE', 'BEGINSWITH', 'ENDSWITH', 'CONTAINS'
-        ]);
-
-        return $valid;
-    }
-
-    /**
-     * @return bool Whether or not the operator is supported.
-     */
-    private function validateAggregateFunction(): bool
-    {
-        $valid = in_array(strtoupper($this->aggregateFunction ?? ''), [
-            '', 'AVG', 'COUNT', 'MAX', 'MIN', 'STD',
-            'STDDEV', 'SUM', 'VARIANCE',
         ]);
 
         return $valid;

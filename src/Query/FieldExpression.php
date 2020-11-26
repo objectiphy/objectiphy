@@ -27,12 +27,6 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
      */
     private bool $isPropertyPath;
 
-    /**
-     * @var string If the expression relates to an aggregate function that requires grouping, this
-     * holds the property path of the property to group by.
-     */
-    public string $aggregateGroupByProperty = '';
-
     public function __construct($expression = null, $isPropertyPath = true)
     {
         if ($isPropertyPath) {
@@ -101,9 +95,6 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
             if ($property) {
                 $paths[] = $property;
             }
-        }
-        if ($this->aggregateGroupByProperty) {
-            $paths[] = str_replace('`', '', $this->aggregateGroupByProperty);
         }
 
         return $paths;

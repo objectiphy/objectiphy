@@ -9,7 +9,7 @@ namespace Objectiphy\Objectiphy\Exception;
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-class MappingException extends \Exception
+class MappingException extends ObjectiphyException
 {
 
 }
