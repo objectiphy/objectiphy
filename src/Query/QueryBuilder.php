@@ -167,10 +167,11 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
             if (is_string($key) && in_array($value, 'ASC', 'DESC', 'asc', 'desc')) {
                 $fieldExpression = new FieldExpression($key . ' ' . strtoupper($value), false);
             } elseif (is_int($key) && is_string($value)) {
-                $fieldExpression = new FieldExpression($value . ' ASC');
+                $fieldExpression = new FieldExpression($value . ' ASC', false);
             } else {
                 throw new QueryException('Invalid orderBy properties. Please use property name as the key and direction as the value, or a numeric key and property name as the value (which defaults to ASC for direction)');
             }
+            $this->orderBy[] = $fieldExpression;
         }
 
         return $this;
@@ -197,13 +198,13 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         //TODO: Check we have valid info? Eg. that we don't have a JOIN without an ON
         
         $query = new SelectQuery();
-        $query->setSelect($this->select);
+        $query->setSelect(...$this->select);
         $query->setFrom($this->from);
-        $query->setJoins($this->joins);
-        $query->setWhere($this->where);
-        $query->setGroupBy($this->groupBy);
-        $query->setHaving($this->having);
-        $query->setOrderBy($this->orderBy);
+        $query->setJoins(...$this->joins);
+        $query->setWhere(...$this->where);
+        $query->setGroupBy(...$this->groupBy);
+        $query->setHaving(...$this->having);
+        $query->setOrderBy(...$this->orderBy);
         $query->setLimit($this->limit);
         $query->setOffset($this->offset);
 

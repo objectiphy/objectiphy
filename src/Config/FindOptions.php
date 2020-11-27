@@ -87,10 +87,14 @@ class FindOptions implements PropertyPathConsumerInterface
             $sanitisedOrderBy[] = $field;
         }
 
-        if (!$this->query) {
-            $this->query = new Query();
+        if ($sanitisedOrderBy) {
+            if (!$this->query) {
+                $this->query = new Query();
+            }
+            if (!$this->query->getOrderBy()) {
+                $this->query->setOrderBy(...$sanitisedOrderBy);
+            }
         }
-        $this->query->setOrderBy(...$sanitisedOrderBy);
     }
 
     public function getOrderBy(): ?array

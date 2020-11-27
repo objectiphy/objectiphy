@@ -124,12 +124,12 @@ class CriteriaReadingTest extends IntegrationTestBase
 //        $this->assertEquals(19071988, $policies2[0]->id);
 //        $this->assertNotEmpty($policies2[0]->underwriter->id);
 
-        $expression = (new CriteriaExpression(new FieldExpression('contact.lastName'), null, '=', 'Skywalker'))
-            ->orWhere(
-                (new CriteriaExpression(new FieldExpression('status'), null, '=', 'PAID'))
-                    ->andWhere(['effectiveStartDateTime', null, '>', new \DateTime('2018-12-15')])
-            )
-            ->orWhere(['id', null, '=', 19072010]);
+//        $expression = (new CriteriaExpression(new FieldExpression('contact.lastName'), null, '=', 'Skywalker'))
+//            ->or(
+//                (new CriteriaExpression(new FieldExpression('status'), null, '=', 'PAID'))
+//                    ->and(['effectiveStartDateTime', null, '>', new \DateTime('2018-12-15')])
+//            )
+//            ->or(['id', null, '=', 19072010]);
 
         //Nicer syntax, same result...  (operators can be strings or you can use the class constants)
 //        $newCriteria = QB::create()
@@ -139,43 +139,26 @@ class CriteriaReadingTest extends IntegrationTestBase
 //            ->orWhere('id', '=', 19072010)
 //            ->build(['lastname_alias' => 'Skywalker']);
         
-        $newCriteria = QB::create()
+        $query = QB::create()
             ->where('contact.lastName', QB::EQUALS, ":lastname_alias")
             ->orStart()
                 ->where('status', QB::EQUALS, "PAID")
                 ->and('effectiveStartDateTime', QB::GREATER_THAN, new \DateTime('2018-12-15'))
             ->orEnd()
             ->or('id', '=', 19072010)
-            ->build(['lastname_alias' => 'Skywalker']);
+            ->orderBy(['id'])
+            ->buildSelectQuery(['lastname_alias' => 'Skywalker']);
         
-        $this->assertEquals([$expression], $newCriteria);
+        //$this->assertEquals([$expression], $newCriteria);
 
 //        $this->assertEquals(6, $this->objectRepository->countBy([$expression]));
-        $this->objectRepository->setOrderBy(['id']);
-        $policies3 = $this->objectRepository->findBy([$expression], null, null, null, 'vehicle.id');
+        //$this->objectRepository->setOrderBy(['id']);
+        $policies3 = $this->objectRepository->findBy($query, null, null, null, 'vehicle.id');
 
         $this->assertEquals(6, count($policies3));
         $this->assertEquals(1, array_keys($policies3)[1]);
         $this->assertEquals(34, array_keys($policies3)[3]);
         $this->assertNotSame(null, $policies3[37]->vehicle->abiCode); //37 is the vehicle ID
-
-        $expression2 = (new CriteriaExpression('contact.lastName', null, '=', 'Skywalker'))
-            ->orWhere(
-                ([
-                    'status',
-                    null,
-                    '=',
-                    'PAID',
-                    null,
-                    null,
-                    [
-                        'AND' => ['effectiveStartDateTime', null, '>', new \DateTime('2018-12-15')]
-                    ]
-                ])
-            )
-            ->orWhere(['id', null, '=', 19072010]);
-        $policies4 = $this->objectRepository->findBy([$expression2]);
-        $this->assertEquals(6, count($policies4));
     }
 
     protected function doOperatorTests()

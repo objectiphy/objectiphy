@@ -14,6 +14,7 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Table;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
+use Objectiphy\Objectiphy\Query\CriteriaGroup;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
@@ -187,10 +188,20 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
     public function getWhere()
     {
         $sql = ' WHERE 1';
+        $removeJoiner = false;
         foreach ($this->options->query->getWhere() as $criteriaExpression) {
-            $sql .= ' AND' . $criteriaExpression->toString($this->params);
+            if ($criteriaExpression instanceof CriteriaGroup) {
+                $removeJoiner = $criteriaExpression->type != CriteriaGroup::GROUP_TYPE_END;
+                $sql .= ' ' . (string) $criteriaExpression;
+            } else {
+                if (!$removeJoiner) {
+                    $sql .= ' ' . $criteriaExpression->joiner;
+                }
+                $sql .= ' ' . $criteriaExpression->toString($this->params);
+                $removeJoiner = false;
+            }
         }
-        array_walk($this->params, function($value) { return $this->dataTypeHandler->toPersistenceValue($value); });
+        array_walk($this->params, function(&$value) { $this->dataTypeHandler->toPersistenceValue($value); });
         $sql = str_replace($this->objectNames, $this->databaseNames, $sql);
 
         return $sql;

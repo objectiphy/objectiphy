@@ -85,10 +85,14 @@ abstract class Query implements QueryInterface
             $paths = array_merge($paths, $field->getPropertyPaths());
         }
         foreach ($this->joins ?? [] as $join) {
-            $paths = array_merge($paths, $join->getPropertyPaths());
+            if ($join instanceof PropertyPathConsumerInterface) {
+                $paths = array_merge($paths, $join->getPropertyPaths());
+            }
         }
         foreach ($this->where ?? [] as $where) {
-            $paths = array_merge($paths, $where->getPropertyPaths());
+            if ($where instanceof PropertyPathConsumerInterface) {
+                $paths = array_merge($paths, $where->getPropertyPaths());
+            }
         }
 
         return array_unique($paths);

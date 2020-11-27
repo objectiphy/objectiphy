@@ -99,7 +99,7 @@ class CriteriaBuilder implements CriteriaBuilderInterface
 
     public function orStart(): CriteriaBuilderInterface
     {
-        $this->currentCriteriaCollection = new CriteriaGroup(CriteriaGroup::GROUP_TYPE_START_OR);
+        $this->currentCriteriaCollection[] = new CriteriaGroup(CriteriaGroup::GROUP_TYPE_START_OR);
         return $this;
     }
 
@@ -117,7 +117,7 @@ class CriteriaBuilder implements CriteriaBuilderInterface
 
     public function end(): CriteriaBuilderInterface
     {
-        $this->currentCriteriaCollection = new CriteriaGroup(CriteriaGroup::GROUP_TYPE_END);
+        $this->currentCriteriaCollection[] = new CriteriaGroup(CriteriaGroup::GROUP_TYPE_END);
         return $this;
     }
 

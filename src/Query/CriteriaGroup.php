@@ -23,4 +23,16 @@ class CriteriaGroup implements CriteriaPartInterface
             throw new QueryException('Criteria group type not recognised: ' . $type);
         }
     }
+
+    public function __toString(): string
+    {
+        switch ($this->type) {
+            case self::GROUP_TYPE_START_AND:
+                return 'AND (';
+            case self::GROUP_TYPE_START_OR:
+                return 'OR (';
+            default:
+                return ')';
+        }
+    }
 }

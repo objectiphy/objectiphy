@@ -102,6 +102,7 @@ class ObjectRepository implements ObjectRepositoryInterface
     {
         if ($className != $this->getClassName()) {
             $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
+            $this->orderBy = [];
             //In case of custom repository that does not pass along the find/save options, set defaults here
             $findOptions = FindOptions::create($this->mappingCollection);
             $this->objectFetcher->setFindOptions($findOptions);

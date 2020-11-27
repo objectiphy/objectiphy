@@ -243,23 +243,23 @@ final class ObjectBinder
                 foreach ($valueKey as $index => $alias) {
                     $value = $row[$alias] ?? null;
                     if ($value !== null) {
-                        $qb->andWhere($whereProperty[$index], '=', $value)->build();
+                        $qb->and($whereProperty[$index], '=', $value);
                     }
                 }
-                $criteria = $qb->build();
+                $query = $qb->buildSelectQuery();
             }
 
             //Do the search
-            if ($criteria) {
+            if ($query && $query->getWhere()) {
                 if ($propertyMapping->relationship->isToOne()) {
                     if ($usePrimaryKey) {
-                        $result = $repository->find($criteria[0]->value);
+                        $result = $repository->find($query->getWhere()[0]->value);
                     } else {
-                        $result = $repository->findOneBy($criteria);
+                        $result = $repository->findOneBy($query);
                     }
                 } else {
                     $orderBy = $propertyMapping->relationship->orderBy;
-                    $result = $repository->findBy($criteria, $orderBy);
+                    $result = $repository->findBy($query, $orderBy);
                     $result = $propertyMapping->getCollection($result);                    
                 }
             }

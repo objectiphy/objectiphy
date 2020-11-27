@@ -82,9 +82,9 @@ class SelectQuery extends Query implements QueryInterface
         return $this->orderBy;
     }
     
-    public function setLimit(int $limit)
+    public function setLimit(?int $limit)
     {
-        $this->limit = $imit;
+        $this->limit = $limit;
     }
     
     public function getLimit(): ?int
@@ -92,7 +92,7 @@ class SelectQuery extends Query implements QueryInterface
         return $this->limit;
     }
     
-    public function setOffset(int $offset)
+    public function setOffset(?int $offset)
     {
         $this->offset = $offset;
     }
