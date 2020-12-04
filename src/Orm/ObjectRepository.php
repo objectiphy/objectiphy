@@ -13,11 +13,14 @@ use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Criteria\CB;
 use Objectiphy\Objectiphy\Query\Pagination;
 use Objectiphy\Objectiphy\Query\QB;
+use Objectiphy\Objectiphy\Query\Query;
 use Objectiphy\Objectiphy\Query\SelctQuery;
+use Objectiphy\Objectiphy\Query\UpdateQuery;
 
 /**
  * Main entry point for all ORM operations
@@ -329,17 +332,23 @@ class ObjectRepository implements ObjectRepositoryInterface
         int &$insertCount = 0,
         int &$updateCount = 0
     ): ?int {
+        $originalClassName = $this->getClassName();
         try {
             $insertCount = 0;
             $updateCount = 0;
             $this->setClassName(ObjectHelper::getObjectClassName($entity));
             $saveChildren = $saveChildren ?? $this->configOptions->saveChildrenByDefault;
             $saveOptions = SaveOptions::create($this->mappingCollection, ['saveChildren' => $saveChildren]);
+            $this->beginTransaction();
             $return = $this->objectPersister->saveEntity($entity, $saveOptions, $insertCount, $updateCount);
-            
+            $this->commit();
+
             return $return;
         } catch (\Throwable $ex) {
+            $this->rollback();
             $this->throwException($ex);
+        } finally {
+            $this->setClassName($originalClassName);
         }
         
         return null;
@@ -352,17 +361,34 @@ class ObjectRepository implements ObjectRepositoryInterface
      * @return int Number of rows affected.
      * @throws \Exception
      */
-    public function saveEntities(array $entities, bool $saveChildren = null): ?int
-    {
+    public function saveEntities(
+        array $entities,
+        bool $saveChildren = null,
+        int &$insertCount = 0,
+        int &$updateCount = 0
+    ): ?int {
         try {
             $saveChildren = $saveChildren ?? $this->configOptions->saveChildrenByDefault;
             $saveOptions = SaveOptions::create($this->mappingCollection, ['saveChildren' => $saveChildren]);
-            $return = $this->objectPersister->saveEntities($entities, $saveOptions);
-            
+            $this->beginTransaction();
+            $return = $this->objectPersister->saveEntities($entities, $saveOptions, $insertCount, $updateCount);
+            $this->commit();
+
             return $return;
         } catch (\Throwable $ex) {
+            $this->rollback();
             $this->throwException($ex);
         }
+    }
+
+    public function saveBy(Query $insertOrUpdateQuery)
+    {
+        if (!($insertOrUpdateQuery instanceof UpdateQuery) && !($insertOrUpdateQuery instanceof InsertQuery)) {
+            throw new QueryException('Can only save by query with an UpdateQuery or InsertQuery');
+        }
+
+        $saveOptions = SaveOptions::create($this->mappingCollection);
+        return $this->objectPersister->saveBy($insertOrUpdateQuery, $saveOptions);
     }
 
     /**

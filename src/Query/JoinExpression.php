@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Query;
 
 use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
+use Objectiphy\Objectiphy\Contract\JoinPartInterface;
 use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
 use Objectiphy\Objectiphy\Contract\QueryPartInterface;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 
-class JoinExpression implements QueryPartInterface, PropertyPathConsumerInterface
+class JoinExpression implements QueryPartInterface, JoinPartInterface, PropertyPathConsumerInterface
 {
     public const JOIN_TYPE_LEFT = 'LEFT';
     public const JOIN_TYPE_INNER = 'INNER';
@@ -20,31 +21,31 @@ class JoinExpression implements QueryPartInterface, PropertyPathConsumerInterfac
     public string $targetEntityClassName;
     public string $targetProperty;
     public string $joinAlias;
-    public ?QueryBuilder $extraQueryBuilder = null;
-
-    /**
-     * @var CriteriaPartInterface[]
-     */
-    public array $extraCriteria = [];
+//    public ?QueryBuilder $extraQueryBuilder = null;
+//
+//    /**
+//     * @var CriteriaPartInterface[]
+//     */
+//    public array $extraCriteria = [];
 
     public string $type = self::JOIN_TYPE_LEFT;
     public ?PropertyMapping $propertyMapping = null; //For automatically joined relationships
 
     public function __construct(
-        $sourceProperty,
-        $operator,
+//        $sourceProperty,
+//        $operator,
         $targetEntityClassName,
-        $targetPropertyName,
+//        $targetPropertyName,
         $joinAlias,
-        QueryBuilder $extraQueryBuilder = null,
+//        QueryBuilder $extraQueryBuilder = null,
         $type = self::JOIN_TYPE_LEFT
     ) {
-        $this->sourceProperty = $sourceProperty;
-        $this->operator = $operator;
+//        $this->sourceProperty = $sourceProperty;
+//        $this->operator = $operator;
         $this->targetEntityClassName = $targetEntityClassName;
-        $this->targetPropertyName = $targetPropertyName;
+//        $this->targetPropertyName = $targetPropertyName;
         $this->joinAlias = $joinAlias;
-        $this->extraQueryBuilder = $extraQueryBuilder;
+//        $this->extraQueryBuilder = $extraQueryBuilder;
         $this->type = $type;
     }
     
@@ -57,7 +58,7 @@ class JoinExpression implements QueryPartInterface, PropertyPathConsumerInterfac
         $joinString .= '`' . $this->sourceProperty . '`';
         $joinString .= ' ' . $this->operator . ' ';
         $joinString .= '`' . $this->sourceProperty . '.' . $this->targetPropertyName . '`';
-        $joinString .= implode(' AND ', $this->extraCriteria);
+//        $joinString .= implode(' AND ', $this->extraCriteria);
 
         return $joinString;
     }
@@ -66,12 +67,12 @@ class JoinExpression implements QueryPartInterface, PropertyPathConsumerInterfac
     {
         $paths = [
             $this->sourceProperty ?? null,
-            $this->targetProperty ?? null
+            $this->targetProperty ?? null,
         ];
 
-        foreach ($this->extraCriteria as $criteriaExpression) {
-            $paths = array_merge($paths, $criteriaExpression->getPropertyPaths());
-        }
+//        foreach ($this->extraCriteria as $criteriaExpression) {
+//            $paths = array_merge($paths, $criteriaExpression->getPropertyPaths());
+//        }
 
         return array_filter($paths);
     }

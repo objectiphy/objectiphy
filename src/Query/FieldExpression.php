@@ -99,19 +99,4 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
 
         return $paths;
     }
-
-    /**
-     * @return string The expression with fields replaced. Backticks are removed from the fields
-     * before the replacement happens. Typically used to convert property paths into SQL
-     * table/column names (or aliases).
-     */
-    public function replaceFields(array $fields, array $replacements)
-    {
-        if (is_string($this->expression)) {
-            $cleanFields = str_replace('`', '', $fields);
-            return str_replace($fields, $replacements, $this->expression);
-        }
-
-        return $this->expression;
-    }
 }

@@ -6,39 +6,38 @@ namespace Objectiphy\Objectiphy\Database;
 
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Contract\SqlProviderInterface;
+use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Exception\QueryException;
+use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Query\Query;
 
 class AbstractSqlProvider implements SqlProviderInterface
 {
     protected array $params = [];
     protected array $queryOverrides = [];
+    protected $sql = '';
+    protected MappingCollection $mappingCollection;
+
+    public function setMappingCollection(MappingCollection $mappingCollection)
+    {
+        $this->mappingCollection = $mappingCollection;
+    }
 
     /**
-     * Return the parameter values to bind to the SQL statement. Where more than one SQL statement is involved, the
-     * index identifies which one we are dealing with.
+     * Return the parameter values to bind to the SQL statement.
      * @param int|null $index Index of the SQL query.
      * @return array Parameter key/value pairs to bind to the prepared statement.
      */
-    public function getQueryParams(int $index = null): array
+    public function getQueryParams(): array
     {
-        $params = [];
-        if ($index !== null && ($index != 0 || isset($this->params[$index]))) {
-            $params = $this->params[$index] ?: [];
-        } else {
-            $params = !empty($this->params) ? $this->params : [];
-        }
+        $this->params = $this->params ?? [];
 
-        return $params;
+        return $this->params;
     }
 
     public function setQueryParams(array $params = []): void
     {
         $this->params = $params;
-    }
-
-    public function overrideQueryParts(array $queryOverrides): void
-    {
-        $this->queryOverrides = array_change_key_case($queryOverrides);
     }
 
     /**
@@ -62,6 +61,20 @@ class AbstractSqlProvider implements SqlProviderInterface
         return $query;
     }
 
+//    protected function combineParams(array ...$params)
+//    {
+//        $combined = [];
+//        $index = 1;
+//        foreach ($params as $paramArray) {
+//            foreach ($paramArray as $value) {
+//                $combined['param_' . strval($index)] = $value;
+//                $index++;
+//            }
+//        }
+//
+//        return $combined;
+//    }
+
     /**
      * Convert "database.table.column" to "`database`.`table`.`column`". As the input does not
      * come from a user, but from mapping definitions, we will not sanitize in case there is a
@@ -74,23 +87,10 @@ class AbstractSqlProvider implements SqlProviderInterface
     {
         $delimited = '';
         if ($tableColumnString) {
-            $delimited = $delimiter . implode("$delimiter.$delimiter", explode('.', $tableColumnString)) . $delimiter;
+            $delimited = str_replace($delimiter, '', $tableColumnString); //Don't double-up
+            $delimited = $delimiter . implode("$delimiter.$delimiter", explode('.', $delimited)) . $delimiter;
         }
 
         return $delimited;
-    }
-
-    protected function overrideQueryPart($part, $generatedSql, $params, QueryInterface $query)
-    {
-        $override = !empty($this->queryOverrides[strtolower($part)])
-            ? $this->queryOverrides[strtolower($part)]
-            : $generatedSql;
-        if (is_callable($override)) {
-            $override = call_user_func_array($override, [$generatedSql, $query, $params]);
-        } elseif (!is_string($override)) { //We don't know what the heck this is - just use our generated SQL
-            $override = $generatedSql;
-        }
-
-        return $override;
     }
 }

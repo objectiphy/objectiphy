@@ -29,7 +29,8 @@ class MappingCollection
     private array $classes = [];
 
     /**
-     * @var PropertyMapping[] Property mappings keyed by column name or alias (ie. as the data appears in the result array).
+     * @var PropertyMapping[] Property mappings keyed by column name or alias (ie. as the data appears in the result 
+     * array).
      */
     private array $columns = [];
 
@@ -38,6 +39,13 @@ class MappingCollection
      */
     private array $properties = [];
 
+    /**
+     * @var PropertyMapping[] Examples for each property of each class - NOT IN CONTEXT. Keyed by class name then 
+     * property name - no property path, as this is just an example of each one, to allow us to access the short
+     * column name without any aliases for use in custom joins.
+     */
+    private array $propertiesByClass = [];
+    
     /**
      * @var PropertyMapping[] Property mappings keyed by parent property path then property name.
      */
@@ -94,6 +102,7 @@ class MappingCollection
         $this->properties[$propertyMapping->getPropertyPath()] = $propertyMapping;
         $parentPath = $propertyMapping->getParentPath();
         $this->propertiesByParent[$parentPath][$propertyMapping->propertyName] = $propertyMapping;
+        $this->propertiesByClass[$propertyMapping->className][$propertyMapping->propertyName] ??= $propertyMapping;
         $this->classes[$propertyMapping->className] = $propertyMapping->table;
         if ($propertyMapping->childTable && $propertyMapping->getChildClassName()) {
             $this->classes[$propertyMapping->getChildClassName()] = $propertyMapping->childTable;
@@ -246,6 +255,28 @@ class MappingCollection
     {
         return $this->properties[$propertyPath] ?? null;
     }
+
+    /**
+     * Return an example property mapping for the given class/property name. This is out of context so must only
+     * be used to obtain generic information such as short column name.
+     */
+    public function getPropertyExample(string $className, string $propertyName): ?PropertyMapping
+    {
+        return $this->propertiesByClass[$className][$propertyName] ?? null;
+    }
+    
+    public function getChildObjectProperties(array $parents = [])
+    {
+        $childProperties = [];
+        $parentPath = implode('.', $parents);
+        foreach ($this->propertiesByParent[$parentPath] ?? [] as $property) {
+            if ($property->getChildClassName()) {
+                $childProperties[] = $property->propertyName;
+            }
+        }
+
+        return $childProperties;
+    }
     
     public function getTableForClass(string $className): ?Table
     {
@@ -313,7 +344,10 @@ class MappingCollection
         $className = ObjectHelper::getObjectClassName($entity);
         $pkProperties = $this->getPrimaryKeyProperties($className);
         foreach ($pkProperties as $pkProperty) {
-            $pkValues[$pkProperty] = ObjectHelper::getValueFromObject($entity, $pkProperty);
+            $pkValue = ObjectHelper::getValueFromObject($entity, $pkProperty);
+            if ($pkValue !== null) {
+                $pkValues[$pkProperty] = $pkValue;
+            }
         }
         
         return $pkValues;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Query;
 
 use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
+use Objectiphy\Objectiphy\Contract\JoinPartInterface;
 use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
@@ -58,7 +59,7 @@ abstract class Query implements QueryInterface
         return $this->className ?? '';
     }
     
-    public function setJoins(JoinExpression ...$joins): void
+    public function setJoins(JoinPartInterface ...$joins): void
     {
         $this->joins = $joins;
     }
@@ -117,6 +118,19 @@ abstract class Query implements QueryInterface
         }
     }
 
+    public function getClassForAlias(string $alias): string
+    {
+        foreach ($this->joins as $joinExpression) {
+            if ($joinExpression instanceof JoinExpression) {
+                if ($joinExpression->joinAlias == $alias) {
+                    return $joinExpression->targetEntityClassName;
+                }
+            }
+        }
+
+        return '';
+    }
+
     protected function populateRelationshipJoin(MappingCollection $mappingCollection, PropertyMapping $propertyMapping)
     {
         if ($propertyMapping->isLateBound(true)) {
@@ -130,14 +144,22 @@ abstract class Query implements QueryInterface
         }
 
         $join = new JoinExpression(
-            $propertyMapping->getPropertyPath(),
-            '=',
+//            $propertyMapping->getPropertyPath(),
+//            '=',
             $propertyMapping->getChildClassName(),
-            $targetProperty,
             'obj_alias_' . str_replace('.', '_', $propertyMapping->getPropertyPath())
+//            $targetProperty
         );
         $join->propertyMapping = $propertyMapping;
-        
+
+        $on = new CriteriaExpression(
+            new FieldExpression($propertyMapping->getPropertyPath(), true),
+            $propertyMapping->getAlias(),
+            QB::EQ,
+            "`$targetProperty`"
+        );
+
         $this->joins[] = $join;
+        $this->joins[] = $on;
     }
 }

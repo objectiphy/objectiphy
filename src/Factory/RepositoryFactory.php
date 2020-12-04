@@ -16,11 +16,12 @@ use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
-use Objectiphy\Objectiphy\Database\DataTypeHandlerMySql;
+use Objectiphy\Objectiphy\Database\MySql\DataTypeHandlerMySql;
+use Objectiphy\Objectiphy\Database\MySql\JoinProviderMySql;
+use Objectiphy\Objectiphy\Database\MySql\WhereProviderMySql;
 use Objectiphy\Objectiphy\Database\PdoStorage;
-use Objectiphy\Objectiphy\Database\SelectorMySql;
-use Objectiphy\Objectiphy\Database\SqlSelectorMySql;
-use Objectiphy\Objectiphy\Database\SqlUpdaterMySql;
+use Objectiphy\Objectiphy\Database\MySql\SqlSelectorMySql;
+use Objectiphy\Objectiphy\Database\MySql\SqlUpdaterMySql;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\MappingProvider\MappingProvider;
 use Objectiphy\Objectiphy\MappingProvider\MappingProviderAnnotation;
@@ -51,6 +52,8 @@ class RepositoryFactory
     private ObjectMapper $objectMapper;
     private StorageInterface $storage;
     private EntityTracker $entityTracker;
+    private JoinProviderMySql $joinProvider;
+    private WhereProviderMySql $whereProvider;
     private array $repositories = [];
 
     public function __construct(\PDO $pdo, ?ConfigOptions $configOptions = null)
@@ -209,7 +212,8 @@ class RepositoryFactory
     protected final function createObjectUnbinder()
     {
         $dataTypeHandler = $this->getDataTypeHandler();
-        return new ObjectUnbinder($this->getEntityTracker(), $dataTypeHandler);
+        $objectMapper = $this->getObjectMapper();
+        return new ObjectUnbinder($this->getEntityTracker(), $dataTypeHandler, $objectMapper);
     }
     
     protected final function createEntityFactory(?ConfigOptions $configOptions = null)
@@ -285,7 +289,9 @@ class RepositoryFactory
     private function getSqlSelector()
     {
         if (!isset($this->sqlSelector)) {
-            $this->sqlSelector = new SqlSelectorMySql($this->getDataTypeHandler());
+            $joinProvider = $this->getJoinProviderMySql();
+            $whereProvider = $this->getWhereProviderMySql();
+            $this->sqlSelector = new SqlSelectorMySql($joinProvider, $whereProvider);
         }
         
         return $this->sqlSelector;
@@ -294,10 +300,30 @@ class RepositoryFactory
     private function getSqlUpdater()
     {
         if (!isset($this->sqlUpdater)) {
-            $this->sqlUpdater = new SqlUpdaterMySql();
+            $joinProvider = $this->getJoinProviderMySql();
+            $whereProvider = $this->getWhereProviderMySql();
+            $this->sqlUpdater = new SqlUpdaterMySql($joinProvider, $whereProvider);
         }
 
         return $this->sqlUpdater;
+    }
+
+    private function getJoinProviderMySql()
+    {
+        if (!isset($this->joinProvider)) {
+            $this->joinProvider = new JoinProviderMySql();
+        }
+
+        return $this->joinProvider;
+    }
+
+    private function getWhereProviderMySql()
+    {
+        if (!isset($this->whereProvider)) {
+            $this->whereProvider = new WhereProviderMySql($this->getDataTypeHandler());
+        }
+
+        return $this->whereProvider;
     }
 
     private function getDataTypeHandler()

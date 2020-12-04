@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy\Database;
+namespace Objectiphy\Objectiphy\Database\MySql;
 
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;

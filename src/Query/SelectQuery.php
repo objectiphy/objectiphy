@@ -151,16 +151,14 @@ class SelectQuery extends Query implements QueryInterface
         if (!$this->select || !$this->from) {
             throw new QueryException('Please finalise the query before use (ie. call the finalise method).');
         }
-        $useParams = $params !== null;
+
         $queryString = 'SELECT ' . (implode(', ', $this->getSelect())) ?: '*';
         $queryString .= ' FROM ' . $this->from;
         $queryString .= ' ' . implode(' ', $this->getJoins());
         $queryString .= ' WHERE 1 ';
         if ($this->where) {
             foreach ($this->getWhere() as $criteriaExpression) {
-                $queryString .= ' AND ' . ($useParams
-                        ? $criteriaExpression->toString($params)
-                        : (string) $criteriaExpression);
+                $queryString .= ' AND ' . (string) $criteriaExpression;
             }
         }
         if ($this->groupBy) {
@@ -169,9 +167,7 @@ class SelectQuery extends Query implements QueryInterface
         if ($this->having) {
             $queryString .= ' HAVING 1 ';
             foreach ($this->getHaving() as $criteriaExpression) {
-                $queryString .= ' AND ' . ($useParams
-                        ? $criteriaExpression->toString($params)
-                        : (string) $criteriaExpression);
+                $queryString .= ' AND ' . (string) $criteriaExpression;
             }
         }
         if ($this->orderBy) {

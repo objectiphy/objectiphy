@@ -58,7 +58,6 @@ final class ObjectFetcher
     public function setConfigOptions(ConfigOptions $configOptions)
     {
         $this->objectBinder->setConfigOptions($configOptions);
-        $this->sqlSelector->overrideQueryParts($configOptions->queryOverrides);
     }
 
     public function getExistingEntity(string $className, $pkValues)
@@ -85,7 +84,7 @@ final class ObjectFetcher
         if ($this->options->keyProperty) {
             $this->options->mappingCollection->forceFetch($this->options->keyProperty);
         }
-
+        $this->options->query->finalise($this->options->mappingCollection);
         $this->doCount();
         $result = $this->doFetch();
 

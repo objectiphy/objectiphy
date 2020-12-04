@@ -9,6 +9,9 @@ use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
+use Objectiphy\Objectiphy\Exception\QueryException;
+use Objectiphy\Objectiphy\Query\QB;
+use Objectiphy\Objectiphy\Query\Query;
 use Objectiphy\Objectiphy\Query\UpdateQuery;
 
 /**
@@ -72,14 +75,19 @@ final class ObjectPersister
         $this->objectUnbinder->setMappingCollection($saveOptions->mappingCollection);
     }
 
-    public function saveEntity(object $entity, SaveOptions $options, int &$insertCount, int &$updateCount): int
-    {
+    public function saveEntity(
+        object $entity,
+        SaveOptions $options,
+        ?int &$insertCount = null,
+        ?int &$updateCount = null
+    ): int {
+        $className = ObjectHelper::getObjectClassName($entity);
+        $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
         $this->setSaveOptions($options);
-        $result = null;
+        $result = 0;
 
         //Try to work out if we are inserting or updating
         $update = false;
-        $className = $this->options->mappingCollection->getEntityClassName();
         $pkValues = $this->options->mappingCollection->getPrimaryKeyValues($entity);
         if ($this->entityTracker->hasEntity($className, $pkValues)) {
             //We are tracking it, so it is definitely an update
@@ -95,7 +103,6 @@ final class ObjectPersister
             $update = true;
         }
 
-        $this->sqlUpdater->setSaveOptions($this->options);
         if ($update) {
             $result = $this->updateEntity($entity, $pkValues, $insertCount, $updateCount);
         } else {
@@ -108,50 +115,104 @@ final class ObjectPersister
     /**
      * TODO: Perhaps something more efficient with a single query? Is that even possible?
      */
-    public function saveEntities(array $entities)
-    {
-        $results = [];
-        $this->storage->beginTransaction();
-        try {
-            foreach ($entities as $entity) {
-                $results[] = $this->saveEntity($entity, $updateChildren, $replace);
-            }
-            $this->storage->commitTransaction();
-        } catch (\Throwable $ex) {
-            $this->storage->rollbackTransaction();
-            throw $ex;
+    public function saveEntities(
+        array $entities,
+        SaveOptions $options,
+        ?int &$insertCount = null,
+        ?int &$updateCount = null
+    ) {
+        $result = 0;
+        foreach ($entities as $entity) {
+            $result += $this->saveEntity($entity, $options, $insertCount, $updateCount);
         }
 
-        return $results;
+        return $result;
     }
 
-    private function updateEntity(object $entity, array $pkValues, int &$insertCount, int &$updateCount): ?int
-    {
+    public function saveBy(
+        Query $query,
+        SaveOptions $options,
+        ?int &$insertCount = null,
+        ?int &$updateCount = null
+    ) {
+        $this->setSaveOptions($options);
+        $query->finalise($this->options->mappingCollection);
+        if ($query instanceof UpdateQuery) {
+            $sql = $this->sqlUpdater->getUpdateSql($query, $this->options->replaceExisting);
+            $params = $this->sqlUpdater->getQueryParams();
+            if ($this->storage->executeQuery($sql, $params)) {
+                $updateCount += $this->storage->getAffectedRecordCount();
+            }
+        } elseif ($query instanceof InsertQuery) {
+            $sql = $this->sqlUpdater->getInsertSql($query);
+            $params = $this->sqlUpdater->getQueryParams();
+            if ($this->storage->executeQuery($sql, $params)) {
+                $insertCount += $this->storage->getAffectedRecordCount();
+            }
+        } else {
+            throw new QueryException('Only update or insert queries can be executed by ObjectPersister');
+        }
+
+        return $insertCount + $updateCount;
+    }
+
+    private function updateEntity(
+        object $entity,
+        array $pkValues,
+        int &$insertCount,
+        int &$updateCount
+    ): int {
         if ($this->options->saveChildren) {
             //Insert new child entities first so that we can populate the foreign keys on the parent
 
             //Count inserts
         }
+
+        $className = ObjectHelper::getObjectClassName($entity);
+        $qb = QB::create();
+        //$qb->update($className)->set($rows);
+        foreach ($pkValues as $key => $value) {
+            $qb->where($key, QB::EQ, $value);
+        }
+        $updateQuery = $qb->buildUpdateQuery();
+        $this->objectMapper->addExtraMappings($className, $updateQuery);
         $rows = $this->objectUnbinder->unbindEntityToRows($entity, $pkValues, $this->options->saveChildren);
         if ($rows) {
-            $className = ObjectHelper::getObjectClassName($entity);
-
-            //Use the query builder here instead of creating the query directly - use pkValues for criteria...
-            
-            $updateQuery = new UpdateQuery();
             $updateQuery->finalise($this->options->mappingCollection, $className, $rows);
-
-            $sql = $this->sqlUpdater->getUpdateSql($updateQuery, $params, $this->options->replaceExisting);
+            $sql = $this->sqlUpdater->getUpdateSql($updateQuery, $this->options->replaceExisting);
+            $params = $this->sqlUpdater->getQueryParams();
             if ($this->storage->executeQuery($sql, $params)) {
-                $updateCount = $this->storage->getAffectedRecordCount();
+                $updateCount += $this->storage->getAffectedRecordCount();
+                $this->entityTracker->storeEntity($entity, $pkValues);
+            }
+
+            if ($this->options->saveChildren) {
+                $this->updateChildren($entity, $insertCount, $updateCount);
             }
         }
 
         return $insertCount + $updateCount;
     }
 
-    private function insertEntity(object $entity)
+    private function updateChildren(object $entity, int &$insertCount, int &$updateCount)
     {
+        $children = $this->options->mappingCollection->getChildObjectProperties();
+        foreach ($children as $childPropertyName) {
+            $child = $entity->$childPropertyName ?? null;
+            if (!empty($child)) {
+                $childPkValues = $this->options->mappingCollection->getPrimaryKeyValues($child);
+                if ($childPkValues) {
+                    $childEntities = is_iterable($child) ? $child : [$child];
+                    foreach ($childEntities as $childEntity) {
+                        $this->saveEntity($childEntity, $this->options, $insertCount, $updateCount);
+                    }
+                }
+            }
+        }
+    }
 
+    private function insertEntity(object $entity, int &$insertCount): int
+    {
+        return 0;
     }
 }

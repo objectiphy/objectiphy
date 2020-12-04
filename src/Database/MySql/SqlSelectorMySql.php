@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy\Database;
+namespace Objectiphy\Objectiphy\Database\MySql;
 
 use Objectiphy\Objectiphy\Config\FindOptions;
-use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
+use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
@@ -19,29 +19,32 @@ use Objectiphy\Objectiphy\Query\FieldExpression;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 
+use Objectiphy\Objectiphy\Query\Query;
+
 use function PHPUnit\Framework\returnValue;
 
 class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterface
 {
     private bool $disableMySqlCache = false;
     private FindOptions $options;
-    private $sql = '';
-    private $objectNames = [];
-    private $databaseNames = [];
-    private $aliases = [];
-    private DataTypeHandlerInterface $dataTypeHandler;
+    private JoinProviderMySql $joinProvider;
+    private WhereProviderMySql $whereProvider;
 
-    public function __construct(DataTypeHandlerInterface $dataTypeHandler)
+    public function __construct(JoinProviderMySql $joinProvider, WhereProviderMySql $whereProvider)
     {
-        $this->dataTypeHandler = $dataTypeHandler;
+        $this->joinProvider = $joinProvider;
+        $this->whereProvider = $whereProvider;
     }
 
     /**
      * These are options that are likely to change on each call (unlike config options).
      */
-    public function setFindOptions(FindOptions $findOptions): void
+    public function setFindOptions(FindOptions $options): void
     {
-        $this->options = $findOptions;
+        $this->options = $options;
+        $this->setMappingCollection($options->mappingCollection);
+        $this->joinProvider->setMappingCollection($options->mappingCollection);
+        $this->whereProvider->setMappingCollection($options->mappingCollection);
     }
 
     /**
@@ -72,12 +75,16 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
         }
 
         $this->params = [];
-        $this->prepareReplacements('|');
+        $this->prepareReplacements($this->options->query, $this->options->mappingCollection, '`', '|');
 
         $sql = $this->getSelect();
         $sql .= $this->getFrom();
-        $sql .= $this->getJoins();
-        $sql .= $this->getWhere();
+        $this->joinProvider->setQueryParams($this->params);
+        $sql .= $this->joinProvider->getJoins($this->options->query, $this->objectNames, $this->persistenceNames);
+        $this->setQueryParams($this->joinProvider->getQueryParams());
+        $this->whereProvider->setQueryParams($this->params);
+        $sql .= $this->whereProvider->getWhere($this->options->query, $this->objectNames, $this->persistenceNames);
+        $this->setQueryParams($this->whereProvider->getQueryParams());
         $sql .= $this->getGroupBy();
         $sql .= $this->getHaving();
         $sql .= $this->getOrderBy();
@@ -96,6 +103,15 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
 
         return $sql;
     }
+
+//    public function getQueryParams(): array
+//    {
+//        $whereParams = $this->whereProvider->getQueryParams();
+//        $joinParams = array_merge($this->params, $this->joinProvider->getQueryParams());
+//        $thisParams = array_merge($this->params, parent::getQueryParams());
+//
+//        return $this->combineParams($whereParams, $joinParams, $thisParams);
+//    }
 
     /**
      * @param array $criteria
@@ -131,79 +147,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
      */
     public function getFrom()
     {
-        $from = $this->options->query->getFrom();
-        $sql = ' FROM ' . str_replace($this->objectNames, $this->databaseNames, $from);
-        
-        return $sql;
-    }
-
-    /**
-     * @return string The join SQL for object relationships.
-     * @throws Exception\CriteriaException
-     * @throws MappingException
-     * @throws \ReflectionException
-     */
-    public function getJoins()
-    {
-        $sql = '';
-        foreach ($this->options->query->getJoins() as $join) {
-            $sql .= " " . ($join->type ?: 'LEFT') . " JOIN ";
-            if ($join->propertyMapping) {
-                $sql .= str_replace($this->objectNames, $this->databaseNames, $join->targetEntityClassName);
-                $sql .= ' ' . $this->delimit($join->joinAlias);
-                $sql .= " ON ";
-                $joinSql = [];
-                $sourceJoinColumns = $join->propertyMapping->getSourceJoinColumns();
-                $targetJoinColumns = $join->propertyMapping->getTargetJoinColumns();
-
-                if ((!$sourceJoinColumns && !$targetJoinColumns)
-                    || (count($sourceJoinColumns) != count($targetJoinColumns))
-                ) {
-                    throw new MappingException(sprintf('Relationship mapping for %1$s::%2$s is incomplete.', $join->propertyMapping->className, $join->propertyMapping->propertyName));
-                }
-
-                foreach ($sourceJoinColumns as $index => $sourceJoinColumn) {
-                    if (isset($targetJoinColumns[$index])) {
-                        $joinSql[] = $this->delimit($sourceJoinColumn) . ' = ' . $this->delimit(
-                                $targetJoinColumns[$index]
-                            );
-                    }
-                }
-                $sql .= implode(' AND ', $joinSql);
-            } else {
-                $sql .= str_replace($this->objectNames, $this->databaseNames, (string)$join);
-            }
-        }
-
-        return $sql;
-    }
-
-    /**
-     * @param array $criteria
-     * @return string The WHERE part of the SQL query.
-     * @throws Exception\CriteriaException
-     * @throws MappingException
-     * @throws \ReflectionException
-     */
-    public function getWhere()
-    {
-        $sql = ' WHERE 1';
-        $removeJoiner = false;
-        foreach ($this->options->query->getWhere() as $criteriaExpression) {
-            if ($criteriaExpression instanceof CriteriaGroup) {
-                $removeJoiner = $criteriaExpression->type != CriteriaGroup::GROUP_TYPE_END;
-                $sql .= ' ' . (string) $criteriaExpression;
-            } else {
-                if (!$removeJoiner) {
-                    $sql .= ' ' . $criteriaExpression->joiner;
-                }
-                $sql .= ' ' . $criteriaExpression->toString($this->params);
-                $removeJoiner = false;
-            }
-        }
-        array_walk($this->params, function(&$value) { $this->dataTypeHandler->toPersistenceValue($value); });
-        $sql = str_replace($this->objectNames, $this->databaseNames, $sql);
-
+        $sql = ' FROM ' . $this->replaceNames($this->options->query->getFrom());
         return $sql;
     }
 
@@ -246,7 +190,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
             $orderBy = $this->options->query->getOrderBy();
             if (!empty($orderBy)) {
                 $orderByString = ' ORDER BY ' . implode(', ', $orderBy);
-                $sql = str_replace($this->objectNames, $this->databaseNames, $orderByString);
+                $sql = $this->replaceNames($orderByString);
             }
         }
 
@@ -269,7 +213,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
             $sql = ' LIMIT ' . $this->options->query->getLimit();
         }
 
-        return $this->overrideQueryPart('limit', $sql, $this->getQueryParams(), $this->options->query);
+        return $sql;
     }
     
     public function getOffset()
@@ -318,40 +262,56 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
 
         $groupBy = $this->options->query->getGroupBy();
         if ($groupBy) {
-            $sql = str_replace($this->objectNames, $this->databaseNames, implode(', ', $groupBy));
+            $sql = $this->replaceNames(implode(', ', $groupBy));
         }
 
         return $sql;
     }
 
+    protected $objectNames;
+    protected $persistenceNames;
+    protected $aliases;
     /**
      * Build arrays of strings to replace and what to replace them with.
      * @param string $delimiter
      */
-    private function prepareReplacements(string $delimiter = '|')
-    {
+    protected function prepareReplacements(
+        Query $query,
+        MappingCollection $mappingCollection,
+        string $delimiter = '`',
+        $altDelimiter = '|'
+    ) {
         $this->sql = '';
         $this->objectNames = [];
-        $this->databaseNames = [];
+        $this->persistenceNames = [];
         $this->aliases = [];
 
-        $this->options->query->finalise($this->options->mappingCollection);
-        $propertiesUsed = $this->options->query->getPropertyPaths();
+        $propertiesUsed = $query->getPropertyPaths();
         foreach ($propertiesUsed as $propertyPath) {
-            $property = $this->options->mappingCollection->getPropertyMapping($propertyPath);
+            $property = $mappingCollection->getPropertyMapping($propertyPath);
             if (!$property) {
                 throw new QueryException('Property mapping not found for: ' . $propertyPath);
             }
             $this->objectNames[] = '`' . $property->getPropertyPath() . '`';
-            $this->databaseNames[] = $this->delimit($property->getFullColumnName());
+            $tableColumnString = $property->getFullColumnName();
+            $this->persistenceNames[] = $this->delimit($tableColumnString, $delimiter);
             //Use alternative delimiter for aliases so we don't accidentally replace them
-            $this->aliases[] = $this->delimit($property->getFullColumnName(), $delimiter)
-                . ' AS ' . $this->delimit($property->getAlias(), $delimiter);
+            $this->aliases[] = $this->delimit($property->getFullColumnName(), $altDelimiter)
+                . ' AS ' . $this->delimit($property->getAlias(), $altDelimiter);
         }
-        $tables = $this->options->mappingCollection->getTables();
+        $tables = $mappingCollection->getTables();
         foreach ($tables as $class => $table) {
             $this->objectNames[] = $class;
-            $this->databaseNames[] = $this->delimit(str_replace('`', '', $table->name)) ;
+            $this->persistenceNames[] = $this->delimit(str_replace($delimiter, '', $table->name)) ;
         }
+    }
+
+    protected function replaceNames(string $subject)
+    {
+        if (!isset($this->objectNames)) {
+            throw new ObjectiphyException('Please call prepareReplacements method before attempting to replace.');
+        }
+
+        return str_replace($this->objectNames, $this->persistenceNames, $subject);
     }
 }

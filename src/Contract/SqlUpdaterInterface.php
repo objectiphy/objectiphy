@@ -6,6 +6,8 @@ namespace Objectiphy\Objectiphy\Contract;
 
 use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Mapping\Table;
+use Objectiphy\Objectiphy\Query\InsertQuery;
+use Objectiphy\Objectiphy\Query\UpdateQuery;
 
 interface SqlUpdaterInterface extends SqlProviderInterface
 {
@@ -15,21 +17,19 @@ interface SqlUpdaterInterface extends SqlProviderInterface
     public function setSaveOptions(SaveOptions $saveOptions): void;
 
     /**
-     * Get the SQL necessary to insert the given row.
-     * @param Table $table Table being inserted into.
-     * @param array $row The row to insert.
-     * @return string[] An array of SQL queries to execute for inserting this record.
+     * Get the SQL necessary to perform the insert.
+     * @param InsertQuery $query
+     * @return string A query to execute for inserting the record.
      */
-    public function getInsertSql(Table $table, array $row): array;
+    public function getInsertSql(InsertQuery $query): string;
 
     /**
-     * Get the queries necessary to update the given row record.
-     * @param Table $table Table whose rows are being updated.
-     * @param array $row Row of data to update.
-     * @param array $pkValues Value of primary key for record to update.
-     * @return string[] An array of queries to execute for updating the entity.
+     * Get the SQL necessary to perform the update.
+     * @param UpdateQuery $query
+     * @param bool $replaceExisting
+     * @return string A query to execute for updating the record(s).
      */
-    public function getUpdateSql(Table $table, array $row, array $pkValues): array;
+    public function getUpdateSql(UpdateQuery $query, bool $replaceExisting = false): string;
 
     /**
      * Get the SQL queries necessary to replace the given row record.

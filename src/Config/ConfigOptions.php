@@ -26,7 +26,6 @@ use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
  * @property string $commonProperty
  * @property string $recordAgeIndicator
  * @property bool $bindToEntities
- * @property array $queryOverrides
  * @property bool $saveChildrenByDefault
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
@@ -172,7 +171,7 @@ class ConfigOptions extends ConfigBase
      * @var bool Whether or not to save child entities when a parent entity is saved. You can also set this on a 
      * case by case basis using a flag at the time you call the saveEntity method.
      */
-    protected bool $saveChildrenByDefault = false;
+    protected bool $saveChildrenByDefault = true;
 
     /**
      * Initialise config options.

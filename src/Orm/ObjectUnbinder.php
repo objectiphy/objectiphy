@@ -12,11 +12,16 @@ final class ObjectUnbinder
     private MappingCollection $mappingCollection;
     private EntityTracker $entityTracker;
     private DataTypeHandlerInterface $dataTypeHandler;
-    
-    public function __construct(EntityTracker $entityTracker, DataTypeHandlerInterface $dataTypeHandler)
-    {
+    private ObjectMapper $objectMapper;
+
+    public function __construct(
+        EntityTracker $entityTracker,
+        DataTypeHandlerInterface $dataTypeHandler,
+        ObjectMapper $objectMapper
+    ) {
         $this->entityTracker = $entityTracker;
         $this->dataTypeHandler = $dataTypeHandler;
+        $this->objectMapper = $objectMapper;
     }
     
     public function setMappingCollection(MappingCollection $mappingCollection): void
@@ -29,16 +34,13 @@ final class ObjectUnbinder
         $rows = [];
         $properties = $this->entityTracker->getDirtyProperties($entity, $pkValues);
         foreach ($properties as $property => $value) {
+            $this->objectMapper->addMappingForProperty(ObjectHelper::getObjectClassName($entity), $property, true);
             $propertyMapping = $this->mappingCollection->getPropertyMapping($property);
-            if (($processChildren || !$propertyMapping->getChildClassName())
+            if ($propertyMapping && ($processChildren || !$propertyMapping->getChildClassName())
                 && $this->mappingCollection->isPropertyFetchable($propertyMapping)) {
                 $columnName = $propertyMapping->getFullColumnName();
                 if ($columnName) {
-                    $rows[$propertyMapping->propertyName] = $value;
-//                    $column = $propertyMapping->column;
-//                    if ($this->dataTypeHandler->toPersistenceValue($value, $column->type, $column->format)) {
-//                        $rows[$columnName] = $value;
-//                    }
+                    $rows[$property] = $value;
                 }
             }
         }

@@ -67,7 +67,7 @@ class EntityFactory
         return $entity;
     }
     
-    private function createProxyFromInstance(string $proxyClassName, object $entity): ?EntityProxyInterface
+    public function createProxyFromInstance(string $proxyClassName, object $entity): ?EntityProxyInterface
     {
         try {
             $serialized = serialize($entity);

@@ -8,19 +8,19 @@ use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
-class UpdateQuery extends Query implements QueryInterface
+class InsertQuery extends Query implements QueryInterface
 {
     /**
      * @var AssignmentExpression[]
      */
     private array $assignments;
 
-    public function setUpdate(string $className): void
+    public function setInsertInto(string $className): void
     {
         $this->setClassName($className);
     }
 
-    public function getUpdate(): string
+    public function getInsertInto(): string
     {
         return $this->getClassName();
     }
@@ -48,8 +48,8 @@ class UpdateQuery extends Query implements QueryInterface
         array $assignments = []
     ): void {
         if (!$this->isFinalised) {
-            if (!$this->getUpdate()) {
-                $this->setUpdate($className);
+            if (!$this->getInsertInto()) {
+                $this->setInsertInto($className);
             }
             if (!$this->getAssignments() && $assignments) {
                 $assignmentExpressions = [];
@@ -66,21 +66,13 @@ class UpdateQuery extends Query implements QueryInterface
 
     public function __toString(): string
     {
-        if (!$this->assignments || !$this->getUpdate()) {
+        if (!$this->assignments || !$this->getInsertInto()) {
             throw new QueryException('Please finalise the query before use (ie. call the finalise method).');
         }
         $useParams = $params !== null;
-        $queryString = 'UPDATE ' . $this->getUpdate();
+        $queryString = 'INSERT INTO ' . $this->getInsertInto();
         $queryString .= ' ' . implode(' ', $this->getJoins());
         $queryString .= 'SET ' . implode(', ', $this->assignments);
-        $queryString .= ' WHERE 1 ';
-        if ($this->where) {
-            foreach ($this->getWhere() as $criteriaExpression) {
-                $queryString .= ' AND ' . ($useParams
-                        ? $criteriaExpression->toString($params)
-                        : (string) $criteriaExpression);
-            }
-        }
 
         return $queryString;
     }

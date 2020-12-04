@@ -23,11 +23,18 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
     private array $select = [];
 
     private string $from = '';
+    private string $insertInto = '';
+    private string $update = '';
 
     /**
      * @var JoinPartInterface[]
      */
     private array $joins = [];
+
+    /**
+     * @var AssignmentExpression[]
+     */
+    private array $assignments = [];
 
     /**
      * @var CriteriaPartInterface[]
@@ -80,6 +87,18 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         return $this;
     }
 
+    public function insertInto(string $className): QueryBuilder
+    {
+        $this->insertInto = $className;
+        return $this;
+    }
+
+    public function update(string $className): QueryBuilder
+    {
+        $this->update = $className;
+        return $this;
+    }
+
     public function from(string $className): QueryBuilder
     {
         $this->from = $className;
@@ -100,25 +119,46 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         return $this;
     }
 
-    public function on(string $propertyName, string $operator, $value): CriteriaBuilderInterface
+    public function on(string $propertyName, string $operator, $value): QueryBuilder
     {
-        $this->currentCriteriaCollection = $this->joins;
+        $this->currentCriteriaCollection =& $this->joins;
         return $this->and($propertyName, $operator, $value);
     }
 
-    public function onExpression(FieldExpression $expression, string $operator, $value): CriteriaBuilderInterface
+    public function onExpression(FieldExpression $expression, string $operator, $value): QueryBuilder
     {
-        $this->currentCriteriaCollection = $this->joins;
+        $this->currentCriteriaCollection =& $this->joins;
         return $this->andExpression($expression, $operator, $value);
+    }
+
+    public function set(array $propertyValues): QueryBuilder
+    {
+        $assignments = [];
+        foreach ($propertyValues as $propertyPath => $value) {
+            if (!is_string($propertyPath)) {
+                throw new QueryException(
+                    'Keys for $propertyValues array when calling the `set` method on the QueryBuilder must be strings.'
+                );
+            }
+            $assignments[] = new AssignmentExpression($propertyPath, $value);
+        }
+
+        return $this->setExpressions(...$assignments);
+    }
+
+    public function setExpressions(AssignmentExpression ...$assignments): QueryBuilder
+    {
+        $this->assignments = $assignments;
+        return $this;
     }
 
     /**
      * Specify first line of criteria (this is actually just an alias for andWhere, as they do the same thing)
      * @throws QueryException
      */
-    public function where(string $propertyName, string $operator, $value): CriteriaBuilderInterface
+    public function where(string $propertyName, string $operator, $value): QueryBuilder
     {
-        $this->currentCriteriaCollection = $this->where;
+        $this->currentCriteriaCollection =& $this->where;
         return $this->and($propertyName, $operator, $value);
     }
 
@@ -126,9 +166,9 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
      * Specify first line of criteria (this is actually just an alias for andWhereExpression, as they do the same thing)
      * @throws QueryException
      */
-    public function whereExpression(FieldExpression $expression, string $operator, $value): CriteriaBuilderInterface
+    public function whereExpression(FieldExpression $expression, string $operator, $value): QueryBuilder
     {
-        $this->currentCriteriaCollection = $this->where;
+        $this->currentCriteriaCollection =& $this->where;
         return $this->andExpression($expression, $operator, $value);
     }
 
@@ -147,7 +187,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
      */
     public function having(string $propertyName, string $operator, $value): QueryBuilder
     {
-        $this->currentCriteriaCollection = $this->having;
+        $this->currentCriteriaCollection =& $this->having;
         return $this->and($propertyName, $operator, $value);
     }
 
@@ -157,7 +197,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
      */
     public function havingExpression(FieldExpression $expression, string $operator, $value): QueryBuilder
     {
-        $this->currentCriteriaCollection = $this->having;
+        $this->currentCriteriaCollection =& $this->having;
         return $this->andExpression($expression, $operator, $value);
     }
 
@@ -169,7 +209,9 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
             } elseif (is_int($key) && is_string($value)) {
                 $fieldExpression = new FieldExpression($value . ' ASC', false);
             } else {
-                throw new QueryException('Invalid orderBy properties. Please use property name as the key and direction as the value, or a numeric key and property name as the value (which defaults to ASC for direction)');
+                throw new QueryException(
+                    'Invalid orderBy properties. Please use property name as the key and direction as the value, or a numeric key and property name as the value (which defaults to ASC for direction)'
+                );
             }
             $this->orderBy[] = $fieldExpression;
         }
@@ -196,7 +238,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         $this->applyValues($this->joins, $params, $removeUnbound);
 
         //TODO: Check we have valid info? Eg. that we don't have a JOIN without an ON
-        
+
         $query = new SelectQuery();
         $query->setSelect(...$this->select);
         $query->setFrom($this->from);
@@ -211,70 +253,16 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         return $query;
     }
 
-//    /**
-//     * Return an array of CriteriaExpression objects, optionally applying values
-//     * @param array $params Array of values, keyed on alias that was supplied when creating the criteria lines
-//     * @param boolean $removeUnbound Whether or not to remove expressions that have not been supplied with a value
-//     * @param bool $exceptionOnInvalidNull If value is null, and operator does not require null, whether to throw an exception
-//     * (if false, it will be converted to an empty string so as not to break the SQL).
-//     * @return array
-//     */
-//    public function build(
-//        array $params = [],
-//        bool $removeUnbound = true,
-//        bool $exceptionOnInvalidNull = true
-//    ): array {
-//        foreach ($this->expressions as $index => $expression) {
-//            $expression->applyValues($params, false, $removeUnbound, $exceptionOnInvalidNull);
-//            if ($removeUnbound && $expression->hasUnboundParameters()) {
-//                $this->expressions[$index] = null;
-//            }
-//        }
-//        $this->expressions = array_values(array_filter($this->expressions));
-//
-//        foreach ($this->joins as $join) {
-//            /** @var JoinExpression $join */
-//            $join->extraCriteria = $join->extraCriteriaBuilder
-//                ? $join->extraCriteriaBuilder->build($params, $removeUnbound, $exceptionOnInvalidNull)
-//                : [];
-//        }
-//
-//        return array_merge($this->expressions, $this->joins);
-//    }
+    public function buildUpdateQuery(): UpdateQuery
+    {
+        $query = new UpdateQuery();
+        $query->setUpdate($this->update);
+        $query->setJoins(...$this->joins);
+        $query->setAssignments(...$this->assignments);
+        $query->setWhere(...$this->where);
 
-//    /**
-//     * Build an order by array with the correct entity/property names based on a request that uses tokens.
-//     * For example, if the request comes in as:
-//     * {
-//     *     "orderBy": {
-//     *         "lastName": "DESC",
-//     *         "id": "ASC"
-//     *     }
-//     * }
-//     * ...you could pass in ['lastName'=>'DESC', 'id'=>'ASC'] as the $orderBy parameter, and
-//     * ['lastName'=>'customer.surname', 'id'=>'policy.id'] as the $tokenTranslations parameter, and
-//     * this method will return an orderBy array that you can use with Objectiphy:
-//     * ['customer.surname'=>'DESC', 'policy.id'=>'ASC'].
-//     * This is just a convenience method to save you having to build the array yourself. If you are re-using a criteria
-//     * builder that you used to build a criteria array, and the criteria included translated tokens, those translations
-//     * will be used in addition to any that you supply in $tokenTranslations ($tokenTranslations can be omitted if
-//     * that already covers all of your translation requirements).
-//     * @param array $orderBy The order by request (with tokens that might not match property names)
-//     * @param array $tokenTranslations Translations from tokens to property names
-//     * @param boolean $preserveUntranslated If some of the fields passed in do not have a translation, this option
-//     * specifies whether or not to preserve them (ie. return them as they are, without any translation). If false,
-//     * any such values will be omitted from the return value.
-//     * @return array
-//     */
-//    public function buildOrderBy(
-//        array $orderBy,
-//        array $tokenTranslations = [],
-//        bool $preserveUntranslated = true
-//    ): array {
-//        $this->translatedFieldNames = array_merge($this->translatedFieldNames, $tokenTranslations);
-//
-//        return $this->getTranslatedFieldNames($orderBy, true, $preserveUntranslated);
-//    }
+        return $query;
+    }
 
     /**
      * Clear all expressions that have been added.
@@ -295,94 +283,20 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         return $this;
     }
 
-//    /**
-//     * @return array
-//     */
-//    public function getAndExpressions(): array
-//    {
-//        return $this->joinWith == 'AND' ? $this->expressions : [];
-//    }
-//
-//    /**
-//     * @return array
-//     */
-//    public function getOrExpressions(): array
-//    {
-//        return $this->joinWith == 'OR' ? $this->expressions : [];
-//    }
-
-
-
     /**
      * @param string $type 'LEFT' or 'INNER'
      */
     protected function addJoin($targetEntityClassName, $alias, $type = 'LEFT')
     {
-        //First line of criteria must link a property on the alias to a property of a known entity
-        /** @var CriteriaExpression $firstExpression */
-        $firstExpression = array_shift($on->expressions);
-        $firstProperty = $firstExpression ? $firstExpression->property : '';
-        $firstValue = $firstExpression ? $firstExpression->value : '';
-
-        if (strpos($firstProperty, $alias . '.') !== 0) {
-            $errorMessage = sprintf('First criteria expression specified for the $on argument when adding a join must refer to the alias. The alias you specified was \'%1$s\', so the propertyName on the first criteria expression for the $on argument should start with \'%1$s.\'', $alias);
-            throw new QueryException($errorMessage);
-        }
-        if (substr($firstValue, 0, 1) !== '`' || substr($firstValue, strlen($firstValue) -1) !== '`') {
-            $errorMessage = 'First criteria expression specified for the $on argument when adding a join must refer to a property in the object hierarchy (ie. the value should be surrounded by backticks).';
-            throw new QueryException($errorMessage);
-        }
-
         $this->joins[] = new JoinExpression(
-            str_replace('`', '', $firstValue),
-            $firstExpression->operator,
+//            str_replace('`', '', $firstValue),
+//            $firstExpression->operator,
             $targetEntityClassName,
-            substr($firstProperty, strlen($alias) + 1),
+//            substr($firstProperty, strlen($alias) + 1),
             $alias,
             $type
         );
 
         return $this;
     }
-
-//    /**
-//     * If the build method has been called, we can translate tokens into property names for all or specified fields.
-//     * This can be useful for quickly creating an orderBy array without having to translate all the field names again.
-//     * @param array|null $fields
-//     * @param bool $useKeys If used to create an orderBy array, and you have the field names as keys, and direction
-//     * as values, setting this to true translates the field names in the keys and preserves the values (false will
-//     * assume an indexed array and will translate field names in the values).
-//     * @param bool $preserveUntranslated If some of the fields passed in do not have a translation, this option
-//     * specifies whether or not to preserve them (ie. return them as they are, without any translation). If false,
-//     * any such values will be omitted from the return value.
-//     * @return array
-//     */
-//    protected function getTranslatedFieldNames(
-//        array $fields = null,
-//        bool $useKeys = true,
-//        bool $preserveUntranslated = true
-//    ): array {
-//        $translatedFieldNames = [];
-//        foreach ($this->translatedFieldNames as $key=>$translatedFieldName) {
-//            if (($useKeys && !empty($fields[$key])) || (!$useKeys && in_array($key, $fields))) {
-//                $fieldIndex = $fields ? array_search($key, $useKeys ? array_keys($fields) : $fields) : false;
-//                if ($fields === null || $fieldIndex !== false) {
-//                    $newIndex = $useKeys ? $translatedFieldName : count($translatedFieldNames);
-//                    $newValue = $useKeys ? $fields[$key] : $translatedFieldName;
-//                    $translatedFieldNames[$newIndex] = $newValue;
-//                }
-//            }
-//        }
-//
-//        //Any fields passed in that do not have a translation, just use their original key/value
-//        if ($preserveUntranslated && $fields) {
-//            foreach ($fields as $key=>$value) {
-//                if (!isset($this->translatedFieldNames[$useKeys ? $key : $value])) {
-//                    $translatedFieldNames[$useKeys ? $key : count($translatedFieldNames)] = $value;
-//                }
-//            }
-//        }
-//
-//        return $translatedFieldNames;
-//    }
 }

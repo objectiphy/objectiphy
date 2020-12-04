@@ -86,11 +86,14 @@ class EntityTracker
             $clone = $this->clones[$className][$pkIndex];
             $reflectionClass = new \ReflectionClass($className);
             foreach ($reflectionClass->getProperties() as $reflectionProperty) {
+
                 $property = $reflectionProperty->getName();
                 $entityValue = ObjectHelper::getValueFromObject($entity, $property);
-                $cloneValue = ObjectHelper::getValueFromObject($clone, $property, '**!VALUE_NOT_FOUND!**');
-                if ($entityValue != $cloneValue) {
-                    $changes[$property] = $entityValue;
+                if (!is_object($entityValue) || $entityValue instanceof \DateTimeInterface) {
+                    $cloneValue = ObjectHelper::getValueFromObject($clone, $property, '**!VALUE_NOT_FOUND!**');
+                    if ($entityValue != $cloneValue) {
+                        $changes[$property] = $entityValue;
+                    }
                 }
             }
         }

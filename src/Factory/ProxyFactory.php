@@ -107,12 +107,6 @@ final class ProxyFactory
 
         if (!class_exists($proxyClassName) && !$this->proxyExists($proxyClassName)) {
             //Buid proxy methods using reflection
-//            $proxyMethods = [];
-//            $getterArg = 'objectiphyGetPropertyName';
-//            $getByRef = true;
-//            $setterArg1 = 'objectiphySetPropertyName';
-//            $setterArg2 = 'objectiphySetValue';
-//            $issetArg = 'objectiphyIsSetPropertyName';
             $reflectionClass = new \ReflectionClass($className);
             $getterMethod = $this->getReflectionMethod($reflectionClass, '__get');
             $setterMethod = $this->getReflectionMethod($reflectionClass, '__set');
@@ -124,44 +118,6 @@ final class ProxyFactory
                 $setterMethod,
                 $issetMethod
             );
-
-//            foreach ($reflectionClass->getMethods(\ReflectionMethod::IS_PUBLIC) as $reflectionMethod) {
-//                if ($reflectionMethod->getName() == '__get') {
-//                    $getterMethod = $reflectionMethod;
-//                    //Make sure our method is compatible with the entity
-//                    $getterArgs = $reflectionMethod->getParameters();
-//                    $getterArg = $getterArgs[0]->getName();
-//                    $getByRef = $reflectionMethod->returnsReference();
-//                    $getterReturnType = $reflectionMethod->getReturnType()->getName();
-//                } elseif ($reflectionMethod->getName() == '__set') {
-//                    $setterMethod = $reflectionMethod;
-//                    $setterArgs = $reflectionMethod->getParameters();
-//                    $setterArg1 = $setterArgs[0]->getName();
-//                    $setterArg2 = $setterArgs[1]->getName();
-//                    $setterReturnType = $reflectionMethod->getReturnType()->getName();
-//                } elseif ($reflectionMethod->getName() == '__isset') {
-//                    $issetArgs = $reflectionMethod->getParameters();
-//                    $issetArg = $issetArgs[0]->getName();
-//                    $issetReturnType = $reflectionMethod->getReturnType()->getName();
-//                }
-//            }
-//
-//            $classDefinition = file_get_contents(__DIR__ . '/EntityProxy.php');
-//
-//            if (!$getByRef) {
-//                $classDefinition = str_replace('public function &__get', 'public function __get', $classDefinition);
-//            }
-//            $classDefinition = str_replace('objectiphyGetPropertyName', $getterArg, $classDefinition);
-//            $classDefinition = str_replace('objectiphySetPropertyName', $setterArg1, $classDefinition);
-//            $classDefinition = str_replace('objectiphyIsSetPropertyName', $issetArg, $classDefinition);
-//            $classDefinition = str_replace('objectiphySetValue', $setterArg2, $classDefinition);
-//            $classDefinition = str_replace('namespace Objectiphy\\Objectiphy;', 'use Objectiphy\\Objectiphy\\ObjectHelper;', $classDefinition);
-//            $classDefinition = str_replace('class EntityProxy implements EntityProxyInterface',
-//                                           "class $proxyClassName extends \\" . $reflectionClass->getName() . " implements " . EntityProxyInterface::class,
-//                                           $classDefinition);
-//            $classDefinition = str_replace('/**************************************************
-//     ***    Auto-generated proxy methods go here.   ***
-//     **************************************************/', implode("\n\n    ", $proxyMethods), $classDefinition);
             $this->createProxyFromFile($classDefinition, $proxyClassName);
         }
 

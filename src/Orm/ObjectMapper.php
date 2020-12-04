@@ -99,7 +99,7 @@ final class ObjectMapper
      * @throws ObjectiphyException
      * @throws \ReflectionException
      */
-    private function addMappingForProperty(string $className, string $propertyPath, bool $forceJoins = false)
+    public function addMappingForProperty(string $className, string $propertyPath, bool $forceJoins = false)
     {
         $mappingCollection = $this->mappingCollections[$className];
         if (!$mappingCollection->getColumnForPropertyPath($propertyPath) || $forceJoins) {

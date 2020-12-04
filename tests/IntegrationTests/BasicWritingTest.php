@@ -2,7 +2,10 @@
 
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
-use Objectiphy\Objectiphy\ProxyFactory;
+use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
+use Objectiphy\Objectiphy\Factory\EntityFactory;
+use Objectiphy\Objectiphy\Factory\ProxyFactory;
+use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Tests\Entity\TestPet;
 use Objectiphy\Objectiphy\Tests\Entity\TestUnderwriter;
 use Objectiphy\Objectiphy\Tests\Entity\TestChild;
@@ -95,6 +98,7 @@ class ObjectRepositoryIntegrationTest extends IntegrationTestBase
         $this->assertEquals(2, $recordsAffected);
 
         //Verify update
+        $this->objectRepository->clearCache();
         $policy2 = $this->objectRepository->find(19071974);
         $this->assertEquals('TESTPOLICY UPDATED', $policy2->policyNo);
         $this->assertEquals('ChildUpdate', $policy2->contact->lastName);
@@ -105,31 +109,68 @@ class ObjectRepositoryIntegrationTest extends IntegrationTestBase
         $this->objectRepository->saveEntity($policy2, false);
         
         //Verify update
+        $this->objectRepository->clearCache();
         $policy3 = $this->objectRepository->find(19071974);
         $this->assertEquals('TESTPOLICY UPDATED AGAIN', $policy3->policyNo);
         $this->assertEquals('ChildUpdate', $policy3->contact->lastName);
-        
+
+        //Try to update two fields in a single query
+        $query = QB::create()
+            ->update(TestPolicy::class)
+            ->innerJoin(TestContact::class, 'c')
+                ->on('contact', '=', '`c.id`')
+            ->set(['policyNo' => 'TP6', 'c.lastName' => 'LastName6'])
+            ->where('id', QB::EQ, 19071974)
+            ->buildUpdateQuery();
+        $affectedCount = $this->objectRepository->saveBy($query);
+        $this->assertEquals(2, $affectedCount);
+
         //Ensure the same result when using a proxy
-        $proxyFactory = new ProxyFactory();
-        $policy3a = $proxyFactory->createEntityProxy($policy3);
-        $policy3a->policyNo = 'TESTPOLICY UPDATED YET AGAIN';
-        $policy3a->contact->lastName = 'DoNotIgnoreMe!';
-        $this->objectRepository->saveEntity($policy3a);
-        
+        $this->assertInstanceOf(EntityProxyInterface::class, $policy3->vehicle);
+        $policy3->vehicle->regNo = 'UpdatedRegNo';
+        $policy3->vehicle->policy->policyNo = 'TESTPOLICY UPDATED YET AGAIN';
+        $this->objectRepository->saveEntity($policy3->vehicle);
+
         //Verify update
+        $this->objectRepository->clearCache();
         $policy4 = $this->objectRepository->find(19071974);
         $this->assertEquals('TESTPOLICY UPDATED YET AGAIN', $policy4->policyNo);
-        $this->assertEquals('DoNotIgnoreMe!', $policy4->contact->lastName);
+        $this->assertEquals('UpdatedRegNo', $policy4->vehicle->regNo);
 
-        $policy4a = $proxyFactory->createEntityProxy($policy4);
-        $policy4a->policyNo = 'TESTPOLICY UPDATED ONE LAST TIME';
-        $policy4a->contact->lastName = 'IgnoreMeAgain!';
-        $this->objectRepository->saveEntity($policy4a, false);
+        //Disable child updates on a proxy
+        $this->assertInstanceOf(EntityProxyInterface::class, $policy3->vehicle);
+        $policy3->vehicle->regNo = 'UpdatedRegNoTwo';
+        $policy3->vehicle->policy->policyNo = 'IgnoreMe!';
+        $this->objectRepository->saveEntity($policy3->vehicle, false);
 
         //Verify update
-        $policy5 = $this->objectRepository->find(19071974);
-        $this->assertEquals('TESTPOLICY UPDATED ONE LAST TIME', $policy5->policyNo);
-        $this->assertEquals('DoNotIgnoreMe!', $policy5->contact->lastName);
+        $this->objectRepository->clearCache();
+        $policy4a = $this->objectRepository->find(19071974);
+        $this->assertEquals('TESTPOLICY UPDATED YET AGAIN', $policy4a->policyNo);
+        $this->assertEquals('UpdatedRegNoTwo', $policy4a->vehicle->regNo);
+
+
+//        $proxyFactory = new ProxyFactory();
+//        $entityFactory = new EntityFactory($proxyFactory);
+//        $policy3a = $entityFactory->createProxyFromInstance(TestPolicy::class, $policy3);
+//        $policy3a->policyNo = 'TESTPOLICY UPDATED YET AGAIN';
+//        $policy3a->contact->lastName = 'DoNotIgnoreMe!';
+//        $this->objectRepository->saveEntity($policy3a);
+//
+//        //Verify update
+//        $policy4 = $this->objectRepository->find(19071974);
+//        $this->assertEquals('TESTPOLICY UPDATED YET AGAIN', $policy4->policyNo);
+//        $this->assertEquals('DoNotIgnoreMe!', $policy4->contact->lastName);
+//
+//        $policy4a = $proxyFactory->createEntityProxy($policy4);
+//        $policy4a->policyNo = 'TESTPOLICY UPDATED ONE LAST TIME';
+//        $policy4a->contact->lastName = 'IgnoreMeAgain!';
+//        $this->objectRepository->saveEntity($policy4a, false);
+//
+//        //Verify update
+//        $policy5 = $this->objectRepository->find(19071974);
+//        $this->assertEquals('TESTPOLICY UPDATED ONE LAST TIME', $policy5->policyNo);
+//        $this->assertEquals('DoNotIgnoreMe!', $policy5->contact->lastName);
     }
     
     protected function doInsertTestsOneToOne()
