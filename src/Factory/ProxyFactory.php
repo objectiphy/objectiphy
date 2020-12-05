@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Factory;
 
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
+use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 
 /**
  * @package Objectiphy\Objectiphy
@@ -56,22 +57,23 @@ final class ProxyFactory
      * Create a proxy for an unhydrated entity so that it can be used to specify relationships without having to load
      * the full entity from the database.
      * @param string $className
-     * @param mixed $id Value of primary key (can be an array if the key is composite)
-     * @param string|array $primaryKeyProperty Name of primary key property (can be an array if the key is composite)
+     * @param array $pkValues Values of primary key (keyed on property name)
      * @param array $constructorArgs
      * @return null
      */
-    public function createObjectReferenceProxy(string $className, $id, $primaryKeyProperty, array $constructorArgs = [])
-    {
-        $proxyClassName = str_replace('\\', '_', 'Objectiphy_ObjectReference_' . $className);
+    public function createObjectReferenceProxy(
+        string $className, 
+        array $pkValues, 
+        array $constructorArgs = []
+    ): ?ObjectReferenceInterface {
+        $proxyClassName = str_replace('\\', '_', 'ObjReference_' . $className);
         if (!$this->proxyExists($proxyClassName) && !class_exists($proxyClassName)) {
             if (class_exists($className)) {
-                $classDefinition = file_get_contents(__DIR__ . '/ObjectReference.php');
-                $classDefinition = str_replace('namespace Objectiphy\Objectiphy;',
-                                               'use Objectiphy\ObjectHelper;', $classDefinition);
+                $classDefinition = file_get_contents(__DIR__ . '/../Orm/ObjectReference.php');
+                $classDefinition = str_replace('namespace Objectiphy\Objectiphy\Orm;',
+                                               'use Objectiphy\Orm\ObjectHelper;', $classDefinition);
                 $classDefinition = str_replace("class ObjectReference implements ObjectReferenceInterface",
-                                               "class $proxyClassName extends \\$className implements "
-                                               . ObjectReferenceInterface::class,
+                                               "class $proxyClassName extends \\$className implements ObjectReferenceInterface",
                                                $classDefinition);
 
                 //Remove the constructor (we don't want to override the real object's constructor)
@@ -85,9 +87,8 @@ final class ProxyFactory
         }
 
         if (class_exists($proxyClassName)) {
-            /** @var ObjectReferenceInterface $proxy */
             $proxy = new $proxyClassName(...$constructorArgs);
-            $proxy->setClassDetails($className, $id, $primaryKeyProperty);
+            $proxy->setClassDetails($className, $pkValues);
 
             return $proxy;
         }

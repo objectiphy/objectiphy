@@ -14,6 +14,7 @@ use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
+use Objectiphy\Objectiphy\Factory\ProxyFactory;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Criteria\CB;
 use Objectiphy\Objectiphy\Query\Pagination;
@@ -34,6 +35,7 @@ class ObjectRepository implements ObjectRepositoryInterface
     protected ObjectFetcher $objectFetcher;
     protected ObjectPersister $objectPersister;
     protected ObjectRemover $objectRemover;
+    protected ProxyFactory $proxyFactory;
     protected ?PaginationInterface $pagination = null;
     protected array $orderBy;
     protected MappingCollection $mappingCollection;
@@ -43,12 +45,14 @@ class ObjectRepository implements ObjectRepositoryInterface
         ObjectFetcher $objectFetcher,
         ObjectPersister $objectPersister,
         ObjectRemover $objectRemover,
+        ProxyFactory $proxyFactory,
         ConfigOptions $configOptions = null
     ) {
         $this->objectMapper = $objectMapper;
         $this->objectFetcher = $objectFetcher;
         $this->objectPersister = $objectPersister;
         $this->objectRemover = $objectRemover;
+        $this->proxyFactory = $proxyFactory;
         if (!$configOptions) {
             $configOptions = new ConfigOptions();
         }
@@ -392,18 +396,23 @@ class ObjectRepository implements ObjectRepositoryInterface
     }
 
     /**
-     * Create a proxy class for an object so that it does not have to be fully hydrated just to save it as a child of
-     * another entity.
-     * @param string $className Name of the class to proxy.
-     * @param mixed $id Value of the primary key for the instance of the class this reference will represent
-     * (can be an array if there is a composite primary key).
-     * @param array $constructorParams
+     * Create an object that does not have to be fully hydrated just to save it as a child of another entity.
+     * @param string $className Name of the class.
+     * @param array $pkValues Values of the primary key for the instance of the class this reference will represent.
+     * @param array $constructorParams If the constructor requires parameters, pass them in here.
      * @return ObjectReferenceInterface|null The resulting object will extend the class name specified, as well as
      * implementing the ObjectReferenceInterface. Returns null if the class does not exist.
      */
-    public function getObjectReference($className, $id, array $constructorParams = []): ?ObjectReferenceInterface
-    {
-        return null;
+    public function getObjectReference(
+        string $className,
+        array $pkValues = [],
+        array $constructorParams = []
+    ): ?ObjectReferenceInterface {
+        try {
+            return $this->proxyFactory->createObjectReferenceProxy($className, $pkValues, $constructorParams);
+        } catch (\Exception $ex) {
+            $this->throwException($ex);
+        }
     }
 
     /**

@@ -183,7 +183,11 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * @return ObjectReferenceInterface|null The resulting object will extend the class name specified, as well as
      * implementing the ObjectReferenceInterface. Returns null if the class does not exist.
      */
-    public function getObjectReference($className, $id, array $constructorParams = []): ?ObjectReferenceInterface;
+    public function getObjectReference(
+        string $className,
+        array $pkValues,
+        array $constructorParams = []
+    ): ?ObjectReferenceInterface;
 
     /**
      * @return Explanation Information about how the latest result was obtained.

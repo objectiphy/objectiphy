@@ -51,6 +51,7 @@ class RepositoryFactory
     private DataTypeHandlerInterface $dataTypeHandler;
     private ObjectMapper $objectMapper;
     private StorageInterface $storage;
+    private ProxyFactory $proxyFactory;
     private EntityTracker $entityTracker;
     private JoinProviderMySql $joinProvider;
     private WhereProviderMySql $whereProvider;
@@ -122,6 +123,7 @@ class RepositoryFactory
                 $this->createObjectFetcher($configOptions),
                 $this->createObjectPersister(),
                 $this->createObjectRemover(),
+                $this->getProxyFactory($configOptions),
                 $configOptions
             );
             if ($entityClassName) {
@@ -159,7 +161,15 @@ class RepositoryFactory
 
         return $this->storage;
     }
-    
+
+    protected final function getProxyFactory(?ConfigOptions $configOptions)
+    {
+        if (!isset($this->proxyFactory)) {
+            $this->proxyFactory = $this->createProxyFactory($configOptions);
+        }
+
+        return $this->proxyFactory;
+    }
     protected final function createObjectMapper()
     {
         return new ObjectMapper($this->getMappingProvider(), $this->createNameResolver());

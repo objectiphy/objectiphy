@@ -205,7 +205,7 @@ class ObjectRepositoryIntegrationTest extends IntegrationTestBase
         $newPolicy2->policyNo = 'Test2';
         $newPolicy2->underwriter = $newPolicy->underwriter;
         //We could just use the $contact object directly here, but for testing purposes we will use an object reference.
-        $newPolicy2->contact = $this->objectRepository->getObjectReference(TestContact::class, $contact->id);
+        $newPolicy2->contact = $this->objectRepository->getObjectReference(TestContact::class, ['id' => $contact->id]);
         $newPolicy2->vehicle = new TestVehicle();
         $newPolicy2->vehicle->policy = new ObjectReference($newPolicy2);
         $newPolicy2Id = $this->objectRepository->saveEntity($newPolicy2);
