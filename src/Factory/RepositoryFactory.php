@@ -205,13 +205,13 @@ class RepositoryFactory
     {
         $entityFactory = $this->createEntityFactory($configOptions);
         $entityTracker = $this->getEntityTracker();
-        $dataTypeHandler = $this->getDataTypeHandler();
+        $dataTypeHandler = $this->getDataTypeHandlerMySql();
         return new ObjectBinder($this, $entityFactory, $entityTracker, $dataTypeHandler);
     }
 
     protected final function createObjectUnbinder()
     {
-        $dataTypeHandler = $this->getDataTypeHandler();
+        $dataTypeHandler = $this->getDataTypeHandlerMySql();
         $objectMapper = $this->getObjectMapper();
         return new ObjectUnbinder($this->getEntityTracker(), $dataTypeHandler, $objectMapper);
     }
@@ -289,9 +289,10 @@ class RepositoryFactory
     private function getSqlSelector()
     {
         if (!isset($this->sqlSelector)) {
+            $dataTypeHandler = $this->getDataTypeHandlerMySql();
             $joinProvider = $this->getJoinProviderMySql();
             $whereProvider = $this->getWhereProviderMySql();
-            $this->sqlSelector = new SqlSelectorMySql($joinProvider, $whereProvider);
+            $this->sqlSelector = new SqlSelectorMySql($dataTypeHandler, $joinProvider, $whereProvider);
         }
         
         return $this->sqlSelector;
@@ -300,9 +301,10 @@ class RepositoryFactory
     private function getSqlUpdater()
     {
         if (!isset($this->sqlUpdater)) {
+            $dataTypeHandler = $this->getDataTypeHandlerMySql();
             $joinProvider = $this->getJoinProviderMySql();
             $whereProvider = $this->getWhereProviderMySql();
-            $this->sqlUpdater = new SqlUpdaterMySql($joinProvider, $whereProvider);
+            $this->sqlUpdater = new SqlUpdaterMySql($dataTypeHandler, $joinProvider, $whereProvider);
         }
 
         return $this->sqlUpdater;
@@ -311,7 +313,7 @@ class RepositoryFactory
     private function getJoinProviderMySql()
     {
         if (!isset($this->joinProvider)) {
-            $this->joinProvider = new JoinProviderMySql();
+            $this->joinProvider = new JoinProviderMySql($this->getDataTypeHandlerMySql());
         }
 
         return $this->joinProvider;
@@ -320,13 +322,13 @@ class RepositoryFactory
     private function getWhereProviderMySql()
     {
         if (!isset($this->whereProvider)) {
-            $this->whereProvider = new WhereProviderMySql($this->getDataTypeHandler());
+            $this->whereProvider = new WhereProviderMySql($this->getDataTypeHandlerMySql());
         }
 
         return $this->whereProvider;
     }
 
-    private function getDataTypeHandler()
+    private function getDataTypeHandlerMySql()
     {
         if (!isset($this->dataTypeHandler)) {
             $this->dataTypeHandler = new DataTypeHandlerMySql();

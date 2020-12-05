@@ -40,11 +40,34 @@ final class ObjectUnbinder
                 && $this->mappingCollection->isPropertyFetchable($propertyMapping)) {
                 $columnName = $propertyMapping->getFullColumnName();
                 if ($columnName) {
-                    $rows[$property] = $value;
+                    $rows[$property] = $this->unbindValue($value);
                 }
             }
         }
         
         return $rows;
+    }
+
+    /**
+     * If value is an entity, extract the primary key value, otherwise just return the value
+     * @param $value
+     * @return \DateTimeInterface|mixed|null
+     */
+    public function unbindValue($value)
+    {
+        $result = null;
+        if (is_object($value) && !($value instanceof \DateTimeInterface)) {
+            $valueClass = ObjectHelper::getObjectClassName($value);
+            $pkProperties = $this->mappingCollection->getPrimaryKeyProperties($valueClass);
+            if ($pkProperties && count($pkProperties) == 1) {
+                $result = ObjectHelper::getValueFromObject($value, reset($pkProperties));
+            } else {
+                $result = $value; //I hope you know what you're doing, coz I don't.
+            }
+        } else {
+            $result = $value;
+        }
+
+        return $result;
     }
 }

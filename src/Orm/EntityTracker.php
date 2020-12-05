@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\PropertyChangedListenerInterface;
 
 /**
@@ -82,22 +83,22 @@ class EntityTracker
         if (isset($this->trackedChanges[$className][$pkIndex])) {
             return $this->trackedChanges[$className];
         }
-        if (isset($this->clones[$className][$pkIndex])) {
-            $clone = $this->clones[$className][$pkIndex];
-            $reflectionClass = new \ReflectionClass($className);
-            foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-
-                $property = $reflectionProperty->getName();
+        $clone = $this->clones[$className][$pkIndex] ?? null;
+        $reflectionClass = new \ReflectionClass($className);
+        foreach ($reflectionClass->getProperties() as $reflectionProperty) {
+            $property = $reflectionProperty->getName();
+            if (!($entity instanceof EntityProxyInterface) || !$entity->isChildAsleep($property)) { //Shh. Don't wake up the kids.
                 $entityValue = ObjectHelper::getValueFromObject($entity, $property);
-                if (!is_object($entityValue) || $entityValue instanceof \DateTimeInterface) {
-                    $cloneValue = ObjectHelper::getValueFromObject($clone, $property, '**!VALUE_NOT_FOUND!**');
+                //if (!is_object($entityValue) || $entityValue instanceof \DateTimeInterface) {
+                    $notFound = '**!VALUE_NOT_FOUND!**';
+                    $cloneValue = $clone ? ObjectHelper::getValueFromObject($clone, $property, $notFound) : $notFound;
                     if ($entityValue != $cloneValue) {
                         $changes[$property] = $entityValue;
                     }
-                }
+                //}
             }
         }
-
+        
         return $changes;
     }
     

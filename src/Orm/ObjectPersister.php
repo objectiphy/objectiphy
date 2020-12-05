@@ -6,6 +6,7 @@ namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Config\SaveOptions;
+use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
@@ -26,6 +27,7 @@ final class ObjectPersister
     private StorageInterface $storage;
     private EntityTracker $entityTracker;
     private SaveOptions $options;
+    private array $savedObjects = [];
 
     public function __construct(
         SqlUpdaterInterface $sqlUpdater,
@@ -72,7 +74,7 @@ final class ObjectPersister
     {
         $this->options = $saveOptions;
         $this->sqlUpdater->setSaveOptions($saveOptions);
-        $this->objectUnbinder->setMappingCollection($saveOptions->mappingCollection);
+        $this->objectUnbinder->setMappingCollection($this->options->mappingCollection);
     }
 
     public function saveEntity(
@@ -81,35 +83,10 @@ final class ObjectPersister
         ?int &$insertCount = null,
         ?int &$updateCount = null
     ): int {
-        $className = ObjectHelper::getObjectClassName($entity);
-        $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
         $this->setSaveOptions($options);
-        $result = 0;
+        $this->savedObjects = []; //Avoid recursion
 
-        //Try to work out if we are inserting or updating
-        $update = false;
-        $pkValues = $this->options->mappingCollection->getPrimaryKeyValues($entity);
-        if ($this->entityTracker->hasEntity($className, $pkValues)) {
-            //We are tracking it, so it is definitely an update
-            $update = true;
-        } elseif ($pkValues) { //We have values for the primary key so probably an update
-            //Check if the primary key is a foreign key (if so, could be an insert so will need to replace)
-            foreach (array_keys($pkValues) as $pkKey) {
-                if ($this->options->mappingCollection->getPropertyMapping($pkKey)->isForeignKey) {
-                    $this->options->replaceExisting = true;
-                    break;
-                }
-            }
-            $update = true;
-        }
-
-        if ($update) {
-            $result = $this->updateEntity($entity, $pkValues, $insertCount, $updateCount);
-        } else {
-            $result = $this->insertEntity($entity, $insertCount);
-        }
-
-        return $result;
+        return $this->doSaveEntity($entity, $insertCount, $updateCount);
     }
 
     /**
@@ -134,7 +111,7 @@ final class ObjectPersister
         SaveOptions $options,
         ?int &$insertCount = null,
         ?int &$updateCount = null
-    ) {
+    ): int {
         $this->setSaveOptions($options);
         $query->finalise($this->options->mappingCollection);
         if ($query instanceof UpdateQuery) {
@@ -156,23 +133,76 @@ final class ObjectPersister
         return $insertCount + $updateCount;
     }
 
+    /**
+     * @param string $className
+     * @return string Whatever the class name was before the update
+     */
+    private function updateMappingCollection(string $className): string
+    {
+        $originalClassName = '';
+        if (isset($this->options) && isset($this->options->mappingCollection)) { //Roll on PHP 8
+            $originalClassName = $this->options->mappingCollection->getEntityClassName();
+        }
+        $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
+        $this->setSaveOptions($this->options);
+
+        return $originalClassName;
+    }
+
+    private function doSaveEntity(
+        object $entity,
+        ?int &$insertCount = null,
+        ?int &$updateCount = null
+    ): int {
+        $result = 0;
+        $className = ObjectHelper::getObjectClassName($entity);
+        $originalClassName = $this->updateMappingCollection($className);
+
+        //Try to work out if we are inserting or updating
+        $update = false;
+        $pkValues = $this->options->mappingCollection->getPrimaryKeyValues($entity);
+        if ($this->entityTracker->hasEntity($className, $pkValues)) {
+            //We are tracking it, so it is definitely an update
+            $update = true;
+        } elseif ($pkValues) { //We have values for the primary key so probably an update
+            //Check if the primary key is a foreign key (if so, could be an insert so will need to replace)
+            foreach (array_keys($pkValues) as $pkKey) {
+                if ($this->options->mappingCollection->getPropertyMapping($pkKey)->isForeignKey) {
+                    $this->options->replaceExisting = true;
+                    break;
+                }
+            }
+            $update = true;
+        }
+
+        if ($update) {
+            $result = $this->updateEntity($entity, $pkValues, $insertCount, $updateCount);
+        } else {
+            $result = $this->insertEntity($entity, $insertCount, $updateCount);
+        }
+        $this->updateMappingCollection($originalClassName);
+
+        return $result;
+    }
+
     private function updateEntity(
         object $entity,
         array $pkValues,
         int &$insertCount,
         int &$updateCount
     ): int {
+        if (in_array($entity, $this->savedObjects)) {
+            return 0;
+        }
         if ($this->options->saveChildren) {
             //Insert new child entities first so that we can populate the foreign keys on the parent
-
-            //Count inserts
+            $this->insertChildren($entity, $insertCount, $updateCount, true);
         }
 
         $className = ObjectHelper::getObjectClassName($entity);
         $qb = QB::create();
-        //$qb->update($className)->set($rows);
         foreach ($pkValues as $key => $value) {
-            $qb->where($key, QB::EQ, $value);
+            $qb->where($key, QB::EQ, $this->objectUnbinder->unbindValue($value));
         }
         $updateQuery = $qb->buildUpdateQuery();
         $this->objectMapper->addExtraMappings($className, $updateQuery);
@@ -183,6 +213,7 @@ final class ObjectPersister
             $params = $this->sqlUpdater->getQueryParams();
             if ($this->storage->executeQuery($sql, $params)) {
                 $updateCount += $this->storage->getAffectedRecordCount();
+                $this->savedObjects[] = $entity;
                 $this->entityTracker->storeEntity($entity, $pkValues);
             }
 
@@ -198,21 +229,83 @@ final class ObjectPersister
     {
         $children = $this->options->mappingCollection->getChildObjectProperties();
         foreach ($children as $childPropertyName) {
+            if ($entity instanceof EntityProxyInterface && $entity->isChildAsleep($childPropertyName)) {
+                continue; //Don't wake it up
+            }
             $child = $entity->$childPropertyName ?? null;
             if (!empty($child)) {
-                $childPkValues = $this->options->mappingCollection->getPrimaryKeyValues($child);
-                if ($childPkValues) {
-                    $childEntities = is_iterable($child) ? $child : [$child];
-                    foreach ($childEntities as $childEntity) {
-                        $this->saveEntity($childEntity, $this->options, $insertCount, $updateCount);
+                $childEntities = is_iterable($child) ? $child : [$child];
+                foreach ($childEntities as $childEntity) {
+                    if (in_array($childEntity, $this->savedObjects)) {
+                        continue;
+                    }
+                    $childPkValues = $this->options->mappingCollection->getPrimaryKeyValues($childEntity);
+                    if ($childPkValues) {
+                        $this->doSaveEntity($childEntity, $insertCount, $updateCount);
                     }
                 }
             }
         }
     }
 
-    private function insertEntity(object $entity, int &$insertCount): int
+    private function insertEntity(object $entity, int &$insertCount, int &$updateCount): int
     {
-        return 0;
+        if (in_array($entity, $this->savedObjects)) {
+            return 0;
+        }
+        $className = ObjectHelper::getObjectClassName($entity);
+
+        $this->savedObjects[] = $entity; //Don't save it as a child of a child, do it after the children are saved
+        if ($this->options->saveChildren) {
+            //First, save any child objects which are owned by the parent
+            $this->insertChildren($entity, $insertCount, $updateCount, true);
+        }
+
+        //Then save the parent
+        $qb = QB::create();
+        $insertQuery = $qb->buildInsertQuery();
+        $rows = $this->objectUnbinder->unbindEntityToRows($entity, [], $this->options->saveChildren);
+        if ($rows) {
+            $insertQuery->finalise($this->options->mappingCollection, $className, $rows);
+            $sql = $this->sqlUpdater->getInsertSql($insertQuery);
+            $params = $this->sqlUpdater->getQueryParams();
+            if ($this->storage->executeQuery($sql, $params)) {
+                $insertId = $this->storage->getLastInsertId();
+                $insertCount += $this->storage->getAffectedRecordCount();
+                $pkProperties = $this->options->mappingCollection->getPrimaryKeyProperties($className);
+                $pkValues = [];
+                if ($insertId && count($pkProperties) == 1) {
+                    $pkProperty = reset($pkProperties);
+                    $pkValues[$pkProperty] = $insertId;
+                    ObjectHelper::setValueOnObject($entity, $pkProperty, $insertId);
+                }
+                $this->entityTracker->storeEntity($entity, $pkValues);
+
+            }
+        }
+
+        if ($this->options->saveChildren) {
+            //Then save any child objects which are owned by the child
+            $this->insertChildren($entity, $insertCount, $updateCount, false);
+        }
+
+        return $insertCount;
+    }
+
+    private function insertChildren(object $entity, int &$insertCount, int &$updateCount, bool $ownedOnly = true)
+    {
+        $children = $this->options->mappingCollection->getChildObjectProperties($ownedOnly);
+        foreach ($children as $childPropertyName) {
+            $child = $entity->$childPropertyName ?? null;
+            if (!empty($child)) {
+                $childEntities = is_iterable($child) ? $child : [$child];
+                foreach ($childEntities as $childEntity) {
+                    $childPkValues = $this->options->mappingCollection->getPrimaryKeyValues($childEntity);
+                    if (!$childPkValues) {
+                        $this->doSaveEntity($childEntity, $insertCount, $updateCount);
+                    }
+                }
+            }
+        }
     }
 }

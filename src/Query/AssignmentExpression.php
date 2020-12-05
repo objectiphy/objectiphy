@@ -65,6 +65,7 @@ class AssignmentExpression implements QueryPartInterface, PropertyPathConsumerIn
             $params['param_' . $paramCount] = $this->value;
             $string .= ':param_' . $paramCount;
         }
+        
         return $string;
     }
 

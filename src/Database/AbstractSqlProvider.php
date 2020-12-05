@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Database;
 
+use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Contract\SqlProviderInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
@@ -17,6 +18,12 @@ class AbstractSqlProvider implements SqlProviderInterface
     protected array $queryOverrides = [];
     protected $sql = '';
     protected MappingCollection $mappingCollection;
+    protected DataTypeHandlerInterface $dataTypeHandler;
+
+    public function __construct(DataTypeHandlerInterface $dataTypeHandler)
+    {
+        $this->dataTypeHandler = $dataTypeHandler;
+    }
 
     public function setMappingCollection(MappingCollection $mappingCollection)
     {

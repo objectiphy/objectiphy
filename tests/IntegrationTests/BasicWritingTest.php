@@ -5,6 +5,7 @@ namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Factory\EntityFactory;
 use Objectiphy\Objectiphy\Factory\ProxyFactory;
+use Objectiphy\Objectiphy\Orm\ObjectReference;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Tests\Entity\TestPet;
 use Objectiphy\Objectiphy\Tests\Entity\TestUnderwriter;
@@ -14,7 +15,6 @@ use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\Tests\Entity\TestContact;
 use Objectiphy\Objectiphy\Tests\Entity\TestVehicle;
 use Objectiphy\Objectiphy\Tests\Entity\TestAddress;
-use Objectiphy\Objectiphy\ObjectReference;
 
 class ObjectRepositoryIntegrationTest extends IntegrationTestBase
 {
@@ -179,7 +179,7 @@ class ObjectRepositoryIntegrationTest extends IntegrationTestBase
         $newPolicy = new TestPolicy();
         $newPolicy->policyNo = 'New!';
         $newPolicy->underwriter = new TestUnderwriter();
-        $newPolicy->underwriter->id = 1;
+        $newPolicy->underwriter->id = 1; //Existing underwriter!
         $newPolicy->effectiveStartDateTime = new \DateTime('today');
         $newPolicy->vehicle = new TestVehicle();
         $newPolicy->vehicle->policy = $newPolicy;
@@ -188,9 +188,11 @@ class ObjectRepositoryIntegrationTest extends IntegrationTestBase
         $newPolicy->contact->firstName = 'Frederick';
         $newPolicy->contact->lastName = 'Bloggs';
 
-        $newEntityId = $this->objectRepository->saveEntity($newPolicy);
-        $this->assertGreaterThan(0, $newEntityId);
-        $refreshedNewPolicy = $this->objectRepository->find($newEntityId);
+        $insertCount = $this->objectRepository->saveEntity($newPolicy);
+        $this->assertEquals(3, $insertCount);
+        $this->assertGreaterThan(0, $newPolicy->id);
+        $this->objectRepository->clearCache();
+        $refreshedNewPolicy = $this->objectRepository->find($newPolicy->id);
         $this->assertEquals('NEW123', $refreshedNewPolicy->vehicle->regNo);
 
         //Add existing child entity to new parent entity

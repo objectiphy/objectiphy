@@ -11,13 +11,6 @@ use Objectiphy\Objectiphy\Query\Query;
 
 class WhereProviderMySql extends AbstractSqlProvider
 {
-    private DataTypeHandlerMySql $dataTypeHandler;
-
-    public function __construct(DataTypeHandlerMySql $dataTypeHandler)
-    {
-        $this->dataTypeHandler = $dataTypeHandler;
-    }
-
     /**
      * @param array $criteria
      * @return string The WHERE part of the SQL query.

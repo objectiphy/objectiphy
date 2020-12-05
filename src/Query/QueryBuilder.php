@@ -264,6 +264,15 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         return $query;
     }
 
+    public function buildInsertQuery(): InsertQuery
+    {
+        $query = new InsertQuery();
+        $query->setInsertInto($this->insertInto);
+        $query->setAssignments(...$this->assignments);
+
+        return $query;
+    }
+
     /**
      * Clear all expressions that have been added.
      */
@@ -288,15 +297,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
      */
     protected function addJoin($targetEntityClassName, $alias, $type = 'LEFT')
     {
-        $this->joins[] = new JoinExpression(
-//            str_replace('`', '', $firstValue),
-//            $firstExpression->operator,
-            $targetEntityClassName,
-//            substr($firstProperty, strlen($alias) + 1),
-            $alias,
-            $type
-        );
-
+        $this->joins[] = new JoinExpression($targetEntityClassName, $alias, $type);
         return $this;
     }
 }

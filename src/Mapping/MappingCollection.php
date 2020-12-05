@@ -107,7 +107,9 @@ class MappingCollection
         if ($propertyMapping->childTable && $propertyMapping->getChildClassName()) {
             $this->classes[$propertyMapping->getChildClassName()] = $propertyMapping->childTable;
         }
-        $this->addPrimaryKeyMapping($propertyMapping->className, $propertyMapping->propertyName, $propertyMapping->column);
+        if ($propertyMapping->column->isPrimaryKey || $propertyMapping->relationship->isPrimaryKey) {
+            $this->addPrimaryKeyMapping($propertyMapping->className, $propertyMapping->propertyName);
+        }
         if ($propertyMapping->relationship->isDefined()) {
             $relationshipKey = $propertyMapping->getRelationshipKey();
             $this->relationships[$relationshipKey] ??= $propertyMapping;
@@ -129,11 +131,9 @@ class MappingCollection
         $this->fetchableProperties[$propertyMapping->getPropertyPath()] = $propertyMapping;
     }
 
-    public function addPrimaryKeyMapping(string $className, string $propertyName, Column $column)
+    public function addPrimaryKeyMapping(string $className, string $propertyName)
     {
-        if ($column->isPrimaryKey ?? false) {
-            $this->primaryKeyProperties[$className][$propertyName] ??= $column;
-        }
+        $this->primaryKeyProperties[$className][$propertyName] ??= 1;
     }
 
     public function setPrimaryTableMapping(Table $table): void
@@ -265,12 +265,12 @@ class MappingCollection
         return $this->propertiesByClass[$className][$propertyName] ?? null;
     }
     
-    public function getChildObjectProperties(array $parents = [])
+    public function getChildObjectProperties(bool $ownedOnly = false, array $parents = [])
     {
         $childProperties = [];
         $parentPath = implode('.', $parents);
         foreach ($this->propertiesByParent[$parentPath] ?? [] as $property) {
-            if ($property->getChildClassName()) {
+            if ($property->getChildClassName() && (!$ownedOnly || $property->getShortColumnName(false))) {
                 $childProperties[] = $property->propertyName;
             }
         }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Database\MySql;
 
 use Objectiphy\Objectiphy\Config\FindOptions;
+use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
 use Objectiphy\Objectiphy\Exception\MappingException;
@@ -30,8 +31,12 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
     private JoinProviderMySql $joinProvider;
     private WhereProviderMySql $whereProvider;
 
-    public function __construct(JoinProviderMySql $joinProvider, WhereProviderMySql $whereProvider)
-    {
+    public function __construct(
+        DataTypeHandlerInterface $dataTypeHandler, 
+        JoinProviderMySql $joinProvider, 
+        WhereProviderMySql $whereProvider
+    ) {
+        parent::__construct($dataTypeHandler);
         $this->joinProvider = $joinProvider;
         $this->whereProvider = $whereProvider;
     }

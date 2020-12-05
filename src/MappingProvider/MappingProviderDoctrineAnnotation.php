@@ -101,6 +101,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
             $this->populateFromDoctrineJoinColumn($reflectionProperty, $relationship, $wasMapped);
             $this->populateFromDoctrineOrderBy($reflectionProperty, $relationship, $wasMapped);
             $this->populateFromDoctrineEmbedded($reflectionProperty, $relationship, $wasMapped);
+            $this->populateFromDoctrineId($reflectionProperty, $relationship, $wasMapped);
 
             return $relationship;
         } catch (\Throwable $ex) {
@@ -134,12 +135,12 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
     /**
      * Read a Doctrine Id annotation.
      * @param \ReflectionProperty $reflectionProperty
-     * @param Column $column
+     * @param object $column
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      */
     private function populateFromDoctrineId(
         \ReflectionProperty $reflectionProperty, 
-        Column &$column,
+        object &$columnOrRelationship,
         bool &$wasMapped
     ): void {
         if (class_exists('Doctrine\ORM\Mapping\Id')) {
@@ -148,7 +149,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
                 \Doctrine\ORM\Mapping\Id::class
             );
             $wasMapped = $wasMapped || $doctrineId;
-            $column->isPrimaryKey = $doctrineId ? true : $column->isPrimaryKey;
+            $columnOrRelationship->isPrimaryKey = $doctrineId ? true : $columnOrRelationship->isPrimaryKey;
         }
     }
 

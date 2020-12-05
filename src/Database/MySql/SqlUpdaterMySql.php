@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Database\MySql;
 
 use Objectiphy\Objectiphy\Config\SaveOptions;
+use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
 use Objectiphy\Objectiphy\Exception\MappingException;
@@ -24,8 +25,12 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
     private JoinProviderMySql $joinProvider;
     private WhereProviderMySql $whereProvider;
 
-    public function __construct(JoinProviderMySql $joinProvider, WhereProviderMySql $whereProvider)
-    {
+    public function __construct(
+        DataTypeHandlerInterface $dataTypeHandler,
+        JoinProviderMySql $joinProvider,
+        WhereProviderMySql $whereProvider
+    ) {
+        parent::__construct($dataTypeHandler);
         $this->joinProvider = $joinProvider;
         $this->whereProvider = $whereProvider;
     }
@@ -45,28 +50,26 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
      */
     public function getInsertSql(InsertQuery $query): string
     {
-        return '';
-//        $this->params = [];
-//
-//        if (!empty($row['table']) && !empty($row['data'])) {
-//            $sql = "INSERT INTO " . $this->delimit($row['table']) . " SET ";
-//            $assignments = '';
-//            foreach ($row['data'] as $column => $value) {
-//                $value = $value instanceof ObjectReferenceInterface ? $value->getPrimaryKeyValue() : $value;
-//                $paramName = 'param_' . strval(count($this->params));
-//                $assignments .= $this->delimit($column) . " = :" . $paramName . ',';
-//                $this->params[$paramName] = $value;
-//            }
-//            $assignments = rtrim($assignments, ",");
-//            $sql .= $assignments;
-//            if ($replace || !empty($row['isScalarJoin'])) {
-//                $sql .= ' ON DUPLICATE KEY UPDATE ' . $assignments;
-//            }
-//
-//            return [$this->overrideQueryPart('insert', $sql, [], $this->params)];
-//        }
-//
-//        return [];
+        if (!isset($this->options->mappingCollection)) {
+            throw new ObjectiphyException('SQL Builder has not been initialised. There is no mapping information!');
+        }
+
+        $this->params = [];
+        $this->prepareReplacements($query, $this->options->mappingCollection, '`');
+
+        $sql = 'INSERT INTO ';
+        $sql .= $this->replaceNames($query->getInsertInto());
+        $sql .= ' SET ';
+        $sqlAssignments = [];
+        foreach ($query->getAssignments() as $assignment) {
+            $sqlAssignments[] = $assignment->toString($this->params);
+        }
+        $sql .= $this->replaceNames(implode(', ', $sqlAssignments));
+        array_walk($this->params, function(&$value) {
+            $this->dataTypeHandler->toPersistenceValue($value);
+        });
+
+        return $sql;
     }
 
     /**
@@ -136,7 +139,8 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
                 if ($this->prepareCustomJoinAliasReplacements($propertyPath, $query, $mappingCollection)) {
                     continue;
                 } else {
-                    throw new QueryException('Property mapping not found for: ' . $parentPath . $propertyPath);
+                    $message = sprintf('Property mapping not found for: %1$s on class %2$s.', $parentPath . $propertyPath, $mappingCollection->getEntityClassName());
+                    throw new QueryException($message);
                 }
             }
             $this->objectNames[] = '`' . $property->getPropertyPath() . '`';

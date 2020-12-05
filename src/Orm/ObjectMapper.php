@@ -240,7 +240,7 @@ final class ObjectMapper
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
             $column = $this->mappingProvider->getColumnMapping($reflectionProperty);
             if ($column->isPrimaryKey) {
-                $mappingCollection->addPrimaryKeyMapping($reflectionClass->getName(), $reflectionProperty->getName(), $column);
+                $mappingCollection->addPrimaryKeyMapping($reflectionClass->getName(), $reflectionProperty->getName());
             }
         }
     }
