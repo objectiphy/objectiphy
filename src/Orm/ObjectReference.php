@@ -14,7 +14,7 @@ use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
  */
 class ObjectReference implements ObjectReferenceInterface
 {
-    private object $object;
+    private ?object $object = null;
     private string $className;
     private array $pkValues;
 

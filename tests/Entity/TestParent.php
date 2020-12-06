@@ -54,10 +54,10 @@ class TestParent
      * @Mapping\Column(name="modified_date_time")
      */
     public $modifiedDateTime;
-    /**
-     * @Mapping\Relationship(childClassName="TestAddress", relationshipType="one_to_one", isEmbedded=true)
-     */
-    protected $address;
+//    /**
+//     * @Mapping\Relationship(childClassName="TestAddress", relationshipType="one_to_one", isEmbedded=true)
+//     */
+//    protected $address;
 
     /** @var boolean */
     private $nameGetterAccessed = false;
@@ -70,7 +70,7 @@ class TestParent
 
     public function __construct()
     {
-        //$this->pets = new TestCollection();
+        $this->pets = new TestCollection();
     }
 
     public function getId()
@@ -134,11 +134,7 @@ class TestParent
 
     public function &getPets()
     {
-        if (isset($this->pets)) {
-            $pets = $this->pets; //Older PHP versions complain that only variables can be passed by ref if we don't do this
-        } else {
-            $pets = null;
-        }
+        $pets = $this->pets ?? null;
         return $pets;
     }
 

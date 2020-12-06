@@ -4,6 +4,7 @@ namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
+use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 
 /**
  * This class only contains static methods. In order to prevent hidden dependencies and brittle code, the only methods
@@ -27,7 +28,7 @@ class ObjectHelper
      * @return mixed|null
      */
     public static function getValueFromObject(
-        object $object,
+        ?object $object,
         string $propertyName,
         $defaultValueIfNotFound = null,
         bool $lookForGetter = true
@@ -35,15 +36,17 @@ class ObjectHelper
         $value = $defaultValueIfNotFound;
 
         try {
-            if ($object && property_exists($object, $propertyName)) {
+            if ($object/* && property_exists($object, $propertyName)*/) {
                 //If lazy loaded, property might exist but be unset, which would cause a reflection error.
                 if ($object instanceof EntityProxyInterface && $object->isChildAsleep($propertyName)) {
                     $object->triggerLazyLoad($propertyName);
                     if (!isset($object->$propertyName)) { //Won't be set if lazy loader didn't load anything
                         return $value;
                     }
-                } elseif ($object instanceof ObjectReferenceInterface && $propertyName == $object->getPrimaryKeyPropertyName()) {
-                    return $object->getPrimaryKeyValue();
+                } elseif ($object instanceof ObjectReferenceInterface) {
+                    if (in_array($propertyName, array_keys($object->getPkValues()))) {
+                        return $object->getPkValue($propertyName);
+                    }
                 }
                 $reflectionProperty = new \ReflectionProperty($object, $propertyName);
                 $reflectionProperty->setAccessible(true);

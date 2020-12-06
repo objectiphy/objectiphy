@@ -7,6 +7,7 @@ namespace Objectiphy\Objectiphy\Orm;
 use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
+use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
@@ -216,10 +217,9 @@ final class ObjectPersister
                 $this->savedObjects[] = $entity;
                 $this->entityTracker->storeEntity($entity, $pkValues);
             }
-
-            if ($this->options->saveChildren) {
-                $this->updateChildren($entity, $insertCount, $updateCount);
-            }
+        }
+        if ($this->options->saveChildren) {
+            $this->updateChildren($entity, $insertCount, $updateCount);
         }
 
         return $insertCount + $updateCount;
@@ -232,17 +232,32 @@ final class ObjectPersister
             if ($entity instanceof EntityProxyInterface && $entity->isChildAsleep($childPropertyName)) {
                 continue; //Don't wake it up
             }
-            $child = $entity->$childPropertyName ?? null;
+            $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
+            $childParentProperty = $childPropertyMapping->relationship->mappedBy;
+            $child = ObjectHelper::getValueFromObject($entity, $childPropertyName);
             if (!empty($child)) {
                 $childEntities = is_iterable($child) ? $child : [$child];
                 foreach ($childEntities as $childEntity) {
                     if (in_array($childEntity, $this->savedObjects)) {
                         continue;
                     }
-                    $childPkValues = $this->options->mappingCollection->getPrimaryKeyValues($childEntity);
-                    if ($childPkValues) {
-                        $this->doSaveEntity($childEntity, $insertCount, $updateCount);
+                    //Populate parent
+                    if ($childParentProperty) {
+                        ObjectHelper::setValueOnObject($childEntity, $childParentProperty, $entity);
                     }
+                    $childPkValues = $this->options->mappingCollection->getPrimaryKeyValues($childEntity);
+                    if (!$childPkValues) {
+                        //If child is late bound, we might not know its primary key, so get its own mapping collection
+                        $childClass = ObjectHelper::getObjectClassName($childEntity);
+                        $childMappingCollection = $this->objectMapper->getMappingCollectionForClass($childClass);
+                        $childPkValues = $childMappingCollection->getPrimaryKeyValues($childEntity);
+                    }
+//                    if ($childPkValues) {
+                        $this->doSaveEntity($childEntity, $insertCount, $updateCount);
+//                    } else {
+//                        //Insert
+//
+//                    }
                 }
             }
         }
@@ -300,9 +315,17 @@ final class ObjectPersister
             if (!empty($child)) {
                 $childEntities = is_iterable($child) ? $child : [$child];
                 foreach ($childEntities as $childEntity) {
-                    $childPkValues = $this->options->mappingCollection->getPrimaryKeyValues($childEntity);
-                    if (!$childPkValues) {
-                        $this->doSaveEntity($childEntity, $insertCount, $updateCount);
+                    if (!($childEntity instanceof ObjectReferenceInterface)) {
+                        $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
+                        $childParentProperty = $childPropertyMapping->relationship->mappedBy;
+                        $childPkValues = $this->options->mappingCollection->getPrimaryKeyValues($childEntity);
+                        if (!$childPkValues) {
+                            //Populate parent
+                            if ($childParentProperty) {
+                                ObjectHelper::setValueOnObject($childEntity, $childParentProperty, $entity);
+                            }
+                            $this->doSaveEntity($childEntity, $insertCount, $updateCount);
+                        }
                     }
                 }
             }

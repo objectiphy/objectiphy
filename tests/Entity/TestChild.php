@@ -39,10 +39,10 @@ class TestChild
      * @Mapping\Relationship(childClassName="TestParent", sourceJoinColumn="parent_id", relationshipType="one_to_one")
      */
     protected $parent;
-    /**
-     * @Mapping\Relationship(childClassName="TestAddress", relationshipType="one_to_one", isEmbedded=true, embeddedColumnPrefix="child_")
-     */
-    public $address;
+//    /**
+//     * @Mapping\Relationship(childClassName="TestAddress", relationshipType="one_to_one", isEmbedded=true, embeddedColumnPrefix="child_")
+//     */
+//    public $address;
 
     public function getId()
     {

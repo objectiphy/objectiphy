@@ -71,7 +71,7 @@ final class ProxyFactory
             if (class_exists($className)) {
                 $classDefinition = file_get_contents(__DIR__ . '/../Orm/ObjectReference.php');
                 $classDefinition = str_replace('namespace Objectiphy\Objectiphy\Orm;',
-                                               'use Objectiphy\Orm\ObjectHelper;', $classDefinition);
+                                               'use Objectiphy\Objectiphy\Orm\ObjectHelper;', $classDefinition);
                 $classDefinition = str_replace("class ObjectReference implements ObjectReferenceInterface",
                                                "class $proxyClassName extends \\$className implements ObjectReferenceInterface",
                                                $classDefinition);
