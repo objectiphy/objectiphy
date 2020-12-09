@@ -109,8 +109,12 @@ class MappingProviderAnnotation implements MappingProviderInterface
      * @param object $component The object whose values may be overridden.
      * @param object $decorator The object which holds the values that take priority.
      */
-    private function decorate(string $hostClassName, string $hostProperty, object $component, ?object $decorator = null)
-    {
+    private function decorate(
+        string $hostClassName, 
+        string $hostProperty, 
+        object $component, 
+        ?object $decorator = null
+    ): object {
         if ($decorator) {
             if (get_class($component) == get_class($decorator)) {
                 $itemName = $hostProperty ? $itemName = 'p:' . $hostProperty : 'c';

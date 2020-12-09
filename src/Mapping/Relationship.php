@@ -256,10 +256,10 @@ class Relationship
         return $this->targetPropertyName;
     }
 
-    public function validate(PropertyMapping $propertyMapping)
+    public function validate(PropertyMapping $propertyMapping): void
     {
         if ($this->isEmbedded) {
-            return true; //Temporary measure until we support embedables.
+            return; //Temporary measure until we support embedables.
         }
         $errorMessage = '';
         if (!$this->joinTable) {

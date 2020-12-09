@@ -9,6 +9,10 @@ use Objectiphy\Objectiphy\Mapping\Table;
 use Objectiphy\Objectiphy\Query\InsertQuery;
 use Objectiphy\Objectiphy\Query\UpdateQuery;
 
+/**
+ * For an object that provides SQL for a update query.
+ * @package Objectiphy\Objectiphy\Contract
+ */
 interface SqlUpdaterInterface extends SqlProviderInterface
 {
     /**

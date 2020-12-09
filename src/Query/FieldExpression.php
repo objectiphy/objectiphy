@@ -44,6 +44,9 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
         return strval($expression);
     }
 
+    /**
+     * @return bool Whether or not the expression is a simple property path.
+     */
     public function isPropertyPath(): bool
     {
         return $this->isPropertyPath;
@@ -65,6 +68,10 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
         $this->isPropertyPath = true;
     }
 
+    /**
+     * Set the value of the expression - will try to automatically detect a property path if wrapped in backticks.
+     * @param $value 
+     */
     public function setExpression($value): void
     {
         $this->isPropertyPath = false; //If it turns out to be a property path, it will get changed.

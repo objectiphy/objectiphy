@@ -6,6 +6,10 @@ namespace Objectiphy\Objectiphy\Contract;
 
 use Objectiphy\Objectiphy\Config\FindOptions;
 
+/**
+ * For an object that provides SQL for a select query.
+ * @package Objectiphy\Objectiphy\Contract
+ */
 interface SqlSelectorInterface extends SqlProviderInterface
 {
     /**

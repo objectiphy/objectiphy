@@ -12,6 +12,9 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Relationship;
 
+/**
+ * Query to select one or more entities from the database.
+ */
 class SelectQuery extends Query implements QueryInterface
 {
     /**
@@ -52,7 +55,7 @@ class SelectQuery extends Query implements QueryInterface
         return $this->getClassName();
     }
 
-    public function setGroupBy(FieldExpression ...$fields)
+    public function setGroupBy(FieldExpression ...$fields): void
     {
         $this->groupBy = $fields;
     }
@@ -62,7 +65,7 @@ class SelectQuery extends Query implements QueryInterface
         return $this->groupBy;
     }
 
-    public function setHaving(CriteriaPartInterface ...$criteria)
+    public function setHaving(CriteriaPartInterface ...$criteria): void
     {
         $this->having = $criteria;
     }
@@ -72,7 +75,7 @@ class SelectQuery extends Query implements QueryInterface
         return $this->having;
     }
 
-    public function setOrderBy(FieldExpression ...$fields)
+    public function setOrderBy(FieldExpression ...$fields): void
     {
         $this->orderBy = $fields;
     }
@@ -82,7 +85,7 @@ class SelectQuery extends Query implements QueryInterface
         return $this->orderBy;
     }
     
-    public function setLimit(?int $limit)
+    public function setLimit(?int $limit): void
     {
         $this->limit = $limit;
     }
@@ -92,7 +95,7 @@ class SelectQuery extends Query implements QueryInterface
         return $this->limit;
     }
     
-    public function setOffset(?int $offset)
+    public function setOffset(?int $offset): void
     {
         $this->offset = $offset;
     }

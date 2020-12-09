@@ -19,11 +19,12 @@ use Objectiphy\Objectiphy\Query\CriteriaGroup;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
-
 use Objectiphy\Objectiphy\Query\Query;
 
-use function PHPUnit\Framework\returnValue;
-
+/**
+ * Provider of SQL for select queries on MySQL
+ * @package Objectiphy\Objectiphy\Database\MySql
+ */
 class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterface
 {
     private bool $disableMySqlCache = false;
@@ -64,7 +65,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
     /**
      * Any config options that the fetcher needs to know about are set here.
      */
-    public function setConfigOptions(bool $disableMySqlCache = false)
+    public function setConfigOptions(bool $disableMySqlCache = false): void
     {
         $this->disableMySqlCache = $disableMySqlCache;
     }
@@ -109,15 +110,6 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
         return $sql;
     }
 
-//    public function getQueryParams(): array
-//    {
-//        $whereParams = $this->whereProvider->getQueryParams();
-//        $joinParams = array_merge($this->params, $this->joinProvider->getQueryParams());
-//        $thisParams = array_merge($this->params, parent::getQueryParams());
-//
-//        return $this->combineParams($whereParams, $joinParams, $thisParams);
-//    }
-
     /**
      * @param array $criteria
      * @return string The SELECT part of the SQL query.
@@ -125,7 +117,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
      * @throws MappingException
      * @throws \ReflectionException
      */
-    public function getSelect()
+    public function getSelect(): string
     {
         $this->countWithoutGroups = false;
         $sql = $this->getCountSql();
@@ -150,7 +142,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
     /**
      * @return string The FROM part of the SQL query.
      */
-    public function getFrom()
+    public function getFrom(): string
     {
         $sql = ' FROM ' . $this->replaceNames($this->options->query->getFrom());
         return $sql;
@@ -161,7 +153,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
      * @throws MappingException
      * @throws \ReflectionException
      */
-    public function getGroupBy($ignoreCount = false)
+    public function getGroupBy($ignoreCount = false): string
     {
         //This function can be overridden, but baseGroupBy cannot be - we need to know whether the value is ours or not.
         return $this->baseGroupBy($ignoreCount);
@@ -175,7 +167,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
      * @throws MappingException
      * @throws \ReflectionException
      */
-    public function getHaving()
+    public function getHaving(): string
     {
         $sql = '';
         return $sql;
@@ -187,7 +179,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
      * @throws MappingException
      * @throws \ReflectionException
      */
-    public function getOrderBy()
+    public function getOrderBy(): string
     {
         $sql = '';
 
@@ -206,7 +198,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
      * @param array $criteria
      * @return string The SQL string for the LIMIT clause (if using pagination).
      */
-    public function getLimit()
+    public function getLimit(): string
     {
         $sql = '';
 
@@ -221,7 +213,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
         return $sql;
     }
     
-    public function getOffset()
+    public function getOffset(): string
     {
         $sql = '';
 
@@ -236,7 +228,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
         return $sql;
     }
 
-    protected function getCountSql()
+    protected function getCountSql(): string
     {
         $sql = '';
         if ($this->options->count && empty($this->queryOverrides)) { //See if we can do a more efficient count
@@ -261,7 +253,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
      * @throws MappingException
      * @throws \ReflectionException
      */
-    private function baseGroupBy()
+    private function baseGroupBy(): string
     {
         $sql = '';
 
@@ -285,7 +277,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
         MappingCollection $mappingCollection,
         string $delimiter = '`',
         $altDelimiter = '|'
-    ) {
+    ): void {
         $this->sql = '';
         $this->objectNames = [];
         $this->persistenceNames = [];
@@ -311,7 +303,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
         }
     }
 
-    protected function replaceNames(string $subject)
+    protected function replaceNames(string $subject): string
     {
         if (!isset($this->objectNames)) {
             throw new ObjectiphyException('Please call prepareReplacements method before attempting to replace.');

@@ -124,7 +124,7 @@ class PropertyMapping
         return ltrim($result, $separator);
     }
 
-    public function getParentPath($separator = '.')
+    public function getParentPath($separator = '.'): string
     {
         return $this->getPropertyPath($separator, false);
     }
@@ -139,7 +139,7 @@ class PropertyMapping
         return $this->relationship->childClassName;
     }
 
-    public function getRelationshipKey()
+    public function getRelationshipKey(): string
     {
         return $this->className . ':' . $this->propertyName;
     }
@@ -204,7 +204,7 @@ class PropertyMapping
         return $columnName;
     }
 
-    public function forceEarlyBindingForJoin()
+    public function forceEarlyBindingForJoin(): void
     {
         $this->forcedEarlyBindingForJoin = true;
     }
@@ -272,7 +272,7 @@ class PropertyMapping
         return $collection;
     }
 
-    private function getTypeHacky(string $collectionClass)
+    private function getTypeHacky(string $collectionClass): string
     {
         //PHP ReflectionType seems buggy at times (on a Mac at least) - try a hacky way of checking the type
         try {

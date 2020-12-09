@@ -79,7 +79,7 @@ class ObjectRepository implements ObjectRepositoryInterface
      * @param string $optionName
      * @param $value
      */
-    public function setConfigOption(string $optionName, $value)
+    public function setConfigOption(string $optionName, $value): void
     {
         $this->configOptions->setConfigOption($optionName, $value);
         $this->updateConfig();
@@ -92,7 +92,7 @@ class ObjectRepository implements ObjectRepositoryInterface
      * @param string $optionName
      * @param $value
      */
-    public function setEntityConfigOption(string $entityClassName, string $optionName, $value)
+    public function setEntityConfigOption(string $entityClassName, string $optionName, $value): void
     {
         $entityConfigs = $this->configOptions->getConfigOption('entityConfig');
         $entityConfig = $entityConfig[$entityClassName] ?? new ConfigEntity();
@@ -385,7 +385,13 @@ class ObjectRepository implements ObjectRepositoryInterface
         }
     }
 
-    public function saveBy(Query $insertOrUpdateQuery)
+    /**
+     * Execute an insert or update query directly
+     * @param Query $insertOrUpdateQuery
+     * @return int Total number of rows updated or inserted
+     * @throws QueryException
+     */
+    public function saveBy(Query $insertOrUpdateQuery): ?int
     {
         if (!($insertOrUpdateQuery instanceof UpdateQuery) && !($insertOrUpdateQuery instanceof InsertQuery)) {
             throw new QueryException('Can only save by query with an UpdateQuery or InsertQuery');
@@ -431,7 +437,7 @@ class ObjectRepository implements ObjectRepositoryInterface
     /**
      * Manually begin a transaction (if supported by the storage engine)
      */
-    public function beginTransaction()
+    public function beginTransaction(): void
     {
         $this->objectPersister->beginTransaction();
     }
@@ -439,7 +445,7 @@ class ObjectRepository implements ObjectRepositoryInterface
     /**
      * Commit a transaction that was started manually (if supported by the storage engine)
      */
-    public function commit()
+    public function commit(): void
     {
         $this->objectPersister->commitTransaction();
     }
@@ -447,7 +453,7 @@ class ObjectRepository implements ObjectRepositoryInterface
     /**
      * Rollback a transaction that was started manually (if supported by the storage engine)
      */
-    public function rollback()
+    public function rollback(): void
     {
         $this->objectPersister->rollbackTransaction();
     }
@@ -463,27 +469,34 @@ class ObjectRepository implements ObjectRepositoryInterface
         return $this->objectFetcher->doFindBy();
     }
 
-    protected function normalizeCriteria(array $criteria = [])
-    {
-        $pkProperty = '';
-        if (is_int(array_key_first($criteria) && is_scalar(reset($criteria)))) { //Plain list of primary keys passed in
-            $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
-            if (!$pkProperties || count($pkProperties) !== 1) {
-                $message = sprintf('The criteria passed in is a plain list of values, but entity \'%1$s\' has a composite key so there is insufficient information to identify which records to return.', $this->getClassName());
-                throw new ObjectiphyException($message);
-            }
-            $pkProperty = $pkProperties[0];
-        }
-        $queryBuilder = QB::create();
-        $normalizedCriteria = $queryBuilder->normalize($criteria, $pkProperty);
-        
-        return $normalizedCriteria;
-    }
+//    /**
+//     * If extending this class, call this method to turn array criteria into CriteriaExpressions
+//     * @param array $criteria
+//     * @return array
+//     * @throws ObjectiphyException
+//     * @throws QueryException
+//     */
+//    protected function normalizeCriteria(array $criteria = []): array
+//    {
+//        $pkProperty = '';
+//        if (is_int(array_key_first($criteria) && is_scalar(reset($criteria)))) { //Plain list of primary keys passed in
+//            $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
+//            if (!$pkProperties || count($pkProperties) !== 1) {
+//                $message = sprintf('The criteria passed in is a plain list of values, but entity \'%1$s\' has a composite key so there is insufficient information to identify which records to return.', $this->getClassName());
+//                throw new ObjectiphyException($message);
+//            }
+//            $pkProperty = $pkProperties[0];
+//        }
+//        $queryBuilder = QB::create();
+//        $normalizedCriteria = $queryBuilder->normalize($criteria, $pkProperty);
+//        
+//        return $normalizedCriteria;
+//    }
 
     /**
      * @throws ObjectiphyException
      */
-    protected function assertClassNameSet()
+    protected function assertClassNameSet(): void
     {
         if (!$this->getClassName()) {
             $callingMethod = debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['function'] ?? 'Unknown method';
@@ -496,7 +509,7 @@ class ObjectRepository implements ObjectRepositoryInterface
      * One or more config options have changed, so pass along the required values to the various dependencies
      * (it is not recommended to pass the whole config object around and let things help themselves)
      */
-    protected function updateConfig()
+    protected function updateConfig(): void
     {
         $this->objectMapper->setConfigOptions(
             $this->configOptions->productionMode,
@@ -510,7 +523,7 @@ class ObjectRepository implements ObjectRepositoryInterface
         $this->objectFetcher->setConfigOptions($this->configOptions);
     }
 
-    private function throwException(\Throwable $ex)
+    private function throwException(\Throwable $ex): void
     {
         if ($ex instanceof ObjectiphyException) {
             throw $ex;

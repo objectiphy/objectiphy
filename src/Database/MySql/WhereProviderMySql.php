@@ -9,6 +9,10 @@ use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Query\CriteriaGroup;
 use Objectiphy\Objectiphy\Query\Query;
 
+/**
+ * Provider of SQL for where clause on MySQL
+ * @package Objectiphy\Objectiphy\Database\MySql
+ */
 class WhereProviderMySql extends AbstractSqlProvider
 {
     /**
@@ -18,7 +22,7 @@ class WhereProviderMySql extends AbstractSqlProvider
      * @throws MappingException
      * @throws \ReflectionException
      */
-    public function getWhere(Query $query, array $objectNames, array $persistenceNames)
+    public function getWhere(Query $query, array $objectNames, array $persistenceNames): string
     {
         $sql = ' WHERE 1';
         $removeJoiner = false;

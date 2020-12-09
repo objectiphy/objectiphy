@@ -30,7 +30,7 @@ class NameResolver
      * @param \ReflectionClass $reflectionClass
      * @param Table $table
      */
-    public function resolveTableName(\ReflectionClass $reflectionClass, Table $table)
+    public function resolveTableName(\ReflectionClass $reflectionClass, Table $table): void
     {
         if ($this->guessMappings && empty($table->name)) {
             $table->name = $this->tableNamingStrategy->convertName(
@@ -46,7 +46,7 @@ class NameResolver
      * relationship), use naming strategy to convert property name - but all that only if config says we should guess.
      * @param PropertyMapping $propertyMapping
      */
-    public function resolveColumnName(PropertyMapping $propertyMapping)
+    public function resolveColumnName(PropertyMapping $propertyMapping): void
     {
         //Local variables make the code that follows more readable
         $propertyName = $propertyMapping->propertyName;

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Contract;
 
+/**
+ * For an object that provides SQL for a query.
+ * @package Objectiphy\Objectiphy\Contract
+ */
 interface SqlProviderInterface
 {
     /**

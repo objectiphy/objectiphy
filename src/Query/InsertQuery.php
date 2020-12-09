@@ -4,28 +4,32 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Query;
 
+use Objectiphy\Objectiphy\Contract\InsertQueryInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
-class InsertQuery extends Query implements QueryInterface
+/**
+ * Represents the instructions needed to insert a record.
+ */
+class InsertQuery extends Query implements QueryInterface, InsertQueryInterface
 {
     /**
      * @var AssignmentExpression[]
      */
     private array $assignments;
 
-    public function setInsertInto(string $className): void
+    public function setInsert(string $className): void
     {
         $this->setClassName($className);
     }
 
-    public function getInsertInto(): string
+    public function getInsert(): string
     {
         return $this->getClassName();
     }
 
-    public function setAssignments(AssignmentExpression ...$assignments)
+    public function setAssignments(AssignmentExpression ...$assignments): void
     {
         $this->assignments = $assignments;
     }
@@ -48,8 +52,8 @@ class InsertQuery extends Query implements QueryInterface
         array $assignments = []
     ): void {
         if (!$this->isFinalised) {
-            if (!$this->getInsertInto()) {
-                $this->setInsertInto($className);
+            if (!$this->getInsert()) {
+                $this->setInsert($className);
             }
             if (!$this->getAssignments() && $assignments) {
                 $assignmentExpressions = [];
@@ -66,11 +70,11 @@ class InsertQuery extends Query implements QueryInterface
 
     public function __toString(): string
     {
-        if (!$this->assignments || !$this->getInsertInto()) {
+        if (!$this->assignments || !$this->getInsert()) {
             throw new QueryException('Please finalise the query before use (ie. call the finalise method).');
         }
         $useParams = $params !== null;
-        $queryString = 'INSERT INTO ' . $this->getInsertInto();
+        $queryString = 'INSERT INTO ' . $this->getInsert();
         $queryString .= ' ' . implode(' ', $this->getJoins());
         $queryString .= 'SET ' . implode(', ', $this->assignments);
 

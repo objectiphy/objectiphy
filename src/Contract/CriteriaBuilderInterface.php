@@ -21,6 +21,13 @@ interface CriteriaBuilderInterface
      */
     public function and(string $propertyName, string $operator, $value): CriteriaBuilderInterface;
 
+    /**
+     * Specify a line of criteria to join the previous line with AND using a FieldExpression object
+     * @param FieldExpression $expression
+     * @param string $operator
+     * @param $value
+     * @return CriteriaBuilderInterface
+     */
     public function andExpression(FieldExpression $expression, string $operator, $value): CriteriaBuilderInterface;
 
     /**
@@ -33,16 +40,43 @@ interface CriteriaBuilderInterface
      */
     public function or(string $propertyName, string $operator, $value): CriteriaBuilderInterface;
 
+    /**
+     * Specify a line of criteria to join to the previous line with OR using a FieldExpression object
+     * @param FieldExpression $expression
+     * @param string $operator
+     * @param $value
+     * @return CriteriaBuilderInterface
+     */
     public function orExpression(FieldExpression $expression, string $operator, $value): CriteriaBuilderInterface;
 
+    /**
+     * Start an AND group (ie. AND followed by an open bracket).
+     * @return CriteriaBuilderInterface
+     */
     public function andStart(): CriteriaBuilderInterface;
 
+    /**
+     * Start an OR group (ie. OR followed by an open bracket).
+     * @return CriteriaBuilderInterface
+     */
     public function orStart(): CriteriaBuilderInterface;
 
+    /**
+     * End a group - alias for end
+     * @return CriteriaBuilderInterface
+     */
     public function andEnd(): CriteriaBuilderInterface;
 
+    /**
+     * End a group - alias for end
+     * @return CriteriaBuilderInterface
+     */
     public function orEnd(): CriteriaBuilderInterface;
 
+    /**
+     * End an AND or OR group (ie. close bracket).
+     * @return CriteriaBuilderInterface
+     */
     public function end(): CriteriaBuilderInterface;
 
     /**

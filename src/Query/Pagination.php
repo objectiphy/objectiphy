@@ -30,7 +30,7 @@ class Pagination implements PaginationInterface
      * This can then be used to calculate how many pages of results there are.
      * @param int $totalRecords Total number of records available.
      */
-    public function setTotalRecords($totalRecords)
+    public function setTotalRecords($totalRecords): void
     {
         $this->totalRecords = intval($totalRecords);
         $this->calculateNoOfPages();
@@ -41,7 +41,7 @@ class Pagination implements PaginationInterface
      * Get current page count.
      * @return int
      */
-    public function getNoOfPages()
+    public function getNoOfPages(): int
     {
         return $this->noOfPages;
     }
@@ -49,7 +49,7 @@ class Pagination implements PaginationInterface
     /**
      * @return int Current page number.
      */
-    public function getPageNo()
+    public function getPageNo(): int
     {
         return $this->pageNo;
     }
@@ -57,7 +57,7 @@ class Pagination implements PaginationInterface
     /**
      * @return int How many records to return per page (query).
      */
-    public function getRecordsPerPage()
+    public function getRecordsPerPage(): int
     {
         return $this->recordsPerPage;
     }
@@ -65,7 +65,7 @@ class Pagination implements PaginationInterface
     /**
      * @return int Total number of records.
      */
-    public function getTotalRecords()
+    public function getTotalRecords(): int
     {
         return $this->totalRecords;
     }
@@ -73,7 +73,7 @@ class Pagination implements PaginationInterface
     /**
      * @return int The record offset for use in a database query
      */
-    public function getOffset()
+    public function getOffset(): int
     {
         $offset = ($this->getPageNo() - 1) * $this->getRecordsPerPage();
         return $offset > 0 ? $offset : 0;
@@ -82,7 +82,7 @@ class Pagination implements PaginationInterface
     /**
      * Set current page count.
      */
-    private function calculateNoOfPages()
+    private function calculateNoOfPages(): void
     {
         $this->noOfPages = intval(ceil($this->totalRecords / intval($this->recordsPerPage ?: self::DEFAULT_RECORDS_PER_PAGE) ?: 1));
     }

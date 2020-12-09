@@ -55,7 +55,7 @@ interface ObjectReferenceInterface
     public function getObjectHash(): string;
 
     /**
-     * @return string Either the primary key value, if known, or the object hash.
+     * @return string Either the primary key value as a string index, if known, or the object hash.
      */
     public function __toString(): string;
 }

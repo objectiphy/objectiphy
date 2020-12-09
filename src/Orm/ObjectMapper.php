@@ -81,7 +81,7 @@ final class ObjectMapper
      * @param string $className Name of top-level class
      * @param Query $criteria
      */
-    public function addExtraMappings(string $className, PropertyPathConsumerInterface $pathConsumer = null)
+    public function addExtraMappings(string $className, PropertyPathConsumerInterface $pathConsumer = null): void
     {
         if ($pathConsumer) {
             foreach ($pathConsumer->getPropertyPaths() ?? [] as $propertyPath) {
@@ -99,7 +99,7 @@ final class ObjectMapper
      * @throws ObjectiphyException
      * @throws \ReflectionException
      */
-    public function addMappingForProperty(string $className, string $propertyPath, bool $forceJoins = false)
+    public function addMappingForProperty(string $className, string $propertyPath, bool $forceJoins = false): void
     {
         $mappingCollection = $this->mappingCollections[$className];
         if (!$mappingCollection->getColumnForPropertyPath($propertyPath) || $forceJoins) {
@@ -341,10 +341,10 @@ final class ObjectMapper
     /**
      * In case of lazy loading, we need to know which properties to use for the target, even if we don't map them.
      * @param Relationship $relationship
-     * @return string|void
+     * @return string
      * @throws \ReflectionException
      */
-    private function findTargetProperty(Relationship $relationship)
+    private function findTargetProperty(Relationship $relationship): string
     {
         $properties = [];
         $reflectionClass = new \ReflectionClass($relationship->childClassName);

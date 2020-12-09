@@ -17,6 +17,12 @@ class SaveOptions
         $this->mappingCollection = $mappingCollection;
     }
 
+    /**
+     * Create and initialise save options.
+     * @param MappingCollection $mappingCollection
+     * @param array $settings
+     * @return SaveOptions
+     */
     public static function create(MappingCollection $mappingCollection, array $settings = [])
     {
         $saveOptions = new SaveOptions($mappingCollection);

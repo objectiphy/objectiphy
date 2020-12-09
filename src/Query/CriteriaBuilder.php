@@ -7,6 +7,9 @@ namespace Objectiphy\Objectiphy\Query;
 use Objectiphy\Objectiphy\Contract\CriteriaBuilderInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
 
+/**
+ * Build criteria used for WHERE and ON clauses, including nested conditions.
+ */
 class CriteriaBuilder implements CriteriaBuilderInterface
 {
     public const EQ = '=';
@@ -58,6 +61,14 @@ class CriteriaBuilder implements CriteriaBuilderInterface
         return $this;
     }
 
+    /**
+     * Join an expression with AND.
+     * @param FieldExpression $expression
+     * @param string $operator
+     * @param $value
+     * @return CriteriaBuilderInterface
+     * @throws QueryException
+     */
     public function andExpression(FieldExpression $expression, string $operator, $value): CriteriaBuilderInterface
     {
         $joiner = CriteriaExpression::JOINER_AND;
@@ -83,6 +94,14 @@ class CriteriaBuilder implements CriteriaBuilderInterface
         return $this;
     }
 
+    /**
+     * Join an expression with OR.
+     * @param FieldExpression $expression
+     * @param string $operator
+     * @param $value
+     * @return CriteriaBuilderInterface
+     * @throws QueryException
+     */
     public function orExpression(FieldExpression $expression, string $operator, $value): CriteriaBuilderInterface
     {
         $joiner = CriteriaExpression::JOINER_OR;
@@ -91,30 +110,50 @@ class CriteriaBuilder implements CriteriaBuilderInterface
         return $this;
     }
 
+    /**
+     * Start an AND group - ie. AND followed by an open bracket.
+     * @return CriteriaBuilderInterface
+     */
     public function andStart(): CriteriaBuilderInterface
     {
         $this->currentCriteriaCollection[] = new CriteriaGroup(CriteriaGroup::GROUP_TYPE_START_AND);
         return $this;
     }
 
+    /**
+     * Start an OR group - ie. OR followed by an open bracket.
+     * @return CriteriaBuilderInterface
+     */
     public function orStart(): CriteriaBuilderInterface
     {
         $this->currentCriteriaCollection[] = new CriteriaGroup(CriteriaGroup::GROUP_TYPE_START_OR);
         return $this;
     }
 
+    /**
+     * Alias for end.
+     * @return CriteriaBuilderInterface
+     */
     public function andEnd(): CriteriaBuilderInterface
     {
         $this->end();
         return $this;
     }
 
+    /**
+     * Alias for end.
+     * @return CriteriaBuilderInterface
+     */
     public function orEnd(): CriteriaBuilderInterface
     {
         $this->end();
         return $this;
     }
 
+    /**
+     * End an AND or OR group - ie. close bracket.
+     * @return CriteriaBuilderInterface
+     */
     public function end(): CriteriaBuilderInterface
     {
         $this->currentCriteriaCollection[] = new CriteriaGroup(CriteriaGroup::GROUP_TYPE_END);
@@ -184,6 +223,12 @@ class CriteriaBuilder implements CriteriaBuilderInterface
         return $arrayExpressions;
     }
 
+    /**
+     * Apply values to placeholder tokens, optionally removing any lines of criteria that still have unbound values.
+     * @param array $collection
+     * @param array $params
+     * @param bool $removeUnbound
+     */
     protected function applyValues(array &$collection, array $params, bool $removeUnbound = true): void
     {
         foreach ($collection as $index => $expression) {
@@ -198,6 +243,7 @@ class CriteriaBuilder implements CriteriaBuilderInterface
     }
     
     /**
+     * Create a CriteriaExpression object for the given parts.
      * @param $propertyName
      * @param $operator
      * @param $values
@@ -225,6 +271,12 @@ class CriteriaBuilder implements CriteriaBuilderInterface
         return $expression;
     }
 
+    /**
+     * Split out values into actual values and aliases.
+     * @param $values
+     * @param bool $valueIsArray
+     * @return array
+     */
     private function getAliasesAndValues($values, bool $valueIsArray = false): array
     {
         $values = !$valueIsArray && (is_array($values) || $values instanceof \Traversable) ? $values : [$values];

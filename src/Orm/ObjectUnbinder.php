@@ -29,9 +29,18 @@ final class ObjectUnbinder
         $this->mappingCollection = $mappingCollection;
     }
 
-    public function unbindEntityToRows(object $entity, array $pkValues = [], bool $processChildren = false): array
+    /**
+     * Get any scalar values and foreign keys from the entity that need saving and return them in a flat array
+     * @param object $entity
+     * @param array $pkValues
+     * @param bool $processChildren
+     * @return array Values to be updated, keyed on property name
+     * @throws \Objectiphy\Objectiphy\Exception\ObjectiphyException
+     * @throws \ReflectionException
+     */
+    public function unbindEntityToRow(object $entity, array $pkValues = [], bool $processChildren = false): array
     {
-        $rows = [];
+        $row = [];
         $properties = $this->entityTracker->getDirtyProperties($entity, $pkValues);
         foreach ($properties as $property => $value) {
             $this->objectMapper->addMappingForProperty(ObjectHelper::getObjectClassName($entity), $property, true);
@@ -40,12 +49,12 @@ final class ObjectUnbinder
                 && $this->mappingCollection->isPropertyFetchable($propertyMapping)) {
                 $columnName = $propertyMapping->getFullColumnName();
                 if ($columnName) {
-                    $rows[$property] = $this->unbindValue($value);
+                    $row[$property] = $this->unbindValue($value);
                 }
             }
         }
         
-        return $rows;
+        return $row;
     }
 
     /**

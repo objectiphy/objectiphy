@@ -13,6 +13,9 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Relationship;
 
+/**
+ * Base class for SelectQuery, InsertQuery, UpdateQuery, and DeleteQuery
+ */
 abstract class Query implements QueryInterface
 {
     /**
@@ -118,6 +121,11 @@ abstract class Query implements QueryInterface
         }
     }
 
+    /**
+     * Extract target class name from a join.
+     * @param string $alias
+     * @return string
+     */
     public function getClassForAlias(string $alias): string
     {
         foreach ($this->joins as $joinExpression) {
@@ -131,6 +139,11 @@ abstract class Query implements QueryInterface
         return '';
     }
 
+    /**
+     * Put together the parts of a join - relationship info and criteria.
+     * @param MappingCollection $mappingCollection
+     * @param PropertyMapping $propertyMapping
+     */
     protected function populateRelationshipJoin(MappingCollection $mappingCollection, PropertyMapping $propertyMapping)
     {
         if ($propertyMapping->isLateBound(true)) {
@@ -144,11 +157,8 @@ abstract class Query implements QueryInterface
         }
 
         $join = new JoinExpression(
-//            $propertyMapping->getPropertyPath(),
-//            '=',
             $propertyMapping->getChildClassName(),
             'obj_alias_' . str_replace('.', '_', $propertyMapping->getPropertyPath())
-//            $targetProperty
         );
         $join->propertyMapping = $propertyMapping;
 

@@ -117,20 +117,17 @@ class EntityProxy implements EntityProxyInterface
                 if (!empty($this->lazyLoaders[$propertyName])) {
                     $closure = $this->lazyLoaders[$propertyName];
                     $value = $closure();
-                    $dataType = is_array($value) || $value instanceof \Traversable 
-                        ? '\Traversable' 
-                        : (is_object($value) ? ObjectHelper::getObjectClassName($value) : null);
-                    $this->setValueObjectiphy($propertyName, $value, $dataType);
+                    $this->setValueObjectiphy($propertyName, $value);
                     unset($this->lazyLoaders[$propertyName]);
                 }
             }
         }
     }
 
-    protected function setValueObjectiphy(string $propertyName, $value, ?string $dataType = null)
+    protected function setValueObjectiphy(string $propertyName, $value)
     {
         $this->objectiphySettingValue[$propertyName] = true; //So that __isset knows not to count on the lazy loader
-        ObjectHelper::setValueOnObject($this, $propertyName, $value, $dataType);
+        ObjectHelper::setValueOnObject($this, $propertyName, $value);
         
         unset($this->objectiphySettingValue[$propertyName]);
     }

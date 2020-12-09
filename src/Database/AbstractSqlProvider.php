@@ -12,6 +12,10 @@ use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Query\Query;
 
+/**
+ * Base class for SQL providers.
+ * @package Objectiphy\Objectiphy\Database
+ */
 class AbstractSqlProvider implements SqlProviderInterface
 {
     protected array $params = [];
@@ -25,7 +29,7 @@ class AbstractSqlProvider implements SqlProviderInterface
         $this->dataTypeHandler = $dataTypeHandler;
     }
 
-    public function setMappingCollection(MappingCollection $mappingCollection)
+    public function setMappingCollection(MappingCollection $mappingCollection): void
     {
         $this->mappingCollection = $mappingCollection;
     }
@@ -49,11 +53,11 @@ class AbstractSqlProvider implements SqlProviderInterface
 
     /**
      * Replace prepared statement parameters with actual values (for debugging output only, not for execution!)
-     * @param string $query Parameterised SQL string
-     * @param array $params Parameter values to replace tokens with
-     * @return string SQL string with values instead of parameters
+     * @param string $query Parameterised SQL string.
+     * @param array $params Parameter values to replace tokens with.
+     * @return string SQL string with values instead of parameters.
      */
-    public function replaceTokens($query, $params)
+    public function replaceTokens($query, $params): string
     {
         if (count($params)) {
             foreach (array_reverse($params) as $key => $value) { //Don't want to replace param_10 with column name for param_1 followed by a zero!
@@ -68,20 +72,6 @@ class AbstractSqlProvider implements SqlProviderInterface
         return $query;
     }
 
-//    protected function combineParams(array ...$params)
-//    {
-//        $combined = [];
-//        $index = 1;
-//        foreach ($params as $paramArray) {
-//            foreach ($paramArray as $value) {
-//                $combined['param_' . strval($index)] = $value;
-//                $index++;
-//            }
-//        }
-//
-//        return $combined;
-//    }
-
     /**
      * Convert "database.table.column" to "`database`.`table`.`column`". As the input does not
      * come from a user, but from mapping definitions, we will not sanitize in case there is a
@@ -90,7 +80,7 @@ class AbstractSqlProvider implements SqlProviderInterface
      * @param string $delimiter Character to wrap tables and columns in.
      * @return string Backtick separated string equivalent.
      */
-    protected function delimit(string $tableColumnString, string $delimiter = '`')
+    protected function delimit(string $tableColumnString, string $delimiter = '`'): string
     {
         $delimited = '';
         if ($tableColumnString) {

@@ -93,6 +93,12 @@ class ObjectReference implements ObjectReferenceInterface
         return $propertyValue;
     }
 
+    /**
+     * Set the value of a primary key property
+     * @param string $propertyName
+     * @param $value
+     * @throws \ReflectionException
+     */
     public function setPrimaryKeyValue(string $propertyName, $value): void
     {
         if (!empty($this->object) && array_key_exists($propertyName, $this->pkValues)) {
@@ -133,7 +139,7 @@ class ObjectReference implements ObjectReferenceInterface
     }
 
     /**
-     * @return string Either the primary key value, if known, or the object hash.
+     * @return string Either the primary key value as a string index, if known, or the object hash.
      */
     public function __toString(): string
     {

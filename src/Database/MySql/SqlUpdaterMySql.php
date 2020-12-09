@@ -17,6 +17,10 @@ use Objectiphy\Objectiphy\Query\InsertQuery;
 use Objectiphy\Objectiphy\Query\Query;
 use Objectiphy\Objectiphy\Query\UpdateQuery;
 
+/**
+ * Provider of SQL for update queries on MySQL
+ * @package Objectiphy\Objectiphy\Database\MySql
+ */
 class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
 {
     protected $objectNames;
@@ -58,7 +62,7 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
         $this->prepareReplacements($query, $this->options->mappingCollection, '`');
 
         $sql = 'INSERT INTO ';
-        $sql .= $this->replaceNames($query->getInsertInto());
+        $sql .= $this->replaceNames($query->getInsert());
         $sql .= ' SET ';
         $sqlAssignments = [];
         foreach ($query->getAssignments() as $assignment) {
@@ -123,7 +127,7 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
         MappingCollection $mappingCollection,
         string $delimiter = '`',
         array $parents = []
-    ) {
+    ): void {
         $this->sql = '';
         $this->objectNames = [];
         $this->persistenceNames = [];
@@ -181,7 +185,7 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
         return false;
     }
 
-    protected function replaceNames(string $subject)
+    protected function replaceNames(string $subject): string
     {
         if (!isset($this->objectNames)) {
             throw new ObjectiphyException('Please call prepareReplacements method before attempting to replace.');

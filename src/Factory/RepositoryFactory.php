@@ -13,6 +13,7 @@ use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
+use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
@@ -66,18 +67,18 @@ class RepositoryFactory
         $this->setConfigOptions($configOptions);
     }
 
-    public function setConfigOptions(ConfigOptions $configOptions)
+    public function setConfigOptions(ConfigOptions $configOptions): void
     {
         $this->configOptions = $configOptions;
     }
 
-    public function setSqlBuilder(SqlSelectorInterface $sqlSelector, DataTypeHandlerInterface $dataTypeHandler)
+    public function setSqlBuilder(SqlSelectorInterface $sqlSelector, DataTypeHandlerInterface $dataTypeHandler): void
     {
         $this->sqlSelector = $sqlSelector;
         $this->dataTypeHandler = $dataTypeHandler;
     }
 
-    public function setMappingProvider(MappingProviderInterface $mappingProvider)
+    public function setMappingProvider(MappingProviderInterface $mappingProvider): void
     {
         $this->mappingProvider = $mappingProvider;
     }
@@ -85,9 +86,9 @@ class RepositoryFactory
     /**
      * If no custom mapping provider has been set, return the default one, which reads both Doctrine and Objectiphy
      * annotations.
-     * @return MappingProviderInterface|MappingProviderAnnotation
+     * @return MappingProviderInterface
      */
-    public function getMappingProvider()
+    public function getMappingProvider(): MappingProviderInterface
     {
         if (!isset($this->mappingProvider)) {
             //Decorate a mapping provider for Doctrine/Objectiphy annotations
@@ -111,7 +112,7 @@ class RepositoryFactory
         string $entityClassName = '',
         string $repositoryClassName = null,
         ?ConfigOptions $configOptions = null
-    ) {
+    ): ObjectRepositoryInterface {
         $configOptions ??= $this->configOptions;
         $configHash = $configOptions->getHash($repositoryClassName ?: '');
         if (!isset($this->repositories[$entityClassName][$configHash])) {
@@ -135,7 +136,7 @@ class RepositoryFactory
         return $this->repositories[$entityClassName][$configHash];
     }
 
-    protected final function getObjectMapper()
+    protected final function getObjectMapper(): ObjectMapper
     {
         if (!isset($this->objectMapper)) {
             $this->objectMapper = $this->createObjectMapper();
@@ -144,7 +145,7 @@ class RepositoryFactory
         return $this->objectMapper;
     }
 
-    protected final function getEntityTracker()
+    protected final function getEntityTracker(): EntityTracker
     {
         if (!isset($this->entityTracker)) {
             $this->entityTracker = $this->createEntityTracker();
@@ -153,7 +154,7 @@ class RepositoryFactory
         return $this->entityTracker;
     }
 
-    protected final function getStorage()
+    protected final function getStorage(): StorageInterface
     {
         if (!isset($this->storage)) {
             $this->storage = $this->createStorage();
@@ -162,7 +163,7 @@ class RepositoryFactory
         return $this->storage;
     }
 
-    protected final function getProxyFactory(?ConfigOptions $configOptions)
+    protected final function getProxyFactory(?ConfigOptions $configOptions): ProxyFactory
     {
         if (!isset($this->proxyFactory)) {
             $this->proxyFactory = $this->createProxyFactory($configOptions);
@@ -170,12 +171,13 @@ class RepositoryFactory
 
         return $this->proxyFactory;
     }
-    protected final function createObjectMapper()
+    
+    protected final function createObjectMapper(): ObjectMapper
     {
         return new ObjectMapper($this->getMappingProvider(), $this->createNameResolver());
     }
 
-    protected final function createObjectFetcher(?ConfigOptions $configOptions = null)
+    protected final function createObjectFetcher(?ConfigOptions $configOptions = null): ObjectFetcher
     {
         $sqlSelector = $this->getSqlSelector();
         $objectMapper = $this->getObjectMapper();
@@ -186,12 +188,12 @@ class RepositoryFactory
         return new ObjectFetcher($sqlSelector, $objectMapper, $objectBinder, $storage, $entityTracker);
     }
 
-    protected final function createNameResolver()
+    protected final function createNameResolver(): NameResolver
     {
         return new NameResolver();
     }
 
-    protected final function createObjectPersister()
+    protected final function createObjectPersister(): ObjectPersister
     {
         $sqlUpdater = $this->getSqlUpdater();
         $objectMapper = $this->getObjectMapper();
@@ -201,17 +203,17 @@ class RepositoryFactory
         return new ObjectPersister($sqlUpdater, $objectMapper, $objectUnbinder, $storage, $entityTracker);
     }
 
-    protected final function createObjectRemover()
+    protected final function createObjectRemover(): ObjectRemover
     {
         return new ObjectRemover();
     }
 
-    protected final function createEntityTracker()
+    protected final function createEntityTracker(): EntityTracker
     {
         return new EntityTracker();
     }
 
-    protected final function createObjectBinder(?ConfigOptions $configOptions = null)
+    protected final function createObjectBinder(?ConfigOptions $configOptions = null): ObjectBinder
     {
         $entityFactory = $this->createEntityFactory($configOptions);
         $entityTracker = $this->getEntityTracker();
@@ -219,25 +221,25 @@ class RepositoryFactory
         return new ObjectBinder($this, $entityFactory, $entityTracker, $dataTypeHandler);
     }
 
-    protected final function createObjectUnbinder()
+    protected final function createObjectUnbinder(): ObjectUnbinder
     {
         $dataTypeHandler = $this->getDataTypeHandlerMySql();
         $objectMapper = $this->getObjectMapper();
         return new ObjectUnbinder($this->getEntityTracker(), $dataTypeHandler, $objectMapper);
     }
     
-    protected final function createEntityFactory(?ConfigOptions $configOptions = null)
+    protected final function createEntityFactory(?ConfigOptions $configOptions = null): EntityFactoryInterface
     {
         return new EntityFactory($this->createProxyFactory($configOptions));
     }
 
-    protected final function createProxyFactory(?ConfigOptions $configOptions = null)
+    protected final function createProxyFactory(?ConfigOptions $configOptions = null): ProxyFactory
     {
         $configOptions ??= $this->configOptions;
         return new ProxyFactory($configOptions->productionMode, $configOptions->cacheDirectory);
     }
     
-    protected final function createStorage()
+    protected final function createStorage(): StorageInterface
     {
         return new PdoStorage($this->pdo);
     }
@@ -250,8 +252,10 @@ class RepositoryFactory
      * @return string Name of repository class to use.
      * @throws ObjectiphyException
      */
-    private function getRepositoryClassName(?string $repositoryClassName = null, ?string $entityClassName = null)
-    {
+    private function getRepositoryClassName(
+        ?string $repositoryClassName = null, 
+        ?string $entityClassName = null
+    ): string {
         $mappingFound = false;
         $repositoryClassName = $repositoryClassName ?? ObjectRepository::class;
         if ($this->validateEntityClass($entityClassName) && $repositoryClassName == ObjectRepository::class) {
@@ -266,7 +270,7 @@ class RepositoryFactory
         return '\\' . ltrim($repositoryClassName, '\\');
     }
 
-    private function validateEntityClass(?string $entityClassName = null)
+    private function validateEntityClass(?string $entityClassName = null): bool
     {
         if ($entityClassName && !class_exists($entityClassName)) {
             throw new ObjectiphyException(sprintf('Entity class %1$s does not exist.', $entityClassName));
@@ -275,7 +279,7 @@ class RepositoryFactory
         return $entityClassName ? true : false;
     }
 
-    private function validateCustomRepository(string $repositoryClassName, bool $wasMapped)
+    private function validateCustomRepository(string $repositoryClassName, bool $wasMapped): bool
     {
         if ($repositoryClassName && !class_exists($repositoryClassName)) {
             if ($wasMapped) {
@@ -296,7 +300,7 @@ class RepositoryFactory
         return $repositoryClassName ? true : false;
     }
     
-    private function getSqlSelector()
+    private function getSqlSelector(): SqlSelectorInterface
     {
         if (!isset($this->sqlSelector)) {
             $dataTypeHandler = $this->getDataTypeHandlerMySql();
@@ -308,7 +312,7 @@ class RepositoryFactory
         return $this->sqlSelector;
     }
 
-    private function getSqlUpdater()
+    private function getSqlUpdater(): SqlUpdaterInterface
     {
         if (!isset($this->sqlUpdater)) {
             $dataTypeHandler = $this->getDataTypeHandlerMySql();
@@ -320,7 +324,7 @@ class RepositoryFactory
         return $this->sqlUpdater;
     }
 
-    private function getJoinProviderMySql()
+    private function getJoinProviderMySql(): JoinProviderMySql
     {
         if (!isset($this->joinProvider)) {
             $this->joinProvider = new JoinProviderMySql($this->getDataTypeHandlerMySql());
@@ -329,7 +333,7 @@ class RepositoryFactory
         return $this->joinProvider;
     }
 
-    private function getWhereProviderMySql()
+    private function getWhereProviderMySql(): WhereProviderMySql
     {
         if (!isset($this->whereProvider)) {
             $this->whereProvider = new WhereProviderMySql($this->getDataTypeHandlerMySql());
@@ -338,7 +342,7 @@ class RepositoryFactory
         return $this->whereProvider;
     }
 
-    private function getDataTypeHandlerMySql()
+    private function getDataTypeHandlerMySql(): DataTypeHandlerInterface
     {
         if (!isset($this->dataTypeHandler)) {
             $this->dataTypeHandler = new DataTypeHandlerMySql();

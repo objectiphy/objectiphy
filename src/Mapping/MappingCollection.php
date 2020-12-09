@@ -96,7 +96,7 @@ class MappingCollection
      * @param bool $suppressFetch If the column is only being added for a join to filter criteria, we don't fetch it
      * (as any sibling properties will not be present and you would get a partially hydrated object).
      */
-    public function addMapping(PropertyMapping $propertyMapping, bool $suppressFetch = false)
+    public function addMapping(PropertyMapping $propertyMapping, bool $suppressFetch = false): void
     {
         $propertyMapping->parentCollection = $this;
         $this->properties[$propertyMapping->getPropertyPath()] = $propertyMapping;
@@ -120,7 +120,7 @@ class MappingCollection
         } 
     }
 
-    public function forceFetch(string $propertyPath)
+    public function forceFetch(string $propertyPath): void
     {
         $propertyMapping = $this->getPropertyMapping($propertyPath);
         if ($propertyMapping->parents) { //Ensure parent is joined
@@ -131,7 +131,7 @@ class MappingCollection
         $this->fetchableProperties[$propertyMapping->getPropertyPath()] = $propertyMapping;
     }
 
-    public function addPrimaryKeyMapping(string $className, string $propertyName)
+    public function addPrimaryKeyMapping(string $className, string $propertyName): void
     {
         $this->primaryKeyProperties[$className][$propertyName] ??= 1;
     }
@@ -265,7 +265,7 @@ class MappingCollection
         return $this->propertiesByClass[$className][$propertyName] ?? null;
     }
     
-    public function getChildObjectProperties(bool $ownedOnly = false, array $parents = [])
+    public function getChildObjectProperties(bool $ownedOnly = false, array $parents = []): array
     {
         $childProperties = [];
         $parentPath = implode('.', $parents);

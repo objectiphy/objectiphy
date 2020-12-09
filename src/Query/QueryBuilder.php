@@ -11,7 +11,7 @@ use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Exception\QueryException;
 
 /**
- * Helper class to build an array of criteria that can be passed to a repository find method.
+ * Helper class to build a query that can be passed to a repository find method.
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
@@ -23,7 +23,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
     private array $select = [];
 
     private string $from = '';
-    private string $insertInto = '';
+    private string $insert = '';
     private string $update = '';
 
     /**
@@ -87,9 +87,9 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         return $this;
     }
 
-    public function insertInto(string $className): QueryBuilder
+    public function insert(string $className): QueryBuilder
     {
-        $this->insertInto = $className;
+        $this->insert = $className;
         return $this;
     }
 
@@ -201,6 +201,12 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         return $this->andExpression($expression, $operator, $value);
     }
 
+    /**
+     * @param array $propertyNames Either a plain indexed array of properties to sort ascending, or an associative 
+     * array with the key being the property name and the value being either ASC or DESC.
+     * @return $this
+     * @throws QueryException
+     */
     public function orderBy(array $propertyNames): QueryBuilder
     {
         foreach ($propertyNames as $key => $value) {
@@ -267,7 +273,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
     public function buildInsertQuery(): InsertQuery
     {
         $query = new InsertQuery();
-        $query->setInsertInto($this->insertInto);
+        $query->setInsert($this->insert);
         $query->setAssignments(...$this->assignments);
 
         return $query;

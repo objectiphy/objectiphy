@@ -56,6 +56,16 @@ final class ObjectBinder
         }
     }
 
+    /**
+     * Take values from a flat array and hydrate an object hierarchy
+     * @param array $row
+     * @param string $entityClassName
+     * @param array $parents
+     * @param object|null $parentEntity
+     * @return object|null
+     * @throws MappingException
+     * @throws \Throwable
+     */
     public function bindRowToEntity(
         array $row,
         string $entityClassName,
@@ -76,6 +86,15 @@ final class ObjectBinder
         return $propertiesMapped ? $entity : null;
     }
 
+    /**
+     * Loop through the records, creating an array of objects.
+     * @param array $rows
+     * @param string $entityClassName
+     * @param string $keyProperty
+     * @return array
+     * @throws MappingException
+     * @throws \Throwable
+     */
     public function bindRowsToEntities(array $rows, string $entityClassName, string $keyProperty): array
     {
         $entities = [];
@@ -92,6 +111,12 @@ final class ObjectBinder
         return $entities;
     }
 
+    /**
+     * See if we can get it from the tracker.
+     * @param string $entityClassName
+     * @param object $entity
+     * @return bool
+     */
     private function getEntityFromLocalCache(string $entityClassName, object &$entity): bool
     {
         $pkProperties = $this->mappingCollection->getPrimaryKeyProperties($entityClassName);
@@ -113,6 +138,13 @@ final class ObjectBinder
         }
     }
 
+    /**
+     * Loop through populating the scalar properties only.
+     * @param object $entity
+     * @param array $row
+     * @param array $parents
+     * @return bool
+     */
     private function bindScalarProperties(object $entity, array $row, array $parents): bool
     {
         $propertiesMapped = false;
@@ -130,6 +162,16 @@ final class ObjectBinder
         return $propertiesMapped;
     }
 
+    /**
+     * Loop through the relationships.
+     * @param object $entity
+     * @param array $row
+     * @param array $parents
+     * @param object|null $parentEntity
+     * @return bool
+     * @throws MappingException
+     * @throws \Throwable
+     */
     private function bindRelationalProperties(object $entity, array $row, array $parents, ?object $parentEntity): bool
     {
         $valueFound = false;
@@ -160,7 +202,14 @@ final class ObjectBinder
         return $valueFound;
     }
 
-    private function applyValue(object $entity, PropertyMapping $propertyMapping, $value)
+    /**
+     * Convert persistence value to object value.
+     * @param object $entity
+     * @param PropertyMapping $propertyMapping
+     * @param $value
+     * @throws \ReflectionException
+     */
+    private function applyValue(object $entity, PropertyMapping $propertyMapping, $value): void
     {
         if ($propertyMapping->getChildClassName()) {
             $type = $propertyMapping->relationship->isToOne() ? $propertyMapping->getChildClassName() : '\iterable';

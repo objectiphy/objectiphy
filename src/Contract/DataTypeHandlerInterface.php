@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Contract;
 
+/**
+ * Convert values between object representations and persistence representations
+ * (eg. \DateTime to string and vice-versa).
+ * @package Objectiphy\Objectiphy\Contract
+ */
 interface DataTypeHandlerInterface
 {
     public const TYPE_STRING = 'string';

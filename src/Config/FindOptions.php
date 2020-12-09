@@ -38,6 +38,12 @@ class FindOptions implements PropertyPathConsumerInterface
         $this->mappingCollection = $mappingCollection;
     }
 
+    /**
+     * Create and initialise find options.
+     * @param MappingCollection $mappingCollection
+     * @param array $settings
+     * @return FindOptions
+     */
     public static function create(MappingCollection $mappingCollection, array $settings = [])
     {
         $findOptions = new FindOptions($mappingCollection);
@@ -57,6 +63,11 @@ class FindOptions implements PropertyPathConsumerInterface
         return $this->mappingCollection->getEntityClassName();
     }
 
+    /**
+     * Take in criteria, normalize, and convert to a query
+     * @param $criteria
+     * @throws QueryException
+     */
     public function setCriteria($criteria): void
     {
         if ($criteria instanceof SelectQuery) {
@@ -72,6 +83,10 @@ class FindOptions implements PropertyPathConsumerInterface
         $this->setOrderBy($this->orderBy);
     }
 
+    /**
+     * Apply default order by to query if not already specified on the query
+     * @param array $orderBy
+     */
     public function setOrderBy(array $orderBy): void
     {
         $sanitisedOrderBy = [];

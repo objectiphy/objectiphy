@@ -97,7 +97,7 @@ final class ProxyFactory
     }
 
     /**
-     * Create a proxy to intercept property access that needs to be lazy loaded.
+     * Create a proxy to intercept property access that needs to be lazy loaded and return its name.
      * @param object|string $entityOrClassName The entity to wrap in a proxy for lazy loading.
      * @return string|null Name of proxy class, if one was successfully created.
      * @throws \ReflectionException
@@ -132,7 +132,7 @@ final class ProxyFactory
     /**
      * Delete files for proxy classes so they will be regenerated next time.
      */
-    public function clearProxyCache()
+    public function clearProxyCache(): void
     {
         if (file_exists($this->cacheDirectory)) {
             $proxies = array_diff(scandir($this->cacheDirectory), ['.', '..']);
@@ -175,7 +175,7 @@ final class ProxyFactory
         ?\ReflectionMethod $getterMethod,
         ?\ReflectionMethod $setterMethod,
         ?\ReflectionMethod $issetMethod
-    ) {
+    ): string {
         $classDefinition = file_get_contents(__DIR__ . '/../Orm/EntityProxy.php');
 
         $defaultGetter = $getterDeclaration = 'public function &__get(string $objectiphyGetPropertyName)';
@@ -231,7 +231,7 @@ final class ProxyFactory
         return $classDefinition;
     }
 
-    private function getMethodDeclaration(\ReflectionMethod $reflectionMethod)
+    private function getMethodDeclaration(\ReflectionMethod $reflectionMethod): string
     {
         $declaration = implode(' ', \Reflection::getModifierNames($reflectionMethod->getModifiers()));
         $declaration .= ' function ';
@@ -262,7 +262,7 @@ final class ProxyFactory
      * @param $className
      * @return bool
      */
-    private function proxyExists($className)
+    private function proxyExists($className): bool
     {
         $fileName = $this->cacheDirectory . DIRECTORY_SEPARATOR . str_replace('\\', '/', $className) . '.php';
         if (file_exists($fileName)) {
@@ -284,7 +284,7 @@ final class ProxyFactory
      * @param $classDefinition
      * @param $className
      */
-    private function createProxyFromFile($classDefinition, $className)
+    private function createProxyFromFile($classDefinition, $className): void
     {
         $fileName = $this->cacheDirectory . DIRECTORY_SEPARATOR . str_replace('\\', '_', ltrim($className, '\\')) . '.php';
         file_put_contents($fileName, $classDefinition);

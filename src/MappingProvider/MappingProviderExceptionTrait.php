@@ -24,7 +24,7 @@ trait MappingProviderExceptionTrait
         return $this->lastErrorMessage;
     }
 
-    private function handleException(\Throwable $ex)
+    private function handleException(\Throwable $ex): void
     {
         if ($this->throwExceptions) {
             if ($ex instanceof MappingException) {

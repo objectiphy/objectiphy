@@ -23,7 +23,7 @@ class Explanation implements ExplanationInterface
      * @param string $query
      * @param array $params
      */
-    public function addQuery(string $query, array $params)
+    public function addQuery(string $query, array $params): void
     {
         $this->queryHistory[] = $query;
         $this->paramHistory[] = $params;
@@ -90,7 +90,7 @@ class Explanation implements ExplanationInterface
      * @param array $params Parameter values to replace tokens with
      * @return string Query string with values instead of parameters
      */
-    private function replaceTokens(string $query, array $params)
+    private function replaceTokens(string $query, array $params): string
     {
         if (count($params)) {
             foreach (array_reverse($params) as $key => $value) { //Don't want to replace param_10 with column name for param_1 followed by a zero!

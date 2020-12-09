@@ -155,6 +155,9 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
         return get_object_vars($copy);
     }
 
+    /**
+     * @return array
+     */
     public function getPropertyPaths(): array
     {
         $paths = $this->property->getPropertyPaths();
@@ -188,7 +191,7 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
      * @param array $params
      * @return string
      */
-    public function toString(array &$params = [])
+    public function toString(array &$params = []): string
     {
         $string = $this->property . ' ' . $this->operator . ' ';
         if (is_array($this->value)) {
@@ -223,7 +226,12 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
         return $string;
     }
 
-    private function checkNullValidity($property, $exceptionOnInvalidNull): void
+    /**
+     * If value is null, and operator does not support null, either reject it, or convert to empty string.
+     * @param $property
+     * @param bool $exceptionOnInvalidNull Whether or not to reject invalid null assignments.
+     */
+    private function checkNullValidity(string $property, bool $exceptionOnInvalidNull): void
     {
         if ($this->$property === null && !$this->requireNull()) {
             if ($exceptionOnInvalidNull) {

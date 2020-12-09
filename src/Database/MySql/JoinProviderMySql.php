@@ -13,6 +13,10 @@ use Objectiphy\Objectiphy\Query\CriteriaGroup;
 use Objectiphy\Objectiphy\Query\JoinExpression;
 use Objectiphy\Objectiphy\Query\Query;
 
+/**
+ * Provider of SQL for joins on MySQL
+ * @package Objectiphy\Objectiphy\Database\MySql
+ */
 class JoinProviderMySql extends AbstractSqlProvider
 {
     private ?string $joiner = null;

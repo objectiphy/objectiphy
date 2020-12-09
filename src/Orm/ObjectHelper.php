@@ -5,6 +5,7 @@ namespace Objectiphy\Objectiphy\Orm;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
+use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 
 /**
  * This class only contains static methods. In order to prevent hidden dependencies and brittle code, the only methods
@@ -34,91 +35,89 @@ class ObjectHelper
         bool $lookForGetter = true
     ) {
         $value = $defaultValueIfNotFound;
+        $valueFound = false;
 
         try {
-            if ($object/* && property_exists($object, $propertyName)*/) {
-                //If lazy loaded, property might exist but be unset, which would cause a reflection error.
-                if ($object instanceof EntityProxyInterface && $object->isChildAsleep($propertyName)) {
-                    $object->triggerLazyLoad($propertyName);
-                    if (!isset($object->$propertyName)) { //Won't be set if lazy loader didn't load anything
-                        return $value;
+            if ($object) {
+                if (!property_exists($object, $propertyName) && $lookForGetter) {
+                    $valueFound = self::getValueFromGetter($object, $propertyName, $value);
+                }
+                if (!$valueFound) {
+                    //If lazy loaded, property might exist but be unset, which would cause a reflection error.
+                    if ($object instanceof EntityProxyInterface && $object->isChildAsleep($propertyName)) {
+                        $object->triggerLazyLoad($propertyName);
+                        if (!isset($object->$propertyName)) { //Won't be set if lazy loader didn't load anything
+                            $valueFound = true;
+                        }
+                    } elseif ($object instanceof ObjectReferenceInterface) {
+                        if (in_array($propertyName, array_keys($object->getPkValues()))) {
+                            $value = $object->getPkValue($propertyName);
+                            $valueFound = true;
+                        }
                     }
-                } elseif ($object instanceof ObjectReferenceInterface) {
-                    if (in_array($propertyName, array_keys($object->getPkValues()))) {
-                        return $object->getPkValue($propertyName);
+                    if (!$valueFound) { //Try to get from protected or private property
+                        $reflectionProperty = new \ReflectionProperty($object, $propertyName);
+                        $reflectionProperty->setAccessible(true);
+                        if ($reflectionProperty->isInitialized($object) === false) {
+                            $value = null;
+                        } else {
+                            $value = $reflectionProperty->getValue($object);
+                        }
+                        $valueFound = true;
                     }
                 }
-                $reflectionProperty = new \ReflectionProperty($object, $propertyName);
-                $reflectionProperty->setAccessible(true);
-                if ($reflectionProperty->isInitialized($object) === false) {
-                    $value = null;
-                } else {
-                    $value = $reflectionProperty->getValue($object);
-                }
-            } elseif ($object && $lookForGetter && method_exists($object, 'get' . ucfirst($propertyName))) {
-                $reflectionMethod = new \ReflectionMethod(ObjectHelper::getObjectClassName($object), 'get' . ucfirst($propertyName));
-                if ($reflectionMethod->isPublic() && $reflectionMethod->getNumberOfRequiredParameters() == 0) {
-                    $value = $object->{'get' . ucfirst($propertyName)}();
-                }
+            }
+        } catch (\Throwable $ex) { }
+
+        try {
+            if (!$valueFound && $object && $lookForGetter) {
+                $valueFound = self::getValueFromGetter($object, $propertyName, $value);
             }
         } catch (\Throwable $ex) {
             //Don't panic, just use the default value provided
             $value = $defaultValueIfNotFound;
         }
-
+        
         return $value;
     }
-
+    
     /**
-     * Set the value of a property on the given entity to the given value of the given data type, optionally formatted
-     * according to the given format string (format string comes from the mapping definition).
+     * Set the value of a property on the given entity to the given value.
      * @param $object
      * @param $propertyName
-     * @param $value
-     * @param $dataType
-     * @param string $format
+     * @param $valueToSet
      * @param bool $lookForSetter
+     * @return bool Whether or not the value was set successfully.
      * @throws \ReflectionException
      * @throws \Exception
      */
     public static function setValueOnObject(
         $object,
         string $propertyName,
-        $valueToSet
-    ): void {
-        if (array_key_exists('valueToSet', get_defined_vars())) { //isset no good here, as $valueToSet can be null
-            if ($valueToSet instanceof \Closure && $object instanceof EntityProxyInterface) {
-                $object->setLazyLoader($propertyName, $valueToSet);
-            } else {
-                try {
-                    $reflectionProperty = new \ReflectionProperty($object, $propertyName);
-                    $reflectionProperty->setAccessible(true);
-                    $reflectionProperty->setValue($object, $valueToSet);
-                } catch (\Throwable $ex) {
-                    if (method_exists($object, 'set' . ucfirst($propertyName))) {
-                        $className = ObjectHelper::getObjectClassName($object);
-                        $reflectionMethod = new \ReflectionMethod($className, 'set' . ucfirst($propertyName));
-                        if ($reflectionMethod->isPublic()
-                            && $reflectionMethod->getNumberOfParameters() >= 1
-                            && $reflectionMethod->getNumberOfRequiredParameters() <= 1
-                        ) {
-                            //Check whether type hint compatible with value, if applicable
-                            $typeHint = $reflectionMethod->getParameters()[0]->getClass();
-                            $typeHintString = $typeHint ? $typeHint->getName() : '';
-                            if (!$typeHintString
-                                || ($reflectionMethod->getParameters()[0]->isOptional() && $valueToSet === null)
-                                || (!$typeHintString && $value)
-                                || ($typeHint && $value instanceof $typeHintString)
-                            ) {
-                                $object->{'set' . ucfirst($propertyName)}($valueToSet);
-                            }
-
-                            return;
-                        }
-                    }
+        $valueToSet,
+        bool $lookForSetter = true
+    ): bool {
+        $isValueSet = false;
+        if ($valueToSet instanceof \Closure && $object instanceof EntityProxyInterface) {
+            $object->setLazyLoader($propertyName, $valueToSet);
+            $isValueSet = true;
+        } elseif (!property_exists($object, $propertyName) && $lookForSetter) {
+            $isValueSet = self::setValueWithSetter($object, $propertyName, $valueToSet);
+        }
+        if (!$isValueSet) {
+            try {
+                $reflectionProperty = new \ReflectionProperty($object, $propertyName);
+                $reflectionProperty->setAccessible(true);
+                $reflectionProperty->setValue($object, $valueToSet);
+                $isValueSet = true;
+            } catch (\Throwable $ex) {
+                if ($lookForSetter) {
+                    $isValueSet = self::setValueWithSetter($object, $propertyName, $valueToSet);
                 }
             }
         }
+        
+        return $isValueSet;
     }
 
     /**
@@ -129,8 +128,12 @@ class ObjectHelper
      * @param object $targetObject
      * @param string $targetProperty If empty, the value of $sourceProperty will be used
      */
-    public static function populateFromObject(object $sourceObject, string $sourceProperty, object $targetObject, string $targetProperty = '')
-    {
+    public static function populateFromObject(
+        object $sourceObject,
+        string $sourceProperty,
+        object $targetObject,
+        string $targetProperty = ''
+    ): void {
         $sourceValue = self::getValueFromObject($sourceObject, $sourceProperty);
         self::setValueOnObject($targetObject, $targetProperty ?: $sourceProperty, $sourceValue);
     }
@@ -153,5 +156,64 @@ class ObjectHelper
         }
 
         return $className;
+    }
+
+    /**
+     * Use a getter method to get a value, if possible
+     * @param object $object
+     * @param string $propertyName
+     * @param mixed $value The value to return
+     * @return bool Whether or not a getter method was successfully called
+     */
+    private static function getValueFromGetter(object $object, string $propertyName, &$value): bool
+    {
+        try {
+            if ($object && method_exists($object, 'get' . ucfirst($propertyName))) {
+                $className = self::getObjectClassName($object);
+                $reflectionMethod = new \ReflectionMethod($className, 'get' . ucfirst($propertyName));
+                if ($reflectionMethod->isPublic() && $reflectionMethod->getNumberOfRequiredParameters() == 0) {
+                    $value = $object->{'get' . ucfirst($propertyName)}();
+                    return true;
+                }
+            }
+
+        } catch (\Throwable $ex) { }
+
+        return false;
+    }
+
+    /**
+     * Try to set a value using a setter method
+     * @param object $object
+     * @param string $propertyName
+     * @param $valueToSet
+     * @return bool Whether or not the setter method was successfully called
+     */
+    private static function setValueWithSetter(object $object, string $propertyName, $valueToSet): bool
+    {
+        try {
+            if (method_exists($object, 'set' . ucfirst($propertyName))) {
+                $className = self::getObjectClassName($object);
+                $reflectionMethod = new \ReflectionMethod($className, 'set' . ucfirst($propertyName));
+                if ($reflectionMethod->isPublic()
+                    && $reflectionMethod->getNumberOfParameters() >= 1
+                    && $reflectionMethod->getNumberOfRequiredParameters() <= 1
+                ) {
+                    //Check whether type hint compatible with value, if applicable
+                    $typeHint = $reflectionMethod->getParameters()[0]->getClass();
+                    $typeHintString = $typeHint ? $typeHint->getName() : '';
+                    if (!$typeHintString
+                        || ($reflectionMethod->getParameters()[0]->isOptional() && $valueToSet === null)
+                        || (!$typeHintString && $valueToSet)
+                        || ($typeHint && $valueToSet instanceof $typeHintString)
+                    ) {
+                        $object->{'set' . ucfirst($propertyName)}($valueToSet);
+                        return true;
+                    }
+                }
+            }
+        } catch (\Throwable $ex) { }
+        
+        return false;
     }
 }

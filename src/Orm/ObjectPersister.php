@@ -47,7 +47,7 @@ final class ObjectPersister
     /**
      * Manually begin a transaction (if supported by the storage engine)
      */
-    public function beginTransaction()
+    public function beginTransaction(): void
     {
         $this->storage->beginTransaction();
     }
@@ -55,7 +55,7 @@ final class ObjectPersister
     /**
      * Commit a transaction that was started manually (if supported by the storage engine)
      */
-    public function commitTransaction()
+    public function commitTransaction(): void
     {
         $this->storage->commitTransaction();
     }
@@ -63,7 +63,7 @@ final class ObjectPersister
     /**
      * Rollback a transaction that was started manually (if supported by the storage engine)
      */
-    public function rollbackTransaction()
+    public function rollbackTransaction(): void
     {
         $this->storage->rollbackTransaction();
     }
@@ -71,13 +71,20 @@ final class ObjectPersister
     /**
      * Config options relating to persisting data only.
      */
-    public function setSaveOptions(SaveOptions $saveOptions)
+    public function setSaveOptions(SaveOptions $saveOptions): void
     {
         $this->options = $saveOptions;
         $this->sqlUpdater->setSaveOptions($saveOptions);
         $this->objectUnbinder->setMappingCollection($this->options->mappingCollection);
     }
 
+    /**
+     * @param object $entity
+     * @param SaveOptions $options
+     * @param int $insertCount Number of rows inserted
+     * @param int $updateCount Number of rows updated
+     * @return int Total number of rows updated or inserted
+     */
     public function saveEntity(
         object $entity,
         SaveOptions $options,
@@ -91,14 +98,18 @@ final class ObjectPersister
     }
 
     /**
-     * TODO: Perhaps something more efficient with a single query? Is that even possible?
+     * @param array $entities
+     * @param SaveOptions $options
+     * @param int $insertCount Number of rows inserted
+     * @param int $updateCount Number of rows updated
+     * @return int Total number of rows updated or inserted
      */
     public function saveEntities(
         array $entities,
         SaveOptions $options,
         ?int &$insertCount = null,
         ?int &$updateCount = null
-    ) {
+    ): int {
         $result = 0;
         foreach ($entities as $entity) {
             $result += $this->saveEntity($entity, $options, $insertCount, $updateCount);
@@ -107,6 +118,15 @@ final class ObjectPersister
         return $result;
     }
 
+    /**
+     * Execute an insert or update query directly
+     * @param Query $query
+     * @param SaveOptions $options
+     * @param int $insertCount Number of rows inserted
+     * @param int $updateCount Number of rows updated
+     * @return int Total number of rows updated or inserted
+     * @throws QueryException
+     */
     public function saveBy(
         Query $query,
         SaveOptions $options,
@@ -135,6 +155,8 @@ final class ObjectPersister
     }
 
     /**
+     * When saving entities, we need the mapping collection for the current entity as we traverse the object hierarchy.
+     * After saving child entities, we reset it back to the original (parent) entity's mapping, ready for the next call.
      * @param string $className
      * @return string Whatever the class name was before the update
      */
@@ -150,6 +172,12 @@ final class ObjectPersister
         return $originalClassName;
     }
 
+    /**
+     * @param object $entity
+     * @param int $insertCount Number of rows inserted
+     * @param int $updateCount Number of rows updated
+     * @return int Total number of rows updated or inserted
+     */
     private function doSaveEntity(
         object $entity,
         ?int &$insertCount = null,
@@ -186,6 +214,14 @@ final class ObjectPersister
         return $result;
     }
 
+    /**
+     * @param object $entity
+     * @param array $pkValues
+     * @param int $insertCount Number of rows inserted
+     * @param int $updateCount Number of rows updated
+     * @return int Total number of rows updated or inserted
+     * @throws QueryException
+     */
     private function updateEntity(
         object $entity,
         array $pkValues,
@@ -207,7 +243,7 @@ final class ObjectPersister
         }
         $updateQuery = $qb->buildUpdateQuery();
         $this->objectMapper->addExtraMappings($className, $updateQuery);
-        $rows = $this->objectUnbinder->unbindEntityToRows($entity, $pkValues, $this->options->saveChildren);
+        $rows = $this->objectUnbinder->unbindEntityToRow($entity, $pkValues, $this->options->saveChildren);
         if ($rows) {
             $updateQuery->finalise($this->options->mappingCollection, $className, $rows);
             $sql = $this->sqlUpdater->getUpdateSql($updateQuery, $this->options->replaceExisting);
@@ -225,7 +261,13 @@ final class ObjectPersister
         return $insertCount + $updateCount;
     }
 
-    private function updateChildren(object $entity, int &$insertCount, int &$updateCount)
+    /**
+     * @param object $entity
+     * @param int $insertCount Number of rows inserted
+     * @param int $updateCount Number of rows updated
+     * @throws \ReflectionException
+     */
+    private function updateChildren(object $entity, int &$insertCount, int &$updateCount): void
     {
         $children = $this->options->mappingCollection->getChildObjectProperties();
         foreach ($children as $childPropertyName) {
@@ -252,17 +294,19 @@ final class ObjectPersister
                         $childMappingCollection = $this->objectMapper->getMappingCollectionForClass($childClass);
                         $childPkValues = $childMappingCollection->getPrimaryKeyValues($childEntity);
                     }
-//                    if ($childPkValues) {
-                        $this->doSaveEntity($childEntity, $insertCount, $updateCount);
-//                    } else {
-//                        //Insert
-//
-//                    }
+                    $this->doSaveEntity($childEntity, $insertCount, $updateCount);
                 }
             }
         }
     }
 
+    /**
+     * @param object $entity
+     * @param int $insertCount Number of rows inserted
+     * @param int $updateCount Number of rows updated
+     * @return int Total number of rows updated or inserted
+     * @throws \ReflectionException
+     */
     private function insertEntity(object $entity, int &$insertCount, int &$updateCount): int
     {
         if (in_array($entity, $this->savedObjects)) {
@@ -279,9 +323,9 @@ final class ObjectPersister
         //Then save the parent
         $qb = QB::create();
         $insertQuery = $qb->buildInsertQuery();
-        $rows = $this->objectUnbinder->unbindEntityToRows($entity, [], $this->options->saveChildren);
-        if ($rows) {
-            $insertQuery->finalise($this->options->mappingCollection, $className, $rows);
+        $row = $this->objectUnbinder->unbindEntityToRow($entity, [], $this->options->saveChildren);
+        if ($row) {
+            $insertQuery->finalise($this->options->mappingCollection, $className, $row);
             $sql = $this->sqlUpdater->getInsertSql($insertQuery);
             $params = $this->sqlUpdater->getQueryParams();
             if ($this->storage->executeQuery($sql, $params)) {
@@ -307,7 +351,15 @@ final class ObjectPersister
         return $insertCount;
     }
 
-    private function insertChildren(object $entity, int &$insertCount, int &$updateCount, bool $ownedOnly = true)
+    /**
+     * @param object $entity
+     * @param int $insertCount Number of rows inserted
+     * @param int $updateCount Number of rows updated
+     * @param bool $ownedOnly Whether to only insert children owned by the entity (must be true if the parent entity
+     * has not yet been saved - otherwise the child that gets inserted will be an orphan in the database).
+     * @throws \ReflectionException
+     */
+    private function insertChildren(object $entity, int &$insertCount, int &$updateCount, bool $ownedOnly = true): void
     {
         $children = $this->options->mappingCollection->getChildObjectProperties($ownedOnly);
         foreach ($children as $childPropertyName) {

@@ -48,19 +48,19 @@ final class ObjectFetcher
     /**
      * Config options relating to fetching data only.
      */
-    public function setFindOptions(FindOptions $findOptions) 
+    public function setFindOptions(FindOptions $findOptions): void
     {
         $this->options = $findOptions;
         $this->sqlSelector->setFindOptions($findOptions);
         $this->objectBinder->setMappingCollection($findOptions->mappingCollection);
     }
 
-    public function setConfigOptions(ConfigOptions $configOptions)
+    public function setConfigOptions(ConfigOptions $configOptions): void
     {
         $this->objectBinder->setConfigOptions($configOptions);
     }
 
-    public function getExistingEntity(string $className, $pkValues)
+    public function getExistingEntity(string $className, $pkValues): ?object
     {
         if (!is_array($pkValues)) {
             $pkValues = [$pkValues];
@@ -90,7 +90,11 @@ final class ObjectFetcher
 
         return $result;
     }
-    
+
+    /**
+     * Clear the entity tracker to ensure objects get refreshed from the database
+     * @param string|null $className
+     */
     public function clearCache(?string $className = null): void
     {
         $this->entityTracker->clear($className);

@@ -12,7 +12,7 @@ use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-class EntityFactory 
+class EntityFactory implements EntityFactoryInterface
 {
     private ProxyFactory $proxyFactory;
     private array $entityFactories = [];

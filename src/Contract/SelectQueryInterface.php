@@ -8,6 +8,10 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 
+/**
+ * Like an SQL query, but with expressions relating to objects and properties.
+ * @package Objectiphy\Objectiphy\Contract
+ */
 interface SelectQueryInterface extends QueryInterface
 {
     public function setSelect(FieldExpression ...$fields): void;
