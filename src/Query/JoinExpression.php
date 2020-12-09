@@ -11,18 +11,14 @@ use Objectiphy\Objectiphy\Contract\QueryPartInterface;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 
 /**
- * Represents a relationship in a query.
+ * Represents a relationship in a query (without any criteria).
  */
 class JoinExpression implements QueryPartInterface, JoinPartInterface, PropertyPathConsumerInterface
 {
     public const JOIN_TYPE_LEFT = 'LEFT';
     public const JOIN_TYPE_INNER = 'INNER';
 
-//    public string $sourceProperty;
-//    public string $sourceEntityClassName;
-//    public string $operator;
     public string $targetEntityClassName;
-//    public string $targetProperty;
     public string $joinAlias;
     public string $type = self::JOIN_TYPE_LEFT;
     public ?PropertyMapping $propertyMapping = null; //For automatically joined relationships
@@ -42,10 +38,6 @@ class JoinExpression implements QueryPartInterface, JoinPartInterface, PropertyP
         $joinString = $this->type . ' JOIN ';
         $joinString .= $this->targetEntityClassName;
         $joinString .= ' ' . $this->joinAlias;
-//        $joinString .= ' ON ';
-//        $joinString .= '`' . $this->sourceProperty . '`';
-//        $joinString .= ' ' . $this->operator . ' ';
-//        $joinString .= '`' . $this->sourceProperty . '.' . $this->targetPropertyName . '`';
 
         return $joinString;
     }
