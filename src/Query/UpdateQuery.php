@@ -12,7 +12,7 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 /**
  * Query to update one or more values in the database.
  */
-class UpdateQuery extends Query implements QueryInterface, UpdateQueryInterface
+class UpdateQuery extends Query implements UpdateQueryInterface
 {
     /**
      * @var AssignmentExpression[]

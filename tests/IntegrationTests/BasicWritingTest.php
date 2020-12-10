@@ -16,7 +16,7 @@ use Objectiphy\Objectiphy\Tests\Entity\TestContact;
 use Objectiphy\Objectiphy\Tests\Entity\TestVehicle;
 use Objectiphy\Objectiphy\Tests\Entity\TestAddress;
 
-class ObjectRepositoryIntegrationTest extends IntegrationTestBase
+class BasicWritingTest extends IntegrationTestBase
 {
     /**
      * Basic writing using annotations to determine eager/lazy loading - doctrine annotations use doctrine defaults

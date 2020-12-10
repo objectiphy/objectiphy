@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Contract;
 
-use Objectiphy\Objectiphy\Orm\ObjectHelper;
-
 /**
  * Interface for an object that represents an instance of an entity to use either as a placeholder before the object 
  * has been persisted, so that the foreign key can be populated after persistence, or as a way of representing a child

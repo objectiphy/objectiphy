@@ -7,7 +7,6 @@ namespace Objectiphy\Objectiphy\Query;
 use Objectiphy\Objectiphy\Contract\CriteriaBuilderInterface;
 use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
 use Objectiphy\Objectiphy\Contract\JoinPartInterface;
-use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Exception\QueryException;
 
 /**

@@ -5,12 +5,8 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Database;
 
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
-use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Contract\SqlProviderInterface;
-use Objectiphy\Objectiphy\Exception\ObjectiphyException;
-use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
-use Objectiphy\Objectiphy\Query\Query;
 
 /**
  * Base class for SQL providers.
@@ -57,19 +53,19 @@ class AbstractSqlProvider implements SqlProviderInterface
      * @param array $params Parameter values to replace tokens with.
      * @return string SQL string with values instead of parameters.
      */
-    public function replaceTokens($query, $params): string
+    public function replaceTokens($queryString, $params): string
     {
         if (count($params)) {
             foreach (array_reverse($params) as $key => $value) { //Don't want to replace param_10 with column name for param_1 followed by a zero!
-                $query = str_replace(
+                $queryString = str_replace(
                     ':' . $key,
                     (in_array($value, [null, true, false], true) ? var_export($value, true) : "'$value'"),
-                    $query
+                    $queryString
                 );
             }
         }
 
-        return $query;
+        return $queryString;
     }
 
     /**

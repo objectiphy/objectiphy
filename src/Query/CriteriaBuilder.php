@@ -214,9 +214,9 @@ class CriteriaBuilder implements CriteriaBuilderInterface
     public function toArray(): array
     {
         $arrayExpressions = [];
-        foreach ($this->expressions as $expression) {
+        foreach ($this->currentCriteriaCollection as $expression) {
             if ($expression) {
-                $arrayExpressions[$expression->propertyName] = $expression->toArray();
+                $arrayExpressions[$expression->property->getExpression()] = $expression->toArray();
             }
         }
 

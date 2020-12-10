@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\NamingStrategy;
 
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
-use Objectiphy\Objectiphy\Contract\NamingStrategyInterface as NSI;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Table;
 
@@ -35,7 +34,7 @@ class NameResolver
         if ($this->guessMappings && empty($table->name)) {
             $table->name = $this->tableNamingStrategy->convertName(
                 $reflectionClass->getShortName(),
-                NSI::TYPE_CLASS
+                NamingStrategyInterface::TYPE_CLASS
             );
         }
     }
@@ -60,7 +59,7 @@ class NameResolver
                 //Resolve column name for scalar value property
                 $column->name = $strategy->convertName(
                     $propertyName,
-                    NSI::TYPE_SCALAR_PROPERTY,
+                    NamingStrategyInterface::TYPE_SCALAR_PROPERTY,
                     $propertyMapping
                 );
             } elseif ($relationship->isDefined() && (!$relationship->sourceJoinColumn && !$relationship->mappedBy)) {
@@ -70,7 +69,7 @@ class NameResolver
                 //Resolve source join column name (foreign key) for relationship property
                 $relationship->sourceJoinColumn = $strategy->convertName(
                     $propertyName,
-                    NSI::TYPE_RELATIONSHIP_PROPERTY,
+                    NamingStrategyInterface::TYPE_RELATIONSHIP_PROPERTY,
                     $propertyMapping
                 );
             }

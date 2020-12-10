@@ -6,8 +6,6 @@ namespace Objectiphy\Objectiphy\Contract;
 
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Query\AssignmentExpression;
-use Objectiphy\Objectiphy\Query\CriteriaExpression;
-use Objectiphy\Objectiphy\Query\FieldExpression;
 
 interface InsertQueryInterface extends QueryInterface
 {

@@ -4,20 +4,16 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
-use Objectiphy\Annotations\AnnotationReader;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\Column;
-use Objectiphy\Objectiphy\Mapping\LateBinding;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Mapping\Table;
 use Objectiphy\Objectiphy\NamingStrategy\NameResolver;
-use Objectiphy\Objectiphy\Query\CriteriaExpression;
-use Objectiphy\Objectiphy\Query\Query;
 
 /**
  * Loads mapping information from the supplied mapping provider (typically annotations, but the mapping information 
@@ -79,7 +75,7 @@ final class ObjectMapper
      * Depending on the criteria, we might need additional mappings - eg. to search on the value of
      * a late bound child object.
      * @param string $className Name of top-level class
-     * @param Query $criteria
+     * @param PropertyPathConsumerInterface $pathConsumer
      */
     public function addExtraMappings(string $className, PropertyPathConsumerInterface $pathConsumer = null): void
     {

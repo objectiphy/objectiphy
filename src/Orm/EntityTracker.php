@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
-use Objectiphy\Objectiphy\Contract\PropertyChangedListenerInterface;
 
 /**
  * A local cache of entities retrieved, and a cloned copy of each for tracking changes.
@@ -89,13 +88,11 @@ class EntityTracker
             $property = $reflectionProperty->getName();
             if (!($entity instanceof EntityProxyInterface) || !$entity->isChildAsleep($property)) { //Shh. Don't wake up the kids.
                 $entityValue = ObjectHelper::getValueFromObject($entity, $property);
-                //if (!is_object($entityValue) || $entityValue instanceof \DateTimeInterface) {
-                    $notFound = '**!VALUE_NOT_FOUND!**';
-                    $cloneValue = $clone ? ObjectHelper::getValueFromObject($clone, $property, $notFound) : $notFound;
-                    if ($entityValue != $cloneValue) {
-                        $changes[$property] = $entityValue;
-                    }
-                //}
+                $notFound = '**!VALUE_NOT_FOUND!**';
+                $cloneValue = $clone ? ObjectHelper::getValueFromObject($clone, $property, $notFound) : $notFound;
+                if ($entityValue != $cloneValue) {
+                    $changes[$property] = $entityValue;
+                }
             }
         }
         

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\UnitTests;
 
+use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Query\QueryBuilder;
 use Objectiphy\Objectiphy\Query\CB;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;

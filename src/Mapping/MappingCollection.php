@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Mapping;
 
-use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Relationship;

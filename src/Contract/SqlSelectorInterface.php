@@ -21,5 +21,5 @@ interface SqlSelectorInterface extends SqlProviderInterface
      * Get the SQL necessary to select the records that will be used to hydrate the given entity.
      * @return string The query to execute.
      */
-    public function getSelectSql(): string;
+    public function getSelectSql(SelectQueryInterface $query): string;
 }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Query;
 
-use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
 use Objectiphy\Objectiphy\Contract\JoinPartInterface;
 use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
 use Objectiphy\Objectiphy\Contract\QueryPartInterface;

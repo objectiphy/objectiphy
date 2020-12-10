@@ -5,7 +5,6 @@ namespace Objectiphy\Objectiphy\Orm;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
-use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 
 /**
  * This class only contains static methods. In order to prevent hidden dependencies and brittle code, the only methods

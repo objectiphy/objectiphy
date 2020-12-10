@@ -6,8 +6,6 @@ namespace Objectiphy\Objectiphy\Contract;
 
 use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Mapping\Table;
-use Objectiphy\Objectiphy\Query\InsertQuery;
-use Objectiphy\Objectiphy\Query\UpdateQuery;
 
 /**
  * For an object that provides SQL for a update query.
@@ -22,18 +20,18 @@ interface SqlUpdaterInterface extends SqlProviderInterface
 
     /**
      * Get the SQL necessary to perform the insert.
-     * @param InsertQuery $query
+     * @param InsertQueryInterface $query
      * @return string A query to execute for inserting the record.
      */
-    public function getInsertSql(InsertQuery $query): string;
+    public function getInsertSql(InsertQueryInterface $query): string;
 
     /**
      * Get the SQL necessary to perform the update.
-     * @param UpdateQuery $query
+     * @param UpdateQueryInterface $query
      * @param bool $replaceExisting
      * @return string A query to execute for updating the record(s).
      */
-    public function getUpdateSql(UpdateQuery $query, bool $replaceExisting = false): string;
+    public function getUpdateSql(UpdateQueryInterface $query, bool $replaceExisting = false): string;
 
     /**
      * Get the SQL queries necessary to replace the given row record.

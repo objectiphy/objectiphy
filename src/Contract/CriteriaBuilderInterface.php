@@ -6,7 +6,6 @@ namespace Objectiphy\Objectiphy\Contract;
 
 use Objectiphy\Objectiphy\Query\CriteriaBuilder;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
-use Objectiphy\Objectiphy\Query\CriteriaGroup;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 
 interface CriteriaBuilderInterface

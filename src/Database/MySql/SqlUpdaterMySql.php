@@ -6,16 +6,15 @@ namespace Objectiphy\Objectiphy\Database\MySql;
 
 use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
+use Objectiphy\Objectiphy\Contract\InsertQueryInterface;
+use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
+use Objectiphy\Objectiphy\Contract\UpdateQueryInterface;
 use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
-use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\Table;
-use Objectiphy\Objectiphy\Query\InsertQuery;
-use Objectiphy\Objectiphy\Query\Query;
-use Objectiphy\Objectiphy\Query\UpdateQuery;
 
 /**
  * Provider of SQL for update queries on MySQL
@@ -49,10 +48,10 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
 
     /**
      * Get the SQL necessary to perform the insert.
-     * @param InsertQuery $query
+     * @param InsertQueryInterface $query
      * @return string A query to execute for inserting the record.
      */
-    public function getInsertSql(InsertQuery $query): string
+    public function getInsertSql(InsertQueryInterface $query): string
     {
         if (!isset($this->options->mappingCollection)) {
             throw new ObjectiphyException('SQL Builder has not been initialised. There is no mapping information!');
@@ -78,18 +77,17 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
 
     /**
      * Get the SQL statements necessary to update the given row record.
-     * @param string $className Name of the parent entity class for the record being updated (used to get the
-     * primary key column).
-     * @param array $row Row of data to update.
-     * @param array $pkValues Value of primary key for record to update.
-     * @return array An array of SQL queries to execute for updating the entity.
-     * @throws MappingException
+     * @param UpdateQueryInterface $query
+     * @param bool $replaceExisting
+     * @param array $parents
+     * @return string
+     * @throws ObjectiphyException
      * @throws \ReflectionException
      */
-    public function getUpdateSql(UpdateQuery $query, bool $replaceExisting = false, array $parents = []): string
+    public function getUpdateSql(UpdateQueryInterface $query, bool $replaceExisting = false, array $parents = []): string
     {
         if (!isset($this->options->mappingCollection)) {
-            throw new ObjectiphyException('SQL Builder has not been initialised. There is no mapping information!');
+            throw new ObjectiphyException('SQL Updater has not been initialised. There is no mapping information!');
         }
 
         $this->params = [];
@@ -123,7 +121,7 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
      * @param string $delimiter
      */
     protected function prepareReplacements(
-        Query $query,
+        QueryInterface $query,
         MappingCollection $mappingCollection,
         string $delimiter = '`',
         array $parents = []
@@ -164,7 +162,7 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
     
     private function prepareCustomJoinAliasReplacements(
         string $propertyPath, 
-        Query $query, 
+        QueryInterface $query,
         MappingCollection $mappingCollection
     ): bool {
         $aliasDelimiterPos = strpos($propertyPath, '.');

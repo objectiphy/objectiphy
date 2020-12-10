@@ -6,8 +6,6 @@ namespace Objectiphy\Objectiphy\Contract;
 
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Query\AssignmentExpression;
-use Objectiphy\Objectiphy\Query\CriteriaExpression;
-use Objectiphy\Objectiphy\Query\FieldExpression;
 
 /**
  * Like an SQL query, but with expressions relating to objects and properties.

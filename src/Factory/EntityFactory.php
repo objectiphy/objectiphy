@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Factory;
 
-use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 

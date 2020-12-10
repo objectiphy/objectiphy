@@ -7,7 +7,6 @@ namespace Objectiphy\Objectiphy\MappingProvider;
 use Doctrine\ORM\Mapping\Embedded;
 use Doctrine\ORM\Mapping\JoinColumn;
 use Doctrine\ORM\Mapping\OrderBy;
-use Objectiphy\Annotations\AnnotationReaderException;
 use Objectiphy\Annotations\AnnotationReaderInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Mapping\Column;

@@ -9,19 +9,21 @@ use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\ExplanationInterface;
+use Objectiphy\Objectiphy\Contract\InsertQueryInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
+use Objectiphy\Objectiphy\Contract\QueryInterface;
+use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
+use Objectiphy\Objectiphy\Contract\UpdateQueryInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Factory\ProxyFactory;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
-use Objectiphy\Objectiphy\Criteria\CB;
+use Objectiphy\Objectiphy\Query\FieldExpression;
 use Objectiphy\Objectiphy\Query\Pagination;
 use Objectiphy\Objectiphy\Query\QB;
-use Objectiphy\Objectiphy\Query\Query;
-use Objectiphy\Objectiphy\Query\SelctQuery;
-use Objectiphy\Objectiphy\Query\UpdateQuery;
+use Objectiphy\Objectiphy\Query\SelectQuery;
 
 /**
  * Main entry point for all ORM operations
@@ -177,7 +179,7 @@ class ObjectRepository implements ObjectRepositoryInterface
     /**
      * Find a single record (and hydrate it as an entity) for the given criteria. Compatible with the equivalent method
      * in Doctrine.
-     * @param array|Query $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
+     * @param array|SelectQueryInterface $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @return object|array|null
      */
@@ -185,16 +187,15 @@ class ObjectRepository implements ObjectRepositoryInterface
     {
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => false,
-            'criteria' => $criteria,
             'bindToEntities' => $this->configOptions->bindToEntities,
         ]);
 
-        return $this->doFindBy($findOptions);
+        return $this->doFindBy($findOptions, $criteria);
     }
 
     /**
      * Return the latest record from a group
-     * @param array|Query $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
+     * @param array|SelectQueryInterface $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @param string|null $commonProperty Property on root entity whose value you want to group by (see also the
      * setCommonProperty method).
@@ -213,16 +214,15 @@ class ObjectRepository implements ObjectRepositoryInterface
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => false,
             'latest' => true,
-            'criteria' => $criteria,
             'bindToEntities' => $this->configOptions->bindToEntities,
         ]);
 
-        return $this->doFindBy($findOptions);
+        return $this->doFindBy($findOptions, $criteria);
     }
 
     /**
      * Return the latest record from each group
-     * @param array|Query $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
+     * @param array|SelectQueryInterface $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @param string|null $commonProperty Property on root entity whose value you want to group by (see also the
      * setCommonProperty method).
@@ -251,7 +251,7 @@ class ObjectRepository implements ObjectRepositoryInterface
     /**
      * Find all records that match the given criteria (and hydrate them as entities). Compatible with the equivalent
      * method in Doctrine.
-     * @param array|Query $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
+     * @param array|SelectQueryInterface $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @param array|null $orderBy Array of properties and optionally sort directions (eg. ['child.name'=>'DESC',
      * 'date']).
@@ -279,7 +279,6 @@ class ObjectRepository implements ObjectRepositoryInterface
         }
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => true,
-            'criteria' => $criteria,
             'orderBy' => $this->orderBy,
             'keyProperty' => $keyProperty ?? '',
             'onDemand' => $fetchOnDemand,
@@ -287,19 +286,19 @@ class ObjectRepository implements ObjectRepositoryInterface
             'bindToEntities' => $this->configOptions->bindToEntities,
         ]);
 
-        return $this->doFindBy($findOptions);
+        return $this->doFindBy($findOptions, $criteria);
     }
 
     /**
      * Alias for findBy but automatically sets the $fetchOnDemand flag to true and avoids needing to supply null values
      * for the arguments that are not applicable (findBy thus remains compatible with Doctrine).
-     * @param array|Query $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
+     * @param array|SelectQueryInterface $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @param array|null $orderBy
      * @return array|null
      */
     public function findOnDemandBy(
-        array $criteria = [],
+        $criteria = [],
         ?array $orderBy = null
     ): ?iterable {
         return null;
@@ -387,13 +386,15 @@ class ObjectRepository implements ObjectRepositoryInterface
 
     /**
      * Execute an insert or update query directly
-     * @param Query $insertOrUpdateQuery
+     * @param QueryInterface $insertOrUpdateQuery
      * @return int Total number of rows updated or inserted
      * @throws QueryException
      */
-    public function saveBy(Query $insertOrUpdateQuery): ?int
+    public function saveBy(QueryInterface $insertOrUpdateQuery): ?int
     {
-        if (!($insertOrUpdateQuery instanceof UpdateQuery) && !($insertOrUpdateQuery instanceof InsertQuery)) {
+        if (!($insertOrUpdateQuery instanceof UpdateQueryInterface) 
+            && !($insertOrUpdateQuery instanceof InsertQueryInterface)
+        ) {
             throw new QueryException('Can only save by query with an UpdateQuery or InsertQuery');
         }
 
@@ -458,40 +459,74 @@ class ObjectRepository implements ObjectRepositoryInterface
         $this->objectPersister->rollbackTransaction();
     }
 
-    protected function doFindBy(FindOptions $findOptions)
+    /**
+     * @param FindOptions $findOptions
+     * @param array | SelectQueryInterface $criteria
+     * @return mixed
+     * @throws ObjectiphyException
+     */
+    protected function doFindBy(FindOptions $findOptions, $criteria)
     {
         $this->objectFetcher->setFindOptions($findOptions);
-        if (!$this->getClassName() && isset($findOptions->query)) {
-            $this->setClassName($findOptions->query->getFrom());
+        $query = $this->normalizeCriteria($criteria);
+        if (!$query->getOrderBy() && $findOptions->orderBy) {
+            $orderBy = $this->normalizeOrderBy($findOptions->orderBy);
+            if ($orderBy) {
+                $query->setOrderBy(...$orderBy);
+            }
+        }
+        if (!$this->getClassName() && $query) {
+            $this->setClassName($query->getFrom());
         }
         $this->assertClassNameSet();
-        
-        return $this->objectFetcher->doFindBy();
+
+        return $this->objectFetcher->doFindBy($query);
     }
 
-//    /**
-//     * If extending this class, call this method to turn array criteria into CriteriaExpressions
-//     * @param array $criteria
-//     * @return array
-//     * @throws ObjectiphyException
-//     * @throws QueryException
-//     */
-//    protected function normalizeCriteria(array $criteria = []): array
-//    {
-//        $pkProperty = '';
-//        if (is_int(array_key_first($criteria) && is_scalar(reset($criteria)))) { //Plain list of primary keys passed in
-//            $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
-//            if (!$pkProperties || count($pkProperties) !== 1) {
-//                $message = sprintf('The criteria passed in is a plain list of values, but entity \'%1$s\' has a composite key so there is insufficient information to identify which records to return.', $this->getClassName());
-//                throw new ObjectiphyException($message);
-//            }
-//            $pkProperty = $pkProperties[0];
-//        }
-//        $queryBuilder = QB::create();
-//        $normalizedCriteria = $queryBuilder->normalize($criteria, $pkProperty);
-//        
-//        return $normalizedCriteria;
-//    }
+    protected function normalizeCriteria($criteria, $queryType = SelectQuery::class): QueryInterface
+    {
+        if (!is_a($queryType, QueryInterface::class, true)) {
+            $errorMessage = sprintf('$queryType argument of normalizeCriteria method must be the name of a class that implements %1$s. %2$s does not.', QueryInterface::class, $queryType);
+            throw new QueryException($errorMessage);
+        }
+
+        if ($criteria instanceof $queryType) {
+            $query = $criteria;
+        } elseif (is_array($criteria)) {
+            $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
+            $normalizedCriteria = QB::create()->normalize($criteria, $pkProperties[0] ?? 'id');
+            $query = new $queryType();
+            $query->setWhere(...$normalizedCriteria);
+        } else {
+            throw new QueryException('Invalid criteria specified for ' . $queryType);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @param array $orderBy Array of property names, or array keyed on property name with direction as the value.
+     * @return array List of FieldExpression objects containing property name and direction.
+     */
+    protected function normalizeOrderBy(array $orderBy): array
+    {
+        $normalisedOrderBy = [];
+        foreach ($orderBy as $property => $direction) {
+            if ($direction instanceof FieldExpression) {
+                $normalisedOrderBy[] = $direction;
+                continue;
+            } elseif (is_int($property) && !in_array(strtoupper($direction), ['ASC', 'DESC'])) {
+                $property = $direction; //Indexed array, not associative
+                $direction = 'ASC';
+            } elseif (!in_array(strtoupper($direction), ['ASC', 'DESC'])) {
+                $direction = 'ASC';
+            }
+            $field = new FieldExpression('`' . $property . '` ' . $direction, false);
+            $normalisedOrderBy[] = $field;
+        }
+
+        return $normalisedOrderBy;
+    }
 
     /**
      * @throws ObjectiphyException

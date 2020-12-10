@@ -4,16 +4,14 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
-use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
-use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
+use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Query\QB;
-use Objectiphy\Objectiphy\Query\Query;
 use Objectiphy\Objectiphy\Query\UpdateQuery;
 
 /**
@@ -120,7 +118,7 @@ final class ObjectPersister
 
     /**
      * Execute an insert or update query directly
-     * @param Query $query
+     * @param QueryInterface $query
      * @param SaveOptions $options
      * @param int $insertCount Number of rows inserted
      * @param int $updateCount Number of rows updated
@@ -128,7 +126,7 @@ final class ObjectPersister
      * @throws QueryException
      */
     public function saveBy(
-        Query $query,
+        QueryInterface $query,
         SaveOptions $options,
         ?int &$insertCount = null,
         ?int &$updateCount = null

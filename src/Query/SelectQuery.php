@@ -5,17 +5,14 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Query;
 
 use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
-use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
-use Objectiphy\Objectiphy\Contract\QueryInterface;
+use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
-use Objectiphy\Objectiphy\Mapping\PropertyMapping;
-use Objectiphy\Objectiphy\Mapping\Relationship;
 
 /**
  * Query to select one or more entities from the database.
  */
-class SelectQuery extends Query implements QueryInterface
+class SelectQuery extends Query implements SelectQueryInterface
 {
     /**
      * @var FieldExpression[]

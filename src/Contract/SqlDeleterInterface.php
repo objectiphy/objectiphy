@@ -15,5 +15,5 @@ interface SqlDeleterInterface extends SqlProviderInterface
      * @param mixed $keyValue Value of primary key for record to delete.
      * @return string[] An array of queries to execute for removing the entity.
      */
-    public function getDeleteSql($entityClassName, $keyValue): array;
+    public function getDeleteSql(DeleteQueryInterface $query): array;
 }

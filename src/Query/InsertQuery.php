@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Query;
 
 use Objectiphy\Objectiphy\Contract\InsertQueryInterface;
-use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
 /**
  * Represents the instructions needed to insert a record.
  */
-class InsertQuery extends Query implements QueryInterface, InsertQueryInterface
+class InsertQuery extends Query implements InsertQueryInterface
 {
     /**
      * @var AssignmentExpression[]

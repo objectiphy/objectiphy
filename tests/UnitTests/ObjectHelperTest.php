@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy;
 
-use Objectiphy\Objectiphy\Orm\ProxyFactory;
+use Objectiphy\Objectiphy\Factory\ProxyFactory;
 use Objectiphy\Objectiphy\Tests\Entity\TestChild;
 use Objectiphy\Objectiphy\Tests\Entity\TestParent;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\Tests\Entity\TestUser;
 use Objectiphy\Objectiphy\Tests\Entity\TestWheel;
 use PHPUnit\Framework\TestCase;
-use Objectiphy\Objectiphy\ObjectHelper;
+use Objectiphy\Objectiphy\Orm\ObjectHelper;
 
 class ObjectHelperTest extends TestCase
 {
@@ -31,7 +31,8 @@ class ObjectHelperTest extends TestCase
     public function testReadLazyLoad()
     {
         $proxyFactory = new ProxyFactory();
-        $proxy = $proxyFactory->createEntityProxy(TestParent::class);
+        $proxyClass = $proxyFactory->createEntityProxy(TestParent::class);
+        $proxy = new $proxyClass();
         $proxy->setLazyLoader('child', function () {
             $child = new TestChild();
             $child->setName('Gizmo');
@@ -46,7 +47,7 @@ class ObjectHelperTest extends TestCase
     public function testReadKeyFromObjectReference()
     {
         $proxyFactory = new ProxyFactory();
-        $objectReference = $proxyFactory->createObjectReferenceProxy(TestChild::class, 142, 'id');
+        $objectReference = $proxyFactory->createObjectReferenceProxy(TestChild::class, ['id' => 142]);
         $childId = ObjectHelper::getValueFromObject($objectReference, 'id');
         $this->assertEquals(142, $childId);
     }
@@ -54,12 +55,11 @@ class ObjectHelperTest extends TestCase
     public function testReadWriteProxy()
     {
         $proxyFactory = new ProxyFactory();
-        $parent = new TestParent();
-        $proxyParent = $proxyFactory->createEntityProxy($parent);
+        $proxyParentClass = $proxyFactory->createEntityProxy(TestParent::class);
+        $proxyParent = new $proxyParentClass;
         ObjectHelper::setValueOnObject($proxyParent, 'name', 'Fred');
         $this->assertEquals(true, isset($proxyParent->name));
         $this->assertEquals('Fred', $proxyParent->name);
-        $this->assertEquals('Fred', $proxyParent->getEntity()->getName());
     }
 
     public function testSetValueOnObject()
@@ -71,11 +71,11 @@ class ObjectHelperTest extends TestCase
         ObjectHelper::setValueOnObject($parent, 'nameAlternative', 'Stripe');
         $this->assertEquals(true, $parent->wasAltNameSetterAccessed());
         $this->assertEquals('Stripe', $parent->getName());
-        ObjectHelper::setValueOnObject($parent, 'nameAlternative', 'Mogwai', null, '', false);
+        ObjectHelper::setValueOnObject($parent, 'nameAlternative', 'Mogwai', false);
         $this->assertEquals('Stripe', $parent->getName());
         ObjectHelper::setValueOnObject($parent, 'nameWithOptionalExtraArg', 'Mogwai');
         $this->assertEquals('Mogwai', $parent->getName());
-        ObjectHelper::setValueOnObject($parent, 'nameWithOptionalExtraArg', 'Gremlin', null, '', false);
+        ObjectHelper::setValueOnObject($parent, 'nameWithOptionalExtraArg', 'Gremlin', false);
         $this->assertEquals('Mogwai', $parent->getName());
         ObjectHelper::setValueOnObject($parent, 'nameInvalid', 'Gremlin');
         $this->assertEquals('Mogwai', $parent->getName());
@@ -84,82 +84,40 @@ class ObjectHelperTest extends TestCase
     public function testSetDateOnObject()
     {
         $policy = new TestPolicy();
-        $testDate = new \DateTime('2019-08-01 09:00:01');
-        ObjectHelper::setValueOnObject($policy, 'effectiveStartDateTime', $testDate->format('Y-m-d H:i:s'), 'datetime');
-        $this->assertEquals($testDate, $policy->effectiveStartDateTime);
-        $testDate->add(new \DateInterval('P10D'));
-        ObjectHelper::setValueOnObject($policy, 'effectiveStartDateTime', $testDate, 'datetime');
+        $testDate = new \DateTime('2019-08-11 09:00:01');
+        ObjectHelper::setValueOnObject($policy, 'effectiveStartDateTime', $testDate);
         $this->assertEquals('2019-08-11', $policy->effectiveStartDateTime->format('Y-m-d'));
         ObjectHelper::setValueOnObject($policy, 'effectiveEndDateTime', $testDate);
         $this->assertEquals($testDate, $policy->effectiveEndDateTime);
         ObjectHelper::setValueOnObject($policy, 'effectiveEndDateTime', $testDate->format('Y-m-d H:i:s'));
         $this->assertEquals($testDate->format('Y-m-d H:i:s'), $policy->effectiveEndDateTime);
-        ObjectHelper::setValueOnObject($policy, 'effectiveStartDateTime', $testDate, 'datetimestring');
-        $this->assertEquals($testDate->format('Y-m-d H:i:s'), $policy->effectiveStartDateTime);
-        ObjectHelper::setValueOnObject($policy, 'effectiveEndDateTime', $testDate->format('Y-m-d H:i:s'),
-            'datetimestring', 'd/m/Y h:i:s');
-        $this->assertEquals('11/08/2019 09:00:01', $policy->effectiveEndDateTime);
     }
 
     public function testSetIntOnObject()
     {
         $parent = new TestParent();
-        ObjectHelper::setValueOnObject($parent, 'totalWeightOfPets', 120, 'int');
+        ObjectHelper::setValueOnObject($parent, 'totalWeightOfPets', 120);
         $this->assertEquals(true, is_integer($parent->totalWeightOfPets));
         $this->assertEquals(120, $parent->totalWeightOfPets);
-        ObjectHelper::setValueOnObject($parent, 'totalWeightOfPets', '54F2', 'integer');
-        $this->assertEquals(true, is_integer($parent->totalWeightOfPets));
-        $this->assertEquals(54, $parent->totalWeightOfPets);
     }
 
     public function testSetBoolOnObject()
     {
         $wheel = new TestWheel();
-        ObjectHelper::setValueOnObject($wheel, 'loadBearing', 'false', 'bool');
-        $this->assertEquals(true, is_bool($wheel->loadBearing));
-        $this->assertEquals(false, $wheel->loadBearing);
-        ObjectHelper::setValueOnObject($wheel, 'loadBearing', 1, 'boolean');
+        ObjectHelper::setValueOnObject($wheel, 'loadBearing', true);
         $this->assertEquals(true, is_bool($wheel->loadBearing));
         $this->assertEquals(true, $wheel->loadBearing);
-        ObjectHelper::setValueOnObject($wheel, 'loadBearing', 0, 'boolean');
+        ObjectHelper::setValueOnObject($wheel, 'loadBearing', false);
         $this->assertEquals(true, is_bool($wheel->loadBearing));
         $this->assertEquals(false, $wheel->loadBearing);
-        ObjectHelper::setValueOnObject($wheel, 'loadBearing', true, 'boolean');
-        $this->assertEquals(true, is_bool($wheel->loadBearing));
-        $this->assertEquals(true, $wheel->loadBearing);
-        ObjectHelper::setValueOnObject($wheel, 'loadBearing', false, 'boolean');
-        $this->assertEquals(true, is_bool($wheel->loadBearing));
-        $this->assertEquals(false, $wheel->loadBearing);
-    }
-
-    public function testSetStringOnObject()
-    {
-        $parent = new TestParent();
-        ObjectHelper::setValueOnObject($parent, 'name', 1234, 'string');
-        $this->assertEquals(true, is_string($parent->getName()));
-        $this->assertEquals('1234', $parent->getName());
-        ObjectHelper::setValueOnObject($parent, 'name', 1234.5, 'string', '%0.2f');
-        $this->assertEquals(true, is_string($parent->getName()));
-        $this->assertEquals('1234.50', $parent->getName());
     }
 
     public function testSetObjectsAndArrays()
     {
         $parent = new TestParent();
-        ObjectHelper::setValueOnObject($parent, 'name', 'string', 'array');
-        $this->assertEmpty($parent->getName());
-        ObjectHelper::setValueOnObject($parent, 'name', ['string'], \Traversable::class);
+        ObjectHelper::setValueOnObject($parent, 'name', ['string']);
         $this->assertEquals(['string'], $parent->getName());
-        $traversable = new IterableResult($this->getMockBuilder(StorageInterface::class)->getMock());
-        ObjectHelper::setValueOnObject($parent, 'name', $traversable, 'array');
-        $this->assertEquals($traversable, $parent->getName());
-        ObjectHelper::setValueOnObject($parent, 'name', 'string', 'MadeUpClass');
-        $this->assertEquals($traversable, $parent->getName());
-        ObjectHelper::setValueOnObject($parent, 'name', null, 'MadeUpClass');
-        $this->assertEquals($traversable, $parent->getName());
-        ObjectHelper::setValueOnObject($parent, 'name', null, TestParent::class);
-        $this->assertEmpty($parent->getName());
-        ObjectHelper::setValueOnObject($parent, 'name', $parent, TestParent::class);
+        ObjectHelper::setValueOnObject($parent, 'name', $parent);
         $this->assertEquals($parent, $parent->getName());
     }
 
@@ -175,7 +133,8 @@ class ObjectHelperTest extends TestCase
         $this->assertInstanceOf(\Closure::class, $parent->getChild());
 
         $proxyFactory = new ProxyFactory();
-        $proxyParent = $proxyFactory->createEntityProxy(TestParent::class);
+        $proxyParentClass = $proxyFactory->createEntityProxy(TestParent::class);
+        $proxyParent = new $proxyParentClass();
         ObjectHelper::setValueOnObject($proxyParent, 'child', $closure);
         $this->assertEquals(true, $proxyParent->isChildAsleep('child'));
         $this->assertEquals('Gizmo', $proxyParent->child->getName());
@@ -184,8 +143,9 @@ class ObjectHelperTest extends TestCase
     public function testGetObjectClassName()
     {
         $proxyFactory = new ProxyFactory();
-        $proxyParent = $proxyFactory->createEntityProxy(TestParent::class);
-        $userReference = $proxyFactory->createObjectReferenceProxy(TestUser::class, 123, 'id');
+        $proxyParentClass = $proxyFactory->createEntityProxy(TestParent::class);
+        $proxyParent = new $proxyParentClass();
+        $userReference = $proxyFactory->createObjectReferenceProxy(TestUser::class, ['id' => 123]);
         $child = new TestChild();
 
         $parentClass = ObjectHelper::getObjectClassName($proxyParent);

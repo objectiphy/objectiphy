@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Database\MySql;
 
+use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Query\CriteriaGroup;
-use Objectiphy\Objectiphy\Query\Query;
 
 /**
  * Provider of SQL for where clause on MySQL
@@ -22,7 +22,7 @@ class WhereProviderMySql extends AbstractSqlProvider
      * @throws MappingException
      * @throws \ReflectionException
      */
-    public function getWhere(Query $query, array $objectNames, array $persistenceNames): string
+    public function getWhere(QueryInterface $query, array $objectNames, array $persistenceNames): string
     {
         $sql = ' WHERE 1';
         $removeJoiner = false;

@@ -4,19 +4,13 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
-use http\Exception\RuntimeException;
 use Marmalade\Objectiphy\IterableResult;
-use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Config\FindOptions;
-use Objectiphy\Objectiphy\Contract\PaginationInterface;
+use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
-use Objectiphy\Objectiphy\Exception\QueryException;
-use Objectiphy\Objectiphy\Query\CriteriaExpression;
-use Objectiphy\Objectiphy\Query\JoinExpression;
-use Objectiphy\Objectiphy\Query\QB;
 
 /**
  * @package Objectiphy\Objectiphy
@@ -70,23 +64,19 @@ final class ObjectFetcher
     }
 
     /**
-     * @param string $className Parent entity class name.
-     * @param array $criteria Associative array or array of CriteriaExpressions built by the QueryBuilder.
-     * @param array $orderBy Key is the property (using dot notation for child objects), value is ASC or DESC.
-     * @param PaginationInterface|null $pagination
-     * @param string $scalarProperty Property name if returning a value or array of values from a single property.
      * @return mixed
      */
-    public function doFindBy() 
+    public function doFindBy(SelectQueryInterface $query) 
     {
         $this->validate();
         $this->objectMapper->addExtraMappings($this->options->getClassName(), $this->options);
+        $this->objectMapper->addExtraMappings($this->options->getClassName(), $query);
         if ($this->options->keyProperty) {
             $this->options->mappingCollection->forceFetch($this->options->keyProperty);
         }
-        $this->options->query->finalise($this->options->mappingCollection);
-        $this->doCount();
-        $result = $this->doFetch();
+        $query->finalise($this->options->mappingCollection);
+        $this->doCount($query);
+        $result = $this->doFetch($query);
 
         return $result;
     }
@@ -113,11 +103,11 @@ final class ObjectFetcher
     /**
      * Count the records and populate the record count on the pagination object.
      */
-    private function doCount(): void
+    private function doCount(SelectQueryInterface $query): void
     {
         if ($this->options->multiple && $this->options->pagination) {
             $this->options->count = true;
-            $countSql = $this->sqlSelector->getSelectSql();
+            $countSql = $this->sqlSelector->getSelectSql($query);
             $recordCount = intval($this->fetchValue($countSql, $this->sqlSelector->getQueryParams()));
             $this->options->pagination->setTotalRecords($recordCount);
             $this->options->count = false;
@@ -127,9 +117,9 @@ final class ObjectFetcher
     /**
      * Return the records, in whatever format is requested.
      */
-    private function doFetch()
+    private function doFetch(SelectQueryInterface $query)
     {
-        $sql = $this->sqlSelector->getSelectSql();
+        $sql = $this->sqlSelector->getSelectSql($query);
         $params = $this->sqlSelector->getQueryParams();
 
         if ($this->options->multiple && $this->options->onDemand && $this->options->scalarProperty) {

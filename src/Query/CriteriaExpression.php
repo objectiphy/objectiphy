@@ -7,10 +7,8 @@ namespace Objectiphy\Objectiphy\Query;
 use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
 use Objectiphy\Objectiphy\Contract\JoinPartInterface;
 use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
-use Objectiphy\Objectiphy\Contract\QueryPartInterface;
 use Objectiphy\Objectiphy\Exception\CriteriaException;
 use Objectiphy\Objectiphy\Exception\QueryException;
-use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
 /**
  * Represents a line of criteria to filter on.

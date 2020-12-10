@@ -6,7 +6,7 @@ namespace Objectiphy\Objectiphy\Database\MySql;
 
 use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
-use Objectiphy\Objectiphy\Contract\PaginationInterface;
+use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
 use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
@@ -15,11 +15,8 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Table;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
-use Objectiphy\Objectiphy\Query\CriteriaGroup;
 use Objectiphy\Objectiphy\Query\FieldExpression;
-use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
-use Objectiphy\Objectiphy\Query\Query;
 
 /**
  * Provider of SQL for select queries on MySQL
@@ -27,8 +24,13 @@ use Objectiphy\Objectiphy\Query\Query;
  */
 class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterface
 {
+    protected array $objectNames = [];
+    protected array $persistenceNames = [];
+    protected array $aliases = [];
+
     private bool $disableMySqlCache = false;
     private FindOptions $options;
+    private SelectQueryInterface $query;
     private JoinProviderMySql $joinProvider;
     private WhereProviderMySql $whereProvider;
 
@@ -74,22 +76,23 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
      * Get the SQL query necessary to select the records that will be used to hydrate the given entity.
      * @return string The SQL query to execute.
      */
-    public function getSelectSql(): string
+    public function getSelectSql(SelectQueryInterface $query): string
     {
         if (!isset($this->options->mappingCollection)) {
-            throw new ObjectiphyException('SQL Builder has not been initialised. There is no mapping information!');
+            throw new ObjectiphyException('SQL Selector has not been initialised. There is no mapping information!');
         }
 
+        $this->query = $query;
         $this->params = [];
-        $this->prepareReplacements($this->options->query, $this->options->mappingCollection, '`', '|');
+        $this->prepareReplacements($this->options->mappingCollection, '`', '|');
 
         $sql = $this->getSelect();
         $sql .= $this->getFrom();
         $this->joinProvider->setQueryParams($this->params);
-        $sql .= $this->joinProvider->getJoins($this->options->query, $this->objectNames, $this->persistenceNames);
+        $sql .= $this->joinProvider->getJoins($this->query, $this->objectNames, $this->persistenceNames);
         $this->setQueryParams($this->joinProvider->getQueryParams());
         $this->whereProvider->setQueryParams($this->params);
-        $sql .= $this->whereProvider->getWhere($this->options->query, $this->objectNames, $this->persistenceNames);
+        $sql .= $this->whereProvider->getWhere($this->query, $this->objectNames, $this->persistenceNames);
         $this->setQueryParams($this->whereProvider->getQueryParams());
         $sql .= $this->getGroupBy();
         $sql .= $this->getHaving();
@@ -111,7 +114,6 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
     }
 
     /**
-     * @param array $criteria
      * @return string The SELECT part of the SQL query.
      * @throws Exception\CriteriaException
      * @throws MappingException
@@ -124,7 +126,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
         
         if (!$sql) {
             $sql = 'SELECT ';
-            foreach ($this->options->query->getSelect() as $fieldExpression) {
+            foreach ($this->query->getSelect() as $fieldExpression) {
                 $fieldSql = trim((string) $fieldExpression);
                 $sql .= str_replace($this->objectNames, $this->aliases, $fieldSql) . ', ';
             }
@@ -144,7 +146,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
      */
     public function getFrom(): string
     {
-        $sql = ' FROM ' . $this->replaceNames($this->options->query->getFrom());
+        $sql = ' FROM ' . $this->replaceNames($this->query->getFrom());
         return $sql;
     }
 
@@ -160,7 +162,6 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
     }
 
     /**
-     * @param array $criteria
      * @return string The SQL string for the HAVING clause, if applicable (used where the criteria involves an
      * aggregate function, either directly in the criteria itself, or by comparing against a property that uses one.
      * @throws Exception\CriteriaException
@@ -169,12 +170,15 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
      */
     public function getHaving(): string
     {
-        $sql = '';
-        return $sql;
+        $criteria = [];
+        foreach ($this->query->getHaving() as $criteriaExpression) {
+            $criteria[] = $this->replaceNames((string) $criteriaExpression);
+        }
+        
+        return implode(' AND ', $criteria);
     }
 
     /**
-     * @param array $criteria
      * @return string The SQL string for the ORDER BY clause.
      * @throws MappingException
      * @throws \ReflectionException
@@ -184,7 +188,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
         $sql = '';
 
         if (!$this->options->count) {
-            $orderBy = $this->options->query->getOrderBy();
+            $orderBy = $this->query->getOrderBy();
             if (!empty($orderBy)) {
                 $orderByString = ' ORDER BY ' . implode(', ', $orderBy);
                 $sql = $this->replaceNames($orderByString);
@@ -206,8 +210,8 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
             $sql = ' LIMIT 1 ';
         } elseif (!$this->options->count && !empty($this->options->pagination)) {
             $sql = ' LIMIT ' . $this->options->pagination->getRecordsPerPage() . ' ';
-        } elseif ($this->options->query->getLimit() ?? false) {
-            $sql = ' LIMIT ' . $this->options->query->getLimit();
+        } elseif ($this->query->getLimit() ?? false) {
+            $sql = ' LIMIT ' . $this->query->getLimit();
         }
 
         return $sql;
@@ -218,10 +222,10 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
         $sql = '';
 
         if ($this->options->multiple && !$this->options->count) {
-            if (!empty($this->options->pagination) && $this->options->pagination->getOffset()) {
+            if ($this->query->getOffset() ?? false) {
+                $sql = ' OFFSET ' . $this->query->getOffset();
+            } elseif (!empty($this->options->pagination) && $this->options->pagination->getOffset()) {
                 $sql = ' OFFSET ' . $this->options->pagination->getOffset();
-            } elseif ($this->options->query->getOffset() ?? false) {
-                $sql = ' OFFSET ' . $this->options->query->getOffset();
             }
         }
 
@@ -238,7 +242,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
                 if (!$this->mappingCollection->hasAggregateFunctions() && $groupBy == $baseGroupBy) {
                     $sql .= "SELECT COUNT(DISTINCT " . $groupBy . ") ";
                     $this->countWithoutGroups = true;
-                } // else: we do the full select, and use it as a sub-query - the count happens outside, in getQuery
+                } // else: we do the full select, and use it as a sub-query - the count happens outside, in getSelect
             } else {
                 $sql .= "SELECT COUNT(*) ";
                 $this->countWithoutGroups = true;
@@ -257,7 +261,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
     {
         $sql = '';
 
-        $groupBy = $this->options->query->getGroupBy();
+        $groupBy = $this->query->getGroupBy();
         if ($groupBy) {
             $sql = $this->replaceNames(implode(', ', $groupBy));
         }
@@ -265,15 +269,11 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
         return $sql;
     }
 
-    protected $objectNames;
-    protected $persistenceNames;
-    protected $aliases;
     /**
      * Build arrays of strings to replace and what to replace them with.
      * @param string $delimiter
      */
     protected function prepareReplacements(
-        Query $query,
         MappingCollection $mappingCollection,
         string $delimiter = '`',
         $altDelimiter = '|'
@@ -283,7 +283,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
         $this->persistenceNames = [];
         $this->aliases = [];
 
-        $propertiesUsed = $query->getPropertyPaths();
+        $propertiesUsed = $this->query->getPropertyPaths();
         foreach ($propertiesUsed as $propertyPath) {
             $property = $mappingCollection->getPropertyMapping($propertyPath);
             if (!$property) {

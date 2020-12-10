@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Database\MySql;
 
 use Objectiphy\Objectiphy\Contract\JoinPartInterface;
+use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\CriteriaGroup;
 use Objectiphy\Objectiphy\Query\JoinExpression;
-use Objectiphy\Objectiphy\Query\Query;
 
 /**
  * Provider of SQL for joins on MySQL
@@ -32,7 +32,7 @@ class JoinProviderMySql extends AbstractSqlProvider
      * @throws MappingException
      * @throws \ReflectionException
      */
-    public function getJoins(Query $query, array $objectNames, array $persistenceNames)
+    public function getJoins(QueryInterface $query, array $objectNames, array $persistenceNames)
     {
         $this->initialise($objectNames, $persistenceNames);
         foreach ($query->getJoins() as $joinPart) {
