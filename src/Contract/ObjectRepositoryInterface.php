@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Contract;
 
+use Marmalade\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
+use Objectiphy\Objectiphy\Exception\QueryException;
 
 if (interface_exists('\Doctrine\Common\Persistence\ObjectRepository')) {
     interface ObjectRepositoryBaseInterface extends \Doctrine\Common\Persistence\ObjectRepository {}
@@ -159,19 +161,69 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * Insert or update the supplied entity.
      * @param object $entity The entity to insert or update.
      * @param bool $saveChildren Whether or not to also update any child objects.
+     * @param int $insertCount Number of rows inserted.
+     * @param int $updateCount Number of rows updated.
      * @return int Number of rows affected.
      * @throws \Exception
      */
-    public function saveEntity(object $entity, ?bool $saveChildren = null): ?int;
+    public function saveEntity(
+        object $entity,
+        ?bool $saveChildren = null,
+        int &$insertCount = 0,
+        int &$updateCount = 0
+    ): int;
 
     /**
      * Insert or update the supplied entities.
      * @param array $entities Array of entities to insert or update.
      * @param bool $saveChildren Whether or not to also insert any new child objects.
+     * @param int $insertCount Number of rows inserted.
+     * @param int $updateCount Number of rows updated.
      * @return int Number of rows affected.
      * @throws \Exception
      */
-    public function saveEntities(array $entities, ?bool $saveChildren = null): ?int;
+    public function saveEntities(
+        array $entities,
+        ?bool $saveChildren = null,
+        int &$insertCount = 0,
+        int &$updateCount = 0
+    ): int;
+
+   /**
+     * Hard delete an entity (and cascade to children, if applicable).
+     * @param object $entity The entity to delete.
+     * @param boolean $disableCascade Whether or not to suppress cascading deletes (deletes will only normally be
+     * cascaded if the mapping definition explicitly requires it, but you can use this flag to override that).
+     * @param boolean $exceptionIfDisabled Whether or not to barf if deletes are disabled (probably only useful for
+     * integration or unit tests)
+     * @return int Number of records affected
+     * @throws \Exception
+     */
+    public function deleteEntity(object $entity, $disableCascade = false, $exceptionIfDisabled = true): int;
+    
+    /**
+     * Hard delete multiple entities (and cascade to children, if applicable).
+     * @param array|\Traversable $entities The entities to delete.
+     * @param boolean $disableCascade Whether or not to suppress cascading deletes (deletes will only normally be
+     * cascaded if the mapping definition explicitly requires it, but you can use this flag to override that).
+     * @return int Number of records affected
+     * @throws \Exception
+     */
+    public function deleteEntities(
+        \Traversable $entities,
+        bool $disableCascade = false,
+        bool $exceptionIfDisabled = true
+    ): int;
+
+    /**
+     * Execute a select, insert, update, or delete query directly
+     * @param QueryInterface $query
+     * @param int $insertCount Number of rows inserted.
+     * @param int $updateCount Number of rows updated.
+     * @return int|object|array|null Query results, or total number of rows affected.
+     * @throws QueryException
+     */
+    public function executeQuery(QueryInterface $query, int &$insertCount = 0, int &$updateCount = 0): ?int;
 
     /**
      * Create a proxy class for an object so that it does not have to be fully hydrated just to save it as a child of
@@ -193,4 +245,10 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * @return Explanation Information about how the latest result was obtained.
      */
     public function getExplanation(): ?ExplanationInterface;
+
+    /**
+     * Clear entities from memory and require them to be re-loaded afresh from the database.
+     * @param string|null $className
+     */
+    public function clearCache(?string $className = null): void;
 }

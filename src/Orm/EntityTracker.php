@@ -25,7 +25,7 @@ class EntityTracker
             $entityClass = ObjectHelper::getObjectClassName($entity);
             $this->entities[$entityClass][$pkIndex] = $entity;
             try {
-                $this->clones[$entityClass][$pkIndex] = clone($entity);
+                $this->clones[$entityClass][$pkIndex] = $this->cloneEntity($entity);
             } catch (\Throwable $ex) {
                 //Not the end of the world, we'll just assume it is dirty
             }
@@ -33,16 +33,24 @@ class EntityTracker
     }
 
     /**
-     * Check whether the tracker holds an instance of the given class with the given primary key values.
+     * Check whether the tracker holds an instance of the given object (either the object itself,
+     * or class name with the given primary key values.
      */
-    public function hasEntity(string $className, array $pkValues): bool
+    public function hasEntity($entityOrClassName, array $pkValues = []): bool
     {
-        $pkIndex = $this->getIndexForPk($pkValues);
-        if (strlen($pkIndex) > 2) {
-            return isset($this->entities[$className][$pkIndex]);
-        } else {
-            return false;
+        if (is_string($entityOrClassName)) {
+            $pkIndex = $this->getIndexForPk($pkValues);
+            if (strlen($pkIndex) > 2) {
+                return isset($this->entities[$entityOrClassName][$pkIndex]);
+            }
+        } elseif (is_object($entityOrClassName)) {
+            $className = ObjectHelper::getObjectClassName($entityOrClassName);
+            if (in_array($entityOrClassName, $this->entities[$className])) {
+                return true;
+            }
         }
+
+        return false;
     }
 
     /**
@@ -98,7 +106,44 @@ class EntityTracker
         
         return $changes;
     }
-    
+
+    public function getRemovedChildren(object $entity, string $propertyName, array $childPks): array
+    {
+        $removedChildren = [];
+        $pkIndex = '';
+        $className = ObjectHelper::getObjectClassName($entity);
+        foreach ($this->entities[$className] as $pkIndex => $storedEntity) {
+            if ($storedEntity == $entity) {
+                break;
+            }
+        }
+
+        if ($pkIndex) {
+            $clone = $this->clones[$className][$pkIndex] ?? null;
+            $clonedCollection = ObjectHelper::getValueFromObject($clone, $propertyName) ?? [];
+            $entityCollection = ObjectHelper::getValueFromObject($entity, $propertyName) ?? [];
+            foreach ($clonedCollection as $clonedChildItem) {
+                $pkValueMatch = false;
+                foreach ($childPks as $childPk) {
+                    $clonePkValue = ObjectHelper::getValueFromObject($clonedChildItem, $childPk);
+                    $pkValueMatch = false;
+                    foreach ($entityCollection as $childItem) {
+                        $pkValue = ObjectHelper::getValueFromObject($childItem, $childPk);
+                        if ($pkValue == $clonePkValue) {
+                            $pkValueMatch = true;
+                            break;
+                        }
+                    }
+                }
+                if (!$pkValueMatch) {
+                    $removedChildren[] = $clonedChildItem;
+                }
+            }
+        }
+
+        return $removedChildren;
+    }
+
     /**
      * Stop tracking entities - either just for the given class, or everything if omitted.
      * @param string|null $className
@@ -141,5 +186,33 @@ class EntityTracker
         $pkIndex = strlen($pkJson) < 40 ? $pkJson : md5($pkJson);
 
         return $pkIndex;
+    }
+
+    private function cloneEntity(object $entity)
+    {
+        $clone = clone($entity);
+        //Clone child objects 1 level deep
+        $reflectionClass = new \ReflectionClass($entity);
+        foreach ($reflectionClass->getProperties() as $reflectionProperty) {
+            if ($entity instanceof EntityProxyInterface && $entity->isChildAsleep($reflectionProperty->getName())) {
+                continue;
+            }
+            $value = ObjectHelper::getValueFromObject($entity, $reflectionProperty->getName());
+            if (is_object($value)) {
+                ObjectHelper::setValueOnObject($clone, $reflectionProperty->getName(), clone($value));
+            } elseif (is_array($value) && $value && is_object(reset($value))) {
+                $cloneArray = [];
+                foreach ($value as $key => $valueArrayElement) {
+                    if (is_object($valueArrayElement)) {
+                        $cloneArray[$key] = clone($valueArrayElement);
+                    } else {
+                        $cloneArray[$key] = $valueArrayElement;
+                    }
+                }
+                ObjectHelper::setValueOnObject($clone, $reflectionProperty->getName(), $cloneArray);
+            }
+        }
+
+        return $clone;
     }
 }

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
+use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\Column;
@@ -62,6 +64,11 @@ final class ObjectMapper
             throw new ObjectiphyException('Cannot get mapping information as no entity class name has been specified. Please call setClassName before attempting to load or save any data.');
         }
 
+        if (is_a($className, EntityProxyInterface::class, true)
+            || is_a($className, ObjectReferenceInterface::class, true)
+        ) {
+            $className = get_parent_class($className);
+        }
         if (!isset($this->mappingCollections[$className])) {
             $mappingCollection = new MappingCollection($className);
             $this->mappingCollections[$className] = $mappingCollection;

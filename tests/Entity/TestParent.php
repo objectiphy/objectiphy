@@ -38,7 +38,7 @@ class TestParent
      * @var TestCollection
      * @Mapping\Relationship(childClassName="TestPet", mappedBy="parent", relationshipType="one_to_many", orderBy={"name"="ASC","type"="DESC"}, cascadeDeletes=true, orphanRemoval=true)
      */
-    public TestCollection $pets;
+    public ?TestCollection $pets;
     /**
      * var int
      * @Mapping\Column(aggregateFunctionName="COUNT", aggregateCollection="pets")
@@ -138,7 +138,7 @@ class TestParent
         return $pets;
     }
 
-    public function setPets(\Traversable $value = null)
+    public function setPets(?TestCollection $value = null)
     {
         $this->pets = $value;
     }

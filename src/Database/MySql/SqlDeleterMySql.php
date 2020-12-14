@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Database\MySql;
 
+use Objectiphy\Objectiphy\Config\DeleteOptions;
 use Objectiphy\Objectiphy\Config\FindOptions;
+use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\DeleteQueryInterface;
 use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
@@ -29,6 +31,7 @@ class SqlDeleterMySql extends AbstractSqlProvider implements SqlDeleterInterface
     protected array $persistenceNames = [];
     protected array $aliases = [];
 
+    private DeleteOptions $options;
     private DeleteQueryInterface $query;
     private JoinProviderMySql $joinProvider;
     private WhereProviderMySql $whereProvider;
@@ -39,6 +42,14 @@ class SqlDeleterMySql extends AbstractSqlProvider implements SqlDeleterInterface
     ) {
         $this->joinProvider = $joinProvider;
         $this->whereProvider = $whereProvider;
+    }
+
+    public function setDeleteOptions(DeleteOptions $options): void
+    {
+        $this->options = $options;
+        $this->setMappingCollection($options->mappingCollection);
+        $this->joinProvider->setMappingCollection($options->mappingCollection);
+        $this->whereProvider->setMappingCollection($options->mappingCollection);
     }
 
     /**

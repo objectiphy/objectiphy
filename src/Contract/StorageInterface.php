@@ -15,23 +15,6 @@ namespace Objectiphy\Objectiphy\Contract;
 interface StorageInterface
 {
     /**
-     * @return boolean Whether or not the transaction was started - please do not throw an exception if a transaction is
-     * already underway - we are assuming nested transactions will be handled gracefully.
-     */
-    public function beginTransaction(): bool;
-
-    /**
-     * @return boolean Whether or not the transaction was rolled back.
-     */
-    public function rollbackTransaction(): bool;
-
-    /**
-     * @return boolean Whether or not the transaction was committed - please do not throw an exception if we are within
-     * a nested transaction - just return true and let the outer transaction do the actual commit.
-     */
-    public function commitTransaction(): bool;
-
-    /**
      * @param mixed $query Whatever your storage engine needs to do stuff (typically an SQL statement as a string, but
      * could be a custom Banana class). Whatever data type is passed in though, should be capable of being coerced into
      * a string so it can be output in a debug trace or profiler (so if you use a custom class, please implement

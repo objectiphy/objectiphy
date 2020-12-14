@@ -278,6 +278,19 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         return $query;
     }
 
+    public function buildDeleteQuery(array $params = [], bool $removeUnbound = true): SelectQuery
+    {
+        $this->applyValues($this->where, $params, $removeUnbound);
+        $this->applyValues($this->joins, $params, $removeUnbound);
+
+        $query = new DeleteQuery();
+        $query->setDelete($this->className);
+        $query->setJoins(...$this->joins);
+        $query->setWhere(...$this->where);
+
+        return $query;
+    }
+
     /**
      * Clear all expressions that have been added.
      */

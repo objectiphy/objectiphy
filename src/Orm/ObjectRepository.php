@@ -6,8 +6,10 @@ namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
+use Objectiphy\Objectiphy\Config\DeleteOptions;
 use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Config\SaveOptions;
+use Objectiphy\Objectiphy\Contract\DeleteQueryInterface;
 use Objectiphy\Objectiphy\Contract\ExplanationInterface;
 use Objectiphy\Objectiphy\Contract\InsertQueryInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
@@ -15,6 +17,7 @@ use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
+use Objectiphy\Objectiphy\Contract\TransactionInterface;
 use Objectiphy\Objectiphy\Contract\UpdateQueryInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
@@ -30,7 +33,7 @@ use Objectiphy\Objectiphy\Query\SelectQuery;
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-class ObjectRepository implements ObjectRepositoryInterface
+class ObjectRepository implements ObjectRepositoryInterface, TransactionInterface
 {
     protected ConfigOptions $configOptions;
     protected ObjectMapper $objectMapper;
@@ -53,6 +56,7 @@ class ObjectRepository implements ObjectRepositoryInterface
         $this->objectMapper = $objectMapper;
         $this->objectFetcher = $objectFetcher;
         $this->objectPersister = $objectPersister;
+        $this->objectPersister->setRepository($this);
         $this->objectRemover = $objectRemover;
         $this->proxyFactory = $proxyFactory;
         if (!$configOptions) {
@@ -326,7 +330,7 @@ class ObjectRepository implements ObjectRepositoryInterface
      * config option (defaults to true).
      * @param int $insertCount Number of rows inserted.
      * @param int $updateCount Number of rows updated.
-     * @return int|null Total number of rows affected (inserts + updates).
+     * @return int Total number of rows affected (inserts + updates).
      * @throws \Throwable
      */
     public function saveEntity(
@@ -334,7 +338,7 @@ class ObjectRepository implements ObjectRepositoryInterface
         ?bool $saveChildren = null,
         int &$insertCount = 0,
         int &$updateCount = 0
-    ): ?int {
+    ): int {
         $originalClassName = $this->getClassName();
         try {
             $insertCount = 0;
@@ -354,13 +358,15 @@ class ObjectRepository implements ObjectRepositoryInterface
             $this->setClassName($originalClassName);
         }
         
-        return null;
+        return $insertCount + $updateCount;
     }
 
     /**
      * Insert or update the supplied entities.
      * @param array $entities Array of entities to insert or update.
      * @param bool $updateChildren Whether or not to also insert any new child objects.
+     * @param int $insertCount Number of rows inserted.
+     * @param int $updateCount Number of rows updated.
      * @return int Number of rows affected.
      * @throws \Exception
      */
@@ -369,7 +375,7 @@ class ObjectRepository implements ObjectRepositoryInterface
         bool $saveChildren = null,
         int &$insertCount = 0,
         int &$updateCount = 0
-    ): ?int {
+    ): int {
         try {
             $saveChildren = $saveChildren ?? $this->configOptions->saveChildrenByDefault;
             $saveOptions = SaveOptions::create($this->mappingCollection, ['saveChildren' => $saveChildren]);
@@ -385,21 +391,93 @@ class ObjectRepository implements ObjectRepositoryInterface
     }
 
     /**
-     * Execute an insert or update query directly
-     * @param QueryInterface $insertOrUpdateQuery
-     * @return int Total number of rows updated or inserted
-     * @throws QueryException
+     * Hard delete an entity (and cascade to children, if applicable).
+     * @param object $entity The entity to delete.
+     * @param boolean $disableCascade Whether or not to suppress cascading deletes (deletes will only normally be
+     * cascaded if the mapping definition explicitly requires it, but you can use this flag to override that).
+     * @param boolean $exceptionIfDisabled Whether or not to barf if deletes are disabled (probably only useful for
+     * integration or unit tests)
+     * @return int Number of records affected
+     * @throws \Exception
      */
-    public function saveBy(QueryInterface $insertOrUpdateQuery): ?int
+    public function deleteEntity(object $entity, $disableCascade = false, $exceptionIfDisabled = true): int
     {
-        if (!($insertOrUpdateQuery instanceof UpdateQueryInterface) 
-            && !($insertOrUpdateQuery instanceof InsertQueryInterface)
-        ) {
-            throw new QueryException('Can only save by query with an UpdateQuery or InsertQuery');
+        if (!$this->validateDeletable($exceptionIfDisabled)) {
+            return 0;
+        }
+        
+        $originalClassName = $this->getClassName();
+        try {
+            $this->setClassName(ObjectHelper::getObjectClassName($entity));
+            $deleteOptions = DeleteOptions::create($this->mappingCollection, ['disableCascade' => $disableCascade]);
+            $this->beginTransaction();
+            $return = $this->objectRemover->deleteEntity($entity, $deleteOptions);
+            $this->commit();
+
+            return $return;
+        } catch (\Throwable $ex) {
+            $this->rollback();
+            $this->throwException($ex);
+        } finally {
+            $this->setClassName($originalClassName);
+        }
+    }
+
+    /**
+     * Hard delete multiple entities (and cascade to children, if applicable).
+     * @param \Traversable $entities The entities to delete.
+     * @param boolean $disableCascade Whether or not to suppress cascading deletes (deletes will only normally be
+     * cascaded if the mapping definition explicitly requires it, but you can use this flag to override that).
+     * @return int Number of records affected
+     * @throws \Exception
+     */
+    public function deleteEntities(
+        iterable $entities,
+        bool $disableCascade = false,
+        bool $exceptionIfDisabled = true
+    ): int {
+        if (!$this->validateDeletable($exceptionIfDisabled)) {
+            return 0;
         }
 
-        $saveOptions = SaveOptions::create($this->mappingCollection);
-        return $this->objectPersister->saveBy($insertOrUpdateQuery, $saveOptions);
+        $originalClassName = $this->getClassName();
+        try {
+            $this->setClassName(ObjectHelper::getObjectClassName(reset($entities)));
+            $deleteOptions = DeleteOptions::create($this->mappingCollection, ['disableCascade' => $disableCascade]);
+            $this->beginTransaction();
+            $return = $this->objectRemover->deleteEntities($entities, $deleteOptions);
+            $this->commit();
+
+            return $return;
+        } catch (\Throwable $ex) {
+            $this->rollback();
+            $this->throwException($ex);
+        } finally {
+            $this->setClassName($originalClassName);
+        }
+    }
+
+    /**
+     * Execute a select, insert, update, or delete query directly
+     * @param QueryInterface $query
+     * @param int $insertCount Number of rows inserted.
+     * @param int $updateCount Number of rows updated.
+     * @return int|object|array|null Query results, or total number of rows affected.
+     * @throws QueryException
+     */
+    public function executeQuery(QueryInterface $query, int &$insertCount = 0, int &$updateCount = 0): ?int
+    {
+        if ($query instanceof SelectQueryInterface) {
+            return $this->findBy($query);
+        } elseif ($query instanceof InsertQueryInterface || $query instanceof UpdateQueryInterface) {
+            $saveOptions = SaveOptions::create($this->mappingCollection);
+            return $this->objectPersister->saveBy($query, $saveOptions, $insertCount, $updateCount);
+        } elseif ($query instanceof DeleteQueryInterface) {
+            $deleteOptions = DeleteOptions::create($this->mappingCollection);
+            return $this->objectDeleter->deleteBy($deleteQuery, $deleteOptions);
+        } else {
+            throw new QueryException('Unrecognised query type: ' . ObjectHelper::getObjectClassName($query));
+        }
     }
 
     /**
@@ -438,25 +516,25 @@ class ObjectRepository implements ObjectRepositoryInterface
     /**
      * Manually begin a transaction (if supported by the storage engine)
      */
-    public function beginTransaction(): void
+    public function beginTransaction(): bool
     {
-        $this->objectPersister->beginTransaction();
+        return $this->objectPersister->beginTransaction();
     }
 
     /**
      * Commit a transaction that was started manually (if supported by the storage engine)
      */
-    public function commit(): void
+    public function commit(): bool
     {
-        $this->objectPersister->commitTransaction();
+        return $this->objectPersister->commit();
     }
 
     /**
      * Rollback a transaction that was started manually (if supported by the storage engine)
      */
-    public function rollback(): void
+    public function rollback(): bool
     {
-        $this->objectPersister->rollbackTransaction();
+        return $this->objectPersister->rollback();
     }
 
     /**
@@ -540,6 +618,20 @@ class ObjectRepository implements ObjectRepositoryInterface
         }
     }
 
+    protected function validateDeletable(bool $exceptionIfDisabled = true): bool
+    {
+        if ($this->configOptions->disableDeleteEntities && $exceptionIfDisabled) {
+            //As you are blatantly contradicting yourself, I'mma throw up.
+            $errorMessage = 'You have tried to delete an entity, but entity deletes have been disabled. To re-enable '
+                . 'deletes, call $repository->setConfigOption(ConfigOptions::DISABLE_DELETE_ENTITIES, false); first.';
+            throw new ObjectiphyException($errorMessage);
+        } elseif ($this->configOptions->disableDeleteEntities) {
+            return false;
+        }
+
+        return true;
+    }
+
     /**
      * One or more config options have changed, so pass along the required values to the various dependencies
      * (it is not recommended to pass the whole config object around and let things help themselves)
@@ -554,8 +646,11 @@ class ObjectRepository implements ObjectRepositoryInterface
             $this->configOptions->tableNamingStrategy,
             $this->configOptions->columnNamingStrategy
         );
-        
         $this->objectFetcher->setConfigOptions($this->configOptions);
+        $this->objectPersister->setConfigOptions(
+            $this->configOptions->disableDeleteRelationships,
+            $this->configOptions->disableDeleteEntities
+        );
     }
 
     private function throwException(\Throwable $ex): void

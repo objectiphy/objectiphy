@@ -78,9 +78,10 @@ final class ObjectBinder
         $requiresProxy = $this->mappingCollection->parentHasLateBoundProperties($parents);
         $entity = $this->entityFactory->createEntity($entityClassName, $requiresProxy);
         $propertiesMapped = $this->bindScalarProperties($entity, $row, $parents);
-        if (!$this->getEntityFromLocalCache($entityClassName, $entity)) {
+        if ($propertiesMapped && !$this->getEntityFromLocalCache($entityClassName, $entity)) {
             $relationalPropertiesMapped = $this->bindRelationalProperties($entity, $row, $parents, $parentEntity);
             $propertiesMapped = $propertiesMapped ?: $relationalPropertiesMapped;
+            $this->entityTracker->storeEntity($entity, $this->mappingCollection->getPrimaryKeyValues($entity));
         }
 
         return $propertiesMapped ? $entity : null;
@@ -119,18 +120,13 @@ final class ObjectBinder
      */
     private function getEntityFromLocalCache(string $entityClassName, object &$entity): bool
     {
-        $pkProperties = $this->mappingCollection->getPrimaryKeyProperties($entityClassName);
-        $pkValues = [];
-        foreach ($pkProperties as $pkProperty) {
-            $pkValues[] = ObjectHelper::getValueFromObject($entity, $pkProperty);
-        }
-
+        $pkValues = $this->mappingCollection->getPrimaryKeyValues($entity);
         if ($pkValues) {
             if ($this->entityTracker->hasEntity($entityClassName, $pkValues)) {
                 $entity = $this->entityTracker->getEntity($entityClassName, $pkValues);
                 return true;
             } else {
-                $this->entityTracker->storeEntity($entity, $pkValues);
+                //$this->entityTracker->storeEntity($entity, $pkValues);
                 return false;
             }
         } else {
@@ -154,7 +150,7 @@ final class ObjectBinder
                 if (array_key_exists($propertyMapping->getShortColumnName(), $row)) {
                     $value = $row[$propertyMapping->getShortColumnName()]; //Prioritises alias, falls back to short column
                     $this->applyValue($entity, $propertyMapping, $value);
-                    $propertiesMapped = true;
+                    $propertiesMapped = $value !== null;
                 }
             }
         }

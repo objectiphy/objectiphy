@@ -13,11 +13,13 @@ use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
+use Objectiphy\Objectiphy\Contract\SqlDeleterInterface;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Database\MySql\DataTypeHandlerMySql;
 use Objectiphy\Objectiphy\Database\MySql\JoinProviderMySql;
+use Objectiphy\Objectiphy\Database\MySql\SqlDeleterMySql;
 use Objectiphy\Objectiphy\Database\MySql\WhereProviderMySql;
 use Objectiphy\Objectiphy\Database\PdoStorage;
 use Objectiphy\Objectiphy\Database\MySql\SqlSelectorMySql;
@@ -47,6 +49,7 @@ class RepositoryFactory
     private MappingProviderInterface $mappingProvider;
     private SqlSelectorInterface $sqlSelector;
     private SqlUpdaterInterface $sqlUpdater;
+    private SqlDeleterInterface  $sqlDeleter;
     private DataTypeHandlerInterface $dataTypeHandler;
     private ObjectMapper $objectMapper;
     private StorageInterface $storage;
@@ -203,7 +206,11 @@ class RepositoryFactory
 
     protected final function createObjectRemover(): ObjectRemover
     {
-        return new ObjectRemover();
+        $sqlDeleter = $this->getSqlDeleter();
+        $storage = $this->getStorage();
+        $entityTracker = $this->getEntityTracker();
+
+        return new ObjectRemover($sqlDeleter, $storage, $entityTracker);
     }
 
     protected final function createEntityTracker(): EntityTracker
@@ -320,6 +327,17 @@ class RepositoryFactory
         }
 
         return $this->sqlUpdater;
+    }
+
+    private function getSqlDeleter(): SqlDeleterInterface
+    {
+        if (!isset($this->sqlDeleter)) {
+            $joinProvider = $this->getJoinProviderMySql();
+            $whereProvider = $this->getWhereProviderMySql();
+            $this->sqlDeleter = new SqlDeleterMySql($joinProvider, $whereProvider);
+        }
+
+        return $this->sqlDeleter;
     }
 
     private function getJoinProviderMySql(): JoinProviderMySql

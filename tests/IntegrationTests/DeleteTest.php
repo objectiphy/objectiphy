@@ -9,10 +9,10 @@ use Objectiphy\Objectiphy\Tests\Entity\TestParent;
 
 class DeleteTest extends IntegrationTestBase
 {
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
-        $this->objectRepository->setEntityClassName(TestParent::class);
+        $this->objectRepository->setClassName(TestParent::class);
     }
 
     public function testDeleteParentOwner()
@@ -23,6 +23,7 @@ class DeleteTest extends IntegrationTestBase
         //Remove a child entity where the parent owns the relationship
         $parent->setUser(null);
         $this->objectRepository->saveEntity($parent);
+        $this->objectRepository->clearCache();
         $bereavedParent = $this->objectRepository->find(1);
         $this->assertEquals(null, $bereavedParent->getUser());
     }
@@ -36,15 +37,16 @@ class DeleteTest extends IntegrationTestBase
         $emancipatedChild = $parent->getChild();
         $parent->setChild(null); //This sets the parent property of the existing child to null (but only because we told it to - Objectiphy does not handle this).
         $this->objectRepository->saveEntity($emancipatedChild);
+        $this->objectRepository->clearCache();
         $bereavedParent = $this->objectRepository->find(1);
         $this->assertEquals(null, $bereavedParent->getChild());
 
         //Emancipated child should still exist, as it does not have orphan removal
-        $this->objectRepository->setEntityClassName(get_class($emancipatedChild));
+        $this->objectRepository->setClassName(get_class($emancipatedChild));
         $reloadedChild = $this->objectRepository->find($emancipatedChild->getId());
         $this->assertEquals($emancipatedChild->getName(), $reloadedChild->getName());
         $this->assertGreaterThan(0, strlen($reloadedChild->getName()));
-        $this->objectRepository->setEntityClassName(get_class($parent)); //Should work even though $parent is a proxy object
+        $this->objectRepository->setClassName(get_class($parent)); //Should work even though $parent is a proxy object
     }
     
     public function testDeleteAllChildren()
@@ -59,12 +61,14 @@ class DeleteTest extends IntegrationTestBase
         $this->assertEquals(false, $issetNow);
 
         //We didn't persist that, so pets should all still be there...
+        $this->objectRepository->clearCache();
         $bereavedParent = $this->objectRepository->find(1);
         $this->assertEquals(4, count($bereavedParent->pets));
 
         //While we're here (not really a delete test, this) update a child object on a one-to-many lazy-loaded relationship
         $bereavedParent->getPets()[1]->name = 'Slartibartfast';
         $this->objectRepository->saveEntity($bereavedParent);
+        $this->objectRepository->clearCache();
         $parentWithNewPetName = $this->objectRepository->find(1);
         $this->assertEquals('Slartibartfast',
             $parentWithNewPetName->getPets()[2]->name); //As they are ordered by name, it will have moved to last place!
@@ -80,6 +84,7 @@ class DeleteTest extends IntegrationTestBase
         $pets->offsetUnset(count($pets) - 1); //Euthanised! :(
         $bereavedParent->setPets($pets);
         $this->objectRepository->saveEntity($bereavedParent);
+        $this->objectRepository->clearCache();
         //Check that we only have three pets
         $bereavedParent = $this->objectRepository->find(1);
         $remainingPets = $bereavedParent->pets;

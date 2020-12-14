@@ -3,6 +3,7 @@
 namespace Objectiphy\Objectiphy\Database;
 
 use Objectiphy\Objectiphy\Contract\StorageInterface;
+use Objectiphy\Objectiphy\Contract\TransactionInterface;
 use Objectiphy\Objectiphy\Exception\StorageException;
 
 /**
@@ -11,7 +12,7 @@ use Objectiphy\Objectiphy\Exception\StorageException;
  * @author Russell Walker <russell.walker@marmalade.co.uk>
  * Handle interaction with PDO.
  */
-class PdoStorage implements StorageInterface
+class PdoStorage implements StorageInterface, TransactionInterface
 {
     /** @var \PDO */
     private $pdo;
@@ -58,7 +59,7 @@ class PdoStorage implements StorageInterface
     /**
      * @return boolean Whether or not the transaction was rolled back.
      */
-    public function rollbackTransaction(): bool
+    public function rollback(): bool
     {
         if ($this->transactionNestingLevel >= 1) {
             $this->pdo->rollBack();
@@ -74,7 +75,7 @@ class PdoStorage implements StorageInterface
     /**
      * @return boolean Whether or not the transaction was committed (or pseudo-committed if nested).
      */
-    public function commitTransaction(): bool
+    public function commit(): bool
     {
         if ($this->transactionNestingLevel == 1) {
             $this->pdo->commit();

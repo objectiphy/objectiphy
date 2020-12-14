@@ -6,20 +6,29 @@ namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
+use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
+use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
+use Objectiphy\Objectiphy\Contract\TransactionInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
+use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Query\UpdateQuery;
+use Objectiphy\Objectiphy\Traits\TransactionTrait;
 
 /**
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-final class ObjectPersister
+final class ObjectPersister implements TransactionInterface
 {
+    use TransactionTrait;
+
+    private bool $disableDeleteRelationships = false;
+    private bool $disableDeleteEntities = false;
     private SqlUpdaterInterface $sqlUpdater;
     private ObjectMapper $objectMapper;
     private ObjectUnbinder $objectUnbinder;
@@ -27,6 +36,7 @@ final class ObjectPersister
     private EntityTracker $entityTracker;
     private SaveOptions $options;
     private array $savedObjects = [];
+    private ObjectRepositoryInterface $repository;
 
     public function __construct(
         SqlUpdaterInterface $sqlUpdater,
@@ -43,27 +53,20 @@ final class ObjectPersister
     }
 
     /**
-     * Manually begin a transaction (if supported by the storage engine)
+     * In case we need to remove an orphan, provide a repository that can handle the deletion.
+     * @param ObjectRepositoryInterface $repository
      */
-    public function beginTransaction(): void
+    public function setRepository(ObjectRepositoryInterface $repository)
     {
-        $this->storage->beginTransaction();
+        $this->repository = $repository;
     }
 
-    /**
-     * Commit a transaction that was started manually (if supported by the storage engine)
-     */
-    public function commitTransaction(): void
-    {
-        $this->storage->commitTransaction();
-    }
-
-    /**
-     * Rollback a transaction that was started manually (if supported by the storage engine)
-     */
-    public function rollbackTransaction(): void
-    {
-        $this->storage->rollbackTransaction();
+    public function setConfigOptions(
+        bool $disableDeleteRelationships,
+        bool $disableDeleteEntities
+    ): void {
+        $this->disableDeleteRelationships = $disableDeleteRelationships;
+        $this->disableDeleteEntities = $disableDeleteEntities;
     }
 
     /**
@@ -248,10 +251,10 @@ final class ObjectPersister
             $params = $this->sqlUpdater->getQueryParams();
             if ($this->storage->executeQuery($sql, $params)) {
                 $updateCount += $this->storage->getAffectedRecordCount();
-                $this->savedObjects[] = $entity;
                 $this->entityTracker->storeEntity($entity, $pkValues);
             }
         }
+        $this->savedObjects[] = $entity; //Even if nothing changed, don't attempt to save again
         if ($this->options->saveChildren) {
             $this->updateChildren($entity, $insertCount, $updateCount);
         }
@@ -294,6 +297,34 @@ final class ObjectPersister
                     }
                     $this->doSaveEntity($childEntity, $insertCount, $updateCount);
                 }
+            }
+            $this->checkForRemovals($entity, $childPropertyMapping, $updateCount);
+        }
+    }
+
+    private function checkForRemovals(object $entity, PropertyMapping $childPropertyMapping, &$updateCount)
+    {
+        $parentProperty = $childPropertyMapping->relationship->mappedBy;
+        if ($childPropertyMapping->relationship->isToMany()
+            && !$this->disableDeleteRelationships
+            && $this->entityTracker->hasEntity($entity)
+            && $parentProperty
+        ) {
+            $childProperty = $childPropertyMapping->propertyName;
+            $childClassName = $childPropertyMapping->getChildClassName();
+            $childPks = $this->options->mappingCollection->getPrimaryKeyProperties($childClassName);
+            $removedChildren = $this->entityTracker->getRemovedChildren($entity, $childProperty, $childPks);
+            $childrenToDelete = [];
+            foreach ($removedChildren as $removedChild) {
+                if ($childPropertyMapping->relationship->orphanRemoval) {
+                    $childrenToDelete[] = $removedChild;
+                } else { //Send to orphanage in case another parent wants to adopt it.
+                    ObjectHelper::setValueOnObject($removedChild, $parentProperty, null);
+                    $this->saveEntity($removedChild, $this->options, null, $updateCount);
+                }
+            }
+            if ($childrenToDelete) {
+                $this->repository->deleteEntities($childrenToDelete); //Send to Belize. Sorry kids, nothing personal.
             }
         }
     }
