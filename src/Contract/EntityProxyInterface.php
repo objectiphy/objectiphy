@@ -11,6 +11,6 @@ interface EntityProxyInterface
 {
     public function setLazyLoader(string $propertyName, \Closure $closure): void;
     public function isChildAsleep(string $propertyName): bool;
-    public function triggerLazyLoad(string $propertyName): void;
+    public function triggerLazyLoad(string $propertyName, bool $bypassEntityCache = false): void;
     public function getClassName(): string;
 }

@@ -19,6 +19,7 @@ class FindOptions implements PropertyPathConsumerInterface
     public bool $onDemand = false;
     public string $keyProperty = '';
     public string $scalarProperty = '';
+    public bool $bypassEntityCache = false;
     /**
      * @var array As per Doctrine, but with properties of children also allowed, eg.
      * ['contact.lastName'=>'ASC', 'policyNo'=>'DESC']. Stored here just for reference - it

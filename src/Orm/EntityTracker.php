@@ -120,12 +120,12 @@ class EntityTracker
 
         if ($pkIndex) {
             $clone = $this->clones[$className][$pkIndex] ?? null;
-            $clonedCollection = ObjectHelper::getValueFromObject($clone, $propertyName) ?? [];
+            $clonedCollection = ObjectHelper::getValueFromObject($clone, $propertyName, null, true, true) ?? [];
             $entityCollection = ObjectHelper::getValueFromObject($entity, $propertyName) ?? [];
             foreach ($clonedCollection as $clonedChildItem) {
                 $pkValueMatch = false;
                 foreach ($childPks as $childPk) {
-                    $clonePkValue = ObjectHelper::getValueFromObject($clonedChildItem, $childPk);
+                    $clonePkValue = ObjectHelper::getValueFromObject($clonedChildItem, $childPk, null, true, true);
                     $pkValueMatch = false;
                     foreach ($entityCollection as $childItem) {
                         $pkValue = ObjectHelper::getValueFromObject($childItem, $childPk);

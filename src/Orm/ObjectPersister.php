@@ -128,7 +128,7 @@ final class ObjectPersister implements TransactionInterface
      * @return int Total number of rows updated or inserted
      * @throws QueryException
      */
-    public function saveBy(
+    public function executeSave(
         QueryInterface $query,
         SaveOptions $options,
         ?int &$insertCount = null,
@@ -234,7 +234,7 @@ final class ObjectPersister implements TransactionInterface
         }
         if ($this->options->saveChildren) {
             //Insert new child entities first so that we can populate the foreign keys on the parent
-            $this->insertChildren($entity, $insertCount, $updateCount, true);
+            $this->saveChildren($entity, $insertCount, $updateCount, true);
         }
 
         $className = ObjectHelper::getObjectClassName($entity);
@@ -256,77 +256,10 @@ final class ObjectPersister implements TransactionInterface
         }
         $this->savedObjects[] = $entity; //Even if nothing changed, don't attempt to save again
         if ($this->options->saveChildren) {
-            $this->updateChildren($entity, $insertCount, $updateCount);
+            $this->saveChildren($entity, $insertCount, $updateCount);
         }
 
         return $insertCount + $updateCount;
-    }
-
-    /**
-     * @param object $entity
-     * @param int $insertCount Number of rows inserted
-     * @param int $updateCount Number of rows updated
-     * @throws \ReflectionException
-     */
-    private function updateChildren(object $entity, int &$insertCount, int &$updateCount): void
-    {
-        $children = $this->options->mappingCollection->getChildObjectProperties();
-        foreach ($children as $childPropertyName) {
-            if ($entity instanceof EntityProxyInterface && $entity->isChildAsleep($childPropertyName)) {
-                continue; //Don't wake it up
-            }
-            $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
-            $childParentProperty = $childPropertyMapping->relationship->mappedBy;
-            $child = ObjectHelper::getValueFromObject($entity, $childPropertyName);
-            if (!empty($child)) {
-                $childEntities = is_iterable($child) ? $child : [$child];
-                foreach ($childEntities as $childEntity) {
-                    if (in_array($childEntity, $this->savedObjects)) {
-                        continue;
-                    }
-                    //Populate parent
-                    if ($childParentProperty) {
-                        ObjectHelper::setValueOnObject($childEntity, $childParentProperty, $entity);
-                    }
-                    $childPkValues = $this->options->mappingCollection->getPrimaryKeyValues($childEntity);
-                    if (!$childPkValues) {
-                        //If child is late bound, we might not know its primary key, so get its own mapping collection
-                        $childClass = ObjectHelper::getObjectClassName($childEntity);
-                        $childMappingCollection = $this->objectMapper->getMappingCollectionForClass($childClass);
-                        $childPkValues = $childMappingCollection->getPrimaryKeyValues($childEntity);
-                    }
-                    $this->doSaveEntity($childEntity, $insertCount, $updateCount);
-                }
-            }
-            $this->checkForRemovals($entity, $childPropertyMapping, $updateCount);
-        }
-    }
-
-    private function checkForRemovals(object $entity, PropertyMapping $childPropertyMapping, &$updateCount)
-    {
-        $parentProperty = $childPropertyMapping->relationship->mappedBy;
-        if ($childPropertyMapping->relationship->isToMany()
-            && !$this->disableDeleteRelationships
-            && $this->entityTracker->hasEntity($entity)
-            && $parentProperty
-        ) {
-            $childProperty = $childPropertyMapping->propertyName;
-            $childClassName = $childPropertyMapping->getChildClassName();
-            $childPks = $this->options->mappingCollection->getPrimaryKeyProperties($childClassName);
-            $removedChildren = $this->entityTracker->getRemovedChildren($entity, $childProperty, $childPks);
-            $childrenToDelete = [];
-            foreach ($removedChildren as $removedChild) {
-                if ($childPropertyMapping->relationship->orphanRemoval) {
-                    $childrenToDelete[] = $removedChild;
-                } else { //Send to orphanage in case another parent wants to adopt it.
-                    ObjectHelper::setValueOnObject($removedChild, $parentProperty, null);
-                    $this->saveEntity($removedChild, $this->options, null, $updateCount);
-                }
-            }
-            if ($childrenToDelete) {
-                $this->repository->deleteEntities($childrenToDelete); //Send to Belize. Sorry kids, nothing personal.
-            }
-        }
     }
 
     /**
@@ -346,7 +279,7 @@ final class ObjectPersister implements TransactionInterface
         $this->savedObjects[] = $entity; //Don't save it as a child of a child, do it after the children are saved
         if ($this->options->saveChildren) {
             //First, save any child objects which are owned by the parent
-            $this->insertChildren($entity, $insertCount, $updateCount, true);
+            $this->saveChildren($entity, $insertCount, $updateCount, true);
         }
 
         //Then save the parent
@@ -374,41 +307,79 @@ final class ObjectPersister implements TransactionInterface
 
         if ($this->options->saveChildren) {
             //Then save any child objects which are owned by the child
-            $this->insertChildren($entity, $insertCount, $updateCount, false);
+            $this->saveChildren($entity, $insertCount, $updateCount);
         }
 
         return $insertCount;
     }
 
-    /**
-     * @param object $entity
-     * @param int $insertCount Number of rows inserted
-     * @param int $updateCount Number of rows updated
-     * @param bool $ownedOnly Whether to only insert children owned by the entity (must be true if the parent entity
-     * has not yet been saved - otherwise the child that gets inserted will be an orphan in the database).
-     * @throws \ReflectionException
-     */
-    private function insertChildren(object $entity, int &$insertCount, int &$updateCount, bool $ownedOnly = true): void
+    private function saveChildren(object $entity, int &$insertCount, int &$updateCount, bool $ownedOnly = false): void
     {
         $children = $this->options->mappingCollection->getChildObjectProperties($ownedOnly);
         foreach ($children as $childPropertyName) {
-            $child = $entity->$childPropertyName ?? null;
+            if ($entity instanceof EntityProxyInterface && $entity->isChildAsleep($childPropertyName)) {
+                continue; //Don't wake it up
+            }
+            $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
+            $childParentProperty = $childPropertyMapping->relationship->mappedBy;
+            $child = ObjectHelper::getValueFromObject($entity, $childPropertyName);
             if (!empty($child)) {
                 $childEntities = is_iterable($child) ? $child : [$child];
                 foreach ($childEntities as $childEntity) {
+                    if (in_array($childEntity, $this->savedObjects)) {
+                        continue; //Prevent recursion
+                    }
                     if (!($childEntity instanceof ObjectReferenceInterface)) {
                         $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
                         $childParentProperty = $childPropertyMapping->relationship->mappedBy;
                         $childPkValues = $this->options->mappingCollection->getPrimaryKeyValues($childEntity);
-                        if (!$childPkValues) {
-                            //Populate parent
-                            if ($childParentProperty) {
-                                ObjectHelper::setValueOnObject($childEntity, $childParentProperty, $entity);
-                            }
-                            $this->doSaveEntity($childEntity, $insertCount, $updateCount);
+                        //Populate parent
+                        if ($childParentProperty) {
+                            ObjectHelper::setValueOnObject($childEntity, $childParentProperty, $entity);
                         }
+                        if (!$childPkValues) {
+                            //If child is late bound, we might not know its primary key, so get its own mapping collection
+                            $childClass = ObjectHelper::getObjectClassName($childEntity);
+                            $childMappingCollection = $this->objectMapper->getMappingCollectionForClass($childClass);
+                            $childPkValues = $childMappingCollection->getPrimaryKeyValues($childEntity);
+                        }
+                        $this->doSaveEntity($childEntity, $insertCount, $updateCount);
                     }
                 }
+            }
+            $this->checkForRemovals($entity, $childPropertyMapping, $updateCount);
+        }
+    }
+
+    private function checkForRemovals(object $entity, PropertyMapping $childPropertyMapping, &$updateCount)
+    {
+        $parentProperty = $childPropertyMapping->relationship->mappedBy;
+        if ($childPropertyMapping->relationship->isToMany()
+            && !$this->disableDeleteRelationships
+            && $parentProperty
+        ) {
+            $childProperty = $childPropertyMapping->propertyName;
+            $childClassName = $childPropertyMapping->getChildClassName();
+            $childPks = $this->options->mappingCollection->getPrimaryKeyProperties($childClassName);
+            if ($this->entityTracker->hasEntity($entity)) {
+                $removedChildren = $this->entityTracker->getRemovedChildren($entity, $childProperty, $childPks);
+            } else {
+                //Load children from database to see if any have been removed
+
+
+
+            }
+            $childrenToDelete = [];
+            foreach ($removedChildren as $removedChild) {
+                if ($childPropertyMapping->relationship->orphanRemoval) {
+                    $childrenToDelete[] = $removedChild;
+                } else { //Send to orphanage in case another parent wants to adopt it.
+                    ObjectHelper::setValueOnObject($removedChild, $parentProperty, null);
+                    $this->saveEntity($removedChild, $this->options, null, $updateCount);
+                }
+            }
+            if ($childrenToDelete) {
+                $this->repository->deleteEntities($childrenToDelete); //Send to Belize. Sorry kids, nothing personal.
             }
         }
     }

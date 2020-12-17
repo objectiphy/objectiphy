@@ -116,7 +116,7 @@ abstract class Query implements QueryInterface
             }
             $className = $this->getClassName() ?: ($className ?? $mappingCollection->getEntityClassName());
             $this->setClassName($className);
-            $this->isFinalised = true; //Overriding superclass could change this back if it has its own finalising to do.
+            $this->isFinalised = true; //Overriding subclass could change this back if it has its own finalising to do.
         }
     }
 

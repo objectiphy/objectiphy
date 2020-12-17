@@ -110,13 +110,13 @@ class EntityProxy implements EntityProxyInterface
      * @param $propertyName
      * @throws \ReflectionException
      */
-    public function triggerLazyLoad($propertyName): void
+    public function triggerLazyLoad($propertyName, bool $bypassEntityCache = false): void
     {
         if (count($this->lazyLoaders)) {
             if (array_key_exists($propertyName, $this->lazyLoaders)) {
                 if (!empty($this->lazyLoaders[$propertyName])) {
                     $closure = $this->lazyLoaders[$propertyName];
-                    $value = $closure();
+                    $value = $closure($bypassEntityCache);
                     $this->setValueObjectiphy($propertyName, $value);
                     unset($this->lazyLoaders[$propertyName]);
                 }

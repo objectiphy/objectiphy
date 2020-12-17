@@ -44,13 +44,17 @@ class ConfigBase
      * Set a config option.
      * @param string $optionName
      * @param $value
+     * @return mixed The previously set value (or default value if not previously set).
      * @throws ObjectiphyException
      */
     public function setConfigOption(string $optionName, $value)
     {
         if (property_exists($this, $optionName)) {
+            $previousValue = $this->{$optionName} ?? null;
             $this->{$optionName} = $value;
             $this->nonDefaults[$optionName] = $value;
+
+            return $previousValue;
         } else {
             $this->throwNotExists($optionName);
         }

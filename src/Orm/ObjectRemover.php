@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Config\DeleteOptions;
+use Objectiphy\Objectiphy\Contract\DeleteQueryInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\SqlDeleterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
@@ -42,7 +43,7 @@ final class ObjectRemover implements TransactionInterface
         $this->sqlDeleter->setDeleteOptions($deleteOptions);
     }
 
-    public function deleteEntity(object $entity, DeleteOptions $deleteOptions)
+    public function deleteEntity(object $entity, DeleteOptions $deleteOptions): int
     {
         $this->setDeleteOptions($deleteOptions);
 
@@ -54,17 +55,27 @@ final class ObjectRemover implements TransactionInterface
         //Delete entity
         $qb = QB::create();
         $deleteQuery = $qb->buildDeleteQuery();
+        $deleteCount = $this->executeDelete();
+    }
+
+    public function executeDelete(DeleteQueryInterface $deleteQuery)
+    {
+        $deleteCount = 0;
+        $className = $deleteQuery->getDelete() ?: $this->options->mappingCollection->getEntityClassName();
         $deleteQuery->finalise($this->options->mappingCollection, $className);
         $sql = $this->sqlDeleter->getDeleteSql($deleteQuery);
         $params = $this->sqlDeleter->getQueryParams();
         if ($this->storage->executeQuery($sql, $params)) {
-            $deleteCount += $this->storage->getAffectedRecordCount();
+            $deleteCount = $this->storage->getAffectedRecordCount();
             $this->entityTracker->clear($className);
         }
+
+        return $deleteCount;
     }
 
-    public function deleteEntities(iterable $entities, DeleteOptions $deleteOptions)
+    public function deleteEntities(iterable $entities, DeleteOptions $deleteOptions): int
     {
+        $deleteCount = 0;
         $this->setDeleteOptions($deleteOptions);
 
         //Extract primary keys by class (just in case we have a mixture of entities)
@@ -75,14 +86,25 @@ final class ObjectRemover implements TransactionInterface
             if (empty($pkValues)) {
                 throw new ObjectiphyException('Cannot delete an entity which has no primary key value.');
             }
-            $deletes[$className] = $pkValues;
+            foreach ($pkValues as $key => $value) {
+                $deletes[$className][$key][] = $value;
+            }
         }
 
         if ($deletes) {
-
             //Delete en-masse per class (but don't forget cascade!)
-            
+            foreach ($deletes as $className => $pkValues) {
+                $deleteQuery = QB::create()->delete($className);
+                foreach ($pkValues as $propertyName => $values) {
+                    foreach ($values as $value) {
+                        $deleteQuery->and($propertyName, QB::EQ, $value);
+                    }
+                }
+                $deleteCount += $this->executeDelete($deleteQuery->buildDeleteQuery());
+            }
         }
+
+        return $deleteCount;
     }
 
     private function deleteChildren(object $entity)

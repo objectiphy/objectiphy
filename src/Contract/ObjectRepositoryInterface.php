@@ -28,6 +28,15 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
     public function setConfiguration(ConfigOptions $configOptions): void;
 
     /**
+     * Set a general configuration option by name. Available options are defined on
+     * the Objectiphy\Objectiphy\Config\ConfigOptions class.
+     * @param string $optionName
+     * @param $value
+     * @return mixed The previously set value (or default value if not previously set).
+     */
+    public function setConfigOption(string $optionName, $value);
+    
+    /**
      * @return string Name of the parent entity class
      */
     public function setClassName(string $className): void;

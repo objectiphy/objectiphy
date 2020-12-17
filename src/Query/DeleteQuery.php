@@ -50,4 +50,20 @@ class DeleteQuery extends Query implements DeleteQueryInterface
 
         return array_unique($paths);
     }
+
+    /**
+     * Ensure query is complete, filling in any missing bits as necessary (don't add joins for delete queries - if they
+     * are needed, the user should supply them).
+     * @param MappingCollection $mappingCollection
+     * @param string|null $className
+     */
+    public function finalise(MappingCollection $mappingCollection, ?string $className = null)
+    {
+        if (!$this->isFinalised) {
+            $this->mappingCollection = $mappingCollection;
+            $className = $this->getDelete() ?: ($className ?? $mappingCollection->getEntityClassName());
+            $this->setClassName($className);
+            $this->isFinalised = true;
+        }
+    }
 }

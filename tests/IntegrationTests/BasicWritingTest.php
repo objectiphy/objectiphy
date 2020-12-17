@@ -122,7 +122,7 @@ class BasicWritingTest extends IntegrationTestBase
             ->set(['policyNo' => 'TP6', 'c.lastName' => 'LastName6'])
             ->where('id', QB::EQ, 19071974)
             ->buildUpdateQuery();
-        $affectedCount = $this->objectRepository->saveBy($query);
+        $affectedCount = $this->objectRepository->executeQuery($query);
         $this->assertEquals(2, $affectedCount);
 
         //Ensure the same result when using a proxy

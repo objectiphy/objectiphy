@@ -67,12 +67,27 @@ class RepositoryFactory
         }
         $this->setConfigOptions($configOptions);
     }
-
+    
     public function setConfigOptions(ConfigOptions $configOptions): void
     {
         $this->configOptions = $configOptions;
     }
 
+    public function reset()
+    {
+        unset($this->mappingProvider);
+        unset($this->sqlSelector);
+        unset($this->sqlUpdater);
+        unset($this->sqlDeleter);
+        unset($this->dataTypeHandler);
+        unset($this->objectMapper);
+        unset($this->storage);
+        unset($this->proxyFactory);
+        unset($this->entityTracker);
+        unset($this->joinProvider);
+        unset($this->whereProvider);
+    }
+    
     public function setSqlBuilder(SqlSelectorInterface $sqlSelector, DataTypeHandlerInterface $dataTypeHandler): void
     {
         $this->sqlSelector = $sqlSelector;
@@ -112,8 +127,12 @@ class RepositoryFactory
     public function createRepository(
         string $entityClassName = '',
         string $repositoryClassName = null,
-        ?ConfigOptions $configOptions = null
+        ?ConfigOptions $configOptions = null,
+        bool $resetFirst = false
     ): ObjectRepositoryInterface {
+        if ($resetFirst) {
+            $this->reset(); //When late binding, we will need new instances to prevent cross-pollination
+        }
         $configOptions ??= $this->configOptions;
         $configHash = $configOptions->getHash($repositoryClassName ?: '');
         if (!isset($this->repositories[$entityClassName][$configHash])) {

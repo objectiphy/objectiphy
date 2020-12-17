@@ -126,7 +126,8 @@ final class ObjectBinder
                 $entity = $this->entityTracker->getEntity($entityClassName, $pkValues);
                 return true;
             } else {
-                //$this->entityTracker->storeEntity($entity, $pkValues);
+                //We store it now to prevent recursion, then update when fully hydrated.
+                $this->entityTracker->storeEntity($entity, $pkValues);
                 return false;
             }
         } else {
@@ -150,7 +151,7 @@ final class ObjectBinder
                 if (array_key_exists($propertyMapping->getShortColumnName(), $row)) {
                     $value = $row[$propertyMapping->getShortColumnName()]; //Prioritises alias, falls back to short column
                     $this->applyValue($entity, $propertyMapping, $value);
-                    $propertiesMapped = $value !== null;
+                    $propertiesMapped = $propertiesMapped || $value !== null;
                 }
             }
         }
@@ -235,12 +236,18 @@ final class ObjectBinder
     {
         $mappingCollection = $this->mappingCollection;
         $configOptions = $this->configOptions;
-        $closure = function() use ($mappingCollection, $configOptions, $propertyMapping, $row) {
+        //Bypass tracker is used to ensure clones get refreshed from the database to detect changes
+        $closure = function($bypassEntityCache = false) use ($mappingCollection, $configOptions, $propertyMapping, $row) {
             //Get the repository
             $result = null;
             $className = $propertyMapping->getChildClassName();
             $repositoryClassName = $propertyMapping->table->repositoryClassName;
-            $repository = $this->repositoryFactory->createRepository($className, $repositoryClassName, $configOptions);
+            $repository = $this->repositoryFactory->createRepository(
+                $className,
+                $repositoryClassName,
+                $configOptions,
+                true
+            );
 
             //Work out what to search for
             $usePrimaryKey = false;
@@ -295,6 +302,7 @@ final class ObjectBinder
             }
 
             //Do the search
+            $originalBypassCache = $repository->setConfigOption('bypassEntityCache', $bypassEntityCache);
             if ($query && $query->getWhere()) {
                 if ($propertyMapping->relationship->isToOne()) {
                     if ($usePrimaryKey) {
@@ -308,6 +316,7 @@ final class ObjectBinder
                     $result = $propertyMapping->getCollection($result);                    
                 }
             }
+            $repository->setConfigOption('bypassEntityCache', $originalBypassCache);
 
             return $result;
         };

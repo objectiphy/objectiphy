@@ -31,7 +31,8 @@ class ObjectHelper
         ?object $object,
         string $propertyName,
         $defaultValueIfNotFound = null,
-        bool $lookForGetter = true
+        bool $lookForGetter = true,
+        bool $bypassEntityTracker = false
     ) {
         $value = $defaultValueIfNotFound;
         $valueFound = false;
@@ -44,7 +45,7 @@ class ObjectHelper
                 if (!$valueFound) {
                     //If lazy loaded, property might exist but be unset, which would cause a reflection error.
                     if ($object instanceof EntityProxyInterface && $object->isChildAsleep($propertyName)) {
-                        $object->triggerLazyLoad($propertyName);
+                        $object->triggerLazyLoad($propertyName, $bypassEntityTracker);
                         if (!isset($object->$propertyName)) { //Won't be set if lazy loader didn't load anything
                             $valueFound = true;
                         }

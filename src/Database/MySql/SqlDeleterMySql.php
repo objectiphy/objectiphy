@@ -66,7 +66,7 @@ class SqlDeleterMySql extends AbstractSqlProvider implements SqlDeleterInterface
         $this->params = [];
         $this->prepareReplacements($this->options->mappingCollection, '`', '|');
 
-        $sql = $this->replaceNames((string) $query->getDelete());
+        $sql = 'DELETE FROM ' . $this->replaceNames((string) $query->getDelete());
         $this->joinProvider->setQueryParams($this->params);
         $sql .= $this->joinProvider->getJoins($this->query, $this->objectNames, $this->persistenceNames);
         $this->setQueryParams($this->joinProvider->getQueryParams());

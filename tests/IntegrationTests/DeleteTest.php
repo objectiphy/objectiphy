@@ -90,17 +90,18 @@ class DeleteTest extends IntegrationTestBase
         $remainingPets = $bereavedParent->pets;
         $this->assertEquals(3, count($remainingPets));
         //Check that the euthanised pet is really dead
-        $this->objectRepository->setEntityClassName(TestPet::class);
+        $this->objectRepository->setClassName(TestPet::class);
         $zombiePet = $this->objectRepository->find($elderlyPetId);
         $this->assertEquals(null, $zombiePet);
-        $this->objectRepository->setEntityClassName(TestParent::class);
+        $this->objectRepository->setClassName(TestParent::class);
 
         //Replace a child of an existing entity that is a property of a new entity
         //(ensure new entity inserted, existing entity updated, orphan entity deleted)
         //Eg. create a new child, assign an existing parent to it, update a property on
         //the parent, remove one of the parent's pets, then add a new pet, then save the child.
         //Removed pet should be deleted, new pet should be inserted, child should be inserted, parent should be updated.
-        $existingParent = $this->objectRepository->find(3);
+        $this->objectRepository->clearCache();
+        $existingParent = $this->objectRepository->find(3); //Pets not being cloned properly - lazy loader populates clone
         $existingPets = $existingParent->getPets();
         $this->assertEquals('Trixie', $existingPets[1]->name); //Make sure the pet we want to replace is there
         $this->assertEquals(13, $existingPets[1]->id);
@@ -115,7 +116,8 @@ class DeleteTest extends IntegrationTestBase
         $parentPets =& $newChild->getParent()->getPets();
         $parentPets[1] = $newPet;
         $this->objectRepository->saveEntity($newChild);
-        $this->objectRepository->setEntityClassName(TestChild::class);
+        $this->objectRepository->clearCache();
+        $this->objectRepository->setClassName(TestChild::class);
         $refreshedChild = $this->objectRepository->find($newChild->getId());
         $this->assertEquals('Arthur', $refreshedChild->getName());
         $this->assertEquals($existingParent->id, $refreshedChild->getParent()->id);
@@ -126,7 +128,8 @@ class DeleteTest extends IntegrationTestBase
         $this->assertContains('Sam', $petNames);
         $this->assertContains('Spot', $petNames);
         //Make sure orphan was deleted
-        $this->objectRepository->setEntityClassName(TestPet::class);
+        $this->objectRepository->clearCache();
+        $this->objectRepository->setClassName(TestPet::class);
         $deadPet = $this->objectRepository->find(13);
         $this->assertNull($deadPet);
     }

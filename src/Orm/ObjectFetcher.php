@@ -66,7 +66,7 @@ final class ObjectFetcher
     /**
      * @return mixed
      */
-    public function doFindBy(SelectQueryInterface $query) 
+    public function executeFind(SelectQueryInterface $query) 
     {
         $this->validate();
         $this->objectMapper->addExtraMappings($this->options->getClassName(), $this->options);

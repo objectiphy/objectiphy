@@ -84,11 +84,14 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * the Objectiphy\Objectiphy\Config\ConfigOptions class.
      * @param string $optionName
      * @param $value
+     * @return mixed The previously set value (or default value if not previously set).
      */
-    public function setConfigOption(string $optionName, $value): void
+    public function setConfigOption(string $optionName, $value)
     {
-        $this->configOptions->setConfigOption($optionName, $value);
+        $previousValue = $this->configOptions->setConfigOption($optionName, $value);
         $this->updateConfig();
+        
+        return $previousValue;
     }
 
     /**
@@ -471,7 +474,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             return $this->findBy($query);
         } elseif ($query instanceof InsertQueryInterface || $query instanceof UpdateQueryInterface) {
             $saveOptions = SaveOptions::create($this->mappingCollection);
-            return $this->objectPersister->saveBy($query, $saveOptions, $insertCount, $updateCount);
+            return $this->objectPersister->executeSave($query, $saveOptions, $insertCount, $updateCount);
         } elseif ($query instanceof DeleteQueryInterface) {
             $deleteOptions = DeleteOptions::create($this->mappingCollection);
             return $this->objectDeleter->deleteBy($deleteQuery, $deleteOptions);
@@ -558,7 +561,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         }
         $this->assertClassNameSet();
 
-        return $this->objectFetcher->doFindBy($query);
+        return $this->objectFetcher->executeFind($query);
     }
 
     protected function normalizeCriteria($criteria, $queryType = SelectQuery::class): QueryInterface

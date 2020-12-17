@@ -6,7 +6,11 @@ namespace Objectiphy\Objectiphy\Query;
 
 use Objectiphy\Objectiphy\Contract\CriteriaBuilderInterface;
 use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
+use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
+use Objectiphy\Objectiphy\Contract\DeleteQueryInterface;
+use Objectiphy\Objectiphy\Contract\InsertQueryInterface;
 use Objectiphy\Objectiphy\Contract\JoinPartInterface;
+use Objectiphy\Objectiphy\Contract\UpdateQueryInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
 
 /**
@@ -101,6 +105,12 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
     public function from(string $className): QueryBuilder
     {
         $this->from = $className;
+        return $this;
+    }
+    
+    public function delete(string $className): QueryBuilder
+    {
+        $this->delete = $className;
         return $this;
     }
 
@@ -236,7 +246,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         return $this;
     }
 
-    public function buildSelectQuery(array $params = [], bool $removeUnbound = true): SelectQuery
+    public function buildSelectQuery(array $params = [], bool $removeUnbound = true): SelectQueryInterface
     {
         $this->applyValues($this->where, $params, $removeUnbound);
         $this->applyValues($this->having, $params, $removeUnbound);
@@ -258,7 +268,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         return $query;
     }
 
-    public function buildUpdateQuery(): UpdateQuery
+    public function buildUpdateQuery(): UpdateQueryInterface
     {
         $query = new UpdateQuery();
         $query->setUpdate($this->update);
@@ -269,7 +279,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         return $query;
     }
 
-    public function buildInsertQuery(): InsertQuery
+    public function buildInsertQuery(): InsertQueryInterface
     {
         $query = new InsertQuery();
         $query->setInsert($this->insert);
@@ -278,13 +288,13 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         return $query;
     }
 
-    public function buildDeleteQuery(array $params = [], bool $removeUnbound = true): SelectQuery
+    public function buildDeleteQuery(array $params = [], bool $removeUnbound = true): DeleteQueryInterface
     {
         $this->applyValues($this->where, $params, $removeUnbound);
         $this->applyValues($this->joins, $params, $removeUnbound);
 
         $query = new DeleteQuery();
-        $query->setDelete($this->className);
+        $query->setDelete($this->delete);
         $query->setJoins(...$this->joins);
         $query->setWhere(...$this->where);
 
