@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
+use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 
 /**
  * A local cache of entities retrieved, and a cloned copy of each for tracking changes.
@@ -34,23 +35,22 @@ class EntityTracker
 
     /**
      * Check whether the tracker holds an instance of the given object (either the object itself,
-     * or class name with the given primary key values.
+     * or class name with the given primary key values. Return the primary key index if found.
      */
-    public function hasEntity($entityOrClassName, array $pkValues = []): bool
+    public function hasEntity($entityOrClassName, array $pkValues = []): ?string
     {
         if (is_string($entityOrClassName)) {
             $pkIndex = $this->getIndexForPk($pkValues);
             if (strlen($pkIndex) > 2) {
-                return isset($this->entities[$entityOrClassName][$pkIndex]);
+                return isset($this->entities[$entityOrClassName][$pkIndex]) ? $pkIndex : null;
             }
         } elseif (is_object($entityOrClassName)) {
             $className = ObjectHelper::getObjectClassName($entityOrClassName);
-            if (in_array($entityOrClassName, $this->entities[$className])) {
-                return true;
-            }
+            $searchResult = array_search($entityOrClassName, $this->entities[$className] ?? []);
+            return $searchResult ? strval($searchResult) : null;
         }
 
-        return false;
+        return null;
     }
 
     /**
@@ -96,10 +96,21 @@ class EntityTracker
             $property = $reflectionProperty->getName();
             if (!($entity instanceof EntityProxyInterface) || !$entity->isChildAsleep($property)) { //Shh. Don't wake up the kids.
                 $entityValue = ObjectHelper::getValueFromObject($entity, $property);
-                $notFound = '**!VALUE_NOT_FOUND!**';
-                $cloneValue = $clone ? ObjectHelper::getValueFromObject($clone, $property, $notFound) : $notFound;
-                if ($entityValue != $cloneValue) {
+                if ($clone instanceof EntityProxyInterface && $clone->isChildAsleep($property)) {
+                    //Yah, it's dirty alright - but no need to wake it up just yet
                     $changes[$property] = $entityValue;
+                } else {
+                    $notFound = '**!VALUE_NOT_FOUND!**';
+                    $cloneValue = $clone ? ObjectHelper::getValueFromObject(
+                        $clone,
+                        $property,
+                        $notFound,
+                        true,
+                        true
+                    ) : $notFound;
+                    if ($entityValue != $cloneValue) {
+                        $changes[$property] = $entityValue;
+                    }
                 }
             }
         }
@@ -107,19 +118,18 @@ class EntityTracker
         return $changes;
     }
 
-    public function getRemovedChildren(object $entity, string $propertyName, array $childPks): array
+    public function getRemovedChildren(object $entity, string $propertyName, array $childPks): ?array
     {
         $removedChildren = [];
         $pkIndex = '';
         $className = ObjectHelper::getObjectClassName($entity);
-        foreach ($this->entities[$className] as $pkIndex => $storedEntity) {
-            if ($storedEntity == $entity) {
-                break;
-            }
-        }
+        $pkIndex = $this->hasEntity($entity);
 
         if ($pkIndex) {
             $clone = $this->clones[$className][$pkIndex] ?? null;
+            if (!$clone) { //We are not tracking changes on this child, so will need to refresh from database.
+                return null;
+            }
             $clonedCollection = ObjectHelper::getValueFromObject($clone, $propertyName, null, true, true) ?? [];
             $entityCollection = ObjectHelper::getValueFromObject($entity, $propertyName) ?? [];
             foreach ($clonedCollection as $clonedChildItem) {
@@ -148,13 +158,17 @@ class EntityTracker
      * Stop tracking entities - either just for the given class, or everything if omitted.
      * @param string|null $className
      */
-    public function clear(?string $className = null): void
+    public function clear(?string $className = null, bool $forgetChangesOnly = false): void
     {
         if ($className) {
-            unset($this->entities[$className]);
+            if (!$forgetChangesOnly) {
+                unset($this->entities[$className]);
+            }
             unset($this->clones[$className]);
         } else {
-            $this->entities = [];
+            if (!$forgetChangesOnly) {
+                $this->entities = [];
+            }
             $this->clones = [];
         }
     }

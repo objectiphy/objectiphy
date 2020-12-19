@@ -257,7 +257,11 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
 
     /**
      * Clear entities from memory and require them to be re-loaded afresh from the database.
-     * @param string|null $className
+     * @param string|null $className If supplied, only the cache for the given class will be cleared, otherwise all.
+     * @param bool $forgetChangesOnly If true, all entities will be forgotten, otherwise, just changes to the entities
+     * will be forgotten.
+     * @param bool $propagateToFactory Whether to clear the cache on factories used by lazy loaders. This should
+     * normally be true unless the factory itself is callinng this method.
      */
-    public function clearCache(?string $className = null): void;
+    public function clearCache(?string $className = null, bool $forgetChangesOnly = false): void;
 }

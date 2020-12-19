@@ -57,6 +57,9 @@ class RepositoryFactory
     private EntityTracker $entityTracker;
     private JoinProviderMySql $joinProvider;
     private WhereProviderMySql $whereProvider;
+    /**
+     * @var ObjectRepositoryInterface[]
+     */
     private array $repositories = [];
 
     public function __construct(\PDO $pdo, ?ConfigOptions $configOptions = null)
@@ -73,7 +76,7 @@ class RepositoryFactory
         $this->configOptions = $configOptions;
     }
 
-    public function reset()
+    public function reset(bool $forgetChanges = true, bool $clearRepositories = false, ?string $className = null)
     {
         unset($this->mappingProvider);
         unset($this->sqlSelector);
@@ -86,6 +89,18 @@ class RepositoryFactory
         unset($this->entityTracker);
         unset($this->joinProvider);
         unset($this->whereProvider);
+        if ($forgetChanges) {
+            foreach ($this->repositories as $entityClassName => $configRepository) {
+                if (!$className || $className == $entityClassName) {
+                    foreach ($configRepository as $repository) {
+                        $repository->clearCache(null, true, false);
+                    }
+                }
+            }
+        }
+//        if ($clearRepositories) {
+//            $this->repositories = [];
+//        }
     }
     
     public function setSqlBuilder(SqlSelectorInterface $sqlSelector, DataTypeHandlerInterface $dataTypeHandler): void
@@ -140,6 +155,7 @@ class RepositoryFactory
 
             /** @var ObjectRepository $objectRepository */
             $objectRepository = new $repositoryClassName(
+                $this,
                 $this->getObjectMapper(),
                 $this->createObjectFetcher($configOptions),
                 $this->createObjectPersister(),
@@ -151,6 +167,9 @@ class RepositoryFactory
                 $objectRepository->setClassName($entityClassName);
             }
             $this->repositories[$entityClassName][$configHash] = $objectRepository;
+        } elseif ($resetFirst) {
+            //Keep tracking objects to prevent recursion, but forget clones as we need to refresh from db
+            $this->repositories[$entityClassName][$configHash]->clearCache(null, true);
         }
 
         return $this->repositories[$entityClassName][$configHash];

@@ -79,6 +79,18 @@ final class ObjectPersister implements TransactionInterface
         $this->objectUnbinder->setMappingCollection($this->options->mappingCollection);
     }
 
+    public function getClassName(): string
+    {
+        return $this->options->mappingCollection->getEntityClassName();
+    }
+
+    public function setClassName(string $className): void
+    {
+        $mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
+        $this->options->mappingCollection = $mappingCollection;
+        $this->setSaveOptions($this->options);
+    }
+
     /**
      * @param object $entity
      * @param SaveOptions $options
@@ -205,6 +217,7 @@ final class ObjectPersister implements TransactionInterface
             $update = true;
         }
 
+        $this->checkForRemovals($entity, $updateCount); //TODO: Add delete count here?
         if ($update) {
             $result = $this->updateEntity($entity, $pkValues, $insertCount, $updateCount);
         } else {
@@ -237,7 +250,9 @@ final class ObjectPersister implements TransactionInterface
             $this->saveChildren($entity, $insertCount, $updateCount, true);
         }
 
+        $originalClassName = $this->getClassName();
         $className = ObjectHelper::getObjectClassName($entity);
+        $this->setClassName($className);
         $qb = QB::create();
         foreach ($pkValues as $key => $value) {
             $qb->where($key, QB::EQ, $this->objectUnbinder->unbindValue($value));
@@ -258,7 +273,8 @@ final class ObjectPersister implements TransactionInterface
         if ($this->options->saveChildren) {
             $this->saveChildren($entity, $insertCount, $updateCount);
         }
-
+        $this->setClassName($originalClassName);
+        
         return $insertCount + $updateCount;
     }
 
@@ -301,7 +317,6 @@ final class ObjectPersister implements TransactionInterface
                     ObjectHelper::setValueOnObject($entity, $pkProperty, $insertId);
                 }
                 $this->entityTracker->storeEntity($entity, $pkValues);
-
             }
         }
 
@@ -330,8 +345,6 @@ final class ObjectPersister implements TransactionInterface
                         continue; //Prevent recursion
                     }
                     if (!($childEntity instanceof ObjectReferenceInterface)) {
-                        $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
-                        $childParentProperty = $childPropertyMapping->relationship->mappedBy;
                         $childPkValues = $this->options->mappingCollection->getPrimaryKeyValues($childEntity);
                         //Populate parent
                         if ($childParentProperty) {
@@ -347,39 +360,48 @@ final class ObjectPersister implements TransactionInterface
                     }
                 }
             }
-            $this->checkForRemovals($entity, $childPropertyMapping, $updateCount);
+
         }
     }
 
-    private function checkForRemovals(object $entity, PropertyMapping $childPropertyMapping, &$updateCount)
+    private function checkForRemovals(object $entity, &$updateCount)
     {
-        $parentProperty = $childPropertyMapping->relationship->mappedBy;
-        if ($childPropertyMapping->relationship->isToMany()
-            && !$this->disableDeleteRelationships
-            && $parentProperty
-        ) {
-            $childProperty = $childPropertyMapping->propertyName;
-            $childClassName = $childPropertyMapping->getChildClassName();
-            $childPks = $this->options->mappingCollection->getPrimaryKeyProperties($childClassName);
-            if ($this->entityTracker->hasEntity($entity)) {
-                $removedChildren = $this->entityTracker->getRemovedChildren($entity, $childProperty, $childPks);
-            } else {
-                //Load children from database to see if any have been removed
-
-
-
+        $children = $this->options->mappingCollection->getChildObjectProperties();
+        foreach ($children as $childPropertyName) {
+            if ($entity instanceof EntityProxyInterface && $entity->isChildAsleep($childPropertyName)) {
+                continue; //Don't wake it up
             }
-            $childrenToDelete = [];
-            foreach ($removedChildren as $removedChild) {
-                if ($childPropertyMapping->relationship->orphanRemoval) {
-                    $childrenToDelete[] = $removedChild;
-                } else { //Send to orphanage in case another parent wants to adopt it.
-                    ObjectHelper::setValueOnObject($removedChild, $parentProperty, null);
-                    $this->saveEntity($removedChild, $this->options, null, $updateCount);
+            $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
+            $parentProperty = $childPropertyMapping->relationship->mappedBy;
+            if ($childPropertyMapping->relationship->isToMany()
+                && !$this->disableDeleteRelationships
+                && $parentProperty
+            ) {
+                $childProperty = $childPropertyMapping->propertyName;
+                $childClassName = $childPropertyMapping->getChildClassName();
+                $childPks = $this->options->mappingCollection->getPrimaryKeyProperties($childClassName);
+                $removedChildren = null;
+                if ($this->entityTracker->hasEntity($entity)) {
+                    $removedChildren = $this->entityTracker->getRemovedChildren($entity, $childProperty, $childPks);
                 }
-            }
-            if ($childrenToDelete) {
-                $this->repository->deleteEntities($childrenToDelete); //Send to Belize. Sorry kids, nothing personal.
+                if ($removedChildren === null) {
+                    //We will have to load children from database to see if any have been removed
+
+                }
+                $childrenToDelete = [];
+                foreach ($removedChildren ?? [] as $removedChild) {
+                    if ($childPropertyMapping->relationship->orphanRemoval) {
+                        $childrenToDelete[] = $removedChild;
+                    } else { //Send to orphanage in case another parent wants to adopt it.
+                        ObjectHelper::setValueOnObject($removedChild, $parentProperty, null);
+                        $this->saveEntity($removedChild, $this->options, null, $updateCount);
+                    }
+                }
+                if ($childrenToDelete) {
+                    $this->repository->deleteEntities(
+                        $childrenToDelete
+                    ); //Send to Belize. Sorry kids, nothing personal.
+                }
             }
         }
     }

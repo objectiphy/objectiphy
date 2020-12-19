@@ -85,9 +85,9 @@ final class ObjectFetcher
      * Clear the entity tracker to ensure objects get refreshed from the database
      * @param string|null $className
      */
-    public function clearCache(?string $className = null): void
+    public function clearCache(?string $className = null, bool $forgetChangesOnly = false): void
     {
-        $this->entityTracker->clear($className);
+        $this->entityTracker->clear($className, $forgetChangesOnly);
     }
 
     /**

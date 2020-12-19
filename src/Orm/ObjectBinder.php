@@ -120,19 +120,20 @@ final class ObjectBinder
      */
     private function getEntityFromLocalCache(string $entityClassName, object &$entity): bool
     {
-        $pkValues = $this->mappingCollection->getPrimaryKeyValues($entity);
-        if ($pkValues) {
-            if ($this->entityTracker->hasEntity($entityClassName, $pkValues)) {
-                $entity = $this->entityTracker->getEntity($entityClassName, $pkValues);
-                return true;
-            } else {
-                //We store it now to prevent recursion, then update when fully hydrated.
-                $this->entityTracker->storeEntity($entity, $pkValues);
-                return false;
+        if (!$this->configOptions->bypassEntityCache) {
+            $pkValues = $this->mappingCollection->getPrimaryKeyValues($entity);
+            if ($pkValues) {
+                if ($this->entityTracker->hasEntity($pkValues ? $entityClassName : $entity, $pkValues)) {
+                    $entity = $this->entityTracker->getEntity($entityClassName, $pkValues);
+                    return true;
+                }
             }
-        } else {
+            //We store it now to prevent recursion, then update when fully hydrated.
+            $this->entityTracker->storeEntity($entity, $pkValues);
             return false;
         }
+        
+        return false;
     }
 
     /**
@@ -184,7 +185,7 @@ final class ObjectBinder
                     if ($valueFound) {
                         $value = $propertyMapping->isEager() ? $closure() : $closure;
                     }
-                } else {
+                }  else {
                     $parents = array_merge($propertyMapping->parents, [$propertyMapping->propertyName]);
                     $childClass = $propertyMapping->getChildClassName();
                     $value = $this->bindRowToEntity($row, $childClass, $parents, $entity);
@@ -236,7 +237,7 @@ final class ObjectBinder
     {
         $mappingCollection = $this->mappingCollection;
         $configOptions = $this->configOptions;
-        //Bypass tracker is used to ensure clones get refreshed from the database to detect changes
+        //BypassEntityCache is used to ensure clones get refreshed from the database to detect changes
         $closure = function($bypassEntityCache = false) use ($mappingCollection, $configOptions, $propertyMapping, $row) {
             //Get the repository
             $result = null;

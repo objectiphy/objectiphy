@@ -68,10 +68,9 @@ class DeleteTest extends IntegrationTestBase
         //While we're here (not really a delete test, this) update a child object on a one-to-many lazy-loaded relationship
         $bereavedParent->getPets()[1]->name = 'Slartibartfast';
         $this->objectRepository->saveEntity($bereavedParent);
-        $this->objectRepository->clearCache();
+        $this->objectRepository->clearCache(); 
         $parentWithNewPetName = $this->objectRepository->find(1);
-        $this->assertEquals('Slartibartfast',
-            $parentWithNewPetName->getPets()[2]->name); //As they are ordered by name, it will have moved to last place!
+        $this->assertEquals('Slartibartfast', $parentWithNewPetName->getPets()[2]->name); //As they are ordered by name, it will have moved to last place!
     }
     
     public function testOrphanRemoval()
@@ -79,7 +78,7 @@ class DeleteTest extends IntegrationTestBase
         $this->testName = 'Orphan removal';
         $bereavedParent = $this->objectRepository->find(1);
         //Remove a child entity which has orphan removal - it should be deleted
-        $pets = $bereavedParent->getPets();
+        $pets = $bereavedParent->getPets(); //RSW: This is wiping out the clones but we need them
         $elderlyPetId = $pets[count($pets) - 1]->id;
         $pets->offsetUnset(count($pets) - 1); //Euthanised! :(
         $bereavedParent->setPets($pets);
