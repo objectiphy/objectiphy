@@ -158,17 +158,13 @@ class EntityTracker
      * Stop tracking entities - either just for the given class, or everything if omitted.
      * @param string|null $className
      */
-    public function clear(?string $className = null, bool $forgetChangesOnly = false): void
+    public function clear(?string $className = null): void
     {
         if ($className) {
-            if (!$forgetChangesOnly) {
-                unset($this->entities[$className]);
-            }
+            unset($this->entities[$className]);
             unset($this->clones[$className]);
         } else {
-            if (!$forgetChangesOnly) {
-                $this->entities = [];
-            }
+            $this->entities = [];
             $this->clones = [];
         }
     }

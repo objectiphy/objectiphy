@@ -120,19 +120,16 @@ final class ObjectBinder
      */
     private function getEntityFromLocalCache(string $entityClassName, object &$entity): bool
     {
-        if (!$this->configOptions->bypassEntityCache) {
-            $pkValues = $this->mappingCollection->getPrimaryKeyValues($entity);
-            if ($pkValues) {
-                if ($this->entityTracker->hasEntity($pkValues ? $entityClassName : $entity, $pkValues)) {
-                    $entity = $this->entityTracker->getEntity($entityClassName, $pkValues);
-                    return true;
-                }
+        $pkValues = $this->mappingCollection->getPrimaryKeyValues($entity);
+        if ($pkValues) {
+            if ($this->entityTracker->hasEntity($pkValues ? $entityClassName : $entity, $pkValues)) {
+                $entity = $this->entityTracker->getEntity($entityClassName, $pkValues);
+                return true;
             }
-            //We store it now to prevent recursion, then update when fully hydrated.
-            $this->entityTracker->storeEntity($entity, $pkValues);
-            return false;
         }
-        
+        //We store it now to prevent recursion, then update when fully hydrated.
+        $this->entityTracker->storeEntity($entity, $pkValues);
+
         return false;
     }
 
@@ -237,8 +234,7 @@ final class ObjectBinder
     {
         $mappingCollection = $this->mappingCollection;
         $configOptions = $this->configOptions;
-        //BypassEntityCache is used to ensure clones get refreshed from the database to detect changes
-        $closure = function($bypassEntityCache = false) use ($mappingCollection, $configOptions, $propertyMapping, $row) {
+        $closure = function() use ($mappingCollection, $configOptions, $propertyMapping, $row) {
             //Get the repository
             $result = null;
             $className = $propertyMapping->getChildClassName();
@@ -303,7 +299,6 @@ final class ObjectBinder
             }
 
             //Do the search
-            $originalBypassCache = $repository->setConfigOption('bypassEntityCache', $bypassEntityCache);
             if ($query && $query->getWhere()) {
                 if ($propertyMapping->relationship->isToOne()) {
                     if ($usePrimaryKey) {
@@ -317,7 +312,6 @@ final class ObjectBinder
                     $result = $propertyMapping->getCollection($result);                    
                 }
             }
-            $repository->setConfigOption('bypassEntityCache', $originalBypassCache);
 
             return $result;
         };

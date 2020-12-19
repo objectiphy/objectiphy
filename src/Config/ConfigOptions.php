@@ -50,7 +50,6 @@ class ConfigOptions extends ConfigBase
     public const RECORD_AGE_INDICATOR = 'recordAgeIndicator';
     public const BIND_TO_ENTITIES = 'bindToEntities';
     public const QUERY_OVERRIDES = 'queryOverrides';
-    public const BYPASS_ENTITY_CACHE = 'bypassEntityCache';
     
     /**
      * @var bool Whether or not we are running in production (proxy classes do not get rebuilt on each run).
@@ -174,11 +173,6 @@ class ConfigOptions extends ConfigBase
      * case by case basis using a flag at the time you call the saveEntity method.
      */
     protected bool $saveChildrenByDefault = true;
-
-    /**
-     * @var bool Whether or not to bypass the entity cache and ensure data is loaded afresh from the database.
-     */
-    protected bool $bypassEntityCache = false;
 
     /**
      * Initialise config options.

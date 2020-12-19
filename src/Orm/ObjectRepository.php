@@ -518,20 +518,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     /**
      * Clear entities from memory and require them to be re-loaded afresh from the database.
      * @param string|null $className If supplied, only the cache for the given class will be cleared, otherwise all.
-     * @param bool $forgetChangesOnly If true, all entities will be forgotten, otherwise, just changes to the entities
-     * will be forgotten.
-     * @param bool $propagateToFactory Whether to clear the cache on factories used by lazy loaders. This should
-     * normally be true unless the factory itself is callinng this method.
      */
-    public function clearCache(
-        ?string $className = null,
-        bool $forgetChangesOnly = false,
-        bool $propagateToFactory = true
-    ): void {
-        if ($propagateToFactory) { //If the factory is calling us, it will set this to false otherwise we are in a loop.
-            $this->repositoryFactory->reset(true, false, $className); //Prevent late bound objects holding on to their entity trackers
-        }
-        $this->objectFetcher->clearCache($className, $forgetChangesOnly);
+    public function clearCache(?string $className = null): void
+    {
+        $this->objectFetcher->clearCache($className);
     }
 
     /**

@@ -76,7 +76,7 @@ class RepositoryFactory
         $this->configOptions = $configOptions;
     }
 
-    public function reset(bool $forgetChanges = true, bool $clearRepositories = false, ?string $className = null)
+    public function reset()
     {
         unset($this->mappingProvider);
         unset($this->sqlSelector);
@@ -86,21 +86,8 @@ class RepositoryFactory
         unset($this->objectMapper);
         unset($this->storage);
         unset($this->proxyFactory);
-        unset($this->entityTracker);
         unset($this->joinProvider);
         unset($this->whereProvider);
-        if ($forgetChanges) {
-            foreach ($this->repositories as $entityClassName => $configRepository) {
-                if (!$className || $className == $entityClassName) {
-                    foreach ($configRepository as $repository) {
-                        $repository->clearCache(null, true, false);
-                    }
-                }
-            }
-        }
-//        if ($clearRepositories) {
-//            $this->repositories = [];
-//        }
     }
     
     public function setSqlBuilder(SqlSelectorInterface $sqlSelector, DataTypeHandlerInterface $dataTypeHandler): void
@@ -152,7 +139,6 @@ class RepositoryFactory
         $configHash = $configOptions->getHash($repositoryClassName ?: '');
         if (!isset($this->repositories[$entityClassName][$configHash])) {
             $repositoryClassName = $this->getRepositoryClassName($repositoryClassName, $entityClassName);
-
             /** @var ObjectRepository $objectRepository */
             $objectRepository = new $repositoryClassName(
                 $this,
@@ -167,9 +153,6 @@ class RepositoryFactory
                 $objectRepository->setClassName($entityClassName);
             }
             $this->repositories[$entityClassName][$configHash] = $objectRepository;
-        } elseif ($resetFirst) {
-            //Keep tracking objects to prevent recursion, but forget clones as we need to refresh from db
-            $this->repositories[$entityClassName][$configHash]->clearCache(null, true);
         }
 
         return $this->repositories[$entityClassName][$configHash];
