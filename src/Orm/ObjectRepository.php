@@ -662,6 +662,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $this->configOptions->disableDeleteRelationships,
             $this->configOptions->disableDeleteEntities
         );
+        $this->objectRemover->setConfigOptions(
+            $this->configOptions->disableDeleteRelationships,
+            $this->configOptions->disableDeleteEntities
+        );
     }
 
     private function throwException(\Throwable $ex): void

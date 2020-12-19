@@ -2,6 +2,7 @@
 
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Tests\Entity\TestPet;
 use Objectiphy\Objectiphy\Tests\Entity\TestChild;
@@ -78,10 +79,10 @@ class DeleteTest extends IntegrationTestBase
         $this->testName = 'Orphan removal';
         $bereavedParent = $this->objectRepository->find(1);
         //Remove a child entity which has orphan removal - it should be deleted
-        $pets = $bereavedParent->getPets(); //RSW: This is wiping out the clones but we need them
+        $pets = $bereavedParent->getPets();
         $elderlyPetId = $pets[count($pets) - 1]->id;
         $pets->offsetUnset(count($pets) - 1); //Euthanised! :(
-        $bereavedParent->setPets($pets);
+        //$bereavedParent->setPets($pets);
         $this->objectRepository->saveEntity($bereavedParent);
         $this->objectRepository->clearCache();
         //Check that we only have three pets
@@ -143,11 +144,13 @@ class DeleteTest extends IntegrationTestBase
         $this->objectRepository->deleteEntity($suicidalParent);
         $zombieParent = $this->objectRepository->find(2);
         $this->assertEquals(null, $zombieParent); //Make sure parent is really dead
-        $this->objectRepository->setEntityClassName(TestChild::class);
+        $this->objectRepository->clearCache();
+        $this->objectRepository->setClassName(TestChild::class);
         $orphan = $this->objectRepository->find($childAtRiskId);
         $this->assertEquals($childAtRiskId, $orphan->getId()); //Make sure child was loaded
         $this->assertEquals(null, $orphan->getParent()); //Make sure child is an orphan
-        $this->objectRepository->setEntityClassName(TestPet::class);
+        $this->objectRepository->clearCache();
+        $this->objectRepository->setClassName(TestPet::class);
         foreach ($petsToDie as $deadPet) {
             $zombiePet = $this->objectRepository->find($deadPet->id);
             $this->assertEquals(null, $zombiePet);
@@ -156,8 +159,9 @@ class DeleteTest extends IntegrationTestBase
         //Delete using an ObjectReference
         $alivePet = $this->objectRepository->find(2);
         $this->assertEquals(2, $alivePet->id);
-        $petReference = $this->objectRepository->getObjectReference(TestPet::class, 2);
+        $petReference = $this->objectRepository->getObjectReference(TestPet::class, ['id' => 2]);
         $this->objectRepository->deleteEntity($petReference);
+        $this->objectRepository->clearCache();
         $deadPet = $this->objectRepository->find(2);
         $this->assertEquals(null, $deadPet);
     }
@@ -165,13 +169,16 @@ class DeleteTest extends IntegrationTestBase
     public function testSuppressedDeleteParentOwner()
     {
         $this->testName = 'Suppressed deletes where parent is owner';
-        $this->objectRepository->setDisableDeletes();
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_RELATIONSHIPS, true);
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_ENTITIES, true);
+        //$this->objectRepository->setDisableDeletes();
 
         $parent = $this->objectRepository->find(1);
         $user = $parent->getUser();
         //Remove a child entity where the parent owns the relationship
         $parent->setUser(null);
         $this->objectRepository->saveEntity($parent);
+        $this->objectRepository->clearCache();
         $bereavedParent = $this->objectRepository->find(1);
         $this->assertEquals($user, $bereavedParent->getUser());
     }
@@ -179,13 +186,15 @@ class DeleteTest extends IntegrationTestBase
     public function testSuppressedDeleteChildOwner()
     {
         $this->testName = 'Suppressed deletes where child is owner';
-        $this->objectRepository->setDisableDeletes();
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_RELATIONSHIPS, true);
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_ENTITIES, true);
         $parent = $this->objectRepository->find(1);
         //Remove a child entity where the child owns the relationship (essentially, we just update the child,
         //so it is treated the same as if it were the parent and the parent were the child).
         $emancipatedChild = $parent->getChild();
         $parent->setChild(null); //This sets the parent property of the existing child to null (but only because we told it to - Objectiphy does not handle this).
         $this->objectRepository->saveEntity($emancipatedChild);
+        $this->objectRepository->clearCache();
         $bereavedParent = $this->objectRepository->find(1);
         $this->assertEquals($emancipatedChild->getId(), $bereavedParent->getChild()->getId());
     }
@@ -193,7 +202,8 @@ class DeleteTest extends IntegrationTestBase
     public function testSuppressedOrphanRemoval()
     {
         $this->testName = 'Suppressed orphan removal';
-        $this->objectRepository->setDisableDeletes();
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_RELATIONSHIPS, true);
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_ENTITIES, true);
         $bereavedParent = $this->objectRepository->find(1);
         //Remove a child entity which has orphan removal - it should NOT be deleted
         $pets = $bereavedParent->getPets();
@@ -203,12 +213,14 @@ class DeleteTest extends IntegrationTestBase
         $this->objectRepository->saveEntity($bereavedParent);
 
         //Check that the euthanised pet is not really dead
-        $this->objectRepository->setEntityClassName(TestPet::class);
+        $this->objectRepository->clearCache();
+        $this->objectRepository->setClassName(TestPet::class);
         $zombiePet = $this->objectRepository->find($elderlyPetId);
         $this->assertEquals($elderlyPetId, $zombiePet->id);
-        $this->objectRepository->setEntityClassName(TestParent::class);
+        $this->objectRepository->setClassName(TestParent::class);
 
         //And still belongs to the parent
+        $this->objectRepository->clearCache();
         $bereavedParent = $this->objectRepository->find(1);
         $remainingPets = $bereavedParent->pets;
         $this->assertEquals(4, count($remainingPets));
@@ -217,21 +229,23 @@ class DeleteTest extends IntegrationTestBase
     public function testSuppressedCascadeDeletes()
     {
         $this->testName = 'Suppressed cascade deletes';
-        $this->objectRepository->setDisableDeletes();
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_RELATIONSHIPS, true);
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_ENTITIES, true);
         //Delete a parent entity without cascading (child should NOT be orphaned, and pets should NOT be killed, as
         //parent delete will fail).
         $suicidalParent = $this->objectRepository->find(2);
         $childAtRiskId = $suicidalParent->getChild()->getId();
         $petsToDie = $suicidalParent->getPets();
         $this->objectRepository->deleteEntity($suicidalParent, false, false);
+        $this->objectRepository->clearCache();
         $zombieParent = $this->objectRepository->find(2);
         $this->assertEquals($suicidalParent->id, $zombieParent->id); //Make sure parent is not really dead
-        $this->objectRepository->setEntityClassName(TestChild::class);
+        $this->objectRepository->setClassName(TestChild::class);
         $orphan = $this->objectRepository->find($childAtRiskId);
         $this->assertEquals($childAtRiskId, $orphan->getId()); //Make sure child was loaded
         $this->assertEquals($zombieParent->getId(), $orphan->getParent()->getId()); //Make sure child is not an orphan
         foreach ($petsToDie as $deadPet) {
-            $this->objectRepository->setEntityClassName(TestPet::class);
+            $this->objectRepository->setClassName(TestPet::class);
             $zombiePet = $this->objectRepository->find($deadPet->id); //zombie pet should have a parent!
             $this->assertEquals($deadPet->id, $zombiePet->id);
             $this->assertEquals($deadPet->parent->id, $zombiePet->parent->id);
@@ -241,9 +255,10 @@ class DeleteTest extends IntegrationTestBase
     public function testSuppressedException()
     {
         $this->testName = 'Suppressed exception';
-        $this->objectRepository->setDisableDeletes();
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_RELATIONSHIPS, true);
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_ENTITIES, true);
         //Check for exception when attempting to delete (test execution stops on exceptions, so it has to be last)
-        $this->objectRepository->setEntityClassName(TestParent::class);
+        $this->objectRepository->setClassName(TestParent::class);
         $suicidalParent = $this->objectRepository->find(2);
         $this->expectException(ObjectiphyException::class);
         $this->objectRepository->deleteEntity($suicidalParent);

@@ -22,16 +22,31 @@ final class ObjectRemover implements TransactionInterface
 {
     use TransactionTrait;
 
+    private ObjectMapper $objectMapper;
+    private SqlDeleterInterface $sqlDeleter;
+    private EntityTracker $entityTracker;
     private DeleteOptions $options;
+    private bool $disableDeleteRelationships = false;
+    private bool $disableDeleteEntities = false;
 
     public function __construct(
+        ObjectMapper $objectMapper,
         SqlDeleterInterface $sqlDeleter,
         StorageInterface $storage,
         EntityTracker $entityTracker
     ) {
+        $this->objectMapper = $objectMapper;
         $this->sqlDeleter = $sqlDeleter;
         $this->storage = $storage;
         $this->entityTracker = $entityTracker;
+    }
+
+    public function setConfigOptions(
+        bool $disableDeleteRelationships,
+        bool $disableDeleteEntities
+    ): void {
+        $this->disableDeleteRelationships = $disableDeleteRelationships;
+        $this->disableDeleteEntities = $disableDeleteEntities;
     }
 
     /**
@@ -43,8 +58,18 @@ final class ObjectRemover implements TransactionInterface
         $this->sqlDeleter->setDeleteOptions($deleteOptions);
     }
 
+    public function setClassName(string $className): void
+    {
+        $mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
+        $this->options->mappingCollection = $mappingCollection;
+        $this->setDeleteOptions($this->options);
+    }
+
     public function deleteEntity(object $entity, DeleteOptions $deleteOptions): int
     {
+        if ($this->disableDeleteEntities) {
+            return 0;
+        }
         $this->setDeleteOptions($deleteOptions);
 
         if (!$deleteOptions->disableCascade) {
@@ -55,7 +80,8 @@ final class ObjectRemover implements TransactionInterface
         //Delete entity
         $qb = QB::create();
         $deleteQuery = $qb->buildDeleteQuery();
-        $deleteCount = $this->executeDelete();
+
+        return $this->executeDelete($deleteQuery);
     }
 
     public function executeDelete(DeleteQueryInterface $deleteQuery)
@@ -75,6 +101,9 @@ final class ObjectRemover implements TransactionInterface
 
     public function deleteEntities(iterable $entities, DeleteOptions $deleteOptions): int
     {
+        if ($this->disableDeleteEntities) {
+            return 0;
+        }
         $deleteCount = 0;
         $this->setDeleteOptions($deleteOptions);
 
@@ -93,15 +122,21 @@ final class ObjectRemover implements TransactionInterface
 
         if ($deletes) {
             //Delete en-masse per class (but don't forget cascade!)
+            $originalClassName = $this->options->getClassName();
             foreach ($deletes as $className => $pkValues) {
+                $this->setClassName($className);
                 $deleteQuery = QB::create()->delete($className);
-                foreach ($pkValues as $propertyName => $values) {
-                    foreach ($values as $value) {
-                        $deleteQuery->and($propertyName, QB::EQ, $value);
+                $valueCount = count(reset($pkValues));
+                for ($valueIndex = 0; $valueIndex < $valueCount; $valueIndex++) {
+                    $deleteQuery->orStart();
+                    foreach ($pkValues as $propertyName => $values) {
+                        $deleteQuery->and($propertyName, QB::EQ, $values[$valueIndex]);
                     }
+                    $deleteQuery->orEnd();
                 }
                 $deleteCount += $this->executeDelete($deleteQuery->buildDeleteQuery());
             }
+            $this->setClassName($originalClassName);
         }
 
         return $deleteCount;
@@ -114,9 +149,13 @@ final class ObjectRemover implements TransactionInterface
             $child = $entity->$childPropertyName ?? null;
             if (!empty($child)) {
                 $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
+                $childEntities = is_iterable($child) ? $child : [$child];
                 if ($childPropertyMapping->relationship->cascadeDeletes) {
-                    $childEntities = is_iterable($child) ? $child : [$child];
                     $this->deleteEntities($childEntities, $this->options);
+                } elseif (!$this->disableDeleteRelationships && $childPropertyMapping->relationship->mappedBy) {
+                    //RSW: set parent to null
+
+
                 }
             }
         }

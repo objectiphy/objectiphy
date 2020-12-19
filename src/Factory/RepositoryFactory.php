@@ -227,11 +227,12 @@ class RepositoryFactory
 
     protected final function createObjectRemover(): ObjectRemover
     {
+        $objectMapper = $this->getObjectMapper();
         $sqlDeleter = $this->getSqlDeleter();
         $storage = $this->getStorage();
         $entityTracker = $this->getEntityTracker();
 
-        return new ObjectRemover($sqlDeleter, $storage, $entityTracker);
+        return new ObjectRemover($objectMapper, $sqlDeleter, $storage, $entityTracker);
     }
 
     protected final function createEntityTracker(): EntityTracker

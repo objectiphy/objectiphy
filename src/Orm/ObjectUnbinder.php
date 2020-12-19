@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
@@ -13,6 +14,7 @@ final class ObjectUnbinder
     private EntityTracker $entityTracker;
     private DataTypeHandlerInterface $dataTypeHandler;
     private ObjectMapper $objectMapper;
+    private bool $disableDeleteRelationships = false;
 
     public function __construct(
         EntityTracker $entityTracker,
@@ -27,6 +29,11 @@ final class ObjectUnbinder
     public function setMappingCollection(MappingCollection $mappingCollection): void
     {
         $this->mappingCollection = $mappingCollection;
+    }
+
+    public function setConfigOptions(bool $disableDeleteRelationships): void
+    {
+        $this->disableDeleteRelationships = $disableDeleteRelationships;
     }
 
     /**
@@ -47,6 +54,9 @@ final class ObjectUnbinder
             $propertyMapping = $this->mappingCollection->getPropertyMapping($property);
             if ($propertyMapping && ($processChildren || !$propertyMapping->getChildClassName())
                 && $this->mappingCollection->isPropertyFetchable($propertyMapping)) {
+                if ($this->disableDeleteRelationships && $propertyMapping->getChildClassName() && !$value) {
+                    continue; //Not allowed to remove the relationship
+                }
                 $columnName = $propertyMapping->getFullColumnName();
                 if ($columnName) {
                     $row[$property] = $this->unbindValue($value);

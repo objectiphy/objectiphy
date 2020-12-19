@@ -67,6 +67,7 @@ final class ObjectPersister implements TransactionInterface
     ): void {
         $this->disableDeleteRelationships = $disableDeleteRelationships;
         $this->disableDeleteEntities = $disableDeleteEntities;
+        $this->objectUnbinder->setConfigOptions($disableDeleteRelationships);
     }
 
     /**

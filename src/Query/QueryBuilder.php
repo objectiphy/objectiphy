@@ -28,6 +28,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
     private string $from = '';
     private string $insert = '';
     private string $update = '';
+    private string $delete = '';
 
     /**
      * @var JoinPartInterface[]
