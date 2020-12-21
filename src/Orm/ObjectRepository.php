@@ -17,12 +17,12 @@ use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
+use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Contract\TransactionInterface;
 use Objectiphy\Objectiphy\Contract\UpdateQueryInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Factory\ProxyFactory;
-use Objectiphy\Objectiphy\Factory\RepositoryFactory;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 use Objectiphy\Objectiphy\Query\Pagination;
@@ -37,7 +37,6 @@ use Objectiphy\Objectiphy\Query\SelectQuery;
 class ObjectRepository implements ObjectRepositoryInterface, TransactionInterface
 {
     protected ConfigOptions $configOptions;
-    protected RepositoryFactory $repositoryFactory;
     protected ObjectMapper $objectMapper;
     protected ObjectFetcher $objectFetcher;
     protected ObjectPersister $objectPersister;
@@ -48,7 +47,6 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     protected MappingCollection $mappingCollection;
 
     public function __construct(
-        RepositoryFactory $repositoryFactory,
         ObjectMapper $objectMapper,
         ObjectFetcher $objectFetcher,
         ObjectPersister $objectPersister,
@@ -56,7 +54,6 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         ProxyFactory $proxyFactory,
         ConfigOptions $configOptions = null
     ) {
-        $this->repositoryFactory = $repositoryFactory;
         $this->objectMapper = $objectMapper;
         $this->objectFetcher = $objectFetcher;
         $this->objectPersister = $objectPersister;
@@ -67,6 +64,11 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $configOptions = new ConfigOptions();
         }
         $this->setConfiguration($configOptions);
+    }
+
+    public function getStoarge(): StorageInterface
+    {
+        return $this->objectFetcher->getStorage();
     }
 
     /**
@@ -344,7 +346,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         object $entity,
         ?bool $saveChildren = null,
         int &$insertCount = 0,
-        int &$updateCount = 0
+        int &$updateCount = 0,
+        int &$deleteCount = 0
     ): int {
         $originalClassName = $this->getClassName();
         try {
@@ -354,7 +357,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $saveChildren = $saveChildren ?? $this->configOptions->saveChildrenByDefault;
             $saveOptions = SaveOptions::create($this->mappingCollection, ['saveChildren' => $saveChildren]);
             $this->beginTransaction();
-            $return = $this->objectPersister->saveEntity($entity, $saveOptions, $insertCount, $updateCount);
+            $return = $this->objectPersister->saveEntity($entity, $saveOptions, $insertCount, $updateCount, $deleteCount);
             $this->commit();
 
             return $return;
@@ -381,13 +384,14 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         array $entities,
         bool $saveChildren = null,
         int &$insertCount = 0,
-        int &$updateCount = 0
+        int &$updateCount = 0,
+        int &$deleteCount = 0
     ): int {
         try {
             $saveChildren = $saveChildren ?? $this->configOptions->saveChildrenByDefault;
             $saveOptions = SaveOptions::create($this->mappingCollection, ['saveChildren' => $saveChildren]);
             $this->beginTransaction();
-            $return = $this->objectPersister->saveEntities($entities, $saveOptions, $insertCount, $updateCount);
+            $return = $this->objectPersister->saveEntities($entities, $saveOptions, $insertCount, $updateCount, $deleteCount);
             $this->commit();
 
             return $return;
@@ -403,11 +407,13 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param boolean $disableCascade Whether or not to suppress cascading deletes (deletes will only normally be
      * cascaded if the mapping definition explicitly requires it, but you can use this flag to override that).
      * @param boolean $exceptionIfDisabled Whether or not to barf if deletes are disabled (probably only useful for
-     * integration or unit tests)
-     * @return int Number of records affected
+     * integration or unit tests).
+     * @param int $updateCount Number of records updated (where child records lose their parents but do not get 
+     * deleted themsselves, they may be updated with null values for the foreign key).
+     * @return int Number of records deleted.
      * @throws \Exception
      */
-    public function deleteEntity(object $entity, $disableCascade = false, $exceptionIfDisabled = true): int
+    public function deleteEntity(object $entity, $disableCascade = false, $exceptionIfDisabled = true, int &$updateCount = 0): int
     {
         if (!$this->validateDeletable($exceptionIfDisabled)) {
             return 0;
@@ -418,7 +424,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $this->setClassName(ObjectHelper::getObjectClassName($entity));
             $deleteOptions = DeleteOptions::create($this->mappingCollection, ['disableCascade' => $disableCascade]);
             $this->beginTransaction();
-            $return = $this->objectRemover->deleteEntity($entity, $deleteOptions);
+            $return = $this->objectRemover->deleteEntity($entity, $deleteOptions, $updateCount);
             $this->commit();
 
             return $return;
@@ -435,13 +441,18 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param \Traversable $entities The entities to delete.
      * @param boolean $disableCascade Whether or not to suppress cascading deletes (deletes will only normally be
      * cascaded if the mapping definition explicitly requires it, but you can use this flag to override that).
-     * @return int Number of records affected
+     * @param int $updateCount Number of records updated (where child records lose their parents but do not get
+     * deleted themsselves, they may be updated with null values for the foreign key).
+     * @param bool $exceptionIfDisabled Whether or not to throw an exception if an attempt is made to delete when
+     * deletes are disabled (if false, it will just silently return zero).
+     * @return int Number of records deleted.
      * @throws \Exception
      */
     public function deleteEntities(
         iterable $entities,
         bool $disableCascade = false,
-        bool $exceptionIfDisabled = true
+        bool $exceptionIfDisabled = true,
+        int $updateCount = 0
     ): int {
         if (!$this->validateDeletable($exceptionIfDisabled)) {
             return 0;
@@ -452,7 +463,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $this->setClassName(ObjectHelper::getObjectClassName(reset($entities)));
             $deleteOptions = DeleteOptions::create($this->mappingCollection, ['disableCascade' => $disableCascade]);
             $this->beginTransaction();
-            $return = $this->objectRemover->deleteEntities($entities, $deleteOptions);
+            $return = $this->objectRemover->deleteEntities($entities, $deleteOptions, $updateCount);
             $this->commit();
 
             return $return;

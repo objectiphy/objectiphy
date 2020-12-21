@@ -63,9 +63,9 @@ CREATE TABLE `child` (
   KEY `parent_id` (`parent_id`),
   KEY `user_id` (`user_id`),
   KEY `parent_id_2` (`parent_id`),
-  KEY `user_id_2` (`user_id`),
-  CONSTRAINT `child_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `parent` FOREIGN KEY (`parent_id`) REFERENCES `parent` (`id`) ON DELETE SET NULL
+  KEY `user_id_2` (`user_id`)/*,
+  CONSTRAINT `child_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) /*ON DELETE SET NULL,
+  /*CONSTRAINT `parent` FOREIGN KEY (`parent_id`) REFERENCES `parent` (`id`) /*ON DELETE SET NULL*/
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------
@@ -246,8 +246,8 @@ CREATE TABLE `parent` (
   `address_country_code` varchar(2) DEFAULT NULL,
   `modified_date_time` datetime ON UPDATE CURRENT_TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`),
-  CONSTRAINT `parent_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE SET NULL
+  KEY `user_id` (`user_id`)/*,
+  CONSTRAINT `parent_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) /*ON DELETE SET NULL*/
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------

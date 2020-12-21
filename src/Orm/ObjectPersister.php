@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use Objectiphy\Objectiphy\Config\DeleteOptions;
 use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
@@ -34,6 +35,7 @@ final class ObjectPersister implements TransactionInterface
     private ObjectUnbinder $objectUnbinder;
     private StorageInterface $storage;
     private EntityTracker $entityTracker;
+    private ObjectRemover $objectRemover;
     private SaveOptions $options;
     private array $savedObjects = [];
     private ObjectRepositoryInterface $repository;
@@ -43,13 +45,15 @@ final class ObjectPersister implements TransactionInterface
         ObjectMapper $objectMapper,
         ObjectUnbinder $objectUnbinder,
         StorageInterface $storage,
-        EntityTracker $entityTracker
+        EntityTracker $entityTracker,
+        ObjectRemover $objectRemover
     ) {
         $this->sqlUpdater = $sqlUpdater;
         $this->objectMapper = $objectMapper;
         $this->objectUnbinder = $objectUnbinder;
         $this->storage = $storage;
         $this->entityTracker = $entityTracker;
+        $this->objectRemover = $objectRemover;
     }
 
     /**
@@ -102,13 +106,14 @@ final class ObjectPersister implements TransactionInterface
     public function saveEntity(
         object $entity,
         SaveOptions $options,
-        ?int &$insertCount = null,
-        ?int &$updateCount = null
+        int &$insertCount = 0,
+        int &$updateCount = 0,
+        int &$deleteCount = 0
     ): int {
         $this->setSaveOptions($options);
         $this->savedObjects = []; //Avoid recursion
 
-        return $this->doSaveEntity($entity, $insertCount, $updateCount);
+        return $this->doSaveEntity($entity, $insertCount, $updateCount, $deleteCount);
     }
 
     /**
@@ -194,8 +199,9 @@ final class ObjectPersister implements TransactionInterface
      */
     private function doSaveEntity(
         object $entity,
-        ?int &$insertCount = null,
-        ?int &$updateCount = null
+        int &$insertCount,
+        int &$updateCount,
+        int &$deleteCount
     ): int {
         $result = 0;
         $className = ObjectHelper::getObjectClassName($entity);
@@ -218,9 +224,9 @@ final class ObjectPersister implements TransactionInterface
             $update = true;
         }
 
-        $this->checkForRemovals($entity, $updateCount); //TODO: Add delete count here?
+        $this->checkForRemovals($entity, $updateCount, $deleteCount);
         if ($update) {
-            $result = $this->updateEntity($entity, $pkValues, $insertCount, $updateCount);
+            $result = $this->updateEntity($entity, $pkValues, $insertCount, $updateCount, $deleteCount);
         } else {
             $result = $this->insertEntity($entity, $insertCount, $updateCount);
         }
@@ -241,14 +247,15 @@ final class ObjectPersister implements TransactionInterface
         object $entity,
         array $pkValues,
         int &$insertCount,
-        int &$updateCount
+        int &$updateCount,
+        int &$deleteCount
     ): int {
         if (in_array($entity, $this->savedObjects)) {
             return 0;
         }
         if ($this->options->saveChildren) {
             //Insert new child entities first so that we can populate the foreign keys on the parent
-            $this->saveChildren($entity, $insertCount, $updateCount, true);
+            $this->saveChildren($entity, $insertCount, $updateCount, $deleteCount, true);
         }
 
         $originalClassName = $this->getClassName();
@@ -272,11 +279,11 @@ final class ObjectPersister implements TransactionInterface
         }
         $this->savedObjects[] = $entity; //Even if nothing changed, don't attempt to save again
         if ($this->options->saveChildren) {
-            $this->saveChildren($entity, $insertCount, $updateCount);
+            $this->saveChildren($entity, $insertCount, $updateCount, $deleteCount);
         }
         $this->setClassName($originalClassName);
         
-        return $insertCount + $updateCount;
+        return $insertCount + $updateCount + $deleteCount;
     }
 
     /**
@@ -291,12 +298,13 @@ final class ObjectPersister implements TransactionInterface
         if (in_array($entity, $this->savedObjects)) {
             return 0;
         }
+        $deleteCount = 0; //There won't be any for an insert!
         $className = ObjectHelper::getObjectClassName($entity);
 
         $this->savedObjects[] = $entity; //Don't save it as a child of a child, do it after the children are saved
         if ($this->options->saveChildren) {
             //First, save any child objects which are owned by the parent
-            $this->saveChildren($entity, $insertCount, $updateCount, true);
+            $this->saveChildren($entity, $insertCount, $updateCount, $deleteCount, true);
         }
 
         //Then save the parent
@@ -323,13 +331,13 @@ final class ObjectPersister implements TransactionInterface
 
         if ($this->options->saveChildren) {
             //Then save any child objects which are owned by the child
-            $this->saveChildren($entity, $insertCount, $updateCount);
+            $this->saveChildren($entity, $insertCount, $updateCount, $deleteCount);
         }
 
         return $insertCount;
     }
 
-    private function saveChildren(object $entity, int &$insertCount, int &$updateCount, bool $ownedOnly = false): void
+    private function saveChildren(object $entity, int &$insertCount, int &$updateCount, int &$deleteCount, bool $ownedOnly = false): void
     {
         $children = $this->options->mappingCollection->getChildObjectProperties($ownedOnly);
         foreach ($children as $childPropertyName) {
@@ -357,7 +365,7 @@ final class ObjectPersister implements TransactionInterface
                             $childMappingCollection = $this->objectMapper->getMappingCollectionForClass($childClass);
                             $childPkValues = $childMappingCollection->getPrimaryKeyValues($childEntity);
                         }
-                        $this->doSaveEntity($childEntity, $insertCount, $updateCount);
+                        $this->doSaveEntity($childEntity, $insertCount, $updateCount, $deleteCount);
                     }
                 }
             }
@@ -365,7 +373,7 @@ final class ObjectPersister implements TransactionInterface
         }
     }
 
-    private function checkForRemovals(object $entity, &$updateCount)
+    private function checkForRemovals(object $entity, int &$updateCount, int &$deleteCount)
     {
         $children = $this->options->mappingCollection->getChildObjectProperties();
         foreach ($children as $childPropertyName) {
@@ -387,21 +395,16 @@ final class ObjectPersister implements TransactionInterface
                 }
                 if ($removedChildren === null) {
                     //We will have to load children from database to see if any have been removed
-
+                    
                 }
-                $childrenToDelete = [];
-                foreach ($removedChildren ?? [] as $removedChild) {
-                    if ($childPropertyMapping->relationship->orphanRemoval) {
-                        $childrenToDelete[] = $removedChild;
-                    } else { //Send to orphanage in case another parent wants to adopt it.
-                        ObjectHelper::setValueOnObject($removedChild, $parentProperty, null);
-                        $this->saveEntity($removedChild, $this->options, null, $updateCount);
-                    }
-                }
-                if ($childrenToDelete) {
-                    $this->repository->deleteEntities(
-                        $childrenToDelete
-                    ); //Send to Belize. Sorry kids, nothing personal.
+                if ($removedChildren) {
+                    $this->objectRemover->setDeleteOptions(DeleteOptions::create($this->options->mappingCollection));
+                    $this->objectRemover->sendOrphanedKidsAway(
+                        $childPropertyName,
+                        $removedChildren,
+                        $updateCount,
+                        $deleteCount
+                    );
                 }
             }
         }

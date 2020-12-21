@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Config\DeleteOptions;
+use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\DeleteQueryInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\SqlDeleterInterface;
+use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Contract\TransactionInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
@@ -24,6 +26,7 @@ final class ObjectRemover implements TransactionInterface
 
     private ObjectMapper $objectMapper;
     private SqlDeleterInterface $sqlDeleter;
+    private SqlUpdaterInterface $sqlUpdater;
     private EntityTracker $entityTracker;
     private DeleteOptions $options;
     private bool $disableDeleteRelationships = false;
@@ -32,11 +35,13 @@ final class ObjectRemover implements TransactionInterface
     public function __construct(
         ObjectMapper $objectMapper,
         SqlDeleterInterface $sqlDeleter,
+        SqlUpdaterInterface $sqlUpdater,
         StorageInterface $storage,
         EntityTracker $entityTracker
     ) {
         $this->objectMapper = $objectMapper;
         $this->sqlDeleter = $sqlDeleter;
+        $this->sqlUpdater = $sqlUpdater;
         $this->storage = $storage;
         $this->entityTracker = $entityTracker;
     }
@@ -65,23 +70,20 @@ final class ObjectRemover implements TransactionInterface
         $this->setDeleteOptions($this->options);
     }
 
-    public function deleteEntity(object $entity, DeleteOptions $deleteOptions): int
+    public function deleteEntity(object $entity, DeleteOptions $deleteOptions, int &$updateCount): int
     {
         if ($this->disableDeleteEntities) {
             return 0;
         }
+        $deleteCount = 0;
         $this->setDeleteOptions($deleteOptions);
-
-        if (!$deleteOptions->disableCascade) {
-            //Cascade to children
-            $this->deleteChildren($entity);
-        }
+        $this->removeChildren($entity, $updateCount, $deleteCount);
 
         //Delete entity
         $qb = QB::create();
         $deleteQuery = $qb->buildDeleteQuery();
 
-        return $this->executeDelete($deleteQuery);
+        return $deleteCount + $this->executeDelete($deleteQuery);
     }
 
     public function executeDelete(DeleteQueryInterface $deleteQuery)
@@ -89,9 +91,12 @@ final class ObjectRemover implements TransactionInterface
         $deleteCount = 0;
         $className = $deleteQuery->getDelete() ?: $this->options->mappingCollection->getEntityClassName();
         $deleteQuery->finalise($this->options->mappingCollection, $className);
+
+        //RSW: TODO: Can we cascade?
+
         $sql = $this->sqlDeleter->getDeleteSql($deleteQuery);
         $params = $this->sqlDeleter->getQueryParams();
-        if ($this->storage->executeQuery($sql, $params)) {
+        if ($sql && $this->storage->executeQuery($sql, $params)) {
             $deleteCount = $this->storage->getAffectedRecordCount();
             $this->entityTracker->clear($className);
         }
@@ -99,8 +104,11 @@ final class ObjectRemover implements TransactionInterface
         return $deleteCount;
     }
 
-    public function deleteEntities(iterable $entities, DeleteOptions $deleteOptions): int
-    {
+    public function deleteEntities(
+        iterable $entities,
+        DeleteOptions $deleteOptions,
+        int &$updateCount
+    ): int {
         if ($this->disableDeleteEntities) {
             return 0;
         }
@@ -118,10 +126,11 @@ final class ObjectRemover implements TransactionInterface
             foreach ($pkValues as $key => $value) {
                 $deletes[$className][$key][] = $value;
             }
+            $this->removeChildren($entity, $updateCount, $deleteCount);
         }
 
         if ($deletes) {
-            //Delete en-masse per class (but don't forget cascade!)
+            //Delete en-masse per class
             $originalClassName = $this->options->getClassName();
             foreach ($deletes as $className => $pkValues) {
                 $this->setClassName($className);
@@ -142,21 +151,82 @@ final class ObjectRemover implements TransactionInterface
         return $deleteCount;
     }
 
-    private function deleteChildren(object $entity)
+    private function removeChildren(object $entity, int &$updateCount, int &$deleteCount)
     {
+        $removedChildren = [];
         $children = $this->options->mappingCollection->getChildObjectProperties();
         foreach ($children as $childPropertyName) {
             $child = $entity->$childPropertyName ?? null;
             if (!empty($child)) {
-                $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
-                $childEntities = is_iterable($child) ? $child : [$child];
-                if ($childPropertyMapping->relationship->cascadeDeletes) {
-                    $this->deleteEntities($childEntities, $this->options);
-                } elseif (!$this->disableDeleteRelationships && $childPropertyMapping->relationship->mappedBy) {
-                    //RSW: set parent to null
+                $children = is_iterable($child) ? $child : [$child];
+                $this->sendOrphanedKidsAway($childPropertyName, $children, $updateCount, $deleteCount);
+            }
+        }
+    }
 
-
+    /**
+     * @param string $propertyName Name of property on parent object that points to this child or children
+     * @param array $orphans One or more children whose parent has been deleted
+     * @throws \ReflectionException
+     */
+    public function sendOrphanedKidsAway(
+        string $propertyName,
+        iterable $removedChildren,
+        int &$updateCount,
+        int &$deleteCount
+    ) {
+        $goingToOrphanage = [];
+        $goingToBelize = [];
+        $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($propertyName);
+        foreach ($removedChildren as $removedChild) {
+            $oneWayTicket = false;
+            if (!$this->disableDeleteEntities
+                && !$this->options->disableCascade
+                && ($childPropertyMapping->relationship->cascadeDeletes
+                    || $childPropertyMapping->relationship->orphanRemoval)
+            ) { //Nobody wants this baby
+                $goingToBelize[] = $removedChild;
+                $oneWayTicket = true;
+            } else { //Available for adoption
+                $parentProperty = $childPropertyMapping->relationship->mappedBy;
+                if ($parentProperty && !$this->disableDeleteRelationships) {
+                    $goingToOrphanage[] = $removedChild;
                 }
+            }
+        }
+
+        if ($goingToOrphanage) {
+            $this->sendKidsToOrphanage($goingToOrphanage, $parentProperty, $updateCount);
+        }
+        if ($goingToBelize) { //Sorry kids, nothing personal.
+            $this->deleteEntities($goingToBelize, $this->options, $deleteCount);
+        }
+    }
+
+    private function sendKidsToOrphanage(array $orphans, string $parentProperty, &$updateCount)
+    {
+        if ($orphans && $parentProperty) {
+            $childClass = ObjectHelper::getObjectClassName(reset($orphans));
+            $pkProperties = $this->options->mappingCollection->getPrimaryKeyProperties($childClass);
+            $qb = QB::create()
+                ->update($childClass)
+                ->set([$parentProperty => null]);
+            foreach ($orphans as $orphan) {
+                $qb->orStart();
+                foreach ($pkProperties as $property) {
+                    $qb->where($property, QB::EQ, ObjectHelper::getValueFromObject($orphan, $property));
+                }
+                $qb->orEnd();
+                ObjectHelper::setValueOnObject($orphan, $parentProperty, null);
+            }
+            $query = $qb->buildUpdateQuery();
+            
+            $updaterMappingCollection = $this->objectMapper->getMappingCollectionForClass($childClass);
+            $this->sqlUpdater->setSaveOptions(SaveOptions::create($updaterMappingCollection));
+            $sql = $this->sqlUpdater->getUpdateSql($query);
+            $params = $this->sqlUpdater->getQueryParams();
+            if ($this->storage->executeQuery($sql, $params)) {
+                $updateCount += $this->storage->getAffectedRecordCount();
             }
         }
     }

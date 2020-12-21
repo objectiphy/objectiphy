@@ -57,6 +57,7 @@ class RepositoryFactory
     private EntityTracker $entityTracker;
     private JoinProviderMySql $joinProvider;
     private WhereProviderMySql $whereProvider;
+    private ObjectRemover $objectRemover;
     /**
      * @var ObjectRepositoryInterface[]
      */
@@ -88,6 +89,7 @@ class RepositoryFactory
         unset($this->proxyFactory);
         unset($this->joinProvider);
         unset($this->whereProvider);
+        unset($this->objectRemover);
     }
     
     public function setSqlBuilder(SqlSelectorInterface $sqlSelector, DataTypeHandlerInterface $dataTypeHandler): void
@@ -141,11 +143,10 @@ class RepositoryFactory
             $repositoryClassName = $this->getRepositoryClassName($repositoryClassName, $entityClassName);
             /** @var ObjectRepository $objectRepository */
             $objectRepository = new $repositoryClassName(
-                $this,
                 $this->getObjectMapper(),
                 $this->createObjectFetcher($configOptions),
                 $this->createObjectPersister(),
-                $this->createObjectRemover(),
+                $this->getObjectRemover(),
                 $this->getProxyFactory($configOptions),
                 $configOptions
             );
@@ -222,17 +223,19 @@ class RepositoryFactory
         $objectUnbinder = $this->createObjectUnbinder();
         $storage = $this->getStorage();
         $entityTracker = $this->getEntityTracker();
-        return new ObjectPersister($sqlUpdater, $objectMapper, $objectUnbinder, $storage, $entityTracker);
+        $objectRemover = $this->createObjectRemover();
+        return new ObjectPersister($sqlUpdater, $objectMapper, $objectUnbinder, $storage, $entityTracker, $objectRemover);
     }
 
     protected final function createObjectRemover(): ObjectRemover
     {
         $objectMapper = $this->getObjectMapper();
         $sqlDeleter = $this->getSqlDeleter();
+        $sqlUpdater = $this->createSqlUpdater();
         $storage = $this->getStorage();
         $entityTracker = $this->getEntityTracker();
 
-        return new ObjectRemover($objectMapper, $sqlDeleter, $storage, $entityTracker);
+        return new ObjectRemover($objectMapper, $sqlDeleter, $sqlUpdater, $storage, $entityTracker);
     }
 
     protected final function createEntityTracker(): EntityTracker
@@ -269,6 +272,14 @@ class RepositoryFactory
     protected final function createStorage(): StorageInterface
     {
         return new PdoStorage($this->pdo);
+    }
+
+    protected final function createSqlUpdater(): SqlUpdaterInterface
+    {
+        $dataTypeHandler = $this->getDataTypeHandlerMySql();
+        $joinProvider = $this->getJoinProviderMySql();
+        $whereProvider = $this->getWhereProviderMySql();
+        return new SqlUpdaterMySql($dataTypeHandler, $joinProvider, $whereProvider);
     }
 
     /**
@@ -342,10 +353,7 @@ class RepositoryFactory
     private function getSqlUpdater(): SqlUpdaterInterface
     {
         if (!isset($this->sqlUpdater)) {
-            $dataTypeHandler = $this->getDataTypeHandlerMySql();
-            $joinProvider = $this->getJoinProviderMySql();
-            $whereProvider = $this->getWhereProviderMySql();
-            $this->sqlUpdater = new SqlUpdaterMySql($dataTypeHandler, $joinProvider, $whereProvider);
+            $this->sqlUpdater = $this->createSqlUpdater();
         }
 
         return $this->sqlUpdater;
@@ -360,6 +368,15 @@ class RepositoryFactory
         }
 
         return $this->sqlDeleter;
+    }
+
+    private function getObjectRemover(): ObjectRemover
+    {
+        if (!isset($this->objectRemover)) {
+            $this->objectRemover = $this->createObjectRemover();
+        }
+
+        return $this->objectRemover;
     }
 
     private function getJoinProviderMySql(): JoinProviderMySql

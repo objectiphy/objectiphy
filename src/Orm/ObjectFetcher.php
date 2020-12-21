@@ -39,6 +39,11 @@ final class ObjectFetcher
         $this->entityTracker = $entityTracker;
     }
 
+    public function getStorage(): StorageInterface
+    {
+        return $this->storage;
+    }
+
     /**
      * Config options relating to fetching data only.
      */

@@ -279,7 +279,7 @@ class CriteriaBuilder implements CriteriaBuilderInterface
      */
     private function getAliasesAndValues($values, bool $valueIsArray = false): array
     {
-        $values = !$valueIsArray && (is_array($values) || $values instanceof \Traversable) ? $values : [$values];
+        $values = !$valueIsArray && (is_iterable($values)) ? $values : [$values];
         $usingAlias = is_string($values[0]) && substr($values[0], 0, 1) == ':';
         $alias = $usingAlias ? substr($values[0], 1) : null;
         $value = $usingAlias ? null : $values[0];
