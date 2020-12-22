@@ -395,6 +395,10 @@ final class ObjectPersister implements TransactionInterface
                 }
                 if ($removedChildren === null) {
                     //We will have to load children from database to see if any have been removed
+
+
+                    //RSW: TODO: go through repository for updates, reads, deletes, instead of each
+                    //object helping itself
                     
                 }
                 if ($removedChildren) {

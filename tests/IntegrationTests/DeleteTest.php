@@ -24,11 +24,10 @@ class DeleteTest extends IntegrationTestBase
         //Remove a child entity where the parent owns the relationship
         $parent->setUser(null);
         $this->objectRepository->saveEntity($parent);
-        $this->objectRepository->clearCache();
         $bereavedParent = $this->objectRepository->find(1);
         $this->assertEquals(null, $bereavedParent->getUser());
     }
-    
+
     public function testDeleteChildOwner()
     {
         $this->testName = 'Delete where child is owner';
@@ -36,9 +35,10 @@ class DeleteTest extends IntegrationTestBase
         //Remove a child entity where the child owns the relationship (essentially, we just update the child,
         //so it is treated the same as if it were the parent and the parent were the child).
         $emancipatedChild = $parent->getChild();
-        $parent->setChild(null); //This sets the parent property of the existing child to null (but only because we told it to - Objectiphy does not handle this).
+        $parent->setChild(
+            null
+        ); //This sets the parent property of the existing child to null (but only because we told it to - Objectiphy does not handle this).
         $this->objectRepository->saveEntity($emancipatedChild);
-        $this->objectRepository->clearCache();
         $bereavedParent = $this->objectRepository->find(1);
         $this->assertEquals(null, $bereavedParent->getChild());
 
@@ -49,7 +49,7 @@ class DeleteTest extends IntegrationTestBase
         $this->assertGreaterThan(0, strlen($reloadedChild->getName()));
         $this->objectRepository->setClassName(get_class($parent)); //Should work even though $parent is a proxy object
     }
-    
+
     public function testDeleteAllChildren()
     {
         $this->testName = 'Delete all children';
@@ -62,18 +62,21 @@ class DeleteTest extends IntegrationTestBase
         $this->assertEquals(false, $issetNow);
 
         //We didn't persist that, so pets should all still be there...
-        $this->objectRepository->clearCache();
+        $this->objectRepository->clearCache(); //Necessary due to no persistence
         $bereavedParent = $this->objectRepository->find(1);
         $this->assertEquals(4, count($bereavedParent->pets));
 
         //While we're here (not really a delete test, this) update a child object on a one-to-many lazy-loaded relationship
         $bereavedParent->getPets()[1]->name = 'Slartibartfast';
         $this->objectRepository->saveEntity($bereavedParent);
-        $this->objectRepository->clearCache(); 
+        $this->objectRepository->clearCache(); //Necessary to get the new ordering
         $parentWithNewPetName = $this->objectRepository->find(1);
-        $this->assertEquals('Slartibartfast', $parentWithNewPetName->getPets()[2]->name); //As they are ordered by name, it will have moved to last place!
+        $this->assertEquals(
+            'Slartibartfast',
+            $parentWithNewPetName->getPets()[2]->name
+        ); //As they are ordered by name, it will have moved to last place!
     }
-    
+
     public function testOrphanRemoval()
     {
         $this->testName = 'Orphan removal';
@@ -83,7 +86,6 @@ class DeleteTest extends IntegrationTestBase
         $elderlyPetId = $pets[count($pets) - 1]->id;
         $pets->offsetUnset(count($pets) - 1); //Euthanised! :(
         $this->objectRepository->saveEntity($bereavedParent);
-        $this->objectRepository->clearCache();
         //Check that we only have three pets
         $bereavedParent = $this->objectRepository->find(1);
         $remainingPets = $bereavedParent->pets;
@@ -99,8 +101,9 @@ class DeleteTest extends IntegrationTestBase
         //Eg. create a new child, assign an existing parent to it, update a property on
         //the parent, remove one of the parent's pets, then add a new pet, then save the child.
         //Removed pet should be deleted, new pet should be inserted, child should be inserted, parent should be updated.
-        $this->objectRepository->clearCache();
-        $existingParent = $this->objectRepository->find(3); //Pets not being cloned properly - lazy loader populates clone
+        $existingParent = $this->objectRepository->find(
+            3
+        ); //Pets not being cloned properly - lazy loader populates clone
         $existingPets = $existingParent->getPets();
         $this->assertEquals('Trixie', $existingPets[1]->name); //Make sure the pet we want to replace is there
         $this->assertEquals(13, $existingPets[1]->id);
@@ -115,7 +118,6 @@ class DeleteTest extends IntegrationTestBase
         $parentPets =& $newChild->getParent()->getPets();
         $parentPets[1] = $newPet;
         $this->objectRepository->saveEntity($newChild);
-        $this->objectRepository->clearCache();
         $this->objectRepository->setClassName(TestChild::class);
         $refreshedChild = $this->objectRepository->find($newChild->getId());
         $this->assertEquals('Arthur', $refreshedChild->getName());
@@ -127,72 +129,10 @@ class DeleteTest extends IntegrationTestBase
         $this->assertContains('Sam', $petNames);
         $this->assertContains('Spot', $petNames);
         //Make sure orphan was deleted
-        $this->objectRepository->clearCache();
         $this->objectRepository->setClassName(TestPet::class);
         $deadPet = $this->objectRepository->find(13);
         $this->assertNull($deadPet);
     }
-
-//    public function testOrphanRemovalWithoutCache()
-//    {
-//        $this->testName = 'Orphan removal';
-//        $bereavedParent = $this->objectRepository->find(1);
-//        //Remove a child entity which has orphan removal - it should be deleted
-//        $pets = $bereavedParent->getPets();
-//        $elderlyPetId = $pets[count($pets) - 1]->id;
-//        $pets->offsetUnset(count($pets) - 1); //Euthanised! :(
-//        $this->objectRepository->clearCache();
-//        $this->objectRepository->saveEntity($bereavedParent);
-//        $this->objectRepository->clearCache();
-//        //Check that we only have three pets
-//        $bereavedParent = $this->objectRepository->find(1);
-//        $remainingPets = $bereavedParent->pets;
-//        $this->assertEquals(3, count($remainingPets));
-//        //Check that the euthanised pet is really dead
-//        $this->objectRepository->setClassName(TestPet::class);
-//        $zombiePet = $this->objectRepository->find($elderlyPetId);
-//        $this->assertEquals(null, $zombiePet);
-//        $this->objectRepository->setClassName(TestParent::class);
-//
-//        //Replace a child of an existing entity that is a property of a new entity
-//        //(ensure new entity inserted, existing entity updated, orphan entity deleted)
-//        //Eg. create a new child, assign an existing parent to it, update a property on
-//        //the parent, remove one of the parent's pets, then add a new pet, then save the child.
-//        //Removed pet should be deleted, new pet should be inserted, child should be inserted, parent should be updated.
-//        $this->objectRepository->clearCache();
-//        $existingParent = $this->objectRepository->find(3); //Pets not being cloned properly - lazy loader populates clone
-//        $existingPets = $existingParent->getPets();
-//        $this->assertEquals('Trixie', $existingPets[1]->name); //Make sure the pet we want to replace is there
-//        $this->assertEquals(13, $existingPets[1]->id);
-//        $newChild = new TestChild();
-//        $newChild->setName('Arthur');
-//        $newChild->setParent($existingParent);
-//        $newChild->getParent()->setName('Updated Parent Name');
-//        $newPet = new TestPet();
-//        $newPet->type = 'dog';
-//        $newPet->name = 'Sam';
-//        $newPet->weightInGrams = 12689;
-//        $parentPets =& $newChild->getParent()->getPets();
-//        $parentPets[1] = $newPet;
-//        $this->objectRepository->clearCache();
-//        $this->objectRepository->saveEntity($newChild);
-//        $this->objectRepository->clearCache();
-//        $this->objectRepository->setClassName(TestChild::class);
-//        $refreshedChild = $this->objectRepository->find($newChild->getId());
-//        $this->assertEquals('Arthur', $refreshedChild->getName());
-//        $this->assertEquals($existingParent->id, $refreshedChild->getParent()->id);
-//        $this->assertEquals('Updated Parent Name', $refreshedChild->getParent()->name);
-//        $refreshedPets = $refreshedChild->getParent()->pets;
-//        $this->assertEquals(2, count($refreshedPets));
-//        $petNames = [$refreshedChild->getParent()->pets[0]->name, $refreshedChild->getParent()->pets[1]->name];
-//        $this->assertContains('Sam', $petNames);
-//        $this->assertContains('Spot', $petNames);
-//        //Make sure orphan was deleted
-//        $this->objectRepository->clearCache();
-//        $this->objectRepository->setClassName(TestPet::class);
-//        $deadPet = $this->objectRepository->find(13);
-//        $this->assertNull($deadPet);
-//    }
 
     public function testCascading()
     {
@@ -204,7 +144,6 @@ class DeleteTest extends IntegrationTestBase
         $this->objectRepository->deleteEntity($suicidalParent);
         $zombieParent = $this->objectRepository->find(2);
         $this->assertEquals(null, $zombieParent); //Make sure parent is really dead
-        $this->objectRepository->clearCache();
         $this->objectRepository->setClassName(TestChild::class);
         $orphan = $this->objectRepository->find($childAtRiskId);
         $this->assertEquals($childAtRiskId, $orphan->getId()); //Make sure child was loaded
@@ -215,7 +154,6 @@ class DeleteTest extends IntegrationTestBase
         $stm->execute();
         $parentId = $stm->fetchColumn();
         $this->assertEquals(null, $parentId);
-        $this->objectRepository->clearCache();
         $this->objectRepository->setClassName(TestPet::class);
         foreach ($petsToDie as $deadPet) {
             $zombiePet = $this->objectRepository->find($deadPet->id);
@@ -227,7 +165,6 @@ class DeleteTest extends IntegrationTestBase
         $this->assertEquals(2, $alivePet->id);
         $petReference = $this->objectRepository->getObjectReference(TestPet::class, ['id' => 2]);
         $this->objectRepository->deleteEntity($petReference);
-        $this->objectRepository->clearCache();
         $deadPet = $this->objectRepository->find(2);
         $this->assertEquals(null, $deadPet);
     }
@@ -237,18 +174,17 @@ class DeleteTest extends IntegrationTestBase
         $this->testName = 'Suppressed deletes where parent is owner';
         $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_RELATIONSHIPS, true);
         $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_ENTITIES, true);
-        //$this->objectRepository->setDisableDeletes();
 
         $parent = $this->objectRepository->find(1);
         $user = $parent->getUser();
         //Remove a child entity where the parent owns the relationship
         $parent->setUser(null);
         $this->objectRepository->saveEntity($parent);
-        $this->objectRepository->clearCache();
+        $this->objectRepository->clearCache(); //Necessary to cause user to be re-loaded after suppressed delete
         $bereavedParent = $this->objectRepository->find(1);
         $this->assertEquals($user, $bereavedParent->getUser());
     }
-    
+
     public function testSuppressedDeleteChildOwner()
     {
         $this->testName = 'Suppressed deletes where child is owner';
@@ -258,13 +194,15 @@ class DeleteTest extends IntegrationTestBase
         //Remove a child entity where the child owns the relationship (essentially, we just update the child,
         //so it is treated the same as if it were the parent and the parent were the child).
         $emancipatedChild = $parent->getChild();
-        $parent->setChild(null); //This sets the parent property of the existing child to null (but only because we told it to - Objectiphy does not handle this).
+        $parent->setChild(
+            null
+        ); //This sets the parent property of the existing child to null (but only because we told it to - Objectiphy does not handle this).
         $this->objectRepository->saveEntity($emancipatedChild);
-        $this->objectRepository->clearCache();
+        $this->objectRepository->clearCache(); //Necessary to re-load as the delete was suppressed.
         $bereavedParent = $this->objectRepository->find(1);
         $this->assertEquals($emancipatedChild->getId(), $bereavedParent->getChild()->getId());
     }
-    
+
     public function testSuppressedOrphanRemoval()
     {
         $this->testName = 'Suppressed orphan removal';
@@ -279,19 +217,18 @@ class DeleteTest extends IntegrationTestBase
         $this->objectRepository->saveEntity($bereavedParent);
 
         //Check that the euthanised pet is not really dead
-        $this->objectRepository->clearCache();
         $this->objectRepository->setClassName(TestPet::class);
         $zombiePet = $this->objectRepository->find($elderlyPetId);
         $this->assertEquals($elderlyPetId, $zombiePet->id);
         $this->objectRepository->setClassName(TestParent::class);
 
         //And still belongs to the parent
-        $this->objectRepository->clearCache();
+        $this->objectRepository->clearCache(); //Necessary to re-load as the orphan removal was suppressed.
         $bereavedParent = $this->objectRepository->find(1);
         $remainingPets = $bereavedParent->pets;
         $this->assertEquals(4, count($remainingPets));
     }
-    
+
     public function testSuppressedCascadeDeletes()
     {
         $this->testName = 'Suppressed cascade deletes';
@@ -303,7 +240,6 @@ class DeleteTest extends IntegrationTestBase
         $childAtRiskId = $suicidalParent->getChild()->getId();
         $petsToDie = $suicidalParent->getPets();
         $this->objectRepository->deleteEntity($suicidalParent, false, false);
-        $this->objectRepository->clearCache();
         $zombieParent = $this->objectRepository->find(2);
         $this->assertEquals($suicidalParent->id, $zombieParent->id); //Make sure parent is not really dead
         $this->objectRepository->setClassName(TestChild::class);
@@ -317,7 +253,7 @@ class DeleteTest extends IntegrationTestBase
             $this->assertEquals($deadPet->parent->id, $zombiePet->parent->id);
         }
     }
-    
+
     public function testSuppressedException()
     {
         $this->testName = 'Suppressed exception';
@@ -328,5 +264,65 @@ class DeleteTest extends IntegrationTestBase
         $suicidalParent = $this->objectRepository->find(2);
         $this->expectException(ObjectiphyException::class);
         $this->objectRepository->deleteEntity($suicidalParent);
+    }
+
+    public function testDeleteParentOwnerNoCache()
+    {
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_ENTITY_CACHE, true);
+        $this->testDeleteParentOwner();
+    }
+
+    public function testDeleteChildOwnerNoCache()
+    {
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_ENTITY_CACHE, true);
+        $this->testDeleteChildOwner();
+    }
+
+    public function testDeleteAllChildrenNoCache()
+    {
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_ENTITY_CACHE, true);
+        $this->testDeleteAllChildren();
+    }
+
+    public function testOrphanRemovalNoCache()
+    {
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_ENTITY_CACHE, true);
+        $this->testOrphanRemoval();
+    }
+
+    public function testCascadingNoCache()
+    {
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_ENTITY_CACHE, true);
+        $this->testCascading();
+    }
+
+    public function testSuppressedDeleteParentOwnerNoCache()
+    {
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_ENTITY_CACHE, true);
+        $this->testSuppressedDeleteParentOwner();
+    }
+
+    public function testSuppressedDeleteChildOwnerNoCache()
+    {
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_ENTITY_CACHE, true);
+        $this->testSuppressedDeleteChildOwner();
+    }
+
+    public function testSuppressedOrphanRemovalNoCache()
+    {
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_ENTITY_CACHE, true);
+        $this->testSuppressedOrphanRemoval();
+    }
+
+    public function testSuppressedCascadeDeletesNoCache()
+    {
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_ENTITY_CACHE, true);
+        $this->testSuppressedCascadeDeletes();
+    }
+
+    public function testSuppressedExceptionNoCache()
+    {
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_ENTITY_CACHE, true);
+        $this->testSuppressedException();
     }
 }

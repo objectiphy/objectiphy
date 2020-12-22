@@ -27,7 +27,7 @@ use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
  * @property string $recordAgeIndicator
  * @property bool $bindToEntities
  * @property bool $saveChildrenByDefault
- * @property bool $bypassEntityCache
+ * @property bool $disableEntityCache
  * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
@@ -50,6 +50,7 @@ class ConfigOptions extends ConfigBase
     public const RECORD_AGE_INDICATOR = 'recordAgeIndicator';
     public const BIND_TO_ENTITIES = 'bindToEntities';
     public const QUERY_OVERRIDES = 'queryOverrides';
+    public const DISABLE_ENTITY_CACHE = 'disableEntityCache';
     
     /**
      * @var bool Whether or not we are running in production (proxy classes do not get rebuilt on each run).
@@ -173,6 +174,12 @@ class ConfigOptions extends ConfigBase
      * case by case basis using a flag at the time you call the saveEntity method.
      */
     protected bool $saveChildrenByDefault = true;
+
+    /**
+     * @var bool Whether to stop tracking entities and always refresh from the database. Setting this to true will
+     * cause performance degradation.
+     */
+    protected bool $disableEntityCache = false;
 
     /**
      * Initialise config options.

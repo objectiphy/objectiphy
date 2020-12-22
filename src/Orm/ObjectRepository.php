@@ -173,6 +173,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     public function find($id)
     {
         $this->assertClassNameSet();
+        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $existingEntity = $this->objectFetcher->getExistingEntity($this->getClassName(), $id);
         if ($existingEntity) {
             return $existingEntity;
@@ -198,6 +199,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     public function findOneBy($criteria = [])
     {
+        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => false,
             'bindToEntities' => $this->configOptions->bindToEntities,
@@ -224,6 +226,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
 
         //TODO: common property/age indicator
 
+        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => false,
             'latest' => true,
@@ -258,6 +261,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         bool $multiple = true,
         bool $fetchOnDemand = false
     ): ?iterable {
+
+        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         return null;
     }
 
@@ -286,6 +291,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         ?string $keyProperty = null,
         bool $fetchOnDemand = false
     ): ?iterable {
+        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $this->setOrderBy(array_filter($orderBy ?? $this->orderBy ?? []));
         if ($limit) { //Only for Doctrine compatibility
             $this->pagination = new Pagination($limit, round($offset / $limit) + 1);
@@ -314,6 +320,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $criteria = [],
         ?array $orderBy = null
     ): ?iterable {
+        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         return null;
     }
 
@@ -349,6 +356,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         int &$updateCount = 0,
         int &$deleteCount = 0
     ): int {
+        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $originalClassName = $this->getClassName();
         try {
             $insertCount = 0;
@@ -387,6 +395,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         int &$updateCount = 0,
         int &$deleteCount = 0
     ): int {
+        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         try {
             $saveChildren = $saveChildren ?? $this->configOptions->saveChildrenByDefault;
             $saveOptions = SaveOptions::create($this->mappingCollection, ['saveChildren' => $saveChildren]);
@@ -415,6 +424,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     public function deleteEntity(object $entity, $disableCascade = false, $exceptionIfDisabled = true, int &$updateCount = 0): int
     {
+        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         if (!$this->validateDeletable($exceptionIfDisabled)) {
             return 0;
         }
@@ -454,6 +464,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         bool $exceptionIfDisabled = true,
         int $updateCount = 0
     ): int {
+        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         if (!$this->validateDeletable($exceptionIfDisabled)) {
             return 0;
         }
@@ -485,6 +496,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     public function executeQuery(QueryInterface $query, int &$insertCount = 0, int &$updateCount = 0): ?int
     {
+        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         if ($query instanceof SelectQueryInterface) {
             return $this->findBy($query);
         } elseif ($query instanceof InsertQueryInterface || $query instanceof UpdateQueryInterface) {
