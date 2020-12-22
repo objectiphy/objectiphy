@@ -74,6 +74,10 @@ final class ObjectFetcher
     public function executeFind(SelectQueryInterface $query) 
     {
         $this->validate();
+        if ($query->getFrom()) {
+            $originalClass = $this->options->mappingCollection->getEntityClassName();
+            $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($query->getFrom());
+        }
         $this->objectMapper->addExtraMappings($this->options->getClassName(), $this->options);
         $this->objectMapper->addExtraMappings($this->options->getClassName(), $query);
         if ($this->options->keyProperty) {
@@ -82,7 +86,10 @@ final class ObjectFetcher
         $query->finalise($this->options->mappingCollection);
         $this->doCount($query);
         $result = $this->doFetch($query);
-
+        if (isset($originalClass)) {
+            $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($originalClass);
+        }
+        
         return $result;
     }
 

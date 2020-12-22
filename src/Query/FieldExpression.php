@@ -79,8 +79,8 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
         if (is_string($value)) {
             $count = 0;
             $potentialPropertyPath = str_replace('`', '', $value, $count);
-            if ($count == 2 && strpos($value, '`') === 0 && strrpos($value, '`') === strlen($value)) {
-                $this->setPropertyPath($value);
+            if ($count == 2 && strpos($value, '`') === 0 && strrpos($value, '`') === strlen($value) - 1) {
+                $this->setPropertyPath($potentialPropertyPath);
             }
         }
     }

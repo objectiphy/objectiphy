@@ -26,7 +26,7 @@ final class ObjectRemover implements TransactionInterface
 
     private ObjectMapper $objectMapper;
     private SqlDeleterInterface $sqlDeleter;
-    private SqlUpdaterInterface $sqlUpdater;
+    private ObjectPersister $objectPersister;
     private EntityTracker $entityTracker;
     private DeleteOptions $options;
     private bool $disableDeleteRelationships = false;
@@ -35,15 +35,18 @@ final class ObjectRemover implements TransactionInterface
     public function __construct(
         ObjectMapper $objectMapper,
         SqlDeleterInterface $sqlDeleter,
-        SqlUpdaterInterface $sqlUpdater,
         StorageInterface $storage,
         EntityTracker $entityTracker
     ) {
         $this->objectMapper = $objectMapper;
         $this->sqlDeleter = $sqlDeleter;
-        $this->sqlUpdater = $sqlUpdater;
         $this->storage = $storage;
         $this->entityTracker = $entityTracker;
+    }
+
+    public function setObjectPersister(ObjectPersister $objectPersister)
+    {
+        $this->objectPersister = $objectPersister;
     }
 
     public function setConfigOptions(
@@ -220,14 +223,8 @@ final class ObjectRemover implements TransactionInterface
                 ObjectHelper::setValueOnObject($orphan, $parentProperty, null);
             }
             $query = $qb->buildUpdateQuery();
-            
-            $updaterMappingCollection = $this->objectMapper->getMappingCollectionForClass($childClass);
-            $this->sqlUpdater->setSaveOptions(SaveOptions::create($updaterMappingCollection));
-            $sql = $this->sqlUpdater->getUpdateSql($query);
-            $params = $this->sqlUpdater->getQueryParams();
-            if ($this->storage->executeQuery($sql, $params)) {
-                $updateCount += $this->storage->getAffectedRecordCount();
-            }
+            $saveOptions = SaveOptions::create($this->objectMapper->getMappingCollectionForClass($childClass));
+            $updateCount += $this->objectPersister->executeSave($query, $saveOptions);
         }
     }
 }

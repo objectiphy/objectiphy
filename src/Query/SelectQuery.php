@@ -8,6 +8,7 @@ use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
 use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
+use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 
 /**
  * Query to select one or more entities from the database.
@@ -123,8 +124,6 @@ class SelectQuery extends Query implements SelectQueryInterface
     public function finalise(MappingCollection $mappingCollection, ?string $className = null)
     {
         if (!$this->isFinalised) {
-            parent::finalise($mappingCollection, $className);
-            $this->isFinalised = false; //Hold your horses, we're not done yet.
             if (!$this->getSelect()) {
                 $fetchables = $mappingCollection->getFetchableProperties();
                 $selects = [];
@@ -142,7 +141,7 @@ class SelectQuery extends Query implements SelectQueryInterface
                     $this->orderBy[] = new FieldExpression('`' . $pkProperty . '` ASC', false);
                 }
             }
-            $this->isFinalised = true; //OK, now we're done.
+            parent::finalise($mappingCollection, $className);
         }
     }
 
@@ -175,5 +174,26 @@ class SelectQuery extends Query implements SelectQueryInterface
         }
         
         return $queryString;
+    }
+
+    /**
+     * Override if required to only return the relationships actually needed for the query
+     * @return PropertyMapping[]
+     */
+    protected function getRelationshipsUsed()
+    {
+        $relationshipsUsed = [];
+        $propertyPathsUsed = $this->getPropertyPaths();
+        $relationships = $this->mappingCollection->getRelationships();
+        foreach ($relationships as $key => $relationship) {
+            foreach ($propertyPathsUsed as $propertyPath) {
+                if (in_array($relationship->propertyName, explode('.', $propertyPath))) {
+                    $relationshipsUsed[$key] = $relationship;
+                    break;
+                }
+            }
+        }
+
+        return $relationshipsUsed;
     }
 }

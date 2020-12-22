@@ -223,19 +223,17 @@ class RepositoryFactory
         $objectUnbinder = $this->createObjectUnbinder();
         $storage = $this->getStorage();
         $entityTracker = $this->getEntityTracker();
-        $objectRemover = $this->createObjectRemover();
-        return new ObjectPersister($sqlUpdater, $objectMapper, $objectUnbinder, $storage, $entityTracker, $objectRemover);
+        return new ObjectPersister($sqlUpdater, $objectMapper, $objectUnbinder, $storage, $entityTracker);
     }
 
     protected final function createObjectRemover(): ObjectRemover
     {
         $objectMapper = $this->getObjectMapper();
         $sqlDeleter = $this->getSqlDeleter();
-        $sqlUpdater = $this->createSqlUpdater();
         $storage = $this->getStorage();
         $entityTracker = $this->getEntityTracker();
 
-        return new ObjectRemover($objectMapper, $sqlDeleter, $sqlUpdater, $storage, $entityTracker);
+        return new ObjectRemover($objectMapper, $sqlDeleter, $storage, $entityTracker);
     }
 
     protected final function createEntityTracker(): EntityTracker

@@ -48,7 +48,7 @@ abstract class Query implements QueryInterface
     
     public function getFields(): array
     {
-        return $this->fields;
+        return $this->fields ?? [];
     }
 
     public function setClassName(string $className): void
@@ -68,7 +68,7 @@ abstract class Query implements QueryInterface
 
     public function getJoins(): array
     {
-        return $this->joins;
+        return $this->joins ?? [];
     }
 
     public function setWhere(CriteriaPartInterface ...$criteria): void
@@ -78,7 +78,7 @@ abstract class Query implements QueryInterface
 
     public function getWhere(): array
     {
-        return $this->where;
+        return $this->where ?? [];
     }
 
     public function getPropertyPaths(): array
@@ -109,13 +109,13 @@ abstract class Query implements QueryInterface
     public function finalise(MappingCollection $mappingCollection, ?string $className = null)
     {
         if (!$this->isFinalised) {
+            $className = $this->getClassName() ?: ($className ?? $mappingCollection->getEntityClassName());
+            $this->setClassName($className);
             $this->mappingCollection = $mappingCollection;
-            $relationships = $mappingCollection->getRelationships();
+            $relationships = $this->getRelationshipsUsed();
             foreach ($relationships as $propertyMapping) {
                 $this->populateRelationshipJoin($mappingCollection, $propertyMapping);
             }
-            $className = $this->getClassName() ?: ($className ?? $mappingCollection->getEntityClassName());
-            $this->setClassName($className);
             $this->isFinalised = true; //Overriding subclass could change this back if it has its own finalising to do.
         }
     }
@@ -138,6 +138,15 @@ abstract class Query implements QueryInterface
         return '';
     }
 
+    /**
+     * Override if required to only return the relationships actually needed for the query
+     * @return PropertyMapping[]
+     */
+    protected function getRelationshipsUsed()
+    {
+        return $this->mappingCollection->getRelationships();
+    }
+    
     /**
      * Put together the parts of a join - relationship info and criteria.
      * @param MappingCollection $mappingCollection

@@ -57,8 +57,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $this->objectMapper = $objectMapper;
         $this->objectFetcher = $objectFetcher;
         $this->objectPersister = $objectPersister;
-        $this->objectPersister->setRepository($this);
         $this->objectRemover = $objectRemover;
+        $this->objectPersister->setObjectRemover($objectRemover);
+        $this->objectPersister->setObjectFetcher($objectFetcher);
+        $this->objectRemover->setObjectPersister($objectPersister);
         $this->proxyFactory = $proxyFactory;
         if (!$configOptions) {
             $configOptions = new ConfigOptions();

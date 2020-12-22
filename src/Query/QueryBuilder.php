@@ -85,7 +85,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
     {
         foreach ($fields as $field) {
             $fieldExpression = new FieldExpression($field, false);
-            $this->select[] = $field;
+            $this->select[] = $fieldExpression;
         }
 
         return $this;

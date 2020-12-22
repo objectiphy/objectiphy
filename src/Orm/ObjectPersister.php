@@ -9,7 +9,6 @@ use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
-use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
@@ -36,35 +35,34 @@ final class ObjectPersister implements TransactionInterface
     private StorageInterface $storage;
     private EntityTracker $entityTracker;
     private ObjectRemover $objectRemover;
+    private ObjectFetcher $objectFetcher;
     private SaveOptions $options;
     private array $savedObjects = [];
-    private ObjectRepositoryInterface $repository;
 
     public function __construct(
         SqlUpdaterInterface $sqlUpdater,
         ObjectMapper $objectMapper,
         ObjectUnbinder $objectUnbinder,
         StorageInterface $storage,
-        EntityTracker $entityTracker,
-        ObjectRemover $objectRemover
+        EntityTracker $entityTracker
     ) {
         $this->sqlUpdater = $sqlUpdater;
         $this->objectMapper = $objectMapper;
         $this->objectUnbinder = $objectUnbinder;
         $this->storage = $storage;
         $this->entityTracker = $entityTracker;
+    }
+
+    public function setObjectRemover(ObjectRemover $objectRemover)
+    {
         $this->objectRemover = $objectRemover;
     }
 
-    /**
-     * In case we need to remove an orphan, provide a repository that can handle the deletion.
-     * @param ObjectRepositoryInterface $repository
-     */
-    public function setRepository(ObjectRepositoryInterface $repository)
+    public function setObjectFetcher(ObjectFetcher $objectFetcher)
     {
-        $this->repository = $repository;
+        $this->objectFetcher = $objectFetcher;
     }
-
+    
     public function setConfigOptions(
         bool $disableDeleteRelationships,
         bool $disableDeleteEntities
@@ -394,12 +392,8 @@ final class ObjectPersister implements TransactionInterface
                     $removedChildren = $this->entityTracker->getRemovedChildren($entity, $childProperty, $childPks);
                 }
                 if ($removedChildren === null) {
-                    //We will have to load children from database to see if any have been removed
-
-
-                    //RSW: TODO: go through repository for updates, reads, deletes, instead of each
-                    //object helping itself
-                    
+                    //Not tracked - have to try loading from database (if tracked but empty, we will have an empty array)
+                    $removedChildren = $this->loadRemovedChildrenFromDatabase($entity, $childPropertyMapping, $childPks);
                 }
                 if ($removedChildren) {
                     $this->objectRemover->setDeleteOptions(DeleteOptions::create($this->options->mappingCollection));
@@ -412,5 +406,44 @@ final class ObjectPersister implements TransactionInterface
                 }
             }
         }
+    }
+
+    private function loadRemovedChildrenFromDatabase(object $entity, PropertyMapping $childPropertyMapping, array $childPks)
+    {
+        $removedChildren = [];
+        $parentProperty = $childPropertyMapping->relationship->mappedBy;
+        if ($parentProperty) {
+            $delimitedPks = array_map(function($value){ return '`' . $value . '`'; }, $childPks);
+            $query = QB::create()
+                ->select(...$delimitedPks)
+                ->from($childPropertyMapping->getChildClassName())
+                ->where($parentProperty, QB::EQ, $entity)
+            ->buildSelectQuery();
+            $dbChildren = $this->objectFetcher->executeFind($query);
+            $currentChildren = ObjectHelper::getValueFromObject($entity, $childPropertyMapping->propertyName);
+            foreach ($dbChildren ?? [] as $dbChild) {
+                $childMatch = true;
+                foreach ($currentChildren as $currentChild) {
+                    $pkMatch = true;
+                    foreach ($childPks as $pkProperty) {
+                        $dbValue = ObjectHelper::getValueFromObject($dbChild, $pkProperty);
+                        $currentValue = ObjectHelper::getValueFromObject($currentChild, $pkProperty);
+                        if ($dbValue != $currentValue) {
+                            $pkMatch = false;
+                            break;
+                        }
+                    }
+                    if ($pkMatch) {
+                        $childMatch = true;
+                        break;
+                    }
+                }
+                if (!$childMatch) {
+                    $removedChildren[] = $dbChild;
+                }
+            }
+        }
+
+        return $removedChildren;
     }
 }

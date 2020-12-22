@@ -112,18 +112,23 @@ class JoinProviderMySql extends AbstractSqlProvider
         $joinPartPropertyMapping = $this->mappingCollection->getPropertyMapping(
             $joinPart->property->getPropertyPath()
         );
-        $sourceJoinColumns = $joinPartPropertyMapping->getSourceJoinColumns();
-        $targetJoinColumns = $joinPartPropertyMapping->getTargetJoinColumns();
-
-        if ((!$sourceJoinColumns && !$targetJoinColumns)
-            || (count($sourceJoinColumns) != count($targetJoinColumns))
-        ) {
+        if ($joinPartPropertyMapping) {
+            $sourceJoinColumns = $joinPartPropertyMapping->getSourceJoinColumns();
+            $targetJoinColumns = $joinPartPropertyMapping->getTargetJoinColumns();
+            if ((empty($sourceJoinColumns) && empty($targetJoinColumns))
+                || (count($sourceJoinColumns) != count($targetJoinColumns))
+            ) {
+                throw new MappingException(
+                    sprintf(
+                        'Relationship mapping for %1$s::%2$s is incomplete.',
+                        $joinPartPropertyMapping->className,
+                        $joinPartPropertyMapping->propertyName
+                    )
+                );
+            }
+        } else {
             throw new MappingException(
-                sprintf(
-                    'Relationship mapping for %1$s::%2$s is incomplete.',
-                    $joinPartPropertyMapping->className,
-                    $joinPartPropertyMapping->propertyName
-                )
+                sprintf('No mapping information found for `%1$s`', $joinPart->property->getPropertyPath())
             );
         }
     }
