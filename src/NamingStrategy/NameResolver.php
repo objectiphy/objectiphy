@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\NamingStrategy;
 
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Table;
@@ -14,14 +15,11 @@ class NameResolver
     private NamingStrategyInterface $columnNamingStrategy;
     private bool $guessMappings;
 
-    public function setConfigOptions(
-        bool $guessMappings = true,
-        NamingStrategyInterface $tableNamingStrategy, 
-        NamingStrategyInterface $columnNamingStrategy
-    ) {
-        $this->tableNamingStrategy = $tableNamingStrategy;
-        $this->columnNamingStrategy = $columnNamingStrategy;
-        $this->guessMappings = $guessMappings;
+    public function setConfigOptions(ConfigOptions $config)
+    {
+        $this->tableNamingStrategy = $config->tableNamingStrategy;
+        $this->columnNamingStrategy = $config->columnNamingStrategy;
+        $this->guessMappings = $config->guessMappings;
     }
 
     /**

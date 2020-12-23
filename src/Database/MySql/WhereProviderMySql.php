@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Database\MySql;
 
+use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
 use Objectiphy\Objectiphy\Exception\MappingException;
@@ -44,7 +45,15 @@ class WhereProviderMySql extends AbstractSqlProvider
             }
         }
         array_walk($this->params, function(&$value) {
-            $this->dataTypeHandler->toPersistenceValue($value);
+            if (!$this->dataTypeHandler->toPersistenceValue($value)) {
+                //We have an object - extract the primary key value if we can
+                if ($value instanceof ObjectReferenceInterface) {
+                    $pkValues = $value->getPkValues();
+                } else {
+                    $pkValues = $this->mappingCollection->getPrimaryKeyValues($value);
+                }
+                $value = $pkValues ? reset($pkValues) : null;
+            }
         });
         $sql = str_replace($objectNames, $persistenceNames, $sql);
 

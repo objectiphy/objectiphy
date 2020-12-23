@@ -31,9 +31,9 @@ final class ObjectUnbinder
         $this->mappingCollection = $mappingCollection;
     }
 
-    public function setConfigOptions(bool $disableDeleteRelationships): void
+    public function setConfigOptions(ConfigOptions $config): void
     {
-        $this->disableDeleteRelationships = $disableDeleteRelationships;
+        $this->disableDeleteRelationships = $config->disableDeleteRelationships;
     }
 
     /**

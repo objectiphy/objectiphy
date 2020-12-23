@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
@@ -39,19 +40,13 @@ final class ObjectMapper
         $this->nameResolver = $nameResolver;
     }
 
-    public function setConfigOptions(
-        bool $productionMode,
-        bool $eagerLoadToOne,
-        bool $eagerLoadToMany,
-        bool $guessMappings,
-        NamingStrategyInterface $tableNamingStrategy,
-        NamingStrategyInterface $columnNamingStrategy
-    ): void {
-        $this->productionMode = $productionMode;
+    public function setConfigOptions(ConfigOptions $config): void 
+    {
+        $this->productionMode = $config->productionMode;
         $this->mappingProvider->setThrowExceptions(!$this->productionMode);
-        $this->eagerLoadToOne = $eagerLoadToOne;
-        $this->eagerLoadToMany = $eagerLoadToMany;
-        $this->nameResolver->setConfigOptions($guessMappings, $tableNamingStrategy, $columnNamingStrategy);
+        $this->eagerLoadToOne = $config->eagerLoadToOne;
+        $this->eagerLoadToMany = $config->eagerLoadToMany;
+        $this->nameResolver->setConfigOptions($config);
     }
 
     /**

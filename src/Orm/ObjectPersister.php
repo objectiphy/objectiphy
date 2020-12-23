@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use Composer\Config;
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Config\DeleteOptions;
+use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
@@ -35,7 +38,6 @@ final class ObjectPersister implements TransactionInterface
     private StorageInterface $storage;
     private EntityTracker $entityTracker;
     private ObjectRemover $objectRemover;
-    private ObjectFetcher $objectFetcher;
     private SaveOptions $options;
     private array $savedObjects = [];
 
@@ -57,19 +59,13 @@ final class ObjectPersister implements TransactionInterface
     {
         $this->objectRemover = $objectRemover;
     }
-
-    public function setObjectFetcher(ObjectFetcher $objectFetcher)
-    {
-        $this->objectFetcher = $objectFetcher;
-    }
     
-    public function setConfigOptions(
-        bool $disableDeleteRelationships,
-        bool $disableDeleteEntities
-    ): void {
-        $this->disableDeleteRelationships = $disableDeleteRelationships;
-        $this->disableDeleteEntities = $disableDeleteEntities;
-        $this->objectUnbinder->setConfigOptions($disableDeleteRelationships);
+    public function setConfigOptions(ConfigOptions $config): void 
+    {
+        $this->disableDeleteRelationships = $config->disableDeleteRelationships;
+        $this->disableDeleteEntities = $config->disableDeleteEntities;
+        $this->objectUnbinder->setConfigOptions($config);
+        $this->objectRemover->setConfigOptions($config);
     }
 
     /**
@@ -222,7 +218,8 @@ final class ObjectPersister implements TransactionInterface
             $update = true;
         }
 
-        $this->checkForRemovals($entity, $updateCount, $deleteCount);
+        $this->objectRemover->setDeleteOptions(DeleteOptions::create($this->options->mappingCollection));
+        $this->objectRemover->checkForRemovals($entity, $updateCount, $deleteCount);
         if ($update) {
             $result = $this->updateEntity($entity, $pkValues, $insertCount, $updateCount, $deleteCount);
         } else {
@@ -337,8 +334,8 @@ final class ObjectPersister implements TransactionInterface
 
     private function saveChildren(object $entity, int &$insertCount, int &$updateCount, int &$deleteCount, bool $ownedOnly = false): void
     {
-        $children = $this->options->mappingCollection->getChildObjectProperties($ownedOnly);
-        foreach ($children as $childPropertyName) {
+        $childProperties = $this->options->mappingCollection->getChildObjectProperties($ownedOnly);
+        foreach ($childProperties as $childPropertyName) {
             if ($entity instanceof EntityProxyInterface && $entity->isChildAsleep($childPropertyName)) {
                 continue; //Don't wake it up
             }
@@ -367,83 +364,6 @@ final class ObjectPersister implements TransactionInterface
                     }
                 }
             }
-
         }
-    }
-
-    private function checkForRemovals(object $entity, int &$updateCount, int &$deleteCount)
-    {
-        $children = $this->options->mappingCollection->getChildObjectProperties();
-        foreach ($children as $childPropertyName) {
-            if ($entity instanceof EntityProxyInterface && $entity->isChildAsleep($childPropertyName)) {
-                continue; //Don't wake it up
-            }
-            $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
-            $parentProperty = $childPropertyMapping->relationship->mappedBy;
-            if ($childPropertyMapping->relationship->isToMany()
-                && !$this->disableDeleteRelationships
-                && $parentProperty
-            ) {
-                $childProperty = $childPropertyMapping->propertyName;
-                $childClassName = $childPropertyMapping->getChildClassName();
-                $childPks = $this->options->mappingCollection->getPrimaryKeyProperties($childClassName);
-                $removedChildren = null;
-                if ($this->entityTracker->hasEntity($entity)) {
-                    $removedChildren = $this->entityTracker->getRemovedChildren($entity, $childProperty, $childPks);
-                }
-                if ($removedChildren === null) {
-                    //Not tracked - have to try loading from database (if tracked but empty, we will have an empty array)
-                    $removedChildren = $this->loadRemovedChildrenFromDatabase($entity, $childPropertyMapping, $childPks);
-                }
-                if ($removedChildren) {
-                    $this->objectRemover->setDeleteOptions(DeleteOptions::create($this->options->mappingCollection));
-                    $this->objectRemover->sendOrphanedKidsAway(
-                        $childPropertyName,
-                        $removedChildren,
-                        $updateCount,
-                        $deleteCount
-                    );
-                }
-            }
-        }
-    }
-
-    private function loadRemovedChildrenFromDatabase(object $entity, PropertyMapping $childPropertyMapping, array $childPks)
-    {
-        $removedChildren = [];
-        $parentProperty = $childPropertyMapping->relationship->mappedBy;
-        if ($parentProperty) {
-            $delimitedPks = array_map(function($value){ return '`' . $value . '`'; }, $childPks);
-            $query = QB::create()
-                ->select(...$delimitedPks)
-                ->from($childPropertyMapping->getChildClassName())
-                ->where($parentProperty, QB::EQ, $entity)
-            ->buildSelectQuery();
-            $dbChildren = $this->objectFetcher->executeFind($query);
-            $currentChildren = ObjectHelper::getValueFromObject($entity, $childPropertyMapping->propertyName);
-            foreach ($dbChildren ?? [] as $dbChild) {
-                $childMatch = true;
-                foreach ($currentChildren as $currentChild) {
-                    $pkMatch = true;
-                    foreach ($childPks as $pkProperty) {
-                        $dbValue = ObjectHelper::getValueFromObject($dbChild, $pkProperty);
-                        $currentValue = ObjectHelper::getValueFromObject($currentChild, $pkProperty);
-                        if ($dbValue != $currentValue) {
-                            $pkMatch = false;
-                            break;
-                        }
-                    }
-                    if ($pkMatch) {
-                        $childMatch = true;
-                        break;
-                    }
-                }
-                if (!$childMatch) {
-                    $removedChildren[] = $dbChild;
-                }
-            }
-        }
-
-        return $removedChildren;
     }
 }

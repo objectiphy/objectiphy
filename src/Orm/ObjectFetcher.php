@@ -77,6 +77,7 @@ final class ObjectFetcher
         if ($query->getFrom()) {
             $originalClass = $this->options->mappingCollection->getEntityClassName();
             $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($query->getFrom());
+            $this->setFindOptions($this->options); //To ensure everyone is kept informed
         }
         $this->objectMapper->addExtraMappings($this->options->getClassName(), $this->options);
         $this->objectMapper->addExtraMappings($this->options->getClassName(), $query);
@@ -88,8 +89,9 @@ final class ObjectFetcher
         $result = $this->doFetch($query);
         if (isset($originalClass)) {
             $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($originalClass);
+            $this->setFindOptions($this->options);
         }
-        
+
         return $result;
     }
 

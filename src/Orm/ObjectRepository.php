@@ -59,7 +59,6 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $this->objectPersister = $objectPersister;
         $this->objectRemover = $objectRemover;
         $this->objectPersister->setObjectRemover($objectRemover);
-        $this->objectPersister->setObjectFetcher($objectFetcher);
         $this->objectRemover->setObjectPersister($objectPersister);
         $this->proxyFactory = $proxyFactory;
         if (!$configOptions) {
@@ -674,23 +673,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     protected function updateConfig(): void
     {
-        $this->objectMapper->setConfigOptions(
-            $this->configOptions->productionMode,
-            $this->configOptions->eagerLoadToOne,
-            $this->configOptions->eagerLoadToMany,
-            $this->configOptions->guessMappings,
-            $this->configOptions->tableNamingStrategy,
-            $this->configOptions->columnNamingStrategy
-        );
+        $this->objectMapper->setConfigOptions($this->configOptions);
         $this->objectFetcher->setConfigOptions($this->configOptions);
-        $this->objectPersister->setConfigOptions(
-            $this->configOptions->disableDeleteRelationships,
-            $this->configOptions->disableDeleteEntities
-        );
-        $this->objectRemover->setConfigOptions(
-            $this->configOptions->disableDeleteRelationships,
-            $this->configOptions->disableDeleteEntities
-        );
+        $this->objectPersister->setConfigOptions($this->configOptions);
+        $this->objectRemover->setConfigOptions($this->configOptions);
     }
 
     private function throwException(\Throwable $ex): void

@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Config\DeleteOptions;
+use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\DeleteQueryInterface;
+use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\SqlDeleterInterface;
 use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Contract\TransactionInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Traits\TransactionTrait;
 
@@ -27,6 +31,7 @@ final class ObjectRemover implements TransactionInterface
     private ObjectMapper $objectMapper;
     private SqlDeleterInterface $sqlDeleter;
     private ObjectPersister $objectPersister;
+    private ObjectFetcher $objectFetcher;
     private EntityTracker $entityTracker;
     private DeleteOptions $options;
     private bool $disableDeleteRelationships = false;
@@ -36,11 +41,13 @@ final class ObjectRemover implements TransactionInterface
         ObjectMapper $objectMapper,
         SqlDeleterInterface $sqlDeleter,
         StorageInterface $storage,
+        ObjectFetcher $objectFetcher,
         EntityTracker $entityTracker
     ) {
         $this->objectMapper = $objectMapper;
         $this->sqlDeleter = $sqlDeleter;
         $this->storage = $storage;
+        $this->objectFetcher = $objectFetcher;
         $this->entityTracker = $entityTracker;
     }
 
@@ -49,12 +56,11 @@ final class ObjectRemover implements TransactionInterface
         $this->objectPersister = $objectPersister;
     }
 
-    public function setConfigOptions(
-        bool $disableDeleteRelationships,
-        bool $disableDeleteEntities
-    ): void {
-        $this->disableDeleteRelationships = $disableDeleteRelationships;
-        $this->disableDeleteEntities = $disableDeleteEntities;
+    public function setConfigOptions(ConfigOptions $config): void
+    {
+        $this->disableDeleteRelationships = $config->disableDeleteRelationships;
+        $this->disableDeleteEntities = $config->disableDeleteEntities;
+        $this->objectFetcher->setConfigOptions($config);
     }
 
     /**
@@ -73,6 +79,44 @@ final class ObjectRemover implements TransactionInterface
         $this->setDeleteOptions($this->options);
     }
 
+    public function checkForRemovals(object $entity, int &$updateCount, int &$deleteCount)
+    {
+        $children = $this->options->mappingCollection->getChildObjectProperties();
+        foreach ($children as $childPropertyName) {
+            if ($entity instanceof EntityProxyInterface && $entity->isChildAsleep($childPropertyName)) {
+                continue; //Don't wake it up
+            }
+            $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
+            $parentProperty = $childPropertyMapping->relationship->mappedBy;
+            if ($childPropertyMapping->relationship->isToMany()
+                && !$this->disableDeleteRelationships
+                && $parentProperty
+            ) {
+                $childProperty = $childPropertyMapping->propertyName;
+                $childClassName = $childPropertyMapping->getChildClassName();
+                $childPks = $this->options->mappingCollection->getPrimaryKeyProperties($childClassName);
+                
+                $removedChildren = null;
+                if ($this->entityTracker->hasEntity($entity)) {
+                    $removedChildren = $this->entityTracker->getRemovedChildren($entity, $childProperty, $childPks);
+                }
+                if ($removedChildren === null) {
+                    //Not tracked - have to try loading from database (if tracked but empty, we will have an empty array)
+                    $removedChildren = $this->loadRemovedChildrenFromDatabase($entity, $childPropertyMapping, $childPks);
+                }
+                if ($removedChildren) {
+                    $this->setDeleteOptions(DeleteOptions::create($this->options->mappingCollection));
+                    $this->sendOrphanedKidsAway(
+                        $childPropertyName,
+                        $removedChildren,
+                        $updateCount,
+                        $deleteCount
+                    );
+                }
+            }
+        }
+    }
+    
     public function deleteEntity(object $entity, DeleteOptions $deleteOptions, int &$updateCount): int
     {
         if ($this->disableDeleteEntities) {
@@ -154,6 +198,48 @@ final class ObjectRemover implements TransactionInterface
         return $deleteCount;
     }
 
+    private function loadRemovedChildrenFromDatabase(object $entity, PropertyMapping $childPropertyMapping, array $childPks)
+    {
+        $removedChildren = [];
+        $parentProperty = $childPropertyMapping->relationship->mappedBy;
+        if ($parentProperty) {
+            $delimitedPks = array_map(function($value){ return '`' . $value . '`'; }, $childPks);
+            $query = QB::create()
+                ->select(...$delimitedPks)
+                ->from($childPropertyMapping->getChildClassName())
+                ->where($parentProperty, QB::EQ, $entity)
+                ->buildSelectQuery();
+
+            //Need to set multiple to true on the find options
+            $this->objectFetcher->setFindOptions(FindOptions::create($this->options->mappingCollection, ['multiple' => true]));
+            $dbChildren = $this->objectFetcher->executeFind($query);
+            $currentChildren = ObjectHelper::getValueFromObject($entity, $childPropertyMapping->propertyName);
+            foreach ($dbChildren ?? [] as $dbChild) {
+                $childMatch = false;
+                foreach ($currentChildren as $currentChild) {
+                    $pkMatch = true;
+                    foreach ($childPks as $pkProperty) {
+                        $dbValue = ObjectHelper::getValueFromObject($dbChild, $pkProperty);
+                        $currentValue = ObjectHelper::getValueFromObject($currentChild, $pkProperty);
+                        if ($dbValue != $currentValue) {
+                            $pkMatch = false;
+                            break;
+                        }
+                    }
+                    if ($pkMatch) {
+                        $childMatch = true;
+                        break;
+                    }
+                }
+                if (!$childMatch) {
+                    $removedChildren[] = $dbChild;
+                }
+            }
+        }
+
+        return $removedChildren;
+    }
+    
     private function removeChildren(object $entity, int &$updateCount, int &$deleteCount)
     {
         $removedChildren = [];

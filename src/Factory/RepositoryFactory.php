@@ -221,6 +221,7 @@ class RepositoryFactory
         $sqlUpdater = $this->getSqlUpdater();
         $objectMapper = $this->getObjectMapper();
         $objectUnbinder = $this->createObjectUnbinder();
+        $objectFetcher = $this->createObjectFetcher(); //Needs a separate copy so the find options don't get polluted
         $storage = $this->getStorage();
         $entityTracker = $this->getEntityTracker();
         return new ObjectPersister($sqlUpdater, $objectMapper, $objectUnbinder, $storage, $entityTracker);
@@ -232,8 +233,9 @@ class RepositoryFactory
         $sqlDeleter = $this->getSqlDeleter();
         $storage = $this->getStorage();
         $entityTracker = $this->getEntityTracker();
+        $objectFetcher = $this->createObjectFetcher(); //New instance for different findOptions
 
-        return new ObjectRemover($objectMapper, $sqlDeleter, $storage, $entityTracker);
+        return new ObjectRemover($objectMapper, $sqlDeleter, $storage, $objectFetcher, $entityTracker);
     }
 
     protected final function createEntityTracker(): EntityTracker
