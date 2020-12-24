@@ -78,15 +78,18 @@ final class ObjectPersister implements TransactionInterface
         $this->objectUnbinder->setMappingCollection($this->options->mappingCollection);
     }
 
-    public function getClassName(): string
+    public function getClassName()
     {
-        return $this->options->mappingCollection->getEntityClassName();
+        if (isset($this->options) && isset($this->options->mappingCollection)) {
+            return $this->options->mappingCollection->getEntityClassName();
+        }
+
+        return '';
     }
 
     public function setClassName(string $className): void
     {
-        $mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
-        $this->options->mappingCollection = $mappingCollection;
+        $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
         $this->setSaveOptions($this->options);
     }
 
@@ -168,24 +171,6 @@ final class ObjectPersister implements TransactionInterface
     }
 
     /**
-     * When saving entities, we need the mapping collection for the current entity as we traverse the object hierarchy.
-     * After saving child entities, we reset it back to the original (parent) entity's mapping, ready for the next call.
-     * @param string $className
-     * @return string Whatever the class name was before the update
-     */
-    private function updateMappingCollection(string $className): string
-    {
-        $originalClassName = '';
-        if (isset($this->options) && isset($this->options->mappingCollection)) { //Roll on PHP 8
-            $originalClassName = $this->options->mappingCollection->getEntityClassName();
-        }
-        $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
-        $this->setSaveOptions($this->options);
-
-        return $originalClassName;
-    }
-
-    /**
      * @param object $entity
      * @param int $insertCount Number of rows inserted
      * @param int $updateCount Number of rows updated
@@ -198,24 +183,24 @@ final class ObjectPersister implements TransactionInterface
         int &$deleteCount
     ): int {
         $result = 0;
-        $className = ObjectHelper::getObjectClassName($entity);
-        $originalClassName = $this->updateMappingCollection($className);
+        $originalClassName = $this->getClassName();
+        $this->setClassName(ObjectHelper::getObjectClassName($entity));
 
         //Try to work out if we are inserting or updating
         $update = false;
         $pkValues = $this->options->mappingCollection->getPrimaryKeyValues($entity);
-        if ($this->entityTracker->hasEntity($className, $pkValues)) {
-            //We are tracking it, so it is definitely an update
-            $update = true;
+        if ($this->entityTracker->hasEntity($this->getClassName(), $pkValues)) {
+            $update = true; //We are tracking it, so it is definitely an update
         } elseif ($pkValues) { //We have values for the primary key so probably an update
+            $update = true;
             //Check if the primary key is a foreign key (if so, could be an insert so will need to replace)
             foreach (array_keys($pkValues) as $pkKey) {
                 if ($this->options->mappingCollection->getPropertyMapping($pkKey)->isForeignKey) {
                     $this->options->replaceExisting = true;
+                    $update = false;
                     break;
                 }
             }
-            $update = true;
         }
 
         $this->objectRemover->setDeleteOptions(DeleteOptions::create($this->options->mappingCollection));
@@ -225,7 +210,7 @@ final class ObjectPersister implements TransactionInterface
         } else {
             $result = $this->insertEntity($entity, $insertCount, $updateCount);
         }
-        $this->updateMappingCollection($originalClassName);
+        $this->setClassName($originalClassName);
 
         return $result;
     }
@@ -294,7 +279,6 @@ final class ObjectPersister implements TransactionInterface
             return 0;
         }
         $deleteCount = 0; //There won't be any for an insert!
-        $className = ObjectHelper::getObjectClassName($entity);
 
         $this->savedObjects[] = $entity; //Don't save it as a child of a child, do it after the children are saved
         if ($this->options->saveChildren) {
@@ -303,17 +287,19 @@ final class ObjectPersister implements TransactionInterface
         }
 
         //Then save the parent
+        $originalClassName = $this->getClassName();
+        $this->setClassName(ObjectHelper::getObjectClassName($entity));
         $qb = QB::create();
         $insertQuery = $qb->buildInsertQuery();
         $row = $this->objectUnbinder->unbindEntityToRow($entity, [], $this->options->saveChildren);
         if ($row) {
-            $insertQuery->finalise($this->options->mappingCollection, $className, $row);
-            $sql = $this->sqlUpdater->getInsertSql($insertQuery);
+            $insertQuery->finalise($this->options->mappingCollection, $this->getClassName(), $row);
+            $sql = $this->sqlUpdater->getInsertSql($insertQuery, $this->options->replaceExisting);
             $params = $this->sqlUpdater->getQueryParams();
             if ($this->storage->executeQuery($sql, $params)) {
                 $insertId = $this->storage->getLastInsertId();
                 $insertCount += $this->storage->getAffectedRecordCount();
-                $pkProperties = $this->options->mappingCollection->getPrimaryKeyProperties($className);
+                $pkProperties = $this->options->mappingCollection->getPrimaryKeyProperties($this->getClassName());
                 $pkValues = [];
                 if ($insertId && count($pkProperties) == 1) {
                     $pkProperty = reset($pkProperties);
@@ -323,6 +309,7 @@ final class ObjectPersister implements TransactionInterface
                 $this->entityTracker->storeEntity($entity, $pkValues);
             }
         }
+        $this->setClassName($originalClassName);
 
         if ($this->options->saveChildren) {
             //Then save any child objects which are owned by the child

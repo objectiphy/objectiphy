@@ -72,6 +72,15 @@ final class ObjectRemover implements TransactionInterface
         $this->sqlDeleter->setDeleteOptions($deleteOptions);
     }
 
+    public function getClassName()
+    {
+        if (isset($this->options) && isset($this->options->mappingCollection)) {
+            return $this->options->mappingCollection->getEntityClassName();
+        }
+
+        return '';
+    }
+    
     public function setClassName(string $className): void
     {
         $mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
@@ -81,6 +90,8 @@ final class ObjectRemover implements TransactionInterface
 
     public function checkForRemovals(object $entity, int &$updateCount, int &$deleteCount)
     {
+        $originalClass = $this->getClassName();
+        $this->setClassName(ObjectHelper::getObjectClassName($entity));
         $children = $this->options->mappingCollection->getChildObjectProperties();
         foreach ($children as $childPropertyName) {
             if ($entity instanceof EntityProxyInterface && $entity->isChildAsleep($childPropertyName)) {
@@ -115,6 +126,8 @@ final class ObjectRemover implements TransactionInterface
                 }
             }
         }
+        
+        $this->setClassName($originalClass);
     }
     
     public function deleteEntity(object $entity, DeleteOptions $deleteOptions, int &$updateCount): int
@@ -122,6 +135,8 @@ final class ObjectRemover implements TransactionInterface
         if ($this->disableDeleteEntities) {
             return 0;
         }
+        $originalClass = $this->getClassName();
+        $this->setClassName(ObjectHelper::getObjectClassName($entity));
         $deleteCount = 0;
         $this->setDeleteOptions($deleteOptions);
         $this->removeChildren($entity, $updateCount, $deleteCount);
@@ -129,15 +144,18 @@ final class ObjectRemover implements TransactionInterface
         //Delete entity
         $qb = QB::create();
         $deleteQuery = $qb->buildDeleteQuery();
-
-        return $deleteCount + $this->executeDelete($deleteQuery);
+        $this->setClassName($originalClass);
+        
+        return $deleteCount + $this->executeDelete($deleteQuery, $this->options);
     }
 
-    public function executeDelete(DeleteQueryInterface $deleteQuery)
+    public function executeDelete(DeleteQueryInterface $deleteQuery, DeleteOptions $options)
     {
+        $this->setDeleteOptions($options);
         $deleteCount = 0;
-        $className = $deleteQuery->getDelete() ?: $this->options->mappingCollection->getEntityClassName();
-        $deleteQuery->finalise($this->options->mappingCollection, $className);
+        $originalClass = $this->getClassName();
+        $this->setClassName($deleteQuery->getDelete() ?: $this->getClassName());
+        $deleteQuery->finalise($this->options->mappingCollection, $this->getClassName());
 
         //RSW: TODO: Can we cascade?
 
@@ -145,7 +163,7 @@ final class ObjectRemover implements TransactionInterface
         $params = $this->sqlDeleter->getQueryParams();
         if ($sql && $this->storage->executeQuery($sql, $params)) {
             $deleteCount = $this->storage->getAffectedRecordCount();
-            $this->entityTracker->clear($className);
+            $this->entityTracker->clear($this->getClassName());
         }
 
         return $deleteCount;
@@ -190,7 +208,7 @@ final class ObjectRemover implements TransactionInterface
                     }
                     $deleteQuery->orEnd();
                 }
-                $deleteCount += $this->executeDelete($deleteQuery->buildDeleteQuery());
+                $deleteCount += $this->executeDelete($deleteQuery->buildDeleteQuery(), $this->options);
             }
             $this->setClassName($originalClassName);
         }
@@ -204,36 +222,47 @@ final class ObjectRemover implements TransactionInterface
         $parentProperty = $childPropertyMapping->relationship->mappedBy;
         if ($parentProperty) {
             $delimitedPks = array_map(function($value){ return '`' . $value . '`'; }, $childPks);
+            $originalClass = $this->getClassName();
+            $this->setClassName($childPropertyMapping->getChildClassName());
             $query = QB::create()
                 ->select(...$delimitedPks)
-                ->from($childPropertyMapping->getChildClassName())
+                ->from($this->getClassName())
                 ->where($parentProperty, QB::EQ, $entity)
                 ->buildSelectQuery();
 
             //Need to set multiple to true on the find options
             $this->objectFetcher->setFindOptions(FindOptions::create($this->options->mappingCollection, ['multiple' => true]));
-            $dbChildren = $this->objectFetcher->executeFind($query);
-            $currentChildren = ObjectHelper::getValueFromObject($entity, $childPropertyMapping->propertyName);
-            foreach ($dbChildren ?? [] as $dbChild) {
-                $childMatch = false;
-                foreach ($currentChildren as $currentChild) {
-                    $pkMatch = true;
-                    foreach ($childPks as $pkProperty) {
-                        $dbValue = ObjectHelper::getValueFromObject($dbChild, $pkProperty);
-                        $currentValue = ObjectHelper::getValueFromObject($currentChild, $pkProperty);
-                        if ($dbValue != $currentValue) {
-                            $pkMatch = false;
-                            break;
-                        }
-                    }
-                    if ($pkMatch) {
-                        $childMatch = true;
+            $dbChildren = $this->objectFetcher->executeFind($query) ?: [];
+            $entityChildren = ObjectHelper::getValueFromObject($entity, $childPropertyMapping->propertyName) ?: [];
+            $removedChildren = $this->detectRemovals($dbChildren, $entityChildren, $childPks);
+            $this->setClassName($originalClass);
+        }
+
+        return $removedChildren;
+    }
+
+    private function detectRemovals(iterable $dbChildren, iterable $entityChildren, array $childPks)
+    {
+        $removedChildren = [];
+        foreach ($dbChildren ?? [] as $dbChild) {
+            $childMatch = false;
+            foreach ($entityChildren as $currentChild) {
+                $pkMatch = true;
+                foreach ($childPks as $pkProperty) {
+                    $dbValue = ObjectHelper::getValueFromObject($dbChild, $pkProperty);
+                    $currentValue = ObjectHelper::getValueFromObject($currentChild, $pkProperty);
+                    if ($dbValue != $currentValue) {
+                        $pkMatch = false;
                         break;
                     }
                 }
-                if (!$childMatch) {
-                    $removedChildren[] = $dbChild;
+                if ($pkMatch) {
+                    $childMatch = true;
+                    break;
                 }
+            }
+            if (!$childMatch) {
+                $removedChildren[] = $dbChild;
             }
         }
 

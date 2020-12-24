@@ -43,7 +43,7 @@ final class ObjectFetcher
     {
         return $this->storage;
     }
-
+    
     /**
      * Config options relating to fetching data only.
      */
@@ -58,10 +58,25 @@ final class ObjectFetcher
     {
         $this->objectBinder->setConfigOptions($configOptions);
     }
+    
+    private function getClassName()
+    {
+        if (isset($this->options) && isset($this->options->mappingCollection)) {
+            return $this->options->mappingCollection->getEntityClassName();
+        }
+        
+        return '';
+    }
+    
+    private function setClassName(string $className) 
+    {
+        $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
+        $this->setFindOptions($this->options); //To ensure everyone is kept informed
+    }
 
     public function getExistingEntity(string $className, $pkValues): ?object
     {
-        if (!is_array($pkValues)) {
+        if (!is_iterable($pkValues)) {
             $pkValues = [$pkValues];
         }
         
@@ -75,12 +90,11 @@ final class ObjectFetcher
     {
         $this->validate();
         if ($query->getFrom()) {
-            $originalClass = $this->options->mappingCollection->getEntityClassName();
-            $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($query->getFrom());
-            $this->setFindOptions($this->options); //To ensure everyone is kept informed
+            $originalClass = $this->getClassName();
+            $this->setClassName($query->getFrom());            
         }
-        $this->objectMapper->addExtraMappings($this->options->getClassName(), $this->options);
-        $this->objectMapper->addExtraMappings($this->options->getClassName(), $query);
+        $this->objectMapper->addExtraMappings($this->getClassName(), $this->options);
+        $this->objectMapper->addExtraMappings($this->getClassName(), $query);
         if ($this->options->keyProperty) {
             $this->options->mappingCollection->forceFetch($this->options->keyProperty);
         }
@@ -88,8 +102,7 @@ final class ObjectFetcher
         $this->doCount($query);
         $result = $this->doFetch($query);
         if (isset($originalClass)) {
-            $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($originalClass);
-            $this->setFindOptions($this->options);
+            $this->setClassName($originalClass);
         }
 
         return $result;
@@ -188,7 +201,7 @@ final class ObjectFetcher
         $this->storage->executeQuery($sql, $params ?: []);
         $row = $this->storage->fetchResult();
         if ($this->options->bindToEntities) {
-            $className = $this->options->mappingCollection->getEntityClassName();
+            $className = $this->getClassName();
             $result = $row ? $this->objectBinder->bindRowToEntity($row, $className) : null;
         } else {
             $result = $row;
@@ -212,7 +225,7 @@ final class ObjectFetcher
         $this->storage->executeQuery($sql, $params ?: []);
         $rows = $this->storage->fetchResults();
         if ($rows && $this->options->bindToEntities) {
-            $result = $this->objectBinder->bindRowsToEntities($rows, $this->options->getClassName(), $this->options->keyProperty);
+            $result = $this->objectBinder->bindRowsToEntities($rows, $this->getClassName(), $this->options->keyProperty);
         } else {
             $result = $rows;
         }
@@ -235,7 +248,7 @@ final class ObjectFetcher
 
         if ($this->bindToEntities) {
             $this->objectBinder->setIsIterable(true);
-            $result = new IterableResult($storage, $this->objectBinder, $this->repository->getEntityClassName());
+            $result = new IterableResult($storage, $this->objectBinder, $this->getClassName());
         } else {
             $result = new IterableResult($storage);
         }

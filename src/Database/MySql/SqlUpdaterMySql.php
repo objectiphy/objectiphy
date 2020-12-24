@@ -49,9 +49,10 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
     /**
      * Get the SQL necessary to perform the insert.
      * @param InsertQueryInterface $query
+     * @param bool $replace Whether to update existing record if it already exists.
      * @return string A query to execute for inserting the record.
      */
-    public function getInsertSql(InsertQueryInterface $query): string
+    public function getInsertSql(InsertQueryInterface $query, bool $replace = false): string
     {
         if (!isset($this->options->mappingCollection)) {
             throw new ObjectiphyException('SQL Builder has not been initialised. There is no mapping information!');
@@ -67,7 +68,12 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
         foreach ($query->getAssignments() as $assignment) {
             $sqlAssignments[] = $assignment->toString($this->params);
         }
-        $sql .= $this->replaceNames(implode(', ', $sqlAssignments));
+        $assignments = $this->replaceNames(implode(', ', $sqlAssignments));
+        $sql .= $assignments;
+        if ($replace) {
+            $sql .= ' ON DUPLICATE KEY UPDATE ' . $assignments;
+        }
+
         array_walk($this->params, function(&$value) {
             $this->dataTypeHandler->toPersistenceValue($value);
         });

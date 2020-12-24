@@ -21,9 +21,10 @@ interface SqlUpdaterInterface extends SqlProviderInterface
     /**
      * Get the SQL necessary to perform the insert.
      * @param InsertQueryInterface $query
+     * @param bool $replace Whether to update existing record if it already exists.
      * @return string A query to execute for inserting the record.
      */
-    public function getInsertSql(InsertQueryInterface $query): string;
+    public function getInsertSql(InsertQueryInterface $query, bool $replace = false): string;
 
     /**
      * Get the SQL necessary to perform the update.

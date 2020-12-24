@@ -28,6 +28,7 @@ use Objectiphy\Objectiphy\Query\FieldExpression;
 use Objectiphy\Objectiphy\Query\Pagination;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Query\SelectQuery;
+use Objectiphy\Objectiphy\Traits\TransactionTrait;
 
 /**
  * Main entry point for all ORM operations
@@ -36,12 +37,15 @@ use Objectiphy\Objectiphy\Query\SelectQuery;
  */
 class ObjectRepository implements ObjectRepositoryInterface, TransactionInterface
 {
+    use TransactionTrait;
+    
     protected ConfigOptions $configOptions;
     protected ObjectMapper $objectMapper;
     protected ObjectFetcher $objectFetcher;
     protected ObjectPersister $objectPersister;
     protected ObjectRemover $objectRemover;
     protected ProxyFactory $proxyFactory;
+    protected StorageInterface $storage;
     protected ?PaginationInterface $pagination = null;
     protected array $orderBy;
     protected MappingCollection $mappingCollection;
@@ -56,6 +60,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     ) {
         $this->objectMapper = $objectMapper;
         $this->objectFetcher = $objectFetcher;
+        $this->storage = $this->objectFetcher->getStorage();
         $this->objectPersister = $objectPersister;
         $this->objectRemover = $objectRemover;
         $this->objectPersister->setObjectRemover($objectRemover);
@@ -67,9 +72,9 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $this->setConfiguration($configOptions);
     }
 
-    public function getStoarge(): StorageInterface
+    public function getStorage(): StorageInterface
     {
-        return $this->objectFetcher->getStorage();
+        return $this->storage;
     }
 
     /**
@@ -126,11 +131,14 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         if ($className != $this->getClassName()) {
             $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
             $this->orderBy = [];
+
             //In case of custom repository that does not pass along the find/save options, set defaults here
             $findOptions = FindOptions::create($this->mappingCollection);
             $this->objectFetcher->setFindOptions($findOptions);
             $saveOptions = SaveOptions::create($this->mappingCollection);
             $this->objectPersister->setSaveOptions($saveOptions);
+            $deleteOptions = DeleteOptions::create($this->mappingCollection);
+            $this->objectRemover->setDeleteOptions($deleteOptions);
         }
     }
 
@@ -262,7 +270,6 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         bool $multiple = true,
         bool $fetchOnDemand = false
     ): ?iterable {
-
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         return null;
     }
@@ -390,15 +397,20 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @throws \Exception
      */
     public function saveEntities(
-        array $entities,
+        iterable $entities,
         bool $saveChildren = null,
         int &$insertCount = 0,
         int &$updateCount = 0,
         int &$deleteCount = 0
     ): int {
+        if (!$entities) {
+            return 0;
+        }
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
+        $originalClassName = $this->getClassName();
         try {
             $saveChildren = $saveChildren ?? $this->configOptions->saveChildrenByDefault;
+            $this->setClassName(ObjectHelper::getObjectClassName(reset($entities)));
             $saveOptions = SaveOptions::create($this->mappingCollection, ['saveChildren' => $saveChildren]);
             $this->beginTransaction();
             $return = $this->objectPersister->saveEntities($entities, $saveOptions, $insertCount, $updateCount, $deleteCount);
@@ -408,6 +420,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         } catch (\Throwable $ex) {
             $this->rollback();
             $this->throwException($ex);
+        } finally {
+            $this->setClassName($originalClassName);
         }
     }
 
@@ -466,7 +480,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         int $updateCount = 0
     ): int {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
-        if (!$this->validateDeletable($exceptionIfDisabled)) {
+        if (!$this->validateDeletable($exceptionIfDisabled) || !$entities) {
             return 0;
         }
 
@@ -497,6 +511,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     public function executeQuery(QueryInterface $query, int &$insertCount = 0, int &$updateCount = 0): ?int
     {
+        //TODO: Use command bus pattern to send queries of different types to different handlers
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         if ($query instanceof SelectQueryInterface) {
             return $this->findBy($query);
@@ -505,7 +520,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             return $this->objectPersister->executeSave($query, $saveOptions, $insertCount, $updateCount);
         } elseif ($query instanceof DeleteQueryInterface) {
             $deleteOptions = DeleteOptions::create($this->mappingCollection);
-            return $this->objectDeleter->deleteBy($deleteQuery, $deleteOptions);
+            return $this->objectRemover->executeDelete($deleteQuery, $deleteOptions);
         } else {
             throw new QueryException('Unrecognised query type: ' . ObjectHelper::getObjectClassName($query));
         }
@@ -546,30 +561,6 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     public function clearCache(?string $className = null): void
     {
         $this->objectFetcher->clearCache($className);
-    }
-
-    /**
-     * Manually begin a transaction (if supported by the storage engine)
-     */
-    public function beginTransaction(): bool
-    {
-        return $this->objectPersister->beginTransaction();
-    }
-
-    /**
-     * Commit a transaction that was started manually (if supported by the storage engine)
-     */
-    public function commit(): bool
-    {
-        return $this->objectPersister->commit();
-    }
-
-    /**
-     * Rollback a transaction that was started manually (if supported by the storage engine)
-     */
-    public function rollback(): bool
-    {
-        return $this->objectPersister->rollback();
     }
 
     /**
