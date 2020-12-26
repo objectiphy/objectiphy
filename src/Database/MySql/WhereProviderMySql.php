@@ -7,21 +7,20 @@ namespace Objectiphy\Objectiphy\Database\MySql;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
-use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Query\CriteriaGroup;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Provider of SQL for where clause on MySQL
- * @package Objectiphy\Objectiphy\Database\MySql
  */
 class WhereProviderMySql extends AbstractSqlProvider
 {
     /**
-     * @param array $criteria
-     * @return string The WHERE part of the SQL query.
-     * @throws Exception\CriteriaException
-     * @throws MappingException
-     * @throws \ReflectionException
+     * The WHERE part of the SQL query.
+     * @param QueryInterface $query
+     * @param array $objectNames
+     * @param array $persistenceNames
+     * @return string
      */
     public function getWhere(QueryInterface $query, array $objectNames, array $persistenceNames): string
     {

@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Contract;
 
 /**
- * Interface StorageInterface
- * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  * Interface for a class that implements storage to and from a datastore (probably always by executing SQL queries using
  * PDO, but could hypothetically be some custom class that feeds bananas to monkeys at typewriters, or whatever - the
@@ -20,9 +18,9 @@ interface StorageInterface
      * a string so it can be output in a debug trace or profiler (so if you use a custom class, please implement
      * __toString() on it).
      * @param array $params Any parameters that need to be bound to the query.
-     * @param boolean $iterable Whether or not we are planning to return an iterable response (as opposed to a normal
+     * @param bool $iterable Whether or not we are planning to return an iterable response (as opposed to a normal
      * smash and grab).
-     * @return boolean Whether or not the query execution was successful.
+     * @return bool Whether or not the query execution was successful.
      */
     public function executeQuery($query, array $params = [], bool $iterable = false): bool;
 

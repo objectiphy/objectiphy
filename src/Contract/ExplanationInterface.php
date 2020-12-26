@@ -5,15 +5,14 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Contract;
 
 /**
- * Used to obtain information about how a request was handled (in particular, database queries that were executed).
- * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
+ * Used to obtain information about how a request was handled (in particular, database queries that were executed).
  */
 interface ExplanationInterface
 {
     /**
      * Get the last query that was executed.
-     * @param boolean $parameterise Whether or not to replace parameter tokens with their values
+     * @param bool $parameterise Whether or not to replace parameter tokens with their values
      * @return string The query (typically SQL), with parameters converted to values so that the string can be pasted
      * into a database GUI and executed without having to replace values manually (when Objectiphy executes the query,
      * it does NOT use this exact string, it uses prepared statements).
@@ -22,7 +21,7 @@ interface ExplanationInterface
 
     /**
      * Get all the queries that were executed, including counts.
-     * @param boolean $parameterise Whether or not to replace parameter tokens with their values
+     * @param bool $parameterise Whether or not to replace parameter tokens with their values
      * @return array All of the queries that have been executed, with parameters converted to values so that the string
      * can be pasted into a database GUI and executed without having to replace values manually (when Objectiphy
      * executes the query, it does NOT use this exact string, it uses prepared statements).

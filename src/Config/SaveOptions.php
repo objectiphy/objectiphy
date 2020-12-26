@@ -6,6 +6,9 @@ namespace Objectiphy\Objectiphy\Config;
 
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
+/**
+ * @author Russell Walker <rwalker.php@gmail.com>
+ */
 class SaveOptions
 {
     public MappingCollection $mappingCollection;
@@ -23,7 +26,7 @@ class SaveOptions
      * @param array $settings
      * @return SaveOptions
      */
-    public static function create(MappingCollection $mappingCollection, array $settings = [])
+    public static function create(MappingCollection $mappingCollection, array $settings = []): SaveOptions
     {
         $saveOptions = new SaveOptions($mappingCollection);
         foreach ($settings as $key => $value) {

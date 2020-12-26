@@ -11,6 +11,7 @@ if (interface_exists('\Doctrine\Persistence\PropertyChangedListener')) {
 }
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * To manually control change tracking of entities, entities can notify the entity tracker of changes
  * using the exact same mechanism as the Doctrine 'Notify' change tracker.
  */

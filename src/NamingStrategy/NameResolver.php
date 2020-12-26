@@ -9,13 +9,16 @@ use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Table;
 
+/**
+ * @author Russell Walker <rwalker.php@gmail.com>
+ */
 class NameResolver
 {
     private NamingStrategyInterface $tableNamingStrategy;
     private NamingStrategyInterface $columnNamingStrategy;
     private bool $guessMappings;
 
-    public function setConfigOptions(ConfigOptions $config)
+    public function setConfigOptions(ConfigOptions $config): void
     {
         $this->tableNamingStrategy = $config->tableNamingStrategy;
         $this->columnNamingStrategy = $config->columnNamingStrategy;
@@ -47,7 +50,6 @@ class NameResolver
     {
         //Local variables make the code that follows more readable
         $propertyName = $propertyMapping->propertyName;
-        $parentClassName = $propertyMapping->className;
         $relationship = $propertyMapping->relationship;
         $column = $propertyMapping->column;
         $strategy = $this->columnNamingStrategy ?? null;

@@ -8,8 +8,8 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Query\AssignmentExpression;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Like an SQL query, but with expressions relating to objects and properties.
- * @package Objectiphy\Objectiphy\Contract
  */
 interface UpdateQueryInterface extends QueryInterface
 {

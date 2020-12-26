@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Query;
 
-use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Contract\DeleteQueryInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Query to update one or more values in the database.
  */
 class DeleteQuery extends Query implements DeleteQueryInterface
@@ -23,7 +23,11 @@ class DeleteQuery extends Query implements DeleteQueryInterface
     {
         return $this->getClassName();
     }
-    
+
+    /**
+     * @return string
+     * @throws QueryException
+     */
     public function __toString(): string
     {
         if (!$this->getDelete()) {
@@ -57,7 +61,7 @@ class DeleteQuery extends Query implements DeleteQueryInterface
      * @param MappingCollection $mappingCollection
      * @param string|null $className
      */
-    public function finalise(MappingCollection $mappingCollection, ?string $className = null)
+    public function finalise(MappingCollection $mappingCollection, ?string $className = null): void
     {
         if (!$this->isFinalised) {
             $this->mappingCollection = $mappingCollection;

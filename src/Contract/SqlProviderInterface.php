@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Contract;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * For an object that provides SQL for a query.
- * @package Objectiphy\Objectiphy\Contract
  */
 interface SqlProviderInterface
 {
@@ -18,6 +18,7 @@ interface SqlProviderInterface
 
     /**
      * Allow query parameters to be set (or cleared) manually.
+     * @param array $params
      */
     public function setQueryParams(array $params = []): void;
 }

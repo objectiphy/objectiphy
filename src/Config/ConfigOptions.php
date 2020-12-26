@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Config;
 
-use Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
-use Objectiphy\Objectiphy\EntityFactoryInterface;
 use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * @property bool $productionMode
  * @property string $cacheDirectory
  * @property array $serializationGroups
@@ -28,8 +28,6 @@ use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
  * @property bool $bindToEntities
  * @property bool $saveChildrenByDefault
  * @property bool $disableEntityCache
- * @package Objectiphy\Objectiphy
- * @author Russell Walker <rwalker.php@gmail.com>
  */
 class ConfigOptions extends ConfigBase
 {
@@ -183,14 +181,14 @@ class ConfigOptions extends ConfigBase
 
     /**
      * Initialise config options.
-     * @param string $cacheDirectory
-     * @param bool $productionMode
-     * @param string $configFile Location of config file that contains the default options
      * @param array $options Array of config options to set
+     * @param string $configFile Location of config file that contains the default options
      * @throws ObjectiphyException
      */
-    public function __construct(array $options = ['cacheDirectory' => '', 'productionMode' => false], string $configFile = '')
-    {
+    public function __construct(
+        array $options = ['cacheDirectory' => '', 'productionMode' => false],
+        string $configFile = ''
+    ) {
         $this->setInitialOptions($options);
         $this->parseConfigFile($configFile);
         $this->setCacheDirectory($options['cacheDirectory'] ?? '');
@@ -200,13 +198,14 @@ class ConfigOptions extends ConfigBase
      * @param string $cacheDirectory
      * @throws ObjectiphyException
      */
-    private function setCacheDirectory(string $cacheDirectory)
+    private function setCacheDirectory(string $cacheDirectory): void
     {
         if ($cacheDirectory) {
+            $usedCacheDir = ($this->productionMode ? '.' : ' (' . $cacheDirectory . ').');
             if (!file_exists($cacheDirectory)) {
-                throw new ObjectiphyException('Objectiphy cache directory does not exist' . ($productionMode ? '.' : ' (' . $cacheDirectory . ').'));
+                throw new ObjectiphyException('Objectiphy cache directory does not exist' . $usedCacheDir);
             } elseif (!is_writable($cacheDirectory)) {
-                throw new ObjectiphyException('Objectiphy cache directory is not writable' . ($productionMode ? '.' : ' (' . $cacheDirectory . ').'));
+                throw new ObjectiphyException('Objectiphy cache directory is not writable' . $usedCacheDir);
             } else {
                 $this->cacheDirectory = $cacheDirectory;
             }
@@ -221,7 +220,7 @@ class ConfigOptions extends ConfigBase
      * @param string $configFile
      * @throws ObjectiphyException
      */
-    private function parseConfigFile(string $configFile)
+    private function parseConfigFile(string $configFile): void
     {
         if ($configFile && !file_exists($configFile)) {
             throw new ObjectiphyException(sprintf('The config file specified does not exist: %1$s.', $configFile));
@@ -244,7 +243,7 @@ class ConfigOptions extends ConfigBase
      * @param array $options
      * @throws ObjectiphyException
      */
-    private function setInitialOptions(array $options)
+    private function setInitialOptions(array $options): void
     {
         foreach ($options ?? [] as $key => $value) {
             $this->setConfigOption($key, $value);

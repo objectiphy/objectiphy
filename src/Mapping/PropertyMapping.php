@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Mapping;
 
 use Objectiphy\Objectiphy\Exception\MappingException;
+use Objectiphy\Objectiphy\Orm\ObjectHelper;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Mapping information for a particular property in context (ie. the same property
  * on different instances of the same class will have different context such as
  * aliases and relationship positioning).
- * @package Objectiphy\Objectiphy
- * @author Russell Walker <rwalker.php@gmail.com>
  */
 class PropertyMapping
 {
@@ -110,6 +110,7 @@ class PropertyMapping
 
     /**
      * Get the fully qualified property path using dot notation by default.
+     * @param string $separator
      * @param bool $includingPropertyName
      * @return string
      */
@@ -250,15 +251,20 @@ class PropertyMapping
         return false;
     }
 
+    /**
+     * @param array $entities
+     * @return iterable
+     * @throws MappingException
+     */
     public function getCollection(array $entities): iterable
     {
         $collection = $entities;
         $collectionClass = $this->relationship->collectionClass;
         if (!$collectionClass || $collectionClass == 'array') {
             if ($this->reflectionProperty->hasType()) {
-                $collectionClass = $this->reflectionProperty->getType()->getName(); //Sometimes returns gibberish
+                $collectionClass = ObjectHelper::getTypeName($this->reflectionProperty->getType()); //Sometimes returns gibberish
                 if ($collectionClass && (!class_exists($collectionClass) || !is_a($collectionClass, '\Traversable', true))) {
-                    $collectionClass = $this->getTypeHacky($collectionClass);
+                    $collectionClass = $this->getTypeHacky();
                 }
             }
         }
@@ -272,7 +278,11 @@ class PropertyMapping
         return $collection;
     }
 
-    private function getTypeHacky(string $collectionClass): string
+    /**
+     * @return string
+     * @throws MappingException
+     */
+    private function getTypeHacky(): string
     {
         //PHP ReflectionType seems buggy at times (on a Mac at least) - try a hacky way of checking the type
         try {

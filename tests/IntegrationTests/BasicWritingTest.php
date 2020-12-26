@@ -3,18 +3,14 @@
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
-use Objectiphy\Objectiphy\Factory\EntityFactory;
-use Objectiphy\Objectiphy\Factory\ProxyFactory;
 use Objectiphy\Objectiphy\Orm\ObjectReference;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Tests\Entity\TestPet;
 use Objectiphy\Objectiphy\Tests\Entity\TestUnderwriter;
-use Objectiphy\Objectiphy\Tests\Entity\TestChild;
 use Objectiphy\Objectiphy\Tests\Entity\TestParent;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\Tests\Entity\TestContact;
 use Objectiphy\Objectiphy\Tests\Entity\TestVehicle;
-use Objectiphy\Objectiphy\Tests\Entity\TestAddress;
 
 class BasicWritingTest extends IntegrationTestBase
 {
@@ -25,7 +21,7 @@ class BasicWritingTest extends IntegrationTestBase
      */
     public function testWritingDefault()
     {
-        $this->testName = 'Writing default';
+        $this->testName = 'Writing default' . $this->getCacheSuffix();
         $this->doTests();
     }
 
@@ -34,7 +30,7 @@ class BasicWritingTest extends IntegrationTestBase
      */
     public function testWritingMixed()
     {
-        $this->testName = 'Writing mixed';
+        $this->testName = 'Writing mixed' . $this->getCacheSuffix();
         $this->objectRepository->setConfigOption('eagerLoadToOne', true);
         $this->objectRepository->setConfigOption('eagerLoadToMany', false);
         $this->doTests();
@@ -45,7 +41,7 @@ class BasicWritingTest extends IntegrationTestBase
      */
     public function testWritingLazy()
     {
-        $this->testName = 'Writing lazy';
+        $this->testName = 'Writing lazy' . $this->getCacheSuffix();
         $this->objectRepository->setConfigOption('eagerLoadToOne', false);
         $this->objectRepository->setConfigOption('eagerLoadToMany', false);
         $this->doTests();
@@ -56,7 +52,7 @@ class BasicWritingTest extends IntegrationTestBase
      */
     public function testWritingEager()
     {
-        $this->testName = 'Writing eager';
+        $this->testName = 'Writing eager' . $this->getCacheSuffix();
         $this->objectRepository->setConfigOption('eagerLoadToOne', true);
         $this->objectRepository->setConfigOption('eagerLoadToMany', true);
         $this->doTests();
@@ -72,6 +68,31 @@ class BasicWritingTest extends IntegrationTestBase
 //        $this->expectExceptionMessage('Failed to insert row');
 //        $this->objectRepository->saveEntity($newAddress2);
 //    }
+
+    //Repeat with cache turned off
+    public function testWritingDefaultNoCache()
+    {
+        $this->disableCache();
+        $this->testWritingDefault();
+    }
+
+    public function testWritingMixedNoCache()
+    {
+        $this->disableCache();
+        $this->testWritingMixed();
+    }
+
+    public function testWritingLazyNoCache()
+    {
+        $this->disableCache();
+        $this->testWritingLazy();
+    }
+
+    public function testWritingEagerNoCache()
+    {
+        $this->disableCache();
+        $this->testWritingEager();
+    }
 
     protected function doTests()
     {
@@ -98,7 +119,6 @@ class BasicWritingTest extends IntegrationTestBase
         $this->assertEquals(2, $recordsAffected);
 
         //Verify update
-        $this->objectRepository->clearCache();
         $policy2 = $this->objectRepository->find(19071974);
         $this->assertEquals('TESTPOLICY UPDATED', $policy2->policyNo);
         $this->assertEquals('ChildUpdate', $policy2->contact->lastName);
@@ -109,7 +129,7 @@ class BasicWritingTest extends IntegrationTestBase
         $this->objectRepository->saveEntity($policy2, false);
         
         //Verify update
-        $this->objectRepository->clearCache();
+        $this->objectRepository->clearCache(); //Necessary to force refresh from database
         $policy3 = $this->objectRepository->find(19071974);
         $this->assertEquals('TESTPOLICY UPDATED AGAIN', $policy3->policyNo);
         $this->assertEquals('ChildUpdate', $policy3->contact->lastName);
@@ -132,7 +152,6 @@ class BasicWritingTest extends IntegrationTestBase
         $this->objectRepository->saveEntity($policy3->vehicle);
 
         //Verify update
-        $this->objectRepository->clearCache();
         $policy4 = $this->objectRepository->find(19071974);
         $this->assertEquals('TESTPOLICY UPDATED YET AGAIN', $policy4->policyNo);
         $this->assertEquals('UpdatedRegNo', $policy4->vehicle->regNo);
@@ -144,7 +163,7 @@ class BasicWritingTest extends IntegrationTestBase
         $this->objectRepository->saveEntity($policy3->vehicle, false);
 
         //Verify update
-        $this->objectRepository->clearCache();
+        $this->objectRepository->clearCache(); //Necessary to force refresh from database
         $policy4a = $this->objectRepository->find(19071974);
         $this->assertEquals('TESTPOLICY UPDATED YET AGAIN', $policy4a->policyNo);
         $this->assertEquals('UpdatedRegNoTwo', $policy4a->vehicle->regNo);
@@ -212,7 +231,7 @@ class BasicWritingTest extends IntegrationTestBase
         $newPolicy2Id = $newPolicy2->id;
 
         //Verify save
-        $this->objectRepository->clearCache();
+        $this->objectRepository->clearCache(); //Necessary to force refresh from database
         $refreshedPolicy = $this->objectRepository->findOneBy(['policyNo' => 'Test2']);
         $this->assertEquals('Existing Contact' . $random, $refreshedPolicy->contact->getName());
 
@@ -238,7 +257,6 @@ class BasicWritingTest extends IntegrationTestBase
         $newPolicy2aId = $newPolicy2a->id;
 
         //Verify save
-        $this->objectRepository->clearCache();
         $refreshedPolicy2a = $this->objectRepository->findOneBy(['policyNo' => 'Test2a']);
         $this->assertEquals('Existing Contact' . $random, $refreshedPolicy2a->contact->getName());
         $this->assertEquals($newPolicy2Id + 1, $newPolicy2aId);
@@ -249,7 +267,6 @@ class BasicWritingTest extends IntegrationTestBase
         $newPolicy2->contact->firstName = 'Newchild';
         $newPolicy2->contact->lastName = 'Smith';
         $this->objectRepository->saveEntity($newPolicy2);
-        $this->objectRepository->clearCache();
         $refreshedPolicy2 = $this->objectRepository->findOneBy(['policyNo' => 'Test2']);
         $this->assertEquals('Newchild Smith', $refreshedPolicy2->contact->getName());
         $this->assertEquals('Test2', $refreshedPolicy2->policyNo);
@@ -275,7 +292,6 @@ class BasicWritingTest extends IntegrationTestBase
         $parent->getPets()->append($newPet);
         $parent->getPets()->append($newPet2);
         $this->objectRepository->saveEntity($parent);
-        $this->objectRepository->clearCache();
         $refreshedParent = $this->objectRepository->find($parent->getId());
         $this->assertEquals(2, count($refreshedParent->getPets()));
         $this->assertEquals('Nugget', $refreshedParent->getPets()[0]->name);
@@ -284,7 +300,6 @@ class BasicWritingTest extends IntegrationTestBase
         //Update child on a one-to-many relationship
         $refreshedParent->getPets()[0]->weightInGrams += 50;
         $this->objectRepository->saveEntity($refreshedParent);
-        $this->objectRepository->clearCache();
         $refreshedParent2 = $this->objectRepository->find($parent->getId());
         $this->assertEquals(675, $refreshedParent2->getPets()[0]->weightInGrams);
 //        $this->assertEquals(4425, $refreshedParent2->totalWeightOfPets);
@@ -297,13 +312,13 @@ class BasicWritingTest extends IntegrationTestBase
         $refreshedParent2->getPets()[1]->name = 'Snuff';
         $refreshedParent2->getPets()->append($newPet3);
         $this->objectRepository->saveEntity($refreshedParent2);
-        $this->objectRepository->clearCache();
         $refreshedParent3 = $this->objectRepository->find($parent->getId());
         $this->assertEquals(3, count($refreshedParent3->getPets()));
 //        $this->assertEquals(5146, $refreshedParent3->totalWeightOfPets);
-        $this->assertEquals('Fifi', $refreshedParent3->getPets()[0]->name);
-        $this->assertEquals('Nugget', $refreshedParent3->getPets()[1]->name);
-        $this->assertEquals('Snuff', $refreshedParent3->getPets()[2]->name);
+        $names = array_column((array) $refreshedParent3->getPets(), 'name');
+        $this->assertContains('Fifi', $names);
+        $this->assertContains('Nugget', $names);
+        $this->assertContains('Snuff', $names);
 
         //Add new children to a new parent
         $newPetA = new TestPet();
@@ -320,7 +335,6 @@ class BasicWritingTest extends IntegrationTestBase
         $newParent->getPets()->append($newPetB);
         $this->objectRepository->saveEntity($newParent);
         $newParentId = $newParent->getId();
-        $this->objectRepository->clearCache();
         $refreshedParent4 = $this->objectRepository->find($newParentId);
         $this->assertEquals(2, count($refreshedParent4->getPets()));
         $this->assertEquals('Arnie', $refreshedParent4->getPets()[0]->name);
@@ -369,7 +383,6 @@ class BasicWritingTest extends IntegrationTestBase
         $parent->getUser()->setType('branch2');
         $parent->getChild()->getUser()->setType('staff2');
         $this->objectRepository->saveEntity($parent);
-        $this->objectRepository->clearCache();
         $refreshedParent = $this->objectRepository->find(1);
         $this->assertNotEquals($refreshedParent->getUser()->getId(), $refreshedParent->getChild()->getUser()->getId());
         $this->assertEquals('branch2', $refreshedParent->getUser()->getType());

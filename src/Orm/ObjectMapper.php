@@ -7,7 +7,6 @@ namespace Objectiphy\Objectiphy\Orm;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
-use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
@@ -19,17 +18,15 @@ use Objectiphy\Objectiphy\Mapping\Table;
 use Objectiphy\Objectiphy\NamingStrategy\NameResolver;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Loads mapping information from the supplied mapping provider (typically annotations, but the mapping information 
  * could come from anywhere as long as there is a provider for it).
- * @package Objectiphy\Objectiphy
- * @author Russell Walker <rwalker.php@gmail.com>
  */
 final class ObjectMapper
 {
     /* @var MappingCollection[] $mappingCollection */
     private array $mappingCollections;
     private MappingProviderInterface $mappingProvider;
-    private bool $productionMode;
     private bool $eagerLoadToOne;
     private bool $eagerLoadToMany;
     private NameResolver $nameResolver;
@@ -42,8 +39,7 @@ final class ObjectMapper
 
     public function setConfigOptions(ConfigOptions $config): void 
     {
-        $this->productionMode = $config->productionMode;
-        $this->mappingProvider->setThrowExceptions(!$this->productionMode);
+        $this->mappingProvider->setThrowExceptions(!$config->productionMode);
         $this->eagerLoadToOne = $config->eagerLoadToOne;
         $this->eagerLoadToMany = $config->eagerLoadToMany;
         $this->nameResolver->setConfigOptions($config);
@@ -51,6 +47,9 @@ final class ObjectMapper
 
     /**
      * Returns a collection of property mappings for the object hierarchy of the given parent class.
+     * @param string $className
+     * @return MappingCollection
+     * @throws ObjectiphyException
      * @throws \ReflectionException
      */
     public function getMappingCollectionForClass(string $className): MappingCollection
@@ -77,7 +76,9 @@ final class ObjectMapper
      * Depending on the criteria, we might need additional mappings - eg. to search on the value of
      * a late bound child object.
      * @param string $className Name of top-level class
-     * @param PropertyPathConsumerInterface $pathConsumer
+     * @param PropertyPathConsumerInterface|null $pathConsumer
+     * @throws ObjectiphyException
+     * @throws \ReflectionException
      */
     public function addExtraMappings(string $className, PropertyPathConsumerInterface $pathConsumer = null): void
     {
@@ -90,10 +91,11 @@ final class ObjectMapper
 
     /**
      * Add a property that would not normally need to be mapped, but is required for the criteria to filter on.
-     * If there are any parent properties in between the deepest one we have already mapped, and the one we 
+     * If there are any parent properties in between the deepest one we have already mapped, and the one we
      * want, we will have to add those too.
      * @param string $className
      * @param string $propertyPath
+     * @param bool $forceJoins
      * @throws ObjectiphyException
      * @throws \ReflectionException
      */
@@ -126,8 +128,12 @@ final class ObjectMapper
     }
 
     /**
-     * Get mapping for class and loop through its properties to get their mappings too. Recursively populate mappings 
+     * Get mapping for class and loop through its properties to get their mappings too. Recursively populate mappings
      * for child objects until we detect a loop or hit something that should be lazy loaded.
+     * @param MappingCollection $mappingCollection
+     * @param string $className
+     * @param array $parents
+     * @throws ObjectiphyException
      * @throws \ReflectionException
      */
     private function populateMappingCollection(
@@ -151,6 +157,7 @@ final class ObjectMapper
      * @param \ReflectionClass $reflectionClass
      * @param array $parents
      * @throws ObjectiphyException
+     * @throws \ReflectionException
      */
     private function populateScalarMappings(
         MappingCollection $mappingCollection,
@@ -316,7 +323,7 @@ final class ObjectMapper
                 $childReflectionClass = new \ReflectionClass($relationship->childClassName);
                 $this->populateScalarMappings($mappingCollection, $childReflectionClass, $childParents);
             } else {
-                $mappingCollection->markRelationshipMapped($propertyName, $reflectionClass->getName(), $childParents);
+                $mappingCollection->markRelationshipMapped($propertyName, $reflectionClass->getName());
                 $this->populateMappingCollection($mappingCollection, $relationship->childClassName, $childParents);
             }
         }

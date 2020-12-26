@@ -6,9 +6,12 @@ namespace Objectiphy\Objectiphy\Factory;
 
 use Objectiphy\Objectiphy\Contract\CollectionFactoryInterface;
 
+/**
+ * @author Russell Walker <rwalker.php@gmail.com>
+ */
 class CollectionFactory implements CollectionFactoryInterface
 {
-    public function createCollection(string $collectionClassName, array $entities): \Traversable
+    public function createCollection(string $collectionClassName, array $entities): iterable
     {
         try {
             $collection = $entities;

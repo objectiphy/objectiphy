@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Mapping;
 
 /**
- * Mapping information to describe how the value of a property is stored and retrieved from a database column.
- * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
+ * Mapping information to describe how the value of a property is stored and retrieved from a database column.
  */
 class Column
 {

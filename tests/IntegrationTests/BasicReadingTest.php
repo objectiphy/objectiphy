@@ -1,17 +1,12 @@
 <?php
 
-//TODO:
-//Map properties without ambiguity as per documentation
-//Respect setGuessMappings(false)
-//Make sure custom respositories work when specified on table annotations
-
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Factory\RepositoryFactory;
-use Objectiphy\Objectiphy\IterableResult;
 use Objectiphy\Objectiphy\Tests\Entity\TestAddress;
 use Objectiphy\Objectiphy\Tests\Entity\TestAssumedPk;
 use Objectiphy\Objectiphy\Tests\Entity\TestChild;
@@ -33,7 +28,7 @@ class BasicReadingTest extends IntegrationTestBase
      */
     public function testReadingDefault()
     {
-        $this->testName = 'Reading default';
+        $this->testName = 'Reading default' . $this->getCacheSuffix();
         $this->doTests();
     }
 
@@ -42,7 +37,7 @@ class BasicReadingTest extends IntegrationTestBase
      */
     public function testReadingMixed()
     {
-        $this->testName = 'Reading mixed';
+        $this->testName = 'Reading mixed' . $this->getCacheSuffix();
         $this->objectRepository->setConfigOption('eagerLoadToOne', true);
         $this->objectRepository->setConfigOption('eagerLoadToMany', false);
         $this->doTests();
@@ -53,7 +48,7 @@ class BasicReadingTest extends IntegrationTestBase
      */
     public function testReadingLazy()
     {
-        $this->testName = 'Reading lazy';
+        $this->testName = 'Reading lazy' . $this->getCacheSuffix();
         $this->objectRepository->setConfigOption('eagerLoadToOne', false);
         $this->objectRepository->setConfigOption('eagerLoadToMany', false);
         $this->doTests();
@@ -64,7 +59,7 @@ class BasicReadingTest extends IntegrationTestBase
      */
     public function testReadingEager()
     {
-        $this->testName = 'Reading eager';
+        $this->testName = 'Reading eager' . $this->getCacheSuffix();
         $this->objectRepository->setConfigOption('eagerLoadToOne', true);
         $this->objectRepository->setConfigOption('eagerLoadToMany', true);
         $this->doTests();
@@ -72,9 +67,40 @@ class BasicReadingTest extends IntegrationTestBase
 
     public function testReadingExceptions()
     {
-        $this->testName = 'Reading exceptions';
+        $this->testName = 'Reading exceptions' . $this->getCacheSuffix();
         $this->expectException(QueryException::class);
         $this->objectRepository->findBy(['something invalid'=>'gibberish']);
+    }
+
+    //Repeat with the cache turned off
+    public function testReadingDefaultNoCache()
+    {
+        $this->disableCache();
+        $this->testReadingDefault();
+    }
+
+    public function testReadingMixedNoCache()
+    {
+        $this->disableCache();
+        $this->testReadingMixed();
+    }
+
+    public function testReadingLazyNoCache()
+    {
+        $this->disableCache();
+        $this->testReadingLazy();
+    }
+
+    public function testReadingEagerNoCache()
+    {
+        $this->disableCache();
+        $this->testReadingEager();
+    }
+
+    public function testReadingExceptionsNoCache()
+    {
+        $this->disableCache();
+        $this->testReadingExceptions();
     }
 
     protected function doTests()
@@ -98,10 +124,12 @@ class BasicReadingTest extends IntegrationTestBase
         $this->assertEquals(5, count($policy->vehicle->wheels));
         $this->assertEquals(TestCollection::class, get_class($policy->vehicle->wheels));
 
-        //Calling find again with the same ID should return the same instance (no db lookup needed)
-        $policya = $this->objectRepository->find(19071974);
-        $this->assertSame($policy, $policya);
-        
+        if (!$this->getCacheSuffix()) {
+            //Calling find again with the same ID should return the same instance (no db lookup needed)
+            $policya = $this->objectRepository->find(19071974);
+            $this->assertSame($policy, $policya);
+        }
+
         //Find by child property (not possible in Doctrine)
         $policy2 = $this->objectRepository->findOneBy(['vehicle.regNo' => 'PJ63LXR']);
         $this->assertEquals('PJ63LXR', $policy2->vehicle->regNo);

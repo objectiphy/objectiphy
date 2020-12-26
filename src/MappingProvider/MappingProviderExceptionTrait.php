@@ -6,10 +6,13 @@ namespace Objectiphy\Objectiphy\MappingProvider;
 
 use Objectiphy\Objectiphy\Exception\MappingException;
 
+/**
+ * @author Russell Walker <rwalker.php@gmail.com>
+ */
 trait MappingProviderExceptionTrait
 {
-    protected $throwExceptions = false;
-    protected $lastErrorMessage = '';
+    protected bool $throwExceptions = false;
+    protected string $lastErrorMessage = '';
 
     public function setThrowExceptions(bool $value): void
     {
@@ -24,6 +27,11 @@ trait MappingProviderExceptionTrait
         return $this->lastErrorMessage;
     }
 
+    /**
+     * @param \Throwable $ex
+     * @throws MappingException
+     * @throws \Throwable
+     */
     private function handleException(\Throwable $ex): void
     {
         if ($this->throwExceptions) {

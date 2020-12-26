@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
-use Marmalade\Objectiphy\IterableResult;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
@@ -13,7 +12,6 @@ use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 
 /**
- * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
 final class ObjectFetcher
@@ -59,7 +57,7 @@ final class ObjectFetcher
         $this->objectBinder->setConfigOptions($configOptions);
     }
     
-    private function getClassName()
+    private function getClassName(): string
     {
         if (isset($this->options) && isset($this->options->mappingCollection)) {
             return $this->options->mappingCollection->getEntityClassName();
@@ -68,7 +66,7 @@ final class ObjectFetcher
         return '';
     }
     
-    private function setClassName(string $className) 
+    private function setClassName(string $className): void
     {
         $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
         $this->setFindOptions($this->options); //To ensure everyone is kept informed
@@ -84,7 +82,9 @@ final class ObjectFetcher
     }
 
     /**
+     * @param SelectQueryInterface $query
      * @return mixed
+     * @throws ObjectiphyException
      */
     public function executeFind(SelectQueryInterface $query) 
     {
@@ -112,13 +112,14 @@ final class ObjectFetcher
      * Clear the entity tracker to ensure objects get refreshed from the database
      * @param string|null $className
      */
-    public function clearCache(?string $className = null, bool $forgetChangesOnly = false): void
+    public function clearCache(?string $className = null): void
     {
-        $this->entityTracker->clear($className, $forgetChangesOnly);
+        $this->entityTracker->clear($className);
     }
 
     /**
      * Ensure find options have been set.
+     * @throws ObjectiphyException
      */
     private function validate(): void
     {
@@ -129,6 +130,7 @@ final class ObjectFetcher
 
     /**
      * Count the records and populate the record count on the pagination object.
+     * @param SelectQueryInterface $query
      */
     private function doCount(SelectQueryInterface $query): void
     {
@@ -143,6 +145,9 @@ final class ObjectFetcher
 
     /**
      * Return the records, in whatever format is requested.
+     * @param SelectQueryInterface $query
+     * @return array|mixed|object|IterableResult|null
+     * @throws ObjectiphyException
      */
     private function doFetch(SelectQueryInterface $query)
     {
@@ -168,18 +173,21 @@ final class ObjectFetcher
 
     /**
      * Fetch a single value for an SQL query
+     * @param string $sql
+     * @param array|null $params
      * @return mixed
      */
     public function fetchValue(string $sql, array $params = null)
     {
         $this->storage->executeQuery($sql, $params ?: []);
-        $value = $this->storage->fetchValue();
-
-        return $value;
+        return $this->storage->fetchValue();
     }
 
     /**
      * Fetch an indexed array of single values for an SQL query (one element for each record)
+     * @param string $sql
+     * @param array|null $params
+     * @return array
      */
     public function fetchValues(string $sql, array $params = null): array
     {
@@ -194,7 +202,7 @@ final class ObjectFetcher
      * @param string $sql SQL Statement to execute.
      * @param array|null $params Parameter values to bind.
      * @return array|object|null Array of data or entity.
-     * @throws ObjectiphyException
+     * @throws ObjectiphyException|\Throwable
      */
     public function fetchResult(string $sql, array $params = null)
     {
@@ -214,11 +222,9 @@ final class ObjectFetcher
      * Fetch all results for an SQL query, optionally binding to entities.
      * @param string $sql SQL Statement to execute.
      * @param array|null $params Parameter values to bind.
-     * @param string|null $keyProperty If you want the resulting array to be associative, based on a value in the
-     * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
-     * child object, but make sure the property you use has a unique value in the result set, otherwise some records
-     * will be lost).
      * @return array Array of arrays of data or array of entities.
+     * @throws \Objectiphy\Objectiphy\Exception\MappingException
+     * @throws \Throwable
      */
     public function fetchResults(string $sql, array $params = null): array
     {
@@ -246,8 +252,8 @@ final class ObjectFetcher
         $storage = clone($this->storage); //In case further queries happen before we iterate
         $storage->executeQuery($sql, $params ?: [], true);
 
-        if ($this->bindToEntities) {
-            $this->objectBinder->setIsIterable(true);
+        if ($this->options->bindToEntities) {
+            //$this->objectBinder->setIsIterable(true);
             $result = new IterableResult($storage, $this->objectBinder, $this->getClassName());
         } else {
             $result = new IterableResult($storage);
@@ -266,8 +272,6 @@ final class ObjectFetcher
     {
         $storage = clone($this->storage); //In case further queries happen before we iterate
         $storage->executeQuery($sql, $params ?: [], true);
-        $result = new IterableResult($storage, null, null, true);
-
-        return $result;
+        return new IterableResult($storage, null, null, true);
     }
 }

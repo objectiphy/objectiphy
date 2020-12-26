@@ -31,9 +31,8 @@ use Objectiphy\Objectiphy\Query\SelectQuery;
 use Objectiphy\Objectiphy\Traits\TransactionTrait;
 
 /**
- * Main entry point for all ORM operations
- * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
+ * Main entry point for all ORM operations
  */
 class ObjectRepository implements ObjectRepositoryInterface, TransactionInterface
 {
@@ -97,6 +96,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param string $optionName
      * @param $value
      * @return mixed The previously set value (or default value if not previously set).
+     * @throws ObjectiphyException
      */
     public function setConfigOption(string $optionName, $value)
     {
@@ -107,11 +107,12 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     }
 
     /**
-     * Set an entity-specific configuration option by name. Available options are 
+     * Set an entity-specific configuration option by name. Available options are
      * defined on the Objectiphy\Objectiphy\Config\ConfigEntity class.
      * @param string $entityClassName
      * @param string $optionName
      * @param $value
+     * @throws ObjectiphyException
      */
     public function setEntityConfigOption(string $entityClassName, string $optionName, $value): void
     {
@@ -125,6 +126,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     /**
      * Setter for the parent entity class name.
      * @param string $className
+     * @throws \ReflectionException
      */
     public function setClassName(string $className): void
     {
@@ -158,7 +160,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     /**
      * Set a pagination object (to store and supply information about how the results are paginated)
      * (can be set to null to remove previously set pagination)
-     * @param PaginationInterface
+     * @param PaginationInterface|null $pagination
      */
     public function setPagination(?PaginationInterface $pagination): void
     {
@@ -178,6 +180,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * equivalent method in Doctrine.
      * @param mixed $id Primary key value - for composite keys, can be an array
      * @return object|array|null
+     * @throws ObjectiphyException
+     * @throws \Throwable
      */
     public function find($id)
     {
@@ -205,6 +209,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param array|SelectQueryInterface $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @return object|array|null
+     * @throws ObjectiphyException
      */
     public function findOneBy($criteria = [])
     {
@@ -226,6 +231,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param string|null $recordAgeIndicator Fully qualified database column or expression that determines record age
      * (see also the setCommonProperty method).
      * @return object|array|null
+     * @throws ObjectiphyException
      */
     public function findLatestOneBy(
         $criteria = [],
@@ -287,9 +293,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
      * child object, but make sure the property you use has a unique value in the result set, otherwise some records
      * will be lost).
-     * @param boolean $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
+     * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
      * set (for streaming large amounts of data).
      * @return array|object|null
+     * @throws ObjectiphyException
      */
     public function findBy(
         $criteria = [],
@@ -334,13 +341,15 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
 
     /**
      * Find all records. Compatible with the equivalent method in Doctrine.
+     * @param array|null $orderBy
      * @param string|null $keyProperty If you want the resulting array to be associative, based on a value in the
      * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
      * child object, but make sure the property you use has a unique value in the result set, otherwise some records
      * will be lost).
-     * @param boolean $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
+     * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
      * set(for streaming large amounts of data).
      * @return array|null
+     * @throws ObjectiphyException
      */
     public function findAll(?array $orderBy = null, ?string $keyProperty = null, bool $fetchOnDemand = false): ?iterable
     {
@@ -350,11 +359,14 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     /**
      * Insert or update the supplied entity.
      * @param object $entity The entity to insert or update.
-     * @param bool $saveChildren Whether or not to also update any child objects. You can set a default value as a 
+     * @param bool $saveChildren Whether or not to also update any child objects. You can set a default value as a
      * config option (defaults to true).
      * @param int $insertCount Number of rows inserted.
      * @param int $updateCount Number of rows updated.
+     * @param int $deleteCount Number of rows deleted.
      * @return int Total number of rows affected (inserts + updates).
+     * @throws ObjectiphyException
+     * @throws \ReflectionException
      * @throws \Throwable
      */
     public function saveEntity(
@@ -390,11 +402,14 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     /**
      * Insert or update the supplied entities.
      * @param array $entities Array of entities to insert or update.
-     * @param bool $updateChildren Whether or not to also insert any new child objects.
+     * @param bool|null $saveChildren
      * @param int $insertCount Number of rows inserted.
      * @param int $updateCount Number of rows updated.
+     * @param int $deleteCount
      * @return int Number of rows affected.
-     * @throws \Exception
+     * @throws ObjectiphyException
+     * @throws \ReflectionException
+     * @throws \Throwable
      */
     public function saveEntities(
         iterable $entities,
@@ -413,7 +428,12 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $this->setClassName(ObjectHelper::getObjectClassName(reset($entities)));
             $saveOptions = SaveOptions::create($this->mappingCollection, ['saveChildren' => $saveChildren]);
             $this->beginTransaction();
-            $return = $this->objectPersister->saveEntities($entities, $saveOptions, $insertCount, $updateCount, $deleteCount);
+            $return = $this->objectPersister->saveEntities(
+                $entities, $saveOptions,
+                $insertCount,
+                $updateCount,
+                $deleteCount
+            );
             $this->commit();
 
             return $return;
@@ -428,9 +448,9 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     /**
      * Hard delete an entity (and cascade to children, if applicable).
      * @param object $entity The entity to delete.
-     * @param boolean $disableCascade Whether or not to suppress cascading deletes (deletes will only normally be
+     * @param bool $disableCascade Whether or not to suppress cascading deletes (deletes will only normally be
      * cascaded if the mapping definition explicitly requires it, but you can use this flag to override that).
-     * @param boolean $exceptionIfDisabled Whether or not to barf if deletes are disabled (probably only useful for
+     * @param bool $exceptionIfDisabled Whether or not to barf if deletes are disabled (probably only useful for
      * integration or unit tests).
      * @param int $updateCount Number of records updated (where child records lose their parents but do not get 
      * deleted themsselves, they may be updated with null values for the foreign key).
@@ -486,7 +506,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
 
         $originalClassName = $this->getClassName();
         try {
-            $this->setClassName(ObjectHelper::getObjectClassName(reset($entities)));
+            $entityArray = is_array($entities) ? $entities : iterator_to_array($entities);
+            $this->setClassName(ObjectHelper::getObjectClassName(reset($entityArray)));
             $deleteOptions = DeleteOptions::create($this->mappingCollection, ['disableCascade' => $disableCascade]);
             $this->beginTransaction();
             $return = $this->objectRemover->deleteEntities($entities, $deleteOptions, $updateCount);
@@ -506,11 +527,17 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param QueryInterface $query
      * @param int $insertCount Number of rows inserted.
      * @param int $updateCount Number of rows updated.
+     * @param int $deleteCount
      * @return int|object|array|null Query results, or total number of rows affected.
+     * @throws ObjectiphyException
      * @throws QueryException
      */
-    public function executeQuery(QueryInterface $query, int &$insertCount = 0, int &$updateCount = 0): ?int
-    {
+    public function executeQuery(
+        QueryInterface $query,
+        int &$insertCount = 0,
+        int &$updateCount = 0,
+        int &$deleteCount = 0
+    ): ?int {
         //TODO: Use command bus pattern to send queries of different types to different handlers
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         if ($query instanceof SelectQueryInterface) {
@@ -520,7 +547,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             return $this->objectPersister->executeSave($query, $saveOptions, $insertCount, $updateCount);
         } elseif ($query instanceof DeleteQueryInterface) {
             $deleteOptions = DeleteOptions::create($this->mappingCollection);
-            return $this->objectRemover->executeDelete($deleteQuery, $deleteOptions);
+            return $this->objectRemover->executeDelete($query, $deleteOptions);
         } else {
             throw new QueryException('Unrecognised query type: ' . ObjectHelper::getObjectClassName($query));
         }
@@ -533,6 +560,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param array $constructorParams If the constructor requires parameters, pass them in here.
      * @return ObjectReferenceInterface|null The resulting object will extend the class name specified, as well as
      * implementing the ObjectReferenceInterface. Returns null if the class does not exist.
+     * @throws ObjectiphyException
+     * @throws \Throwable
      */
     public function getObjectReference(
         string $className,
@@ -541,13 +570,13 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     ): ?ObjectReferenceInterface {
         try {
             return $this->proxyFactory->createObjectReferenceProxy($className, $pkValues, $constructorParams);
-        } catch (\Exception $ex) {
+        } catch (\Throwable $ex) {
             $this->throwException($ex);
         }
     }
 
     /**
-     * @return Explanation Information about how the latest result was obtained.
+     * @return ExplanationInterface Information about how the latest result was obtained.
      */
     public function getExplanation(): ?ExplanationInterface
     {
@@ -568,6 +597,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param array | SelectQueryInterface $criteria
      * @return mixed
      * @throws ObjectiphyException
+     * @throws QueryException
+     * @throws \ReflectionException
      */
     protected function doFindBy(FindOptions $findOptions, $criteria)
     {
@@ -587,6 +618,12 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         return $this->objectFetcher->executeFind($query);
     }
 
+    /**
+     * @param $criteria
+     * @param string $queryType
+     * @return QueryInterface
+     * @throws QueryException
+     */
     protected function normalizeCriteria($criteria, $queryType = SelectQuery::class): QueryInterface
     {
         if (!is_a($queryType, QueryInterface::class, true)) {
@@ -670,6 +707,11 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $this->objectRemover->setConfigOptions($this->configOptions);
     }
 
+    /**
+     * @param \Throwable $ex
+     * @throws ObjectiphyException
+     * @throws \Throwable
+     */
     private function throwException(\Throwable $ex): void
     {
         if ($ex instanceof ObjectiphyException) {

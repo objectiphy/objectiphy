@@ -9,6 +9,7 @@ use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Represents the instructions needed to insert a record.
  */
 class InsertQuery extends Query implements InsertQueryInterface
@@ -67,12 +68,15 @@ class InsertQuery extends Query implements InsertQueryInterface
         }
     }
 
+    /**
+     * @return string
+     * @throws QueryException
+     */
     public function __toString(): string
     {
         if (!$this->assignments || !$this->getInsert()) {
             throw new QueryException('Please finalise the query before use (ie. call the finalise method).');
         }
-        $useParams = $params !== null;
         $queryString = 'INSERT INTO ' . $this->getInsert();
         $queryString .= ' ' . implode(' ', $this->getJoins());
         $queryString .= 'SET ' . implode(', ', $this->assignments);

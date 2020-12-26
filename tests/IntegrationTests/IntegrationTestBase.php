@@ -63,4 +63,21 @@ class IntegrationTestBase extends TestCase
         }
         $this->pdo->commit();
     }
+
+    protected function disableCache()
+    {
+        if (!empty($this->objectRepository)) {
+            $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_ENTITY_CACHE, true);
+        }
+    }
+
+    protected function getCacheSuffix(): string
+    {
+        $suffix = '';
+        if (!empty($this->objectRepository)) {
+            $suffix = $this->objectRepository->getConfiguration()->disableEntityCache ? ' No Cache' : '';
+        }
+
+        return $suffix;
+    }
 }

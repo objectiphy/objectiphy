@@ -10,14 +10,13 @@ use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Mapping\Table;
 
 /**
- * This is just a base component that other providers can decorate depending on how they get their mapping information.
- * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
+ * This is just a base component that other providers can decorate depending on how they get their mapping information.
  */
 class MappingProvider implements MappingProviderInterface
 {
-    protected $throwExceptions = false;
-    protected $lastErrorMessage = '';
+    protected bool $throwExceptions = false;
+    protected string $lastErrorMessage = '';
     
     public function setThrowExceptions(bool $value): void
     {

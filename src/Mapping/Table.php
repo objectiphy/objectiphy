@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Mapping;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Mapping information to describe which database table and/or custom repository class to use for storage of the data
  * relating to the properties of the class.
- * @package Objectiphy\Objectiphy
- * @author Russell Walker <rwalker.php@gmail.com>
  */
 class Table
 {

@@ -6,16 +6,16 @@ namespace Objectiphy\Objectiphy\MappingProvider;
 
 use Objectiphy\Annotations\AnnotationReaderInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
+use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Mapping\Column;
 use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Mapping\Table;
 use Objectiphy\Objectiphy\Orm\ObjectHelper;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Reads Objectiphy annotations, which take precedence over any Doctrine ones supplied by the component we are 
  * decorating.
- * @package Objectiphy\Objectiphy
- * @author Russell Walker <rwalker.php@gmail.com>
  */
 class MappingProviderAnnotation implements MappingProviderInterface
 {
@@ -35,6 +35,8 @@ class MappingProviderAnnotation implements MappingProviderInterface
      * @param \ReflectionClass $reflectionClass
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      * @return Table
+     * @throws MappingException
+     * @throws \Throwable
      */
     public function getTableMapping(\ReflectionClass $reflectionClass, bool &$wasMapped = null): Table
     {
@@ -58,6 +60,8 @@ class MappingProviderAnnotation implements MappingProviderInterface
      * @param \ReflectionProperty $reflectionProperty
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      * @return Column
+     * @throws MappingException
+     * @throws \Throwable
      */
     public function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Column
     {
@@ -81,6 +85,8 @@ class MappingProviderAnnotation implements MappingProviderInterface
      * @param \ReflectionProperty $reflectionProperty
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      * @return Relationship
+     * @throws MappingException
+     * @throws \Throwable
      */
     public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Relationship
     {
@@ -98,16 +104,19 @@ class MappingProviderAnnotation implements MappingProviderInterface
             return $this->decorate($hostClassName, $hostProperty, $relationship, $objectiphyRelationship);
         } catch (\Throwable $ex) {
             $this->handleException($ex);
-            return new Relationship();
+            return new Relationship(Relationship::UNDEFINED);
         }
     }
 
     /**
-     * Takes a mapping object (Table, Column, Relationship), and replaces property values with the properties of an 
-     * equivalent object, overriding the base implementation. If the decorator's annotation did not specify a value for 
+     * Takes a mapping object (Table, Column, Relationship), and replaces property values with the properties of an
+     * equivalent object, overriding the base implementation. If the decorator's annotation did not specify a value for
      * a property, the original value of the component is preserved.
+     * @param string $hostClassName
+     * @param string $hostProperty
      * @param object $component The object whose values may be overridden.
-     * @param object $decorator The object which holds the values that take priority.
+     * @param object|null $decorator The object which holds the values that take priority.
+     * @return object
      */
     private function decorate(
         string $hostClassName, 

@@ -7,7 +7,6 @@ namespace Objectiphy\Objectiphy\Config;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 
 /**
- * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
 class ConfigBase
@@ -35,7 +34,7 @@ class ConfigBase
      * @param $value
      * @throws ObjectiphyException
      */
-    public function __set(string $optionName, $value)
+    public function __set(string $optionName, $value): void
     {
         $this->setConfigOption($optionName, $value);
     }
@@ -82,7 +81,7 @@ class ConfigBase
      * @param $value
      * @throws ObjectiphyException
      */
-    public function setConfigArrayOption(string $optionName, string $key, $value)
+    public function setConfigArrayOption(string $optionName, string $key, $value): void
     {
         $this->validateArray($optionName);
         $this->{$optionName}[$key] = $value;
@@ -93,7 +92,7 @@ class ConfigBase
      * Safely get an individual element of a config option that is an array.
      * @param string $optionName
      * @param string $key
-     * @return |null
+     * @return mixed
      * @throws ObjectiphyException
      */
     public function getConfigArrayOption(string $optionName, string $key)
@@ -106,8 +105,10 @@ class ConfigBase
     /**
      * Returns a hash uniquely representing the config options that are currently set (to be used as a cache key for
      * mapping information that uses this particular set of config options).
+     * @param string $suffix
+     * @return string
      */
-    public function getHash(string $suffix = '')
+    public function getHash(string $suffix = ''): string
     {
         ksort($this->nonDefaults);
         return sha1(json_encode($this->nonDefaults) . $suffix);
@@ -117,7 +118,7 @@ class ConfigBase
      * @param string $optionName
      * @throws ObjectiphyException
      */
-    private function validateArray(string $optionName)
+    private function validateArray(string $optionName): void
     {
         if (!property_exists($this, $optionName)) {
             $this->throwNotExists($optionName);
@@ -130,7 +131,7 @@ class ConfigBase
      * @param string $optionName
      * @throws ObjectiphyException
      */
-    private function throwNotExists(string $optionName)
+    private function throwNotExists(string $optionName): void
     {
         throw new ObjectiphyException(sprintf('Config option %1$s does not exist.', $optionName));
     }

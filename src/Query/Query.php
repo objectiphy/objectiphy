@@ -8,11 +8,12 @@ use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
 use Objectiphy\Objectiphy\Contract\JoinPartInterface;
 use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
+use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
-use Objectiphy\Objectiphy\Mapping\Relationship;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Base class for SelectQuery, InsertQuery, UpdateQuery, and DeleteQuery
  */
 abstract class Query implements QueryInterface
@@ -106,7 +107,7 @@ abstract class Query implements QueryInterface
      * @param MappingCollection $mappingCollection
      * @param string|null $className
      */
-    public function finalise(MappingCollection $mappingCollection, ?string $className = null)
+    public function finalise(MappingCollection $mappingCollection, ?string $className = null): void
     {
         if (!$this->isFinalised) {
             $className = $this->getClassName() ?: ($className ?? $mappingCollection->getEntityClassName());
@@ -142,18 +143,21 @@ abstract class Query implements QueryInterface
      * Override if required to only return the relationships actually needed for the query
      * @return PropertyMapping[]
      */
-    protected function getRelationshipsUsed()
+    protected function getRelationshipsUsed(): array
     {
         return $this->mappingCollection->getRelationships();
     }
-    
+
     /**
      * Put together the parts of a join - relationship info and criteria.
      * @param MappingCollection $mappingCollection
      * @param PropertyMapping $propertyMapping
+     * @throws QueryException
      */
-    protected function populateRelationshipJoin(MappingCollection $mappingCollection, PropertyMapping $propertyMapping)
-    {
+    protected function populateRelationshipJoin(
+        MappingCollection $mappingCollection,
+        PropertyMapping $propertyMapping
+    ): void {
         if ($propertyMapping->isLateBound(true)) {
             return;
         }

@@ -7,8 +7,6 @@ namespace Objectiphy\Objectiphy\Orm;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 
 /**
- * Class ObjectReference
- * @package Marmalade\Objectiphy
  * @author Russell Walker <russell.walker@marmalade.co.uk>
  * Represents a child object which might or might not yet have an ID.
  */
@@ -33,14 +31,14 @@ class ObjectReference implements ObjectReferenceInterface
     }
 
     /**
-     * @param string $propertyName
+     * @param string $objectiphyGetPropertyName
      * @return mixed
      */
-    public function &__get($propertyName)
+    public function &__get(string $objectiphyGetPropertyName)
     {
         $propertyValue = null;
-        if (array_key_exists($propertyName, $this->pkValues)) {
-            $propertyValue = $this->getPkValue($propertyName);
+        if (array_key_exists($objectiphyGetPropertyName, $this->pkValues)) {
+            $propertyValue = $this->getPkValue($objectiphyGetPropertyName);
         }
 
         return $propertyValue;
@@ -50,8 +48,7 @@ class ObjectReference implements ObjectReferenceInterface
      * When creating an object reference, we will be extending any old entity, which might have its own constructor
      * arguments. In that case, we have to call this method separately.
      * @param string|object $classNameOrObject
-     * @param null $primaryKeyValue
-     * @param string $primaryKeyPropertyName
+     * @param array $pkValues
      */
     public function setClassDetails($classNameOrObject, array $pkValues = []): void
     {
@@ -78,8 +75,9 @@ class ObjectReference implements ObjectReferenceInterface
     }
 
     /**
-     * Get the specified primary key value - prioritise trying to get it from the actual object, if possible, otherwise 
+     * Get the specified primary key value - prioritise trying to get it from the actual object, if possible, otherwise
      * use the local value.
+     * @param string $propertyName
      * @return mixed The value of the primary key property.
      */
     public function getPkValue(string $propertyName)

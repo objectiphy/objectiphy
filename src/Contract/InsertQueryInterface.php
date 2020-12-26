@@ -7,6 +7,9 @@ namespace Objectiphy\Objectiphy\Contract;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Query\AssignmentExpression;
 
+/**
+ * @author Russell Walker <rwalker.php@gmail.com>
+ */
 interface InsertQueryInterface extends QueryInterface
 {
     /**

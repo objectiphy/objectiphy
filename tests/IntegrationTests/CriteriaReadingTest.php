@@ -25,7 +25,7 @@ class CriteriaReadingTest extends IntegrationTestBase
      */
     public function testReadingDefault()
     {
-        $this->testName = 'Critiera Reading default';
+        $this->testName = 'Critiera Reading Default' . $this->getCacheSuffix();
         $this->doTests();
     }
 
@@ -34,7 +34,7 @@ class CriteriaReadingTest extends IntegrationTestBase
      */
     public function testReadingMixed()
     {
-        $this->testName = 'Criteria Reading mixed';
+        $this->testName = 'Criteria Reading Mixed' . $this->getCacheSuffix();
         $this->objectRepository->setConfigOption('eagerLoadToOne', true);
         $this->objectRepository->setConfigOption('eagerLoadToMany', false);
 
@@ -46,7 +46,7 @@ class CriteriaReadingTest extends IntegrationTestBase
      */
     public function testReadingLazy()
     {
-        $this->testName = 'Criteria Reading lazy';
+        $this->testName = 'Criteria Reading Lazy' . $this->getCacheSuffix();
         $this->objectRepository->setConfigOption('eagerLoadToOne', false);
         $this->objectRepository->setConfigOption('eagerLoadToMany', false);
 
@@ -58,10 +58,36 @@ class CriteriaReadingTest extends IntegrationTestBase
      */
     public function testReadingEager()
     {
-        $this->testName = 'Criteria Reading eager';
+        $this->testName = 'Criteria Reading Eager' . $this->getCacheSuffix();
         $this->objectRepository->setConfigOption('eagerLoadToOne', true);
         $this->objectRepository->setConfigOption('eagerLoadToMany', true);
         $this->doTests();
+    }
+
+    //Repeat with cache turned off
+
+    public function testReadingDefaultNoCache()
+    {
+        $this->disableCache();
+        $this->testReadingDefault();
+    }
+
+    public function testReadingMixedNoCache()
+    {
+        $this->disableCache();
+        $this->testReadingMixed();
+    }
+
+    public function testReadingLazyNoCache()
+    {
+        $this->disableCache();
+        $this->testReadingLazy();
+    }
+
+    public function testReadingEagerNoCache()
+    {
+        $this->disableCache();
+        $this->testReadingEager();
     }
 
     protected function doTests()
@@ -311,7 +337,6 @@ class CriteriaReadingTest extends IntegrationTestBase
         $this->assertEquals('Eleanor Shellstrop', $parent->getName());
         $this->assertEquals('Chidi', $parent->child->getName());
         $this->assertEquals(134, $parent->child->getHeight());
-        $customRepository->clearCache();
 
         //Removed support for overrides for now...
 

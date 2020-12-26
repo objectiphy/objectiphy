@@ -8,6 +8,7 @@ use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
 use Objectiphy\Objectiphy\Contract\QueryPartInterface;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Yields something that can be resolved to a value - typically just a property path, but can also 
  * accommodate a function - eg. COUNT, AVG(`someOtherToManyPropery`), CONCAT(`property`, '_', `otherProperty`).
  * Might update this later to support sub queries, but that's a bit ambitious for now.

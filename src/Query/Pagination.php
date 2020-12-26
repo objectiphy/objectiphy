@@ -6,18 +6,21 @@ namespace Objectiphy\Objectiphy\Query;
 
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 
+/**
+ * @author Russell Walker <rwalker.php@gmail.com>
+ */
 class Pagination implements PaginationInterface
 {
-    const DEFAULT_RECORDS_PER_PAGE = 50;
+    public const DEFAULT_RECORDS_PER_PAGE = 50;
 
     /** @var int */
-    private $recordsPerPage;
+    private int $recordsPerPage;
     /** @var int */
-    private $pageNo;
+    private int $pageNo;
     /** @var int */
-    private $noOfPages;
+    private int $noOfPages;
     /** @var int */
-    private $totalRecords;
+    private int $totalRecords;
 
     public function __construct($recordsPerPage = null, $pageNo = 1)
     {
@@ -30,7 +33,7 @@ class Pagination implements PaginationInterface
      * This can then be used to calculate how many pages of results there are.
      * @param int $totalRecords Total number of records available.
      */
-    public function setTotalRecords($totalRecords): void
+    public function setTotalRecords(int $totalRecords): void
     {
         $this->totalRecords = intval($totalRecords);
         $this->calculateNoOfPages();

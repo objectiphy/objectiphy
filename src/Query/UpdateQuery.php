@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Query;
 
-use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Contract\UpdateQueryInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Query to update one or more values in the database.
  */
 class UpdateQuery extends Query implements UpdateQueryInterface

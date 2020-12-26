@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Traits;
 
+/**
+ * @author Russell Walker <rwalker.php@gmail.com>
+ */
 trait TransactionTrait
 {
     /**

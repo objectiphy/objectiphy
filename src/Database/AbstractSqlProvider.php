@@ -9,14 +9,14 @@ use Objectiphy\Objectiphy\Contract\SqlProviderInterface;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Base class for SQL providers.
- * @package Objectiphy\Objectiphy\Database
  */
 class AbstractSqlProvider implements SqlProviderInterface
 {
     protected array $params = [];
     protected array $queryOverrides = [];
-    protected $sql = '';
+    protected string $sql = '';
     protected MappingCollection $mappingCollection;
     protected DataTypeHandlerInterface $dataTypeHandler;
 
@@ -32,7 +32,6 @@ class AbstractSqlProvider implements SqlProviderInterface
 
     /**
      * Return the parameter values to bind to the SQL statement.
-     * @param int|null $index Index of the SQL query.
      * @return array Parameter key/value pairs to bind to the prepared statement.
      */
     public function getQueryParams(): array
@@ -49,11 +48,11 @@ class AbstractSqlProvider implements SqlProviderInterface
 
     /**
      * Replace prepared statement parameters with actual values (for debugging output only, not for execution!)
-     * @param string $query Parameterised SQL string.
+     * @param string $queryString Parameterised SQL string.
      * @param array $params Parameter values to replace tokens with.
      * @return string SQL string with values instead of parameters.
      */
-    public function replaceTokens($queryString, $params): string
+    public function replaceTokens(string $queryString, array $params): string
     {
         if (count($params)) {
             foreach (array_reverse($params) as $key => $value) { //Don't want to replace param_10 with column name for param_1 followed by a zero!

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * @todo Make this better. Possibly create objects in a generic way (autowiring), or split into smaller factories.
+ * RSW: TODO: Make this better. Possibly create objects in a generic way (kinda like autowiring), or split into smaller factories.
  */
 declare(strict_types=1);
 
@@ -39,7 +39,6 @@ use Objectiphy\Objectiphy\Orm\ObjectRemover;
 use Objectiphy\Objectiphy\Orm\ObjectUnbinder;
 
 /**
- * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
 class RepositoryFactory
@@ -77,7 +76,7 @@ class RepositoryFactory
         $this->configOptions = $configOptions;
     }
 
-    public function reset()
+    public function reset(): void
     {
         unset($this->mappingProvider);
         unset($this->sqlSelector);
@@ -159,7 +158,7 @@ class RepositoryFactory
         return $this->repositories[$entityClassName][$configHash];
     }
 
-    protected final function getObjectMapper(): ObjectMapper
+    final protected function getObjectMapper(): ObjectMapper
     {
         if (!isset($this->objectMapper)) {
             $this->objectMapper = $this->createObjectMapper();
@@ -168,7 +167,7 @@ class RepositoryFactory
         return $this->objectMapper;
     }
 
-    protected final function getEntityTracker(): EntityTracker
+    final protected function getEntityTracker(): EntityTracker
     {
         if (!isset($this->entityTracker)) {
             $this->entityTracker = $this->createEntityTracker();
@@ -177,7 +176,7 @@ class RepositoryFactory
         return $this->entityTracker;
     }
 
-    protected final function getStorage(): StorageInterface
+    final protected function getStorage(): StorageInterface
     {
         if (!isset($this->storage)) {
             $this->storage = $this->createStorage();
@@ -186,7 +185,7 @@ class RepositoryFactory
         return $this->storage;
     }
 
-    protected final function getProxyFactory(?ConfigOptions $configOptions): ProxyFactory
+    final protected function getProxyFactory(?ConfigOptions $configOptions): ProxyFactory
     {
         if (!isset($this->proxyFactory)) {
             $this->proxyFactory = $this->createProxyFactory($configOptions);
@@ -195,12 +194,12 @@ class RepositoryFactory
         return $this->proxyFactory;
     }
     
-    protected final function createObjectMapper(): ObjectMapper
+    final protected function createObjectMapper(): ObjectMapper
     {
         return new ObjectMapper($this->getMappingProvider(), $this->createNameResolver());
     }
 
-    protected final function createObjectFetcher(?ConfigOptions $configOptions = null): ObjectFetcher
+    final protected function createObjectFetcher(?ConfigOptions $configOptions = null): ObjectFetcher
     {
         $sqlSelector = $this->getSqlSelector();
         $objectMapper = $this->getObjectMapper();
@@ -211,23 +210,23 @@ class RepositoryFactory
         return new ObjectFetcher($sqlSelector, $objectMapper, $objectBinder, $storage, $entityTracker);
     }
 
-    protected final function createNameResolver(): NameResolver
+    final protected function createNameResolver(): NameResolver
     {
         return new NameResolver();
     }
 
-    protected final function createObjectPersister(): ObjectPersister
+    final protected function createObjectPersister(): ObjectPersister
     {
         $sqlUpdater = $this->getSqlUpdater();
         $objectMapper = $this->getObjectMapper();
         $objectUnbinder = $this->createObjectUnbinder();
-        $objectFetcher = $this->createObjectFetcher(); //Needs a separate copy so the find options don't get polluted
         $storage = $this->getStorage();
         $entityTracker = $this->getEntityTracker();
+
         return new ObjectPersister($sqlUpdater, $objectMapper, $objectUnbinder, $storage, $entityTracker);
     }
 
-    protected final function createObjectRemover(): ObjectRemover
+    final protected function createObjectRemover(): ObjectRemover
     {
         $objectMapper = $this->getObjectMapper();
         $sqlDeleter = $this->getSqlDeleter();
@@ -238,43 +237,49 @@ class RepositoryFactory
         return new ObjectRemover($objectMapper, $sqlDeleter, $storage, $objectFetcher, $entityTracker);
     }
 
-    protected final function createEntityTracker(): EntityTracker
+    final protected function createEntityTracker(): EntityTracker
     {
         return new EntityTracker();
     }
 
-    protected final function createObjectBinder(?ConfigOptions $configOptions = null): ObjectBinder
+    final protected function createObjectBinder(?ConfigOptions $configOptions = null): ObjectBinder
     {
         $entityFactory = $this->createEntityFactory($configOptions);
         $entityTracker = $this->getEntityTracker();
         $dataTypeHandler = $this->getDataTypeHandlerMySql();
+
         return new ObjectBinder($this, $entityFactory, $entityTracker, $dataTypeHandler);
     }
 
-    protected final function createObjectUnbinder(): ObjectUnbinder
+    final protected function createObjectUnbinder(): ObjectUnbinder
     {
         $dataTypeHandler = $this->getDataTypeHandlerMySql();
         $objectMapper = $this->getObjectMapper();
         return new ObjectUnbinder($this->getEntityTracker(), $dataTypeHandler, $objectMapper);
     }
     
-    protected final function createEntityFactory(?ConfigOptions $configOptions = null): EntityFactoryInterface
+    final protected function createEntityFactory(?ConfigOptions $configOptions = null): EntityFactoryInterface
     {
         return new EntityFactory($this->createProxyFactory($configOptions));
     }
 
-    protected final function createProxyFactory(?ConfigOptions $configOptions = null): ProxyFactory
+    /**
+     * @param ConfigOptions|null $configOptions
+     * @return ProxyFactory
+     * @throws ObjectiphyException
+     */
+    final protected function createProxyFactory(?ConfigOptions $configOptions = null): ProxyFactory
     {
         $configOptions ??= $this->configOptions;
         return new ProxyFactory($configOptions->productionMode, $configOptions->cacheDirectory);
     }
     
-    protected final function createStorage(): StorageInterface
+    final protected function createStorage(): StorageInterface
     {
         return new PdoStorage($this->pdo);
     }
 
-    protected final function createSqlUpdater(): SqlUpdaterInterface
+    final protected function createSqlUpdater(): SqlUpdaterInterface
     {
         $dataTypeHandler = $this->getDataTypeHandlerMySql();
         $joinProvider = $this->getJoinProviderMySql();
@@ -289,6 +294,7 @@ class RepositoryFactory
      * @param string|null $entityClassName
      * @return string Name of repository class to use.
      * @throws ObjectiphyException
+     * @throws \ReflectionException
      */
     private function getRepositoryClassName(
         ?string $repositoryClassName = null, 
@@ -302,7 +308,7 @@ class RepositoryFactory
             $classMapping = $this->getMappingProvider()->getTableMapping($entityReflectionClass, $mappingFound);
             $repositoryClassName = $classMapping->repositoryClassName;
         }
-        $useCustomClass = $this->validateCustomRepository($repositoryClassName, $mappingFound);
+        $useCustomClass = $this->validateCustomRepository($repositoryClassName, $entityClassName, $mappingFound);
         $repositoryClassName = $useCustomClass ? $repositoryClassName : ObjectRepository::class;
 
         return '\\' . ltrim($repositoryClassName, '\\');
@@ -317,8 +323,18 @@ class RepositoryFactory
         return $entityClassName ? true : false;
     }
 
-    private function validateCustomRepository(string $repositoryClassName, bool $wasMapped): bool
-    {
+    /**
+     * @param string $repositoryClassName
+     * @param string $entityClassName
+     * @param bool $wasMapped
+     * @return bool
+     * @throws ObjectiphyException
+     */
+    private function validateCustomRepository(
+        string $repositoryClassName,
+        string $entityClassName,
+        bool $wasMapped
+    ): bool {
         if ($repositoryClassName && !class_exists($repositoryClassName)) {
             if ($wasMapped) {
                 $errorMessage = sprintf(
@@ -364,7 +380,8 @@ class RepositoryFactory
         if (!isset($this->sqlDeleter)) {
             $joinProvider = $this->getJoinProviderMySql();
             $whereProvider = $this->getWhereProviderMySql();
-            $this->sqlDeleter = new SqlDeleterMySql($joinProvider, $whereProvider);
+            $dataTypeHandler = $this->getDataTypeHandlerMySql();
+            $this->sqlDeleter = new SqlDeleterMySql($dataTypeHandler, $joinProvider, $whereProvider);
         }
 
         return $this->sqlDeleter;

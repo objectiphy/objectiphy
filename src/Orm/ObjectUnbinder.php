@@ -6,8 +6,12 @@ namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
+use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
+/**
+ * @author Russell Walker <rwalker.php@gmail.com>
+ */
 final class ObjectUnbinder
 {
     private MappingCollection $mappingCollection;
@@ -42,7 +46,7 @@ final class ObjectUnbinder
      * @param array $pkValues
      * @param bool $processChildren
      * @return array Values to be updated, keyed on property name
-     * @throws \Objectiphy\Objectiphy\Exception\ObjectiphyException
+     * @throws ObjectiphyException
      * @throws \ReflectionException
      */
     public function unbindEntityToRow(object $entity, array $pkValues = [], bool $processChildren = false): array
@@ -69,8 +73,8 @@ final class ObjectUnbinder
 
     /**
      * If value is an entity, extract the primary key value, otherwise just return the value
-     * @param $value
-     * @return \DateTimeInterface|mixed|null
+     * @param mixed $value
+     * @return mixed
      */
     public function unbindValue($value)
     {

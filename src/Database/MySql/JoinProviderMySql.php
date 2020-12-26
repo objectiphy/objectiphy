@@ -8,14 +8,13 @@ use Objectiphy\Objectiphy\Contract\JoinPartInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
 use Objectiphy\Objectiphy\Exception\MappingException;
-use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\CriteriaGroup;
 use Objectiphy\Objectiphy\Query\JoinExpression;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Provider of SQL for joins on MySQL
- * @package Objectiphy\Objectiphy\Database\MySql
  */
 class JoinProviderMySql extends AbstractSqlProvider
 {
@@ -27,12 +26,12 @@ class JoinProviderMySql extends AbstractSqlProvider
     private array $persistenceNames = [];
 
     /**
+     * @param QueryInterface $query
+     * @param array $objectNames
+     * @param array $persistenceNames
      * @return string The join SQL for object relationships.
-     * @throws Exception\CriteriaException
-     * @throws MappingException
-     * @throws \ReflectionException
      */
-    public function getJoins(QueryInterface $query, array $objectNames, array $persistenceNames)
+    public function getJoins(QueryInterface $query, array $objectNames, array $persistenceNames): string
     {
         $this->initialise($objectNames, $persistenceNames);
         foreach ($query->getJoins() as $joinPart) {
@@ -48,7 +47,7 @@ class JoinProviderMySql extends AbstractSqlProvider
         return $this->sql;
     }
 
-    private function initialise(array $objectNames, array $persistenceNames)
+    private function initialise(array $objectNames, array $persistenceNames): void
     {
         $this->sql = '';
         $this->joiner = null;
@@ -59,7 +58,7 @@ class JoinProviderMySql extends AbstractSqlProvider
         $this->persistenceNames = $persistenceNames;
     }
 
-    private function processJoinExpression(JoinExpression $joinPart)
+    private function processJoinExpression(JoinExpression $joinPart): void
     {
         $this->currentJoinAlias = $joinPart->joinAlias;
         $this->sql .= " " . ($joinPart->type ?: 'LEFT') . " JOIN ";
@@ -68,13 +67,13 @@ class JoinProviderMySql extends AbstractSqlProvider
         $this->joiner = null;
     }
 
-    private function processCriteriaGroup(CriteriaGroup $joinPart)
+    private function processCriteriaGroup(CriteriaGroup $joinPart): void
     {
         $this->removeJoiner = $joinPart->type != CriteriaGroup::GROUP_TYPE_END;
         $this->sql .= ' ' . str_replace($this->objectNames, $this->persistenceNames, (string) $joinPart);
     }
 
-    private function processCriteriaExpression(CriteriaExpression $joinPart)
+    private function processCriteriaExpression(CriteriaExpression $joinPart): void
     {
         $this->joiner = $this->joiner ? $joinPart->joiner : " ON ";
 
@@ -104,11 +103,19 @@ class JoinProviderMySql extends AbstractSqlProvider
         } else {
             $this->sql .= ' ' . $joinPart->toString($this->params);
         }
-        $removeJoiner = false;
     }
 
-    private function getJoinColumns(JoinPartInterface $joinPart, array &$sourceJoinColumns, array &$targetJoinColumns)
-    {
+    /**
+     * @param JoinPartInterface $joinPart
+     * @param array $sourceJoinColumns
+     * @param array $targetJoinColumns
+     * @throws MappingException
+     */
+    private function getJoinColumns(
+        JoinPartInterface $joinPart,
+        array &$sourceJoinColumns,
+        array &$targetJoinColumns
+    ): void {
         $joinPartPropertyMapping = $this->mappingCollection->getPropertyMapping(
             $joinPart->property->getPropertyPath()
         );

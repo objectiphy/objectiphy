@@ -6,17 +6,16 @@ namespace Objectiphy\Objectiphy\MappingProvider;
 
 use Doctrine\ORM\Mapping\Embedded;
 use Doctrine\ORM\Mapping\JoinColumn;
-use Doctrine\ORM\Mapping\OrderBy;
 use Objectiphy\Annotations\AnnotationReaderInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
+use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Mapping\Column;
 use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Mapping\Table;
 
 /**
- * A mapping provider decorator, which populates mapping information using Doctrine annotations.
- * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
+ * A mapping provider decorator, which populates mapping information using Doctrine annotations.
  */
 class MappingProviderDoctrineAnnotation implements MappingProviderInterface
 {
@@ -36,6 +35,8 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
      * @param \ReflectionClass $reflectionClass
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      * @return Table
+     * @throws MappingException
+     * @throws \Throwable
      */
     public function getTableMapping(\ReflectionClass $reflectionClass, bool &$wasMapped = null): Table
     {
@@ -63,6 +64,8 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
      * @param \ReflectionProperty $reflectionProperty
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      * @return Column
+     * @throws MappingException
+     * @throws \Throwable
      */
     public function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Column
     {
@@ -83,6 +86,8 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
      * @param \ReflectionProperty $reflectionProperty
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      * @return Relationship
+     * @throws MappingException
+     * @throws \Throwable
      */
     public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Relationship
     {
@@ -134,7 +139,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
     /**
      * Read a Doctrine Id annotation.
      * @param \ReflectionProperty $reflectionProperty
-     * @param object $column
+     * @param object $columnOrRelationship
      * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
      */
     private function populateFromDoctrineId(

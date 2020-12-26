@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Config\ConfigOptions;
-use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
@@ -16,7 +15,6 @@ use Objectiphy\Objectiphy\Factory\EntityFactory;
 use Objectiphy\Objectiphy\Factory\RepositoryFactory;
 
 /**
- * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
 final class ObjectBinder
@@ -79,8 +77,7 @@ final class ObjectBinder
         $entity = $this->entityFactory->createEntity($entityClassName, $requiresProxy);
         $propertiesMapped = $this->bindScalarProperties($entity, $row, $parents);
         if ($propertiesMapped && !$this->getEntityFromLocalCache($entityClassName, $entity)) {
-            $relationalPropertiesMapped = $this->bindRelationalProperties($entity, $row, $parents, $parentEntity);
-            $propertiesMapped = $propertiesMapped ?: $relationalPropertiesMapped;
+            $this->bindRelationalProperties($entity, $row, $parents, $parentEntity);
             $this->entityTracker->storeEntity($entity, $this->mappingCollection->getPrimaryKeyValues($entity));
         }
 
@@ -139,6 +136,7 @@ final class ObjectBinder
      * @param array $row
      * @param array $parents
      * @return bool
+     * @throws \ReflectionException
      */
     private function bindScalarProperties(object $entity, array $row, array $parents): bool
     {
@@ -216,10 +214,8 @@ final class ObjectBinder
 
         if ($entity instanceof EntityProxyInterface && $value instanceof \Closure) {
             $entity->setLazyLoader($propertyMapping->propertyName, $value);
-        } else {
-            if ($this->dataTypeHandler->toObjectValue($value, $type, $format)) {
-                ObjectHelper::setValueOnObject($entity, $propertyMapping->propertyName, $value);
-            }
+        } elseif ($this->dataTypeHandler->toObjectValue($value, $type, $format)) {
+            ObjectHelper::setValueOnObject($entity, $propertyMapping->propertyName, $value);
         }
     }
 
@@ -233,8 +229,8 @@ final class ObjectBinder
     private function createLateBoundClosure(PropertyMapping $propertyMapping, array $row)
     {
         $mappingCollection = $this->mappingCollection;
-        $configOptions = $this->configOptions;
-        $closure = function() use ($mappingCollection, $configOptions, $propertyMapping, $row) {
+        $configOptions = clone($this->configOptions);
+        return function() use ($mappingCollection, $configOptions, $propertyMapping, $row) {
             //Get the repository
             $result = null;
             $className = $propertyMapping->getChildClassName();
@@ -245,6 +241,9 @@ final class ObjectBinder
                 $configOptions,
                 true
             );
+
+            //We have to allow the cache, otherwise we get recursion - cache will have been cleared before the parent was fetched
+            $repository->setConfigOption(ConfigOptions::DISABLE_ENTITY_CACHE, false);
 
             //Work out what to search for
             $usePrimaryKey = false;
@@ -299,7 +298,7 @@ final class ObjectBinder
             }
 
             //Do the search
-            if ($query && $query->getWhere()) {
+            if (!empty($query) && $query->getWhere()) {
                 if ($propertyMapping->relationship->isToOne()) {
                     if ($usePrimaryKey) {
                         $result = $repository->find($query->getWhere()[0]->value);
@@ -315,7 +314,5 @@ final class ObjectBinder
 
             return $result;
         };
-
-        return $closure;
     }
 }

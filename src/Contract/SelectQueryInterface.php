@@ -9,8 +9,8 @@ use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Like an SQL query, but with expressions relating to objects and properties.
- * @package Objectiphy\Objectiphy\Contract
  */
 interface SelectQueryInterface extends QueryInterface
 {
@@ -22,25 +22,25 @@ interface SelectQueryInterface extends QueryInterface
 
     public function getFrom(): string;
 
-    public function setGroupBy(FieldExpression ...$fields);
+    public function setGroupBy(FieldExpression ...$fields): void;
 
     public function getGroupBy(): array;
 
-    public function setHaving(CriteriaExpression ...$critiera);
+    public function setHaving(CriteriaExpression ...$criteria): void;
 
     public function getHaving(): array;
 
-    public function setOrderBy(FieldExpression ...$fields);
+    public function setOrderBy(FieldExpression ...$fields): void;
 
     public function getOrderBy(): array;
 
-    public function setLimit(int $limit);
+    public function setLimit(int $limit): void;
 
     public function getLimit(): ?int;
 
-    public function setOffset(int $offset);
+    public function setOffset(int $offset): void;
 
     public function getOffset(): ?int;
 
-    public function finalise(MappingCollection $mappingCollection, ?string $className = null);
+    public function finalise(MappingCollection $mappingCollection, ?string $className = null): void;
 }

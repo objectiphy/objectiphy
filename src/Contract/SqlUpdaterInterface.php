@@ -5,18 +5,18 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Contract;
 
 use Objectiphy\Objectiphy\Config\SaveOptions;
-use Objectiphy\Objectiphy\Mapping\Table;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * For an object that provides SQL for a update query.
- * @package Objectiphy\Objectiphy\Contract
  */
 interface SqlUpdaterInterface extends SqlProviderInterface
 {
     /**
      * Set runtime configuration for a find query.
+     * @param SaveOptions $options
      */
-    public function setSaveOptions(SaveOptions $saveOptions): void;
+    public function setSaveOptions(SaveOptions $options): void;
 
     /**
      * Get the SQL necessary to perform the insert.
@@ -33,13 +33,4 @@ interface SqlUpdaterInterface extends SqlProviderInterface
      * @return string A query to execute for updating the record(s).
      */
     public function getUpdateSql(UpdateQueryInterface $query, bool $replaceExisting = false): string;
-
-    /**
-     * Get the SQL queries necessary to replace the given row record.
-     * @param Table $table Table whose rows are being replaced.
-     * @param array $row Row of data to update.
-     * @param array $pkValues Value of primary key for record to update.
-     * @return string[] An array of queries to execute for updating the entity.
-     */
-    public function getReplaceSql(Table $table, array $row, array $pkValues): array;
 }

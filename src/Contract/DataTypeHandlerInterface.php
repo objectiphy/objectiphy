@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Contract;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Convert values between object representations and persistence representations
  * (eg. \DateTime to string and vice-versa).
  * @package Objectiphy\Objectiphy\Contract
@@ -23,7 +24,7 @@ interface DataTypeHandlerInterface
     /**
      * Convert the given value to a format acceptable to the persistence layer (eg. MySql).
      * @param mixed &$value The value to convert.
-     * @param string $dataType Optionally specify one of the data type constants or a class name.
+     * @param string|null $dataType Optionally specify one of the data type constants or a class name.
      * @param string $format Optionally specify a format string if applicable to the data type.
      * @return bool Whether or not the value was successfully converted.
      */
@@ -32,9 +33,8 @@ interface DataTypeHandlerInterface
     /**
      * Convert the given value to a format acceptable to a PHP object (eg. from a date string to a \DateTime)
      * @param mixed &$value The value to convert.
-     * @param string $dataType Optionally specify one of the data type constants or a class name.
-     * @param string $format Optionally specify a format string if applicable to the data type.
-     * @param string $format If the data type requires a format (eg. datetimestring), specify it here.
+     * @param string|null $dataType Optionally specify one of the data type constants or a class name.
+     * @param string|null $format If the data type requires a format (eg. datetimestring), specify it here.
      * @return bool Whether or not the value was successfully converted.
      */
     public function toObjectValue(&$value, ?string $dataType = null, ?string $format = null): bool;

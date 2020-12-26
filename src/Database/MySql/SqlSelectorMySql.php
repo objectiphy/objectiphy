@@ -5,47 +5,23 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Database\MySql;
 
 use Objectiphy\Objectiphy\Config\FindOptions;
-use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
-use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
-use Objectiphy\Objectiphy\Exception\QueryException;
-use Objectiphy\Objectiphy\Mapping\MappingCollection;
-use Objectiphy\Objectiphy\Mapping\PropertyMapping;
-use Objectiphy\Objectiphy\Mapping\Table;
-use Objectiphy\Objectiphy\Query\CriteriaExpression;
-use Objectiphy\Objectiphy\Query\FieldExpression;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Provider of SQL for select queries on MySQL
- * @package Objectiphy\Objectiphy\Database\MySql
  */
-class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterface
+class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
 {
-    protected array $objectNames = [];
-    protected array $persistenceNames = [];
-    protected array $aliases = [];
-
     private bool $disableMySqlCache = false;
     private FindOptions $options;
-    private SelectQueryInterface $query;
-    private JoinProviderMySql $joinProvider;
-    private WhereProviderMySql $whereProvider;
-
-    public function __construct(
-        DataTypeHandlerInterface $dataTypeHandler, 
-        JoinProviderMySql $joinProvider, 
-        WhereProviderMySql $whereProvider
-    ) {
-        parent::__construct($dataTypeHandler);
-        $this->joinProvider = $joinProvider;
-        $this->whereProvider = $whereProvider;
-    }
 
     /**
      * These are options that are likely to change on each call (unlike config options).
+     * @param FindOptions $options
      */
     public function setFindOptions(FindOptions $options): void
     {
@@ -66,6 +42,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
 
     /**
      * Any config options that the fetcher needs to know about are set here.
+     * @param bool $disableMySqlCache
      */
     public function setConfigOptions(bool $disableMySqlCache = false): void
     {
@@ -74,7 +51,10 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
 
     /**
      * Get the SQL query necessary to select the records that will be used to hydrate the given entity.
+     * @param SelectQueryInterface $query
      * @return string The SQL query to execute.
+     * @throws MappingException
+     * @throws \Exception
      */
     public function getSelectSql(SelectQueryInterface $query): string
     {
@@ -115,13 +95,9 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
 
     /**
      * @return string The SELECT part of the SQL query.
-     * @throws Exception\CriteriaException
-     * @throws MappingException
-     * @throws \ReflectionException
      */
     public function getSelect(): string
     {
-        $this->countWithoutGroups = false;
         $sql = $this->getCountSql();
         
         if (!$sql) {
@@ -143,17 +119,17 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
 
     /**
      * @return string The FROM part of the SQL query.
+     * @throws ObjectiphyException
      */
     public function getFrom(): string
     {
-        $sql = ' FROM ' . $this->replaceNames($this->query->getFrom());
-        return $sql;
+        return ' FROM ' . $this->replaceNames($this->query->getFrom());
     }
 
     /**
+     * @param bool $ignoreCount
      * @return string The SQL string for the GROUP BY clause, if applicable.
-     * @throws MappingException
-     * @throws \ReflectionException
+     * @throws ObjectiphyException
      */
     public function getGroupBy($ignoreCount = false): string
     {
@@ -164,9 +140,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
     /**
      * @return string The SQL string for the HAVING clause, if applicable (used where the criteria involves an
      * aggregate function, either directly in the criteria itself, or by comparing against a property that uses one.
-     * @throws Exception\CriteriaException
-     * @throws MappingException
-     * @throws \ReflectionException
+     * @throws ObjectiphyException
      */
     public function getHaving(): string
     {
@@ -180,8 +154,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
 
     /**
      * @return string The SQL string for the ORDER BY clause.
-     * @throws MappingException
-     * @throws \ReflectionException
+     * @throws ObjectiphyException
      */
     public function getOrderBy(): string
     {
@@ -199,7 +172,6 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
     }
 
     /**
-     * @param array $criteria
      * @return string The SQL string for the LIMIT clause (if using pagination).
      */
     public function getLimit(): string
@@ -216,11 +188,13 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
 
         return $sql;
     }
-    
+
+    /**
+     * @return string The SQL string for the LIMIT offset (if using pagination).
+     */
     public function getOffset(): string
     {
         $sql = '';
-
         if ($this->options->multiple && !$this->options->count) {
             if ($this->query->getOffset() ?? false) {
                 $sql = ' OFFSET ' . $this->query->getOffset();
@@ -232,6 +206,10 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
         return $sql;
     }
 
+    /**
+     * @return string
+     * @throws ObjectiphyException
+     */
     protected function getCountSql(): string
     {
         $sql = '';
@@ -241,11 +219,9 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
             if ($groupBy) {
                 if (!$this->mappingCollection->hasAggregateFunctions() && $groupBy == $baseGroupBy) {
                     $sql .= "SELECT COUNT(DISTINCT " . $groupBy . ") ";
-                    $this->countWithoutGroups = true;
                 } // else: we do the full select, and use it as a sub-query - the count happens outside, in getSelect
             } else {
                 $sql .= "SELECT COUNT(*) ";
-                $this->countWithoutGroups = true;
             }
         }
 
@@ -254,8 +230,7 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
 
     /**
      * @return string SQL string for the GROUP BY clause, base implementation (cannot be overridden).
-     * @throws MappingException
-     * @throws \ReflectionException
+     * @throws ObjectiphyException
      */
     private function baseGroupBy(): string
     {
@@ -270,39 +245,10 @@ class SqlSelectorMySql extends AbstractSqlProvider implements SqlSelectorInterfa
     }
 
     /**
-     * Build arrays of strings to replace and what to replace them with.
-     * @param string $delimiter
+     * @param string $subject
+     * @return string
+     * @throws ObjectiphyException
      */
-    protected function prepareReplacements(
-        MappingCollection $mappingCollection,
-        string $delimiter = '`',
-        $altDelimiter = '|'
-    ): void {
-        $this->sql = '';
-        $this->objectNames = [];
-        $this->persistenceNames = [];
-        $this->aliases = [];
-
-        $propertiesUsed = $this->query->getPropertyPaths();
-        foreach ($propertiesUsed as $propertyPath) {
-            $property = $mappingCollection->getPropertyMapping($propertyPath);
-            if (!$property) {
-                throw new QueryException('Property mapping not found for: ' . $propertyPath);
-            }
-            $this->objectNames[] = '`' . $property->getPropertyPath() . '`';
-            $tableColumnString = $property->getFullColumnName();
-            $this->persistenceNames[] = $this->delimit($tableColumnString, $delimiter);
-            //Use alternative delimiter for aliases so we don't accidentally replace them
-            $this->aliases[] = $this->delimit($property->getFullColumnName(), $altDelimiter)
-                . ' AS ' . $this->delimit($property->getAlias(), $altDelimiter);
-        }
-        $tables = $mappingCollection->getTables();
-        foreach ($tables as $class => $table) {
-            $this->objectNames[] = $class;
-            $this->persistenceNames[] = $this->delimit(str_replace($delimiter, '', $table->name)) ;
-        }
-    }
-
     protected function replaceNames(string $subject): string
     {
         if (!isset($this->objectNames)) {

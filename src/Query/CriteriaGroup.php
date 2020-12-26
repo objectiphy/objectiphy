@@ -8,6 +8,7 @@ use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Represents an opening or closing parenthesis in a group of criteria, starting with either AND or OR.
  * ie. "AND (", "OR (", or ")".
  */

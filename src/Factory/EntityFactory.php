@@ -6,9 +6,9 @@ namespace Objectiphy\Objectiphy\Factory;
 
 use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
+use Objectiphy\Objectiphy\Orm\ObjectHelper;
 
 /**
- * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
 class EntityFactory implements EntityFactoryInterface
@@ -26,6 +26,13 @@ class EntityFactory implements EntityFactoryInterface
         $this->entityFactories[$className] = $entityFactory;
     }
 
+    /**
+     * @param string $className
+     * @param bool $requiresProxy
+     * @return object
+     * @throws \ReflectionException
+     * @throws \Throwable
+     */
     public function createEntity(string $className, bool $requiresProxy = false): object
     {
         $entity = null;
@@ -51,7 +58,8 @@ class EntityFactory implements EntityFactoryInterface
                     $constructorArgs = $constructor->getParameters();
                     foreach ($constructorArgs as $arg) {
                         if (!$arg->isOptional() && method_exists($arg->getType(), 'getName')) {
-                            $type = $arg->getType()->getName();
+                            $reflectionType = $arg->getType();
+                            $type = ObjectHelper::getTypeName($reflectionType);
                             $args[$arg->getName()] = $this->createEntity($type);
                         }
                     }

@@ -14,16 +14,15 @@ use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
-use Objectiphy\Objectiphy\Mapping\Table;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Provider of SQL for update queries on MySQL
- * @package Objectiphy\Objectiphy\Database\MySql
  */
 class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
 {
-    protected $objectNames;
-    protected $persistenceNames;
+    protected array $objectNames;
+    protected array $persistenceNames;
     private SaveOptions $options;
     private JoinProviderMySql $joinProvider;
     private WhereProviderMySql $whereProvider;
@@ -117,14 +116,13 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
         return $sql;
     }
 
-    public function getReplaceSql(Table $table, array $row, array $pkValues): array
-    {
-        // TODO: Implement getReplaceSql() method.
-    }
-
     /**
      * Build arrays of strings to replace and what to replace them with.
+     * @param QueryInterface $query
+     * @param MappingCollection $mappingCollection
      * @param string $delimiter
+     * @param array $parents
+     * @throws QueryException
      */
     protected function prepareReplacements(
         QueryInterface $query,
@@ -135,14 +133,12 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
         $this->sql = '';
         $this->objectNames = [];
         $this->persistenceNames = [];
-        $this->aliases = [];
 
         $propertiesUsed = $query->getPropertyPaths();
         $parentPath = $parents ? implode('.', $parents) . '.' : '';
         foreach ($propertiesUsed as $propertyPath) {
             $property = $mappingCollection->getPropertyMapping($parentPath . $propertyPath);
             if (!$property) {
-                //Need to account for custom join alias...
                 //Just need to keep alias the same and change property name to short column name
                 if ($this->prepareCustomJoinAliasReplacements($propertyPath, $query, $mappingCollection)) {
                     continue;
@@ -189,6 +185,11 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
         return false;
     }
 
+    /**
+     * @param string $subject
+     * @return string
+     * @throws ObjectiphyException
+     */
     protected function replaceNames(string $subject): string
     {
         if (!isset($this->objectNames)) {

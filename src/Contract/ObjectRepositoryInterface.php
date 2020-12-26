@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Contract;
 
-use Marmalade\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Exception\QueryException;
 
@@ -15,14 +14,15 @@ if (interface_exists('\Doctrine\Common\Persistence\ObjectRepository')) {
 }
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Objectiphy repository interface, compatible with Doctrine Repository interface, with additional methods for
  * persistence and other features.
- * @package Objectiphy\Objectiphy
- * @author Russell Walker <rwalker.php@gmail.com>
  */
 interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
 {
     /**
+     * Apply an entire config option set in one go. Typically you would set config options one at a time using
+     * setConfigOption rather than this method.
      * @param ConfigOptions $configOptions
      */
     public function setConfiguration(ConfigOptions $configOptions): void;
@@ -35,19 +35,19 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * @return mixed The previously set value (or default value if not previously set).
      */
     public function setConfigOption(string $optionName, $value);
-    
+
     /**
-     * @return string Name of the parent entity class
+     * @param string $className Name of the parent entity class.
      */
     public function setClassName(string $className): void;
 
     /**
-     * @return string Name of the parent entity class
+     * @return string Name of the parent entity class.
      */
     public function getClassName(): string;
 
     /**
-     * Set a pagination object (to store and supply information about how the results are paginated)
+     * Set a pagination object (to store and supply information about how the results are paginated).
      * @param PaginationInterface
      */
     public function setPagination(PaginationInterface $pagination): void;
@@ -60,39 +60,39 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
     /**
      * Find a single record (and hydrate it as an entity) with the given primary key value. Compatible with the
      * equivalent method in Doctrine.
-     * @param mixed $id Primary key value - for composite keys, can be an array
-     * @return object|array|null
+     * @param mixed $id Primary key value - for composite keys, can be an array.
+     * @return mixed
      */
     public function find($id);
 
     /**
      * Find a single record (and hydrate it as an entity) for the given criteria. Compatible with the equivalent method
      * in Doctrine.
-     * @param array $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
+     * @param array|SelectQueryInterface $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
-     * @return object|array|null
+     * @return mixed
      */
-    public function findOneBy(array $criteria = []);
+    public function findOneBy($criteria = []);
 
     /**
-     * Return the latest record from a group
-     * @param array $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
+     * Return the latest record from a group.
+     * @param array|SelectQueryInterface $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @param string|null $commonProperty Property on root entity whose value you want to group by (see also the
      * setCommonProperty method).
      * @param string|null $recordAgeIndicator Fully qualified database column or expression that determines record age
      * (see also the setCommonProperty method).
-     * @return object|array|null
+     * @return mixed
      */
     public function findLatestOneBy(
-        array $criteria = [], 
+        $criteria = [],
         ?string $commonProperty = null,
         ?string $recordAgeIndicator = null
     );
 
     /**
-     * Return the latest record from each group
-     * @param array $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
+     * Return the latest record from each group.
+     * @param array|SelectQueryInterface $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @param string|null $commonProperty Property on root entity whose value you want to group by (see also the
      * setCommonProperty method).
@@ -102,24 +102,24 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
      * child object, but make sure the property you use has a unique value in the result set, otherwise some records
      * will be lost).
-     * @param boolean $multiple For internal use (when this method is called by the findLatestOneBy method).
-     * @param boolean $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
+     * @param bool $multiple For internal use (when this method is called by the findLatestOneBy method).
+     * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
      * set(for streaming large amounts of data).
-     * @return iterable
+     * @return mixed
      */
     public function findLatestBy(
-        array $criteria, 
+        $criteria,
         ?string $commonProperty = null, 
         ?string $recordAgeIndicator = null, 
         ?string $keyProperty = null, 
         bool $multiple = true, 
         bool $fetchOnDemand = false
-    ): ?iterable;
+    );
 
     /**
      * Find all records that match the given criteria (and hydrate them as entities). Compatible with the equivalent
      * method in Doctrine.
-     * @param array $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
+     * @param array|SelectQueryInterface $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @param array|null $orderBy Array of properties and optionally sort directions (eg. ['child.name'=>'DESC',
      * 'date']).
@@ -129,42 +129,43 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
      * child object, but make sure the property you use has a unique value in the result set, otherwise some records
      * will be lost).
-     * @param boolean $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
+     * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
      * set(for streaming large amounts of data).
-     * @return array|object|null
+     * @return mixed
      */
     public function findBy(
-        array $criteria, 
+        $criteria,
         ?array $orderBy = null, 
         $limit = null,
         $offset = null,
         ?string $keyProperty = null, 
         bool $fetchOnDemand = false
-    ): ?iterable;
+    );
 
     /**
      * Alias for findBy but automatically sets the $fetchOnDemand flag to true and avoids needing to supply null values 
      * for the arguments that are not applicable (findBy thus remains compatible with Doctrine).
-     * @param array $criteria
+     * @param array|SelectQueryInterface $criteria
      * @param array|null $orderBy
-     * @return array|null
+     * @return iterable
      */
     public function findOnDemandBy(
-        array $criteria, 
+        $criteria,
         ?array $orderBy = null
     ): ?iterable;
 
     /**
      * Find all records. Compatible with the equivalent method in Doctrine.
+     * @param array|null $orderBy
      * @param string|null $keyProperty If you want the resulting array to be associative, based on a value in the
      * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
      * child object, but make sure the property you use has a unique value in the result set, otherwise some records
      * will be lost).
-     * @param boolean $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
+     * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
      * set(for streaming large amounts of data).
-     * @return array|null
+     * @return mixed
      */
-    public function findAll(?array $orderBy = null, ?string $keyProperty = null, bool $fetchOnDemand = false): ?iterable;
+    public function findAll(?array $orderBy = null, ?string $keyProperty = null, bool $fetchOnDemand = false);
 
     /**
      * Insert or update the supplied entity.
@@ -201,45 +202,48 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
    /**
      * Hard delete an entity (and cascade to children, if applicable).
      * @param object $entity The entity to delete.
-     * @param boolean $disableCascade Whether or not to suppress cascading deletes (deletes will only normally be
+     * @param bool $disableCascade Whether or not to suppress cascading deletes (deletes will only normally be
      * cascaded if the mapping definition explicitly requires it, but you can use this flag to override that).
-     * @param boolean $exceptionIfDisabled Whether or not to barf if deletes are disabled (probably only useful for
-     * integration or unit tests)
+     * @param bool $exceptionIfDisabled Whether or not to throw an exception if deletes have been disabled. If false,
+     * it will just silently return zero records affected (probably only useful for integration or unit tests).
      * @return int Number of records affected
      * @throws \Exception
      */
     public function deleteEntity(object $entity, $disableCascade = false, $exceptionIfDisabled = true): int;
-    
+
     /**
      * Hard delete multiple entities (and cascade to children, if applicable).
-     * @param array|\Traversable $entities The entities to delete.
-     * @param boolean $disableCascade Whether or not to suppress cascading deletes (deletes will only normally be
+     * @param iterable $entities The entities to delete.
+     * @param bool $disableCascade Whether or not to suppress cascading deletes (deletes will only normally be
      * cascaded if the mapping definition explicitly requires it, but you can use this flag to override that).
-     * @return int Number of records affected
+     * @param bool $exceptionIfDisabled Whether or not to throw an exception if deletes have been disabled. If false,
+     * it will just silently return zero records affected (probably only useful for integration or unit tests).
+     * @return int Number of records affected.
      * @throws \Exception
      */
     public function deleteEntities(
-        \Traversable $entities,
+        iterable $entities,
         bool $disableCascade = false,
         bool $exceptionIfDisabled = true
     ): int;
 
     /**
-     * Execute a select, insert, update, or delete query directly
+     * Execute a select, insert, update, or delete query directly.
      * @param QueryInterface $query
      * @param int $insertCount Number of rows inserted.
      * @param int $updateCount Number of rows updated.
-     * @return int|object|array|null Query results, or total number of rows affected.
+     * @param int $deleteCount Number of rows deleted.
+     * @return int|object|iterable|null Query results, or total number of rows affected.
      * @throws QueryException
      */
-    public function executeQuery(QueryInterface $query, int &$insertCount = 0, int &$updateCount = 0): ?int;
+    public function executeQuery(QueryInterface $query, int &$insertCount = 0, int &$updateCount = 0, int &$deleteCount = 0);
 
     /**
      * Create a proxy class for an object so that it does not have to be fully hydrated just to save it as a child of
      * another entity.
      * @param string $className Name of the class to proxy.
-     * @param mixed $id Value of the primary key for the instance of the class this reference will represent 
-     * (can be an array if there is a composite primary key).
+     * @param array $pkValues Value of the primary key for the instance of the class this reference will represent,
+     * keyed by property name.
      * @param array $constructorParams
      * @return ObjectReferenceInterface|null The resulting object will extend the class name specified, as well as
      * implementing the ObjectReferenceInterface. Returns null if the class does not exist.
@@ -251,7 +255,7 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
     ): ?ObjectReferenceInterface;
 
     /**
-     * @return Explanation Information about how the latest result was obtained.
+     * @return ExplanationInterface Information about how the latest result was obtained.
      */
     public function getExplanation(): ?ExplanationInterface;
 

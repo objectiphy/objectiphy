@@ -10,19 +10,18 @@ use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Mapping information to describe how a property relates to a property on another class, or a value from a table other
  * than the one associated with the class it belongs to.
- * @package Objectiphy\Objectiphy
- * @author Russell Walker <rwalker.php@gmail.com>
  */
 class Relationship
 {
-    const UNDEFINED = 'undefined';
-    const SCALAR = 'scalar';
-    const ONE_TO_ONE = 'one_to_one';
-    const ONE_TO_MANY = 'one_to_many';
-    const MANY_TO_ONE = 'many_to_one';
-    const MANY_TO_MANY = 'many_to_many';
+    public const UNDEFINED = 'undefined';
+    public const SCALAR = 'scalar';
+    public const ONE_TO_ONE = 'one_to_one';
+    public const ONE_TO_MANY = 'one_to_many';
+    public const MANY_TO_ONE = 'many_to_one';
+    public const MANY_TO_MANY = 'many_to_many';
 
     /** 
      * @var bool Whether this relationship is part of the primary key. 
@@ -51,7 +50,7 @@ class Relationship
     public string $mappedBy = '';
     
     /**
-     * @var boolean | null Whether or not to lazy load the data (for a child object if this property is the owning side)
+     * @var bool|null Whether or not to lazy load the data (for a child object if this property is the owning side)
      * - if null, defaults to false for -to-one associations, and true for -to-many associations.
      */
     public ?bool $lazyLoad = null;
@@ -137,6 +136,11 @@ class Relationship
      */
     private bool $eagerLoadToMany;
 
+    /**
+     * Relationship constructor.
+     * @param string $relationshipType
+     * @throws ObjectiphyException
+     */
     public function __construct(string $relationshipType)
     {
         if (!in_array($relationshipType, self::getRelationshipTypes())) {
@@ -256,10 +260,14 @@ class Relationship
         return $this->targetPropertyName;
     }
 
+    /**
+     * @param PropertyMapping $propertyMapping
+     * @throws MappingException
+     */
     public function validate(PropertyMapping $propertyMapping): void
     {
         if ($this->isEmbedded) {
-            return; //Temporary measure until we support embedables.
+            return; //Temporary measure until we support embeddables.
         }
         $errorMessage = '';
         if (!$this->joinTable) {

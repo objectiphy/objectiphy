@@ -38,7 +38,7 @@ class FindOptions implements PropertyPathConsumerInterface
      * @param array $settings
      * @return FindOptions
      */
-    public static function create(MappingCollection $mappingCollection, array $settings = [])
+    public static function create(MappingCollection $mappingCollection, array $settings = []): FindOptions
     {
         $findOptions = new FindOptions($mappingCollection);
         foreach ($settings as $key => $value) {

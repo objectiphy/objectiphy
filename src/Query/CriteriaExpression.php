@@ -7,13 +7,11 @@ namespace Objectiphy\Objectiphy\Query;
 use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
 use Objectiphy\Objectiphy\Contract\JoinPartInterface;
 use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
-use Objectiphy\Objectiphy\Exception\CriteriaException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 
 /**
- * Represents a line of criteria to filter on.
- * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
+ * Represents a line of criteria to filter on.
  */
 class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, PropertyPathConsumerInterface, \JsonSerializable
 {
@@ -30,7 +28,7 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
     public CriteriaExpression $parentExpression;
     
     /**
-     * @param FieldExpression $property The property being filtered on.
+     * @param FieldExpression|string $property The property being filtered on.
      * @param string $operator Operator to use (normal MySQL operators, plus special: BEGINSWITH, ENDSWITH, and
      * CONTAINS).
      * @param mixed $value Optionally supply the value to filter by up-front (if not using the applyValues method to set
@@ -41,7 +39,7 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
      * using the applyValues method.
      * @param string|null $alias2 If operator takes more than one value (BETWEEN), and values are being supplied via the
      * applyValues method, specify the array key that holds the second value.
-     * @throws CriteriaException
+     * @throws QueryException
      */
     public function __construct(
         $property,
@@ -254,13 +252,13 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
 
     /**
      * Make sure we have a valid object - throw exception if not.
-     * @throws CriteriaException If the operator is not supported, or the relevant alias and/or value for the
+     * @throws QueryException If the operator is not supported, or the relevant alias and/or value for the
      * second BETWEEN value is not supplied.
      */
     private function validate(): void
     {
         if (!$this->validateOperator()) {
-            throw new CriteriaException("Operator '$this->operator' is not supported.");
+            throw new QueryException("Operator '$this->operator' is not supported.");
         }
 
         if (strtoupper($this->operator) == 'BETWEEN') {
@@ -268,7 +266,7 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
                 //We can just make up an alias - all it will be used for is the named parameter in the prepared query
                 $this->alias2 = 'alias_' . uniqid();
             } elseif ($this->alias2 === null) {
-                throw new CriteriaException('alias2 is required for between operator (unless you also supply value2 up-front)');
+                throw new QueryException('alias2 is required for between operator (unless you also supply value2 up-front)');
             }
         }
     }

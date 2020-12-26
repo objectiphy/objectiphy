@@ -10,6 +10,7 @@ use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Orm\ObjectHelper;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Converts PHP data types into MySQL ones (eg. \DateTime to yyyy-mm-dd, boolean to 0 or 1)
  */
 class DataTypeHandlerMySql implements DataTypeHandlerInterface
@@ -17,7 +18,7 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
     /**
      * Convert the given value to a format acceptable to the persistence layer (eg. MySql).
      * @param mixed &$value The value to convert.
-     * @param string $dataType Optionally specify one of the data type constants or a class name.
+     * @param string|null $dataType Optionally specify one of the data type constants or a class name.
      * @param string $format Optionally specify a format string if applicable to the data type.
      * @return bool Whether or not the value was successfully converted.
      */
@@ -71,8 +72,8 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
     /**
      * Convert the given value to a format acceptable to a PHP object (eg. from a date string to a \DateTime)
      * @param mixed &$value The value to convert.
-     * @param string $dataType Optionally specify one of the data type constants or a class name.
-     * @param string $format If the data type requires a format (eg. datetimestring), specify it here.
+     * @param string|null $dataType Optionally specify one of the data type constants or a class name.
+     * @param string|null $format If the data type requires a format (eg. datetimestring), specify it here.
      * @return bool Whether or not the value was successfully converted.
      */
     public function toObjectValue(&$value, ?string $dataType = null, ?string $format = null): bool

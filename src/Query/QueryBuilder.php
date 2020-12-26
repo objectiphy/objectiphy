@@ -14,9 +14,8 @@ use Objectiphy\Objectiphy\Contract\UpdateQueryInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
 
 /**
- * Helper class to build a query that can be passed to a repository find method.
- * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
+ * Helper class to build a query that can be passed to a repository.
  */
 class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
 {
@@ -62,8 +61,6 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
 
     private ?int $limit = null;
     private ?int $offset = null;
-
-    private array $params = [];
 
     /**
      * Not a singleton (no private constructor): this static method allows us to use QB::create() to chain
@@ -138,7 +135,9 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
     public function onExpression(FieldExpression $expression, string $operator, $value): QueryBuilder
     {
         $this->currentCriteriaCollection =& $this->joins;
-        return $this->andExpression($expression, $operator, $value);
+        $this->andExpression($expression, $operator, $value);
+
+        return $this;
     }
 
     public function set(array $propertyValues): QueryBuilder
@@ -164,6 +163,10 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
 
     /**
      * Specify first line of criteria (this is actually just an alias for andWhere, as they do the same thing)
+     * @param string $propertyName
+     * @param string $operator
+     * @param $value
+     * @return QueryBuilder
      * @throws QueryException
      */
     public function where(string $propertyName, string $operator, $value): QueryBuilder
@@ -174,12 +177,18 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
 
     /**
      * Specify first line of criteria (this is actually just an alias for andWhereExpression, as they do the same thing)
+     * @param FieldExpression $expression
+     * @param string $operator
+     * @param $value
+     * @return QueryBuilder
      * @throws QueryException
      */
     public function whereExpression(FieldExpression $expression, string $operator, $value): QueryBuilder
     {
         $this->currentCriteriaCollection =& $this->where;
-        return $this->andExpression($expression, $operator, $value);
+        $this->andExpression($expression, $operator, $value);
+
+        return $this;
     }
 
     public function groupBy(string ...$propertyNames): QueryBuilder
@@ -193,6 +202,10 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
 
     /**
      * Specify first line of having criteria (this is actually just an alias for andHaving, as they do the same thing)
+     * @param string $propertyName
+     * @param string $operator
+     * @param $value
+     * @return QueryBuilder
      * @throws QueryException
      */
     public function having(string $propertyName, string $operator, $value): QueryBuilder
@@ -203,12 +216,18 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
 
     /**
      * Specify first line of criteria (this is actually just an alias for andHavingExpression, as they do the same thing)
+     * @param FieldExpression $expression
+     * @param string $operator
+     * @param $value
+     * @return QueryBuilder
      * @throws QueryException
      */
     public function havingExpression(FieldExpression $expression, string $operator, $value): QueryBuilder
     {
         $this->currentCriteriaCollection =& $this->having;
-        return $this->andExpression($expression, $operator, $value);
+        $this->andExpression($expression, $operator, $value);
+
+        return $this;
     }
 
     /**
@@ -311,7 +330,6 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         $this->from = '';
         $this->joins = [];
         $this->where = [];
-        $this->params = [];
         $this->groupBy = [];
         $this->having = [];
         $this->orderBy = [];
@@ -322,7 +340,10 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
     }
 
     /**
+     * @param $targetEntityClassName
+     * @param $alias
      * @param string $type 'LEFT' or 'INNER'
+     * @return QueryBuilder
      */
     protected function addJoin($targetEntityClassName, $alias, $type = 'LEFT')
     {

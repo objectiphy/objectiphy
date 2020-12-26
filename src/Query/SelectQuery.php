@@ -11,6 +11,7 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Query to select one or more entities from the database.
  */
 class SelectQuery extends Query implements SelectQueryInterface
@@ -121,7 +122,7 @@ class SelectQuery extends Query implements SelectQueryInterface
      * @param MappingCollection $mappingCollection
      * @param string|null $className
      */
-    public function finalise(MappingCollection $mappingCollection, ?string $className = null)
+    public function finalise(MappingCollection $mappingCollection, ?string $className = null): void
     {
         if (!$this->isFinalised) {
             if (!$this->getSelect()) {
@@ -147,12 +148,12 @@ class SelectQuery extends Query implements SelectQueryInterface
 
     public function __toString(): string
     {
-        if (!$this->select || !$this->from) {
+        if (!$this->getSelect() || !$this->getFrom()) {
             throw new QueryException('Please finalise the query before use (ie. call the finalise method).');
         }
 
         $queryString = 'SELECT ' . (implode(', ', $this->getSelect())) ?: '*';
-        $queryString .= ' FROM ' . $this->from;
+        $queryString .= ' FROM ' . $this->getFrom();
         $queryString .= ' ' . implode(' ', $this->getJoins());
         $queryString .= ' WHERE 1 ';
         if ($this->where) {
@@ -180,7 +181,7 @@ class SelectQuery extends Query implements SelectQueryInterface
      * Override if required to only return the relationships actually needed for the query
      * @return PropertyMapping[]
      */
-    protected function getRelationshipsUsed()
+    protected function getRelationshipsUsed(): array
     {
         $relationshipsUsed = [];
         $propertyPathsUsed = $this->getPropertyPaths();

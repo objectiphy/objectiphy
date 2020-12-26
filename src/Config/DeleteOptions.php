@@ -6,6 +6,9 @@ namespace Objectiphy\Objectiphy\Config;
 
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
+/**
+ * @author Russell Walker <rwalker.php@gmail.com>
+ */
 class DeleteOptions
 {
     public MappingCollection $mappingCollection;
@@ -17,12 +20,12 @@ class DeleteOptions
     }
 
     /**
-     * Create and initialise save options.
+     * Create and initialise delete options.
      * @param MappingCollection $mappingCollection
      * @param array $settings
-     * @return SaveOptions
+     * @return DeleteOptions
      */
-    public static function create(MappingCollection $mappingCollection, array $settings = [])
+    public static function create(MappingCollection $mappingCollection, array $settings = []): DeleteOptions
     {
         $deleteOptions = new DeleteOptions($mappingCollection);
         foreach ($settings as $key => $value) {
@@ -35,7 +38,7 @@ class DeleteOptions
         
         return $deleteOptions;
     }
-    
+
     public function getClassName(): string
     {
         return $this->mappingCollection->getEntityClassName();

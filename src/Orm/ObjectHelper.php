@@ -7,11 +7,10 @@ use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * This class only contains static methods. In order to prevent hidden dependencies and brittle code, the only methods
  * allowed here are ones which do not change application state (except for on arguments that are passed into the method
  * for that purpose), and which do not have any dependencies other than arguments that are passed into the method.
- * @package Objectiphy\Objectiphy
- * @author Russell Walker <rwalker.php@gmail.com>
  */
 class ObjectHelper
 {
@@ -21,7 +20,7 @@ class ObjectHelper
      * Try various techniques for getting a property value - see if there is a getter, a public property, or use
      * reflection to access a protected or private property. If values cannot be obtained, optionally return a
      * default value.
-     * @param object $object Object whose property we want to read.
+     * @param object|null $object $object Object whose property we want to read.
      * @param string $propertyName Name of property.
      * @param null $defaultValueIfNotFound Default value to return if we could not obtain the property value.
      * @param bool $lookForGetter Whether or not to look for a getter method.
@@ -31,8 +30,7 @@ class ObjectHelper
         ?object $object,
         string $propertyName,
         $defaultValueIfNotFound = null,
-        bool $lookForGetter = true,
-        bool $bypassEntityTracker = false
+        bool $lookForGetter = true
     ) {
         $value = $defaultValueIfNotFound;
         $valueFound = false;
@@ -45,7 +43,7 @@ class ObjectHelper
                 if (!$valueFound) {
                     //If lazy loaded, property might exist but be unset, which would cause a reflection error.
                     if ($object instanceof EntityProxyInterface && $object->isChildAsleep($propertyName)) {
-                        $object->triggerLazyLoad($propertyName, $bypassEntityTracker);
+                        $object->triggerLazyLoad($propertyName);
                         if (!isset($object->$propertyName)) { //Won't be set if lazy loader didn't load anything
                             $valueFound = true;
                         }
@@ -71,7 +69,7 @@ class ObjectHelper
 
         try {
             if (!$valueFound && $object && $lookForGetter) {
-                $valueFound = self::getValueFromGetter($object, $propertyName, $value);
+                self::getValueFromGetter($object, $propertyName, $value);
             }
         } catch (\Throwable $ex) {
             //Don't panic, just use the default value provided
@@ -88,8 +86,6 @@ class ObjectHelper
      * @param $valueToSet
      * @param bool $lookForSetter
      * @return bool Whether or not the value was set successfully.
-     * @throws \ReflectionException
-     * @throws \Exception
      */
     public static function setValueOnObject(
         $object,
@@ -156,6 +152,20 @@ class ObjectHelper
         }
 
         return $className;
+    }
+
+    public static function getTypeName(\ReflectionType $reflectionType, $defaultToStdClass = true)
+    {
+        $type = '';
+        if (\PHP_MAJOR_VERSION < 8) {
+            $type = $reflectionType->getName();
+        } elseif ($reflectionType instanceof \ReflectionNamedType) {
+            $type = $reflectionType->getName();
+        } elseif ($reflectionType instanceof \ReflectionUnionType) {
+            $type = reset($reflectionType->getTypes());
+        }
+
+        return $type ?: ($defaultToStdClass ? 'stdClass' : '');
     }
 
     /**

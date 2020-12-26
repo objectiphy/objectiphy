@@ -9,12 +9,11 @@ use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Mapping\Table;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Mapping information can come from anywhere - perhaps even a proprietary text file format. As long as you write a 
  * provider that implements this interface, it can be used by Objectiphy. Objectiphy comes with mapping providers for 
  * Doctrine annotations and Objectiphy annotations. A mapping provider can decorate another provider (to fall back to 
  * another mechanism for mapping information, perhaps partially), or can be used on its own.
- * @package Objectiphy\Objectiphy
- * @author Russell Walker <rwalker.php@gmail.com>
  */
 interface MappingProviderInterface
 {

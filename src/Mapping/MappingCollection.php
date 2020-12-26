@@ -5,13 +5,10 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Mapping;
 
 use Objectiphy\Objectiphy\Exception\MappingException;
-use Objectiphy\Objectiphy\Mapping\PropertyMapping;
-use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Orm\ObjectHelper;
 
 /**
  * Represents the full mapping information for the entire object hierarchy of a given parent class.
- * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
 class MappingCollection
@@ -194,8 +191,8 @@ class MappingCollection
     }
 
     /**
-     * @param string $forClass Optionally filter by parent.
-     * @return PropertyMapping[]
+     * @param array|null $parents
+     * @return array|PropertyMapping[]
      */
     public function getPropertyMappings(?array $parents = null): array
     {
@@ -211,8 +208,12 @@ class MappingCollection
      * Given a property mapping, find a sibling that maps to the given column name, or given a class name,
      * just find the first property defined for that class with that column name (used to work out which properties 
      * to use for late bound joins).
-     * @param PropertyMapping $property
      * @param string $columnName
+     * @param PropertyMapping|null $siblingProperty
+     * @param string $className
+     * @param bool $exceptionIfNotFound
+     * @return PropertyMapping|null
+     * @throws MappingException
      */
     public function getPropertyByColumn(
         string $columnName,
@@ -258,6 +259,9 @@ class MappingCollection
     /**
      * Return an example property mapping for the given class/property name. This is out of context so must only
      * be used to obtain generic information such as short column name.
+     * @param string $className
+     * @param string $propertyName
+     * @return PropertyMapping|null
      */
     public function getPropertyExample(string $className, string $propertyName): ?PropertyMapping
     {
@@ -290,6 +294,7 @@ class MappingCollection
     /**
      * Return the column alias used for the given property
      * @param string $propertyPath
+     * @param bool $fullyQualified
      * @return string | null
      */
     public function getColumnForPropertyPath(string $propertyPath, bool $fullyQualified = false): ?string
@@ -315,10 +320,10 @@ class MappingCollection
 
         return false;
     }
-    
+
     /**
      * Return list of properties that are marked as being part of the primary key.
-     * @param string $className Optionally specify a child class name (defaults to parent entity).
+     * @param string|null $className Optionally specify a child class name (defaults to parent entity).
      * @return array
      */
     public function getPrimaryKeyProperties(?string $className = null): array
@@ -413,6 +418,7 @@ class MappingCollection
      * Ensure joinTable, sourceJoinColumn, and targetJoinColumn are populated for
      * each relationship (ie. if not specified explicitly in the mapping information,
      * work it out).
+     * @throws MappingException
      */
     private function finaliseRelationshipMappings(): void
     {

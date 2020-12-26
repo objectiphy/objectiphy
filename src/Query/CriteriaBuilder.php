@@ -8,6 +8,7 @@ use Objectiphy\Objectiphy\Contract\CriteriaBuilderInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Build criteria used for WHERE and ON clauses, including nested conditions.
  */
 class CriteriaBuilder implements CriteriaBuilderInterface
@@ -195,9 +196,7 @@ class CriteriaBuilder implements CriteriaBuilderInterface
                         !empty($expression['operator']) ? $expression['operator'] : ($value === null ? 'IS' : '='),
                         $value,
                         !empty($expression['alias2']) ? $expression['alias2'] : null,
-                        isset($expression['value2']) ? $expression['value2'] : null,
-                        !empty($expression['and']) ? $this->normalize($expression['and']) : [],
-                        !empty($expression['or']) ? $this->normalize($expression['or']) : []
+                        isset($expression['value2']) ? $expression['value2'] : null
                     );
                 }
                 $normalizedCriteria[] = $expression;
@@ -241,15 +240,14 @@ class CriteriaBuilder implements CriteriaBuilderInterface
         }
         $collection = array_values(array_filter($collection));
     }
-    
+
     /**
      * Create a CriteriaExpression object for the given parts.
-     * @param $propertyName
-     * @param $operator
+     * @param string $joiner
+     * @param FieldExpression $property
+     * @param string $operator
      * @param $values
-     * @param QueryBuilder|null $nestedCriteria
-     * @param string $joinWith
-     * @throws QueryException
+     * @return CriteriaExpression
      */
     private function buildExpression(
         string $joiner,

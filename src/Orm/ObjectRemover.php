@@ -10,18 +10,16 @@ use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\DeleteQueryInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
-use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\SqlDeleterInterface;
-use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Contract\TransactionInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Traits\TransactionTrait;
 
 /**
- * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
 final class ObjectRemover implements TransactionInterface
@@ -51,7 +49,7 @@ final class ObjectRemover implements TransactionInterface
         $this->entityTracker = $entityTracker;
     }
 
-    public function setObjectPersister(ObjectPersister $objectPersister)
+    public function setObjectPersister(ObjectPersister $objectPersister): void
     {
         $this->objectPersister = $objectPersister;
     }
@@ -72,7 +70,7 @@ final class ObjectRemover implements TransactionInterface
         $this->sqlDeleter->setDeleteOptions($deleteOptions);
     }
 
-    public function getClassName()
+    public function getClassName(): string
     {
         if (isset($this->options) && isset($this->options->mappingCollection)) {
             return $this->options->mappingCollection->getEntityClassName();
@@ -88,7 +86,7 @@ final class ObjectRemover implements TransactionInterface
         $this->setDeleteOptions($this->options);
     }
 
-    public function checkForRemovals(object $entity, int &$updateCount, int &$deleteCount)
+    public function checkForRemovals(object $entity, int &$updateCount, int &$deleteCount): void
     {
         $originalClass = $this->getClassName();
         $this->setClassName(ObjectHelper::getObjectClassName($entity));
@@ -149,16 +147,13 @@ final class ObjectRemover implements TransactionInterface
         return $deleteCount + $this->executeDelete($deleteQuery, $this->options);
     }
 
-    public function executeDelete(DeleteQueryInterface $deleteQuery, DeleteOptions $options)
+    public function executeDelete(DeleteQueryInterface $deleteQuery, DeleteOptions $options): int
     {
         $this->setDeleteOptions($options);
         $deleteCount = 0;
         $originalClass = $this->getClassName();
         $this->setClassName($deleteQuery->getDelete() ?: $this->getClassName());
         $deleteQuery->finalise($this->options->mappingCollection, $this->getClassName());
-
-        //RSW: TODO: Can we cascade?
-
         $sql = $this->sqlDeleter->getDeleteSql($deleteQuery);
         $params = $this->sqlDeleter->getQueryParams();
         if ($sql && $this->storage->executeQuery($sql, $params)) {
@@ -216,8 +211,11 @@ final class ObjectRemover implements TransactionInterface
         return $deleteCount;
     }
 
-    private function loadRemovedChildrenFromDatabase(object $entity, PropertyMapping $childPropertyMapping, array $childPks)
-    {
+    private function loadRemovedChildrenFromDatabase(
+        object $entity,
+        PropertyMapping $childPropertyMapping,
+        array $childPks
+    ): array {
         $removedChildren = [];
         $parentProperty = $childPropertyMapping->relationship->mappedBy;
         if ($parentProperty) {
@@ -241,7 +239,7 @@ final class ObjectRemover implements TransactionInterface
         return $removedChildren;
     }
 
-    private function detectRemovals(iterable $dbChildren, iterable $entityChildren, array $childPks)
+    private function detectRemovals(iterable $dbChildren, iterable $entityChildren, array $childPks): array
     {
         $removedChildren = [];
         foreach ($dbChildren ?? [] as $dbChild) {
@@ -268,10 +266,15 @@ final class ObjectRemover implements TransactionInterface
 
         return $removedChildren;
     }
-    
-    private function removeChildren(object $entity, int &$updateCount, int &$deleteCount)
+
+    /**
+     * @param object $entity
+     * @param int $updateCount
+     * @param int $deleteCount
+     * @throws \ReflectionException
+     */
+    private function removeChildren(object $entity, int &$updateCount, int &$deleteCount): void
     {
-        $removedChildren = [];
         $children = $this->options->mappingCollection->getChildObjectProperties();
         foreach ($children as $childPropertyName) {
             $child = $entity->$childPropertyName ?? null;
@@ -284,15 +287,17 @@ final class ObjectRemover implements TransactionInterface
 
     /**
      * @param string $propertyName Name of property on parent object that points to this child or children
-     * @param array $orphans One or more children whose parent has been deleted
-     * @throws \ReflectionException
+     * @param iterable $removedChildren
+     * @param int $updateCount
+     * @param int $deleteCount
+     * @throws ObjectiphyException
      */
     public function sendOrphanedKidsAway(
         string $propertyName,
         iterable $removedChildren,
         int &$updateCount,
         int &$deleteCount
-    ) {
+    ): void {
         $goingToOrphanage = [];
         $goingToBelize = [];
         $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($propertyName);
@@ -321,7 +326,15 @@ final class ObjectRemover implements TransactionInterface
         }
     }
 
-    private function sendKidsToOrphanage(array $orphans, string $parentProperty, &$updateCount)
+    /**
+     * @param array $orphans
+     * @param string $parentProperty
+     * @param $updateCount
+     * @throws ObjectiphyException
+     * @throws QueryException
+     * @throws \ReflectionException
+     */
+    private function sendKidsToOrphanage(array $orphans, string $parentProperty, &$updateCount): void
     {
         if ($orphans && $parentProperty) {
             $childClass = ObjectHelper::getObjectClassName(reset($orphans));

@@ -7,6 +7,7 @@ namespace Objectiphy\Objectiphy\Orm;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * This is a template file for creating proxy object classes. This class will not be instantiated directly.
  */
 class EntityProxy implements EntityProxyInterface
@@ -28,6 +29,8 @@ class EntityProxy implements EntityProxyInterface
 
     /**
      * If a property is ready to be lazy loaded but has not yet actually been loaded, it is asleep.
+     * @param string $propertyName
+     * @return bool
      */
     public function isChildAsleep(string $propertyName): bool
     {
@@ -41,6 +44,8 @@ class EntityProxy implements EntityProxyInterface
 
     /**
      * Magic getter to intercept property access and perform lazy loading if necessary.
+     * @param string $objectiphyGetPropertyName
+     * @return mixed
      * @throws \ReflectionException
      */
     //It is important that the $objectiphyGetPropertyName argument is not changed (proxy factory will replace it)
@@ -48,6 +53,7 @@ class EntityProxy implements EntityProxyInterface
     {
         $this->triggerLazyLoad($objectiphyGetPropertyName);
 
+        $value = null;
         if (property_exists($this, $objectiphyGetPropertyName) && isset($this->$objectiphyGetPropertyName)) {
             $value =& $this->$objectiphyGetPropertyName;
         } elseif (is_callable('parent::__get')) {
@@ -74,6 +80,8 @@ class EntityProxy implements EntityProxyInterface
 
     /**
      * Magic setter to remove lazy loader if a property is set directly without being read.
+     * @param string $objectiphySetPropertyName
+     * @param $objectiphySetValue
      * @throws \ReflectionException
      */
     //It is important that the $objectiphySetPropertyName and $objectiphySetValue arguments are not changed (proxy
@@ -88,6 +96,8 @@ class EntityProxy implements EntityProxyInterface
 
     /**
      * Magic method to check whether a property holds a value (will lazy load if necessary)
+     * @param string $objectiphyIsSetPropertyName
+     * @return bool
      * @throws \ReflectionException
      */
     //It is important that the $objectiphyIsSetPropertyName argument is not changed (proxy factory will replace it)
@@ -110,13 +120,13 @@ class EntityProxy implements EntityProxyInterface
      * @param $propertyName
      * @throws \ReflectionException
      */
-    public function triggerLazyLoad($propertyName, bool $bypassEntityCache = false): void
+    public function triggerLazyLoad($propertyName): void
     {
         if (count($this->lazyLoaders)) {
             if (array_key_exists($propertyName, $this->lazyLoaders)) {
                 if (!empty($this->lazyLoaders[$propertyName])) {
                     $closure = $this->lazyLoaders[$propertyName];
-                    $value = $closure($bypassEntityCache);
+                    $value = $closure();
                     $this->setValueObjectiphy($propertyName, $value);
                     unset($this->lazyLoaders[$propertyName]);
                 }
@@ -124,7 +134,12 @@ class EntityProxy implements EntityProxyInterface
         }
     }
 
-    protected function setValueObjectiphy(string $propertyName, $value)
+    /**
+     * @param string $propertyName
+     * @param $value
+     * @throws \ReflectionException
+     */
+    protected function setValueObjectiphy(string $propertyName, $value): void
     {
         $this->objectiphySettingValue[$propertyName] = true; //So that __isset knows not to count on the lazy loader
         ObjectHelper::setValueOnObject($this, $propertyName, $value);

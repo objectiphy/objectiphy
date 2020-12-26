@@ -10,6 +10,7 @@ use Objectiphy\Objectiphy\Contract\QueryPartInterface;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Represents a relationship in a query (without any criteria).
  */
 class JoinExpression implements QueryPartInterface, JoinPartInterface, PropertyPathConsumerInterface

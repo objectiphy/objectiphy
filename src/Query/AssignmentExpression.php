@@ -8,6 +8,7 @@ use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
 use Objectiphy\Objectiphy\Contract\QueryPartInterface;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Represents the assignment of a value to a property for persistence
  */
 class AssignmentExpression implements QueryPartInterface, PropertyPathConsumerInterface
@@ -65,7 +66,7 @@ class AssignmentExpression implements QueryPartInterface, PropertyPathConsumerIn
         if ($this->value === null) {
             $string .= 'null';
         } else {
-            //If there are quotes in the value, extract anything between quotes...
+            //If there are quotes in the value, extract anything between quotes...?
 
             $paramCount = count($params) + 1;
             $params['param_' . $paramCount] = $this->value;

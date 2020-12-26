@@ -6,9 +6,10 @@ namespace Objectiphy\Objectiphy\Factory;
 
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
+use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Orm\ObjectHelper;
 
 /**
- * @package Objectiphy\Objectiphy
  * @author Russell Walker <rwalker.php@gmail.com>
  */
 final class ProxyFactory
@@ -25,6 +26,12 @@ final class ProxyFactory
      */
     protected array $proxyClasses = [];
 
+    /**
+     * ProxyFactory constructor.
+     * @param bool $productionMode
+     * @param string|null $cacheDirectory
+     * @throws ObjectiphyException
+     */
     public function __construct(bool $productionMode = false, ?string $cacheDirectory = null)
     {
         $this->productionMode = $productionMode;
@@ -59,7 +66,8 @@ final class ProxyFactory
      * @param string $className
      * @param array $pkValues Values of primary key (keyed on property name)
      * @param array $constructorArgs
-     * @return null
+     * @return ObjectReferenceInterface|null
+     * @throws \ReflectionException
      */
     public function createObjectReferenceProxy(
         string $className, 
@@ -69,18 +77,30 @@ final class ProxyFactory
         $proxyClassName = str_replace('\\', '_', 'ObjReference_' . $className);
         if (!$this->proxyExists($proxyClassName) && !class_exists($proxyClassName)) {
             if (class_exists($className)) {
+                $reflectionClass = new \ReflectionClass($className);
+                $getterMethod = $this->getReflectionMethod($reflectionClass, '__get');
                 $classDefinition = file_get_contents(__DIR__ . '/../Orm/ObjectReference.php');
+                $classDefinition = $this->customiseClassDefinition(
+                    $classDefinition,
+                    $className,
+                    $proxyClassName,
+                    $getterMethod
+                );
+
                 $classDefinition = str_replace('namespace Objectiphy\Objectiphy\Orm;',
                                                'use Objectiphy\Objectiphy\Orm\ObjectHelper;', $classDefinition);
                 $classDefinition = str_replace("class ObjectReference implements ObjectReferenceInterface",
                                                "class $proxyClassName extends \\$className implements ObjectReferenceInterface",
                                                $classDefinition);
+                $classDefinition = str_replace("public function __toString(): string\n    {",
+                                               "public function __toString(): string\n    {if (is_callable('parent::__toString')) {return parent::__toString();}",
+                                                $classDefinition);
 
                 //Remove the constructor (we don't want to override the real object's constructor)
                 $constructorStart = strpos($classDefinition, 'public function __construct(');
                 $constructorEnd = strpos($classDefinition, '}', $constructorStart);
                 $classDefinition = substr($classDefinition, 0, $constructorStart)
-                                    . substr($classDefinition, $constructorEnd + 1);
+                    . substr($classDefinition, $constructorEnd + 1);
 
                 $this->createProxyFromFile($classDefinition, $proxyClassName);
             }
@@ -98,21 +118,23 @@ final class ProxyFactory
 
     /**
      * Create a proxy to intercept property access that needs to be lazy loaded and return its name.
-     * @param object|string $entityOrClassName The entity to wrap in a proxy for lazy loading.
+     * @param string $className The entity class to wrap in a proxy for lazy loading.
      * @return string|null Name of proxy class, if one was successfully created.
      * @throws \ReflectionException
      */
-    public function createEntityProxy($className): ?string
+    public function createEntityProxy(string $className): ?string
     {
         $proxyClassName = str_replace('\\', '_', 'Objectiphy_Proxy_' . $className);
 
         if (!class_exists($proxyClassName) && !$this->proxyExists($proxyClassName)) {
-            //Buid proxy methods using reflection
+            //Build proxy methods using reflection
             $reflectionClass = new \ReflectionClass($className);
             $getterMethod = $this->getReflectionMethod($reflectionClass, '__get');
             $setterMethod = $this->getReflectionMethod($reflectionClass, '__set');
             $issetMethod = $this->getReflectionMethod($reflectionClass, '__isset');
+            $classDefinition = file_get_contents(__DIR__ . '/../Orm/EntityProxy.php');
             $classDefinition = $this->customiseClassDefinition(
+                $classDefinition,
                 $className,
                 $proxyClassName,
                 $getterMethod,
@@ -166,18 +188,26 @@ final class ProxyFactory
             return $reflectionClass->getMethod($methodName);
         } catch (\Throwable $ex) {
             return null;
-        };
+        }
     }
 
+    /**
+     * @param string $className
+     * @param string $proxyClassName
+     * @param \ReflectionMethod|null $getterMethod
+     * @param \ReflectionMethod|null $setterMethod
+     * @param \ReflectionMethod|null $issetMethod
+     * @return string
+     * @throws \ReflectionException
+     */
     private function customiseClassDefinition(
+        string $classDefinition,
         string $className,
         string $proxyClassName,
-        ?\ReflectionMethod $getterMethod,
-        ?\ReflectionMethod $setterMethod,
-        ?\ReflectionMethod $issetMethod
+        ?\ReflectionMethod $getterMethod = null,
+        ?\ReflectionMethod $setterMethod = null,
+        ?\ReflectionMethod $issetMethod = null
     ): string {
-        $classDefinition = file_get_contents(__DIR__ . '/../Orm/EntityProxy.php');
-
         $defaultGetter = $getterDeclaration = 'public function &__get(string $objectiphyGetPropertyName)';
         $defaultSetter = $setterDeclaration = 'public function __set(string $objectiphySetPropertyName, $objectiphySetValue): void';
         $defaultIsset = $issetDeclaration = 'public function __isset(string $objectiphyIsSetPropertyName): bool';
@@ -231,6 +261,11 @@ final class ProxyFactory
         return $classDefinition;
     }
 
+    /**
+     * @param \ReflectionMethod $reflectionMethod
+     * @return string
+     * @throws \ReflectionException
+     */
     private function getMethodDeclaration(\ReflectionMethod $reflectionMethod): string
     {
         $declaration = implode(' ', \Reflection::getModifierNames($reflectionMethod->getModifiers()));
@@ -239,7 +274,7 @@ final class ProxyFactory
         $declaration .= '(';
         foreach ($reflectionMethod->getParameters() as $parameter) {
             if ($parameter->hasType()) {
-                $declaration .= ($parameter->getType() ? $parameter->getType()->getName() : '') . ' ';
+                $declaration .= ($parameter->getType() ? ObjectHelper::getTypeName($parameter->getType()) : '') . ' ';
             }
             $declaration .= '$' . $parameter->getName();
             if ($parameter->isOptional()) {
@@ -249,7 +284,8 @@ final class ProxyFactory
             $declaration .= ',';
         }
         $declaration = rtrim($declaration, ',') . ')';
-        $returnType = $reflectionMethod->getReturnType() ? $reflectionMethod->getReturnType()->getName() : '';
+        $reflectionType = $reflectionMethod->getReturnType();
+        $returnType = $reflectionType ? ObjectHelper::getTypeName($reflectionType) : '';
         if ($returnType) {
             $declaration .= ': ' . $returnType;
         }

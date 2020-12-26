@@ -7,8 +7,8 @@ namespace Objectiphy\Objectiphy\Contract;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 
 /**
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Identifies an object as a query (SelectQuery, UpdateQuery, InsertQuery, DeleteQuery)
- * @package Objectiphy\Objectiphy\Contract
  */
 interface QueryInterface extends PropertyPathConsumerInterface
 {

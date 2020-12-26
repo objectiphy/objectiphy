@@ -64,4 +64,9 @@ class TestPet
             $this->$property = $value;
         }
     }
+
+    public function __isset($property)
+    {
+        return isset($this->$property);
+    }
 }

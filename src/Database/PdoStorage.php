@@ -7,25 +7,17 @@ use Objectiphy\Objectiphy\Contract\TransactionInterface;
 use Objectiphy\Objectiphy\Exception\StorageException;
 
 /**
- * Class PdoStorage
- * @package Marmalade\Objectiphy
- * @author Russell Walker <russell.walker@marmalade.co.uk>
+ * @author Russell Walker <rwalker.php@gmail.com>
  * Handle interaction with PDO.
  */
 class PdoStorage implements StorageInterface, TransactionInterface
 {
-    /** @var \PDO */
-    private $pdo;
-    /** @var \PDOStatement */
-    private $stm;
-    /** @var boolean */
-    private $transactionStarted = false;
-    /** @var int */
-    private $transactionNestingLevel = 0;
-    /** @var array $queryHistory All the SQL queries that have been executed */
-    private $queryHistory = [];
-    /** @var array $paramHistory All the params for the SQL queries that have been executed */
-    private $paramHistory = [];
+    private \PDO $pdo;
+    private \PDOStatement $stm;
+    private bool $transactionStarted = false;
+    private int $transactionNestingLevel = 0;
+    private array $queryHistory = [];
+    private array $paramHistory = [];
 
     public function __construct(\PDO $pdo)
     {
@@ -43,7 +35,7 @@ class PdoStorage implements StorageInterface, TransactionInterface
     }
 
     /**
-     * @return boolean Whether or not the transaction is underway (regardless of whether this call started it or not).
+     * @return bool Whether or not the transaction is underway (regardless of whether this call started it or not).
      */
     public function beginTransaction(): bool
     {
@@ -57,7 +49,7 @@ class PdoStorage implements StorageInterface, TransactionInterface
     }
 
     /**
-     * @return boolean Whether or not the transaction was rolled back.
+     * @return bool Whether or not the transaction was rolled back.
      */
     public function rollback(): bool
     {
@@ -73,7 +65,7 @@ class PdoStorage implements StorageInterface, TransactionInterface
     }
 
     /**
-     * @return boolean Whether or not the transaction was committed (or pseudo-committed if nested).
+     * @return bool Whether or not the transaction was committed (or pseudo-committed if nested).
      */
     public function commit(): bool
     {
@@ -87,11 +79,11 @@ class PdoStorage implements StorageInterface, TransactionInterface
     }
 
     /**
-     * @param mixed $query SQL string to execute
+     * @param mixed $query SQL string (or whatever) to execute
      * @param array $params Any parameters that need to be bound to the query.
-     * @param boolean $iterable Whether or not we are planning to return an iterable response (as opposed to a normal
+     * @param bool $iterable Whether or not we are planning to return an iterable response (as opposed to a normal
      * smash and grab).
-     * @return boolean Whether or not the query execution was successful.
+     * @return bool Whether or not the query execution was successful.
      * @throws StorageException
      */
     public function executeQuery($query, array $params = [], $iterable = false): bool
@@ -126,7 +118,7 @@ class PdoStorage implements StorageInterface, TransactionInterface
      * query, the first will be returned unless you specify a column number. If more than one record came back from the
      * query, only the first record will be used.
      */
-    public function fetchValue($columnNumber = 0)
+    public function fetchValue(int $columnNumber = 0)
     {
         $value = null;
         if (isset($this->stm)) {
@@ -142,7 +134,7 @@ class PdoStorage implements StorageInterface, TransactionInterface
      * from the query, the first will be used unless you specify a column number. If more than one record came back from
      * the query, only the first record will be used.
      */
-    public function fetchValues($columnNumber = 0): array
+    public function fetchValues(int $columnNumber = 0): array
     {
         $values = [];
         if (isset($this->stm)) {
@@ -209,9 +201,7 @@ class PdoStorage implements StorageInterface, TransactionInterface
      */
     public function getQuery(): ?string
     {
-        $sql = !empty($this->queryHistory) ? end($this->queryHistory) : null;
-
-        return $sql;
+        return !empty($this->queryHistory) ? end($this->queryHistory) : null;
     }
 
     /**
@@ -219,9 +209,7 @@ class PdoStorage implements StorageInterface, TransactionInterface
      */
     public function getParams(): array
     {
-        $params = !empty($this->paramHistory) ? end($this->paramHistory) : [];
-
-        return $params;
+        return !empty($this->paramHistory) ? end($this->paramHistory) : [];
     }
 
     /**
