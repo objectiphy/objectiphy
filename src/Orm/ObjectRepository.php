@@ -588,6 +588,14 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     }
 
     /**
+     * @return string Convenience method to get the last SQL query generated.
+     */
+    public function getSql(): string
+    {
+        return $this->explanation->getSql();
+    }
+
+    /**
      * Clear entities from memory and require them to be re-loaded afresh from the database.
      * @param string|null $className If supplied, only the cache for the given class will be cleared, otherwise all.
      */
