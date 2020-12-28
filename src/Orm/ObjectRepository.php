@@ -24,6 +24,7 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Factory\ProxyFactory;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
+use Objectiphy\Objectiphy\Meta\Explanation;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 use Objectiphy\Objectiphy\Query\Pagination;
 use Objectiphy\Objectiphy\Query\QB;
@@ -48,6 +49,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     protected ?PaginationInterface $pagination = null;
     protected array $orderBy;
     protected MappingCollection $mappingCollection;
+    protected ExplanationInterface $explanation;
 
     public function __construct(
         ObjectMapper $objectMapper,
@@ -55,7 +57,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         ObjectPersister $objectPersister,
         ObjectRemover $objectRemover,
         ProxyFactory $proxyFactory,
-        ConfigOptions $configOptions = null
+        ExplanationInterface $explanation,
+        ?ConfigOptions $configOptions = null
     ) {
         $this->objectMapper = $objectMapper;
         $this->objectFetcher = $objectFetcher;
@@ -65,6 +68,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $this->objectPersister->setObjectRemover($objectRemover);
         $this->objectRemover->setObjectPersister($objectPersister);
         $this->proxyFactory = $proxyFactory;
+        $this->explanation = $explanation;
         if (!$configOptions) {
             $configOptions = new ConfigOptions();
         }
@@ -580,7 +584,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     public function getExplanation(): ?ExplanationInterface
     {
-        return null;
+        return $this->explanation;
     }
 
     /**

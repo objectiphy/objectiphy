@@ -10,6 +10,7 @@ use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\DeleteQueryInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
+use Objectiphy\Objectiphy\Contract\ExplanationInterface;
 use Objectiphy\Objectiphy\Contract\SqlDeleterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Contract\TransactionInterface;
@@ -28,25 +29,30 @@ final class ObjectRemover implements TransactionInterface
 
     private ObjectMapper $objectMapper;
     private SqlDeleterInterface $sqlDeleter;
+    private StorageInterface $storage;
     private ObjectPersister $objectPersister;
     private ObjectFetcher $objectFetcher;
     private EntityTracker $entityTracker;
     private DeleteOptions $options;
     private bool $disableDeleteRelationships = false;
     private bool $disableDeleteEntities = false;
+    private ExplanationInterface $explanation;
+    private ConfigOptions $config;
 
     public function __construct(
         ObjectMapper $objectMapper,
         SqlDeleterInterface $sqlDeleter,
         StorageInterface $storage,
         ObjectFetcher $objectFetcher,
-        EntityTracker $entityTracker
+        EntityTracker $entityTracker,
+        ExplanationInterface $explanation
     ) {
         $this->objectMapper = $objectMapper;
         $this->sqlDeleter = $sqlDeleter;
         $this->storage = $storage;
         $this->objectFetcher = $objectFetcher;
         $this->entityTracker = $entityTracker;
+        $this->explanation = $explanation;
     }
 
     public function setObjectPersister(ObjectPersister $objectPersister): void
@@ -56,13 +62,13 @@ final class ObjectRemover implements TransactionInterface
 
     public function setConfigOptions(ConfigOptions $config): void
     {
-        $this->disableDeleteRelationships = $config->disableDeleteRelationships;
-        $this->disableDeleteEntities = $config->disableDeleteEntities;
+        $this->config = $config;
         $this->objectFetcher->setConfigOptions($config);
     }
 
     /**
      * Config options relating to deleting data only.
+     * @param DeleteOptions $deleteOptions
      */
     public function setDeleteOptions(DeleteOptions $deleteOptions): void
     {
@@ -78,7 +84,12 @@ final class ObjectRemover implements TransactionInterface
 
         return '';
     }
-    
+
+    /**
+     * @param string $className
+     * @throws ObjectiphyException
+     * @throws \ReflectionException
+     */
     public function setClassName(string $className): void
     {
         $mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
@@ -86,6 +97,12 @@ final class ObjectRemover implements TransactionInterface
         $this->setDeleteOptions($this->options);
     }
 
+    /**
+     * @param object $entity
+     * @param int $updateCount
+     * @param int $deleteCount
+     * @throws ObjectiphyException|\ReflectionException
+     */
     public function checkForRemovals(object $entity, int &$updateCount, int &$deleteCount): void
     {
         $originalClass = $this->getClassName();
@@ -98,7 +115,7 @@ final class ObjectRemover implements TransactionInterface
             $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
             $parentProperty = $childPropertyMapping->relationship->mappedBy;
             if ($childPropertyMapping->relationship->isToMany()
-                && !$this->disableDeleteRelationships
+                && !$this->config->disableDeleteRelationships
                 && $parentProperty
             ) {
                 $childProperty = $childPropertyMapping->propertyName;
@@ -127,10 +144,17 @@ final class ObjectRemover implements TransactionInterface
         
         $this->setClassName($originalClass);
     }
-    
+
+    /**
+     * @param object $entity
+     * @param DeleteOptions $deleteOptions
+     * @param int $updateCount
+     * @return int
+     * @throws \ReflectionException
+     */
     public function deleteEntity(object $entity, DeleteOptions $deleteOptions, int &$updateCount): int
     {
-        if ($this->disableDeleteEntities) {
+        if ($this->config->disableDeleteEntities) {
             return 0;
         }
         $originalClass = $this->getClassName();
@@ -156,6 +180,7 @@ final class ObjectRemover implements TransactionInterface
         $deleteQuery->finalise($this->options->mappingCollection, $this->getClassName());
         $sql = $this->sqlDeleter->getDeleteSql($deleteQuery);
         $params = $this->sqlDeleter->getQueryParams();
+        $this->explanation->addQuery($deleteQuery, $sql, $params, $this->options->mappingCollection, $this->config);
         if ($sql && $this->storage->executeQuery($sql, $params)) {
             $deleteCount = $this->storage->getAffectedRecordCount();
             $this->entityTracker->clear($this->getClassName());
@@ -164,12 +189,19 @@ final class ObjectRemover implements TransactionInterface
         return $deleteCount;
     }
 
+    /**
+     * @param iterable $entities
+     * @param DeleteOptions $deleteOptions
+     * @param int $updateCount
+     * @return int
+     * @throws ObjectiphyException|QueryException|\ReflectionException
+     */
     public function deleteEntities(
         iterable $entities,
         DeleteOptions $deleteOptions,
         int &$updateCount
     ): int {
-        if ($this->disableDeleteEntities) {
+        if ($this->config->disableDeleteEntities) {
             return 0;
         }
         $deleteCount = 0;
@@ -211,6 +243,13 @@ final class ObjectRemover implements TransactionInterface
         return $deleteCount;
     }
 
+    /**
+     * @param object $entity
+     * @param PropertyMapping $childPropertyMapping
+     * @param array $childPks
+     * @return array
+     * @throws ObjectiphyException|QueryException|\ReflectionException|\Throwable
+     */
     private function loadRemovedChildrenFromDatabase(
         object $entity,
         PropertyMapping $childPropertyMapping,
@@ -271,7 +310,7 @@ final class ObjectRemover implements TransactionInterface
      * @param object $entity
      * @param int $updateCount
      * @param int $deleteCount
-     * @throws \ReflectionException
+     * @throws \ReflectionException|ObjectiphyException
      */
     private function removeChildren(object $entity, int &$updateCount, int &$deleteCount): void
     {
@@ -290,7 +329,7 @@ final class ObjectRemover implements TransactionInterface
      * @param iterable $removedChildren
      * @param int $updateCount
      * @param int $deleteCount
-     * @throws ObjectiphyException
+     * @throws ObjectiphyException|\ReflectionException
      */
     public function sendOrphanedKidsAway(
         string $propertyName,
@@ -303,7 +342,7 @@ final class ObjectRemover implements TransactionInterface
         $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($propertyName);
         foreach ($removedChildren as $removedChild) {
             $oneWayTicket = false;
-            if (!$this->disableDeleteEntities
+            if (!$this->config->disableDeleteEntities
                 && !$this->options->disableCascade
                 && ($childPropertyMapping->relationship->cascadeDeletes
                     || $childPropertyMapping->relationship->orphanRemoval)
@@ -312,7 +351,7 @@ final class ObjectRemover implements TransactionInterface
                 $oneWayTicket = true;
             } else { //Available for adoption
                 $parentProperty = $childPropertyMapping->relationship->mappedBy;
-                if ($parentProperty && !$this->disableDeleteRelationships) {
+                if ($parentProperty && !$this->config->disableDeleteRelationships) {
                     $goingToOrphanage[] = $removedChild;
                 }
             }

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Meta;
 
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\ExplanationInterface;
+use Objectiphy\Objectiphy\Contract\QueryInterface;
+use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
@@ -14,31 +17,80 @@ use Objectiphy\Objectiphy\Contract\ExplanationInterface;
  */
 class Explanation implements ExplanationInterface
 {
+    /**
+     * @var QueryInterface[]
+     */
     private array $queryHistory = [];
+
+    /**
+     * @var array string[]
+     */
+    private array $sqlHistory = [];
+
     private array $paramHistory = [];
 
     /**
-     * Used internally to record query activity - not part of the interface
-     * @param string $query
-     * @param array $params
+     * @var MappingCollection[]
      */
-    public function addQuery(string $query, array $params): void
-    {
-        $this->queryHistory[] = $query;
-        $this->paramHistory[] = $params;
+    private array $mapping = [];
+
+    /**
+     * @var ConfigOptions[]
+     */
+    private array $config = [];
+
+    /**
+     * Used internally to record query activity - not part of the interface
+     * @param QueryInterface $query
+     * @param string $sql
+     * @param array $params
+     * @param MappingCollection|null $mappingCollection
+     * @param ConfigOptions|null $config
+     */
+    public function addQuery(
+        QueryInterface $query,
+        string $sql,
+        array $params,
+        MappingCollection $mappingCollection = null,
+        ConfigOptions $config = null
+    ): void {
+        $index = count($this->queryHistory);
+        $this->queryHistory[$index] = $query;
+        $this->sqlHistory[$index] = $sql;
+        $this->paramHistory[$index] = $params;
+        $this->mapping[$index] = $mappingCollection;
+        $this->config[$index] = $config;
     }
 
     /**
      * Get the last query that was executed.
-     * @param boolean $parameterise Whether or not to replace parameter tokens with their values
-     * @return string The query (typically SQL), with parameters converted to values so that the string can be pasted
+     * @return QueryInterface|null
+     */
+    public function getQuery(): ?QueryInterface
+    {
+        return $this->queryHistory ? $this->queryHistory[array_key_last($this->queryHistory)] : null;
+    }
+
+    /**
+     * Get all the queries that were executed.
+     * @return QueryInterface[] All of the queries that have been executed.
+     */
+    public function getQueryHistory(): array
+    {
+        return $this->queryHistory;
+    }
+
+    /**
+     * Get the last SQL query that was executed.
+     * @param bool $parameterise Whether or not to replace parameter tokens with their values
+     * @return string The SQL, with parameters converted to values so that the string can be pasted
      * into a database GUI and executed without having to replace values manually (when Objectiphy executes the query,
      * it does NOT use this exact string, it uses prepared statements).
      */
-    public function getQuery(bool $parameterise = true): string
+    public function getSql(bool $parameterise = true): string
     {
-        if ($this->queryHistory) {
-            $lastQuery = $this->queryHistory[array_key_last($this->queryHistory)];
+        if ($this->sqlHistory) {
+            $lastQuery = $this->sqlHistory[array_key_last($this->sqlHistory)];
             $lastParams = $this->getParams();
 
             return $parameterise ? $this->replaceTokens($lastQuery, $lastParams) : $lastQuery;
@@ -48,26 +100,26 @@ class Explanation implements ExplanationInterface
     }
 
     /**
-     * Get all the queries that were executed, including counts.
-     * @param boolean $parameterise Whether or not to replace parameter tokens with their values
+     * Get all the SQL queries that were executed.
+     * @param bool $parameterise Whether or not to replace parameter tokens with their values
      * @return array All of the queries that have been executed, with parameters converted to values so that the string
      * can be pasted into a database GUI and executed without having to replace values manually (when Objectiphy
      * executes the query, it does NOT use this exact string, it uses prepared statements).
      */
-    public function getQueryHistory(bool $parameterise = true): array
+    public function getSqlHistory(bool $parameterise = true): array
     {
-        $queryHistory = $this->queryHistory;
+        $sqlHistory = $this->sqlHistory;
         if ($parameterise) {
-            array_walk($queryHistory, function (&$query, $index, $paramHistory = []) {
-                $query = $this->replaceTokens($query, $paramHistory[$index]);
+            array_walk($sqlHistory, function (&$sql, $index, $paramHistory = []) {
+                $sql = $this->replaceTokens($sql, $paramHistory[$index]);
             }, $this->paramHistory);
         }
 
-        return $queryHistory ?: [];
+        return $sqlHistory ?: [];
     }
 
     /**
-     * @return array The parameters used in the last query as an associative array
+     * @return array The parameters used in the last query as an associative array.
      */
     public function getParams(): array
     {
@@ -82,7 +134,41 @@ class Explanation implements ExplanationInterface
     {
         return $this->paramHistory;
     }
-    
+
+    /**
+     * @return MappingCollection|null The mapping collection used for the last query.
+     */
+    public function getMappingCollection(): ?MappingCollection
+    {
+        return $this->mapping ? $this->mapping[array_key_last($this->mapping)] : null;
+    }
+
+    /**
+     * @return array An indexed array of the mapping collections used in all queries. Each element is an associative
+     * array. The index of the outer array exactly matches that returned by getQueryHistory.
+     */
+    public function getMappingCollectionHistory(): array
+    {
+        return $this->mapping;
+    }
+
+    /**
+     * @return MappingCollection|null The config options used for the last query.
+     */
+    public function getConfig(): ?ConfigOptions
+    {
+        return $this->config ? $this->config[array_key_last($this->config)] : null;
+    }
+
+    /**
+     * @return array An indexed array of the config options used in all queries. Each element is an associative
+     * array. The index of the outer array exactly matches that returned by getQueryHistory.
+     */
+    public function getConfigHistory(): array
+    {
+        return $this->config;
+    }
+
     /**
      * Replace prepared statement parameters with actual values (for debugging output only, not for execution!)
      * @param string $query Parameterised query string

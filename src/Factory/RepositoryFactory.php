@@ -11,6 +11,7 @@ use Objectiphy\Annotations\AnnotationReader;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
+use Objectiphy\Objectiphy\Contract\ExplanationInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
 use Objectiphy\Objectiphy\Contract\SqlDeleterInterface;
@@ -28,6 +29,7 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\MappingProvider\MappingProvider;
 use Objectiphy\Objectiphy\MappingProvider\MappingProviderAnnotation;
 use Objectiphy\Objectiphy\MappingProvider\MappingProviderDoctrineAnnotation;
+use Objectiphy\Objectiphy\Meta\Explanation;
 use Objectiphy\Objectiphy\NamingStrategy\NameResolver;
 use Objectiphy\Objectiphy\Orm\EntityTracker;
 use Objectiphy\Objectiphy\Orm\ObjectRepository;
@@ -57,6 +59,7 @@ class RepositoryFactory
     private JoinProviderMySql $joinProvider;
     private WhereProviderMySql $whereProvider;
     private ObjectRemover $objectRemover;
+    private ?ExplanationInterface $explanation = null;
     /**
      * @var ObjectRepositoryInterface[]
      */
@@ -127,6 +130,19 @@ class RepositoryFactory
         return $this->mappingProvider;
     }
 
+    public function setExplanation(ExplanationInterface $explanation)
+    {
+        $this->explanation = $explanation;
+    }
+
+    /**
+     * @param string $entityClassName
+     * @param string|null $repositoryClassName
+     * @param ConfigOptions|null $configOptions
+     * @param bool $resetFirst
+     * @return ObjectRepositoryInterface
+     * @throws ObjectiphyException|\ReflectionException
+     */
     public function createRepository(
         string $entityClassName = '',
         string $repositoryClassName = null,
@@ -147,6 +163,7 @@ class RepositoryFactory
                 $this->createObjectPersister(),
                 $this->getObjectRemover(),
                 $this->getProxyFactory($configOptions),
+                $this->getExplanation(),
                 $configOptions
             );
             if ($entityClassName) {
@@ -205,9 +222,10 @@ class RepositoryFactory
         $objectMapper = $this->getObjectMapper();
         $objectBinder = $this->createObjectBinder($configOptions);
         $entityTracker = $this->getEntityTracker();
+        $explanation = $this->getExplanation();
         $storage = $this->getStorage();
 
-        return new ObjectFetcher($sqlSelector, $objectMapper, $objectBinder, $storage, $entityTracker);
+        return new ObjectFetcher($sqlSelector, $objectMapper, $objectBinder, $storage, $entityTracker, $explanation);
     }
 
     final protected function createNameResolver(): NameResolver
@@ -222,8 +240,9 @@ class RepositoryFactory
         $objectUnbinder = $this->createObjectUnbinder();
         $storage = $this->getStorage();
         $entityTracker = $this->getEntityTracker();
+        $explanation = $this->getExplanation();
 
-        return new ObjectPersister($sqlUpdater, $objectMapper, $objectUnbinder, $storage, $entityTracker);
+        return new ObjectPersister($sqlUpdater, $objectMapper, $objectUnbinder, $storage, $entityTracker, $explanation);
     }
 
     final protected function createObjectRemover(): ObjectRemover
@@ -233,8 +252,9 @@ class RepositoryFactory
         $storage = $this->getStorage();
         $entityTracker = $this->getEntityTracker();
         $objectFetcher = $this->createObjectFetcher(); //New instance for different findOptions
+        $explanation = $this->getExplanation();
 
-        return new ObjectRemover($objectMapper, $sqlDeleter, $storage, $objectFetcher, $entityTracker);
+        return new ObjectRemover($objectMapper, $sqlDeleter, $storage, $objectFetcher, $entityTracker, $explanation);
     }
 
     final protected function createEntityTracker(): EntityTracker
@@ -352,6 +372,12 @@ class RepositoryFactory
         }
 
         return $repositoryClassName ? true : false;
+    }
+
+    private function getExplanation()
+    {
+        $this->explanation ??= new Explanation();
+        return $this->explanation;
     }
     
     private function getSqlSelector(): SqlSelectorInterface

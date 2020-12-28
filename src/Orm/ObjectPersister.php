@@ -8,6 +8,7 @@ use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Config\DeleteOptions;
 use Objectiphy\Objectiphy\Config\SaveOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
+use Objectiphy\Objectiphy\Contract\ExplanationInterface;
 use Objectiphy\Objectiphy\Contract\InsertQueryInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
@@ -18,7 +19,6 @@ use Objectiphy\Objectiphy\Contract\UpdateQueryInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Query\QB;
-use Objectiphy\Objectiphy\Query\UpdateQuery;
 use Objectiphy\Objectiphy\Traits\TransactionTrait;
 
 /**
@@ -34,21 +34,25 @@ final class ObjectPersister implements TransactionInterface
     private StorageInterface $storage;
     private EntityTracker $entityTracker;
     private ObjectRemover $objectRemover;
+    private ConfigOptions $config;
     private SaveOptions $options;
     private array $savedObjects = [];
+    private ExplanationInterface $explanation;
 
     public function __construct(
         SqlUpdaterInterface $sqlUpdater,
         ObjectMapper $objectMapper,
         ObjectUnbinder $objectUnbinder,
         StorageInterface $storage,
-        EntityTracker $entityTracker
+        EntityTracker $entityTracker,
+        ExplanationInterface $explanation
     ) {
         $this->sqlUpdater = $sqlUpdater;
         $this->objectMapper = $objectMapper;
         $this->objectUnbinder = $objectUnbinder;
         $this->storage = $storage;
         $this->entityTracker = $entityTracker;
+        $this->explanation = $explanation;
     }
 
     public function setObjectRemover(ObjectRemover $objectRemover): void
@@ -58,6 +62,7 @@ final class ObjectPersister implements TransactionInterface
     
     public function setConfigOptions(ConfigOptions $config): void 
     {
+        $this->config = $config;
         $this->objectUnbinder->setConfigOptions($config);
         $this->objectRemover->setConfigOptions($config);
     }
@@ -82,6 +87,10 @@ final class ObjectPersister implements TransactionInterface
         return '';
     }
 
+    /**
+     * @param string $className
+     * @throws ObjectiphyException|\ReflectionException
+     */
     public function setClassName(string $className): void
     {
         $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
@@ -95,6 +104,7 @@ final class ObjectPersister implements TransactionInterface
      * @param int $updateCount Number of rows updated
      * @param int $deleteCount
      * @return int Total number of rows updated or inserted
+     * @throws QueryException|\ReflectionException
      */
     public function saveEntity(
         object $entity,
@@ -116,6 +126,7 @@ final class ObjectPersister implements TransactionInterface
      * @param int|null $updateCount Number of rows updated
      * @param int|null $deleteCount
      * @return int Total number of rows updated or inserted
+     * @throws QueryException|\ReflectionException
      */
     public function saveEntities(
         array $entities,
@@ -152,12 +163,14 @@ final class ObjectPersister implements TransactionInterface
         if ($query instanceof UpdateQueryInterface) {
             $sql = $this->sqlUpdater->getUpdateSql($query, $this->options->replaceExisting);
             $params = $this->sqlUpdater->getQueryParams();
+            $this->explanation->addQuery($query, $sql, $params, $this->options->mappingCollection, $this->config);
             if ($this->storage->executeQuery($sql, $params)) {
                 $updateCount += $this->storage->getAffectedRecordCount();
             }
         } elseif ($query instanceof InsertQueryInterface) {
             $sql = $this->sqlUpdater->getInsertSql($query);
             $params = $this->sqlUpdater->getQueryParams();
+            $this->explanation->addQuery($query, $sql, $params, $this->options->mappingCollection, $this->config);
             if ($this->storage->executeQuery($sql, $params)) {
                 $insertCount += $this->storage->getAffectedRecordCount();
             }
@@ -174,8 +187,7 @@ final class ObjectPersister implements TransactionInterface
      * @param int $updateCount Number of rows updated
      * @param int $deleteCount
      * @return int Total number of rows updated or inserted
-     * @throws QueryException
-     * @throws \ReflectionException
+     * @throws QueryException|\ReflectionException| ObjectiphyException
      */
     private function doSaveEntity(
         object $entity,
@@ -256,6 +268,7 @@ final class ObjectPersister implements TransactionInterface
             $updateQuery->finalise($this->options->mappingCollection, $className, $rows);
             $sql = $this->sqlUpdater->getUpdateSql($updateQuery, $this->options->replaceExisting);
             $params = $this->sqlUpdater->getQueryParams();
+            $this->explanation->addQuery($updateQuery, $sql, $params, $this->options->mappingCollection, $this->config);
             if ($this->storage->executeQuery($sql, $params)) {
                 $updateCount += $this->storage->getAffectedRecordCount();
                 $this->entityTracker->storeEntity($entity, $pkValues);
@@ -275,7 +288,7 @@ final class ObjectPersister implements TransactionInterface
      * @param int $insertCount Number of rows inserted
      * @param int $updateCount Number of rows updated
      * @return int Total number of rows updated or inserted
-     * @throws \ReflectionException
+     * @throws \ReflectionException|ObjectiphyException
      */
     private function insertEntity(object $entity, int &$insertCount, int &$updateCount): int
     {
@@ -300,6 +313,7 @@ final class ObjectPersister implements TransactionInterface
             $insertQuery->finalise($this->options->mappingCollection, $this->getClassName(), $row);
             $sql = $this->sqlUpdater->getInsertSql($insertQuery, $this->options->replaceExisting);
             $params = $this->sqlUpdater->getQueryParams();
+            $this->explanation->addQuery($insertQuery, $sql, $params, $this->options->mappingCollection, $this->config);
             if ($this->storage->executeQuery($sql, $params)) {
                 $insertId = $this->storage->getLastInsertId();
                 $insertCount += $this->storage->getAffectedRecordCount();
@@ -323,6 +337,14 @@ final class ObjectPersister implements TransactionInterface
         return $insertCount;
     }
 
+    /**
+     * @param object $entity
+     * @param int $insertCount
+     * @param int $updateCount
+     * @param int $deleteCount
+     * @param bool $ownedOnly
+     * @throws ObjectiphyException|QueryException|\ReflectionException
+     */
     private function saveChildren(
         object $entity,
         int &$insertCount,

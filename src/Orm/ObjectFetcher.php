@@ -6,6 +6,7 @@ namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Config\FindOptions;
+use Objectiphy\Objectiphy\Contract\ExplanationInterface;
 use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
@@ -22,28 +23,39 @@ final class ObjectFetcher
     private ObjectBinder $objectBinder;
     private EntityTracker $entityTracker;
     private FindOptions $options;
+    private ConfigOptions $configOptions;
+    private ExplanationInterface $explanation;
     
     public function __construct(
         SqlSelectorInterface $sqlSelector,
         ObjectMapper $objectMapper,
         ObjectBinder $objectBinder,
         StorageInterface $storage,
-        EntityTracker $entityTracker
+        EntityTracker $entityTracker,
+        ExplanationInterface $explanation
     ) {
         $this->sqlSelector = $sqlSelector;
         $this->storage = $storage;
         $this->objectMapper = $objectMapper;
         $this->objectBinder = $objectBinder;
         $this->entityTracker = $entityTracker;
+        $this->explanation = $explanation;
     }
 
     public function getStorage(): StorageInterface
     {
         return $this->storage;
     }
-    
+
+    public function setConfigOptions(ConfigOptions $configOptions): void
+    {
+        $this->configOptions = $configOptions;
+        $this->objectBinder->setConfigOptions($configOptions);
+    }
+
     /**
      * Config options relating to fetching data only.
+     * @param FindOptions $findOptions
      */
     public function setFindOptions(FindOptions $findOptions): void
     {
@@ -52,11 +64,6 @@ final class ObjectFetcher
         $this->objectBinder->setMappingCollection($findOptions->mappingCollection);
     }
 
-    public function setConfigOptions(ConfigOptions $configOptions): void
-    {
-        $this->objectBinder->setConfigOptions($configOptions);
-    }
-    
     private function getClassName(): string
     {
         if (isset($this->options) && isset($this->options->mappingCollection)) {
@@ -85,6 +92,7 @@ final class ObjectFetcher
      * @param SelectQueryInterface $query
      * @return mixed
      * @throws ObjectiphyException
+     * @throws \ReflectionException|\Throwable
      */
     public function executeFind(SelectQueryInterface $query) 
     {
@@ -137,7 +145,9 @@ final class ObjectFetcher
         if ($this->options->multiple && $this->options->pagination) {
             $this->options->count = true;
             $countSql = $this->sqlSelector->getSelectSql($query);
-            $recordCount = intval($this->fetchValue($countSql, $this->sqlSelector->getQueryParams()));
+            $params = $this->sqlSelector->getQueryParams();
+            $this->explanation->addQuery($query, $countSql, $params, $this->options->mappingCollection, $this->configOptions);
+            $recordCount = intval($this->fetchValue($countSql, $params));
             $this->options->pagination->setTotalRecords($recordCount);
             $this->options->count = false;
         }
@@ -147,13 +157,13 @@ final class ObjectFetcher
      * Return the records, in whatever format is requested.
      * @param SelectQueryInterface $query
      * @return array|mixed|object|IterableResult|null
-     * @throws ObjectiphyException
+     * @throws ObjectiphyException|\Throwable
      */
     private function doFetch(SelectQueryInterface $query)
     {
         $sql = $this->sqlSelector->getSelectSql($query);
         $params = $this->sqlSelector->getQueryParams();
-
+        $this->explanation->addQuery($query, $sql, $params, $this->options->mappingCollection, $this->configOptions);
         if ($this->options->multiple && $this->options->onDemand && $this->options->scalarProperty) {
             $result = $this->fetchIterableValues($sql, $params);
         } elseif ($this->options->multiple && $this->options->onDemand) {

@@ -2,7 +2,6 @@
 
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
-use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
@@ -115,10 +114,7 @@ class BasicReadingTest extends IntegrationTestBase
     protected function doReadingTests()
     {
         //Find by ID, as per doctrine
-        $start = microtime(true);
-        $policy = $this->objectRepository->find(19071974);
-        $time = round(microtime(true) - $start, 5);
-
+            $policy = $this->objectRepository->find(19071974);
         $this->assertEquals('P123456', $policy->policyNo);
         $this->assertEquals('Skywalker', $policy->contact->lastName);
         $this->assertEquals(5, count($policy->vehicle->wheels));
