@@ -106,11 +106,14 @@ class MappingCollection
         if ($propertyMapping->column->isPrimaryKey || $propertyMapping->relationship->isPrimaryKey) {
             $this->addPrimaryKeyMapping($propertyMapping->className, $propertyMapping->propertyName);
         }
-        if ($propertyMapping->relationship->isDefined()) {
+        if ($propertyMapping->relationship->isDefined() && !$propertyMapping->relationship->isEmbedded) {
             $relationshipKey = $propertyMapping->getRelationshipKey();
             $this->relationships[$relationshipKey] ??= $propertyMapping;
         }
-        if ((!$suppressFetch && !$propertyMapping->relationship->isDefined()) || $propertyMapping->isForeignKey) {
+        if ((!$suppressFetch && !$propertyMapping->relationship->isDefined())
+            || $propertyMapping->isForeignKey
+            || $propertyMapping->relationship->isEmbedded
+        ) {
             $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
             $this->fetchableProperties[$propertyMapping->getPropertyPath()] = $propertyMapping;
         } 
@@ -395,11 +398,19 @@ class MappingCollection
         //Check if we can get each column
         foreach ($this->columns as $columnAlias => $propertyMapping) {
             if ($propertyMapping->parents) {
+                $parentPropertyMapping = $this->getPropertyMapping($propertyMapping->getParentPath());
                 $canFetch = false;
-                foreach ($relationships as $relationship) {
-                    if ($relationship->getPropertyPath() == $propertyMapping->getParentPath()) {
-                        $canFetch = !$relationship->isLateBound();// true;
-                        break;
+                if ($parentPropertyMapping && $parentPropertyMapping->relationship->isEmbedded) {
+                    $canFetch = !$propertyMapping->relationship->isScalarJoin();
+                }
+                if (!$canFetch) {
+                    foreach ($relationships as $relationship) {
+                        if ($relationship->getPropertyPath() == $propertyMapping->getParentPath()
+                            || ($relationship->relationship->isScalarJoin() && $relationship->getPropertyPath() == $propertyMapping->getPropertyPath())
+                        ) {
+                            $canFetch = !$relationship->isLateBound();
+                            break;
+                        }
                     }
                 }
                 if (!$canFetch) {
@@ -439,6 +450,8 @@ class MappingCollection
                     //If empty, use primary key of child class
                     $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: implode(',', $this->getPrimaryKeyProperties($relationship->childClassName));
                     $relationship->joinTable = $relationship->joinTable ?: $otherSideMapping->getTableAlias();
+                } else {
+                    $stop = true;
                 }
             } elseif (!$relationship->targetJoinColumn) {
                 $pkPropertyNames = $this->getPrimaryKeyProperties($relationship->childClassName);

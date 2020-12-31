@@ -162,20 +162,24 @@ final class ObjectMapper
     private function populateScalarMappings(
         MappingCollection $mappingCollection,
         \ReflectionClass $reflectionClass,
-        array $parents
+        array $parents,
+        Relationship $parentRelationship = null
     ): void {
-        $table = $this->getTableMapping($reflectionClass, true);
+        $table = $parents ?
+            $mappingCollection->getPropertyMapping(implode('.', $parents))->childTable :
+            $this->getTableMapping($reflectionClass, true);
         if (count($parents) == 0) {
             $mappingCollection->setPrimaryTableMapping($table);
         }
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-            $propertyMapping = $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents);
+            $propertyMapping = $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents, $parentRelationship);
             if ($propertyMapping && $propertyMapping->relationship->isDefined()) {
                 //For lazy loading, we must have the primary key so we can load the child
                 if ((!isset($mappingCollection->getRelationships(false)[$propertyMapping->getRelationshipKey()])
                     || $propertyMapping->relationship->isLateBound())
                     && !$propertyMapping->relationship->mappedBy
                     && !$propertyMapping->relationship->isEmbedded
+                    && !$propertyMapping->relationship->isScalarJoin()
                 ) {
                     $childPks = $mappingCollection->getPrimaryKeyProperties($propertyMapping->getChildClassName());
                     if (empty($childPks)) {
@@ -192,6 +196,7 @@ final class ObjectMapper
      * @param \ReflectionProperty $reflectionProperty
      * @param Table $table
      * @param array $parents
+     * @param Relationship|null $parentRelationship
      * @param bool $suppressFetch
      * @return PropertyMapping|null
      * @throws \ReflectionException
@@ -201,18 +206,43 @@ final class ObjectMapper
         \ReflectionProperty $reflectionProperty,
         Table $table,
         array $parents,
+        Relationship $parentRelationship = null,
         bool $suppressFetch = false
     ): ?PropertyMapping {
         $columnIsMapped = false;
         $relationshipIsMapped = false;
-        $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $columnIsMapped);
         $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $relationshipIsMapped);
+        $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $columnIsMapped);
+        if ($parentRelationship && $parentRelationship->isEmbedded) {
+            $column = clone($column);
+            $column->name = $parentRelationship->embeddedColumnPrefix . $column->name;
+            $relationship = clone($relationship);
+            if ($relationship->sourceJoinColumn) {
+                $relationship->sourceJoinColumn = $parentRelationship->embeddedColumnPrefix . $relationship->sourceJoinColumn;
+            }
+        }
+        if ($relationship->isScalarJoin()) {
+            $column->name = $relationship->targetScalarValueColumn;
+        }
         $this->initialiseRelationship($relationship);
-        if (($columnIsMapped || $relationshipIsMapped) && $column->name != 'IGNORE') {
+//        $immediateParent = end($parents);
+//        if (
+//            count($parents) == 1
+//            && $immediateParent
+//            && $relationship->mappedBy == $immediateParent
+//            && $relationship->childClassName == $mappingCollection->getEntityClassName()
+//        ) {
+//            $childIsRootClass = true;
+//        }
+        if ((($columnIsMapped || $relationshipIsMapped) && $column->name != 'IGNORE')
+            //&& !($immediateParent && $relationship->mappedBy == $immediateParent) //We already have the parent, no need to get it again
+            //&& !($childIsRootClass ?? true)
+        ) {
             $childTable = null;
             if ($relationship->childClassName) {
                 $childReflectionClass = new \ReflectionClass($relationship->childClassName);
-                $childTable = $this->mappingProvider->getTableMapping($childReflectionClass);
+                $childTable = $relationship->isEmbedded ? $table : null;
+                $childTable = $childTable ?? $this->mappingProvider->getTableMapping($childReflectionClass);
             }
             $propertyMapping = new PropertyMapping(
                 $reflectionProperty->getDeclaringClass()->getName(),
@@ -268,9 +298,6 @@ final class ObjectMapper
             $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty);
             if ($relationship->isDefined()) {
                 $this->initialiseRelationship($relationship);
-                if ($relationship->isEmbedded) {
-                    continue; //Temporary measure until we support embedables.
-                }
                 $propertyName = $reflectionProperty->getName();
                 $this->mapRelationship($mappingCollection, $propertyName, $relationship, $reflectionClass, $parents, $drillDown);
             }
@@ -321,7 +348,7 @@ final class ObjectMapper
             if (!$drillDown) {
                 //Just do the scalar properties and return
                 $childReflectionClass = new \ReflectionClass($relationship->childClassName);
-                $this->populateScalarMappings($mappingCollection, $childReflectionClass, $childParents);
+                $this->populateScalarMappings($mappingCollection, $childReflectionClass, $childParents, $relationship);
             } else {
                 $mappingCollection->markRelationshipMapped($propertyName, $reflectionClass->getName());
                 $this->populateMappingCollection($mappingCollection, $relationship->childClassName, $childParents);
@@ -337,7 +364,7 @@ final class ObjectMapper
     private function initialiseRelationship(Relationship $relationship): void
     {
         $relationship->setConfigOptions($this->eagerLoadToOne, $this->eagerLoadToMany);
-        if ($relationship->targetJoinColumn) {
+        if ($relationship->childClassName && $relationship->targetJoinColumn) {
             $targetProperty = $this->findTargetProperty($relationship);
             $relationship->setTargetProperty($targetProperty);
         }

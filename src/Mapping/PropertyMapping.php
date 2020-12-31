@@ -51,7 +51,8 @@ class PropertyMapping
     public Table $table;
 
     /**
-     * @var Table If this property represents a relationship to a child entity, the table annotation for the child.
+     * @var Table|null $childTable If this property represents a relationship to a child entity, the table annotation
+     * for the child.
      */
     public ?Table $childTable;
 
@@ -142,7 +143,14 @@ class PropertyMapping
 
     public function getRelationshipKey(): string
     {
-        return $this->className . ':' . $this->propertyName;
+        //If parent is embedded, use class name from parent as we might need multiple joins for different parents
+        $className = $this->className;
+        $parentProperty = $this->parentCollection->getPropertyMapping($this->getParentPath());
+        if ($parentProperty && $parentProperty->relationship->isEmbedded) {
+            $className = $parentProperty->className . ':' . $parentProperty->propertyName;
+        }
+
+        return $className . ':' . $this->propertyName;
     }
     
     /**
@@ -155,7 +163,7 @@ class PropertyMapping
     {
         if (empty($this->alias)) {
             $this->alias = $this->getPropertyPath('_');
-            if (array_key_exists($this->alias, $this->parentCollection->getColumns(false))) {
+            if (array_key_exists($this->alias, $this->parentCollection->getColumns())) {
                 $this->alias = $this->getPropertyPath('_-_');
             }
         }
@@ -167,15 +175,23 @@ class PropertyMapping
     {
         if (empty($this->tableAlias)
             && count($this->parents) > 0 //No need to alias scalar properties of main entity
-            && strpos($this->column->name, '.') === false) { //Already mapped to an alias manually, so don't mess 
-            $this->tableAlias = rtrim('obj_alias_' . implode('_', $this->parents), '_');
+            && (strpos($this->column->name, '.') === false || $this->relationship->isScalarJoin())) { //Already mapped to an alias manually, so don't mess
+            //Embedded objects use the alias of their parent, anything else gets its own
+            $parentPropertyMapping = $this->parentCollection->getPropertyMapping($this->getParentPath());
+            if ($this->relationship->isScalarJoin()) { //Each property with a scalar join is a separate join so needs a unique alias
+                $this->tableAlias = rtrim('obj_alias_' . $this->getParentPath('_'), '_') . '_' . $this->propertyName;
+            } elseif ($parentPropertyMapping && $parentPropertyMapping->relationship->isEmbedded) {
+                $this->tableAlias = $parentPropertyMapping->getTableAlias();
+            } else {
+                $this->tableAlias = rtrim('obj_alias_' . $this->getParentPath('_'), '_');
+            }
         }
         $tableAlias = $this->tableAlias;
         
         if ($forJoin) {
-            if (!$tableAlias && $this->relationship->childClassName) {
+            if (!$tableAlias && $this->relationship->childClassName && !$this->relationship->isScalarJoin()) {
                 $tableAlias = 'obj_alias_' . $this->propertyName;
-            } else {
+            } elseif (!$this->relationship->isScalarJoin()) {
                 $tableAlias = ltrim($tableAlias . '_' . $this->propertyName, '_');
             }
         }
@@ -185,24 +201,30 @@ class PropertyMapping
 
     public function getFullColumnName(): string
     {
-        if ($this->relationship->isEmbedded) {
-            return ''; //Temporary measure until we support embedables.
-        } elseif ($this->column->aggregateFunctionName) {
+        if ($this->column->aggregateFunctionName) {
             return ''; //Temporary measure until we support aggregates.
-        } 
+        }
         $table = $this->getTableAlias();
         $table = $table ?: $this->table->name;
-        $column = $this->column->name;
+        if ($this->relationship->isScalarJoin()) {
+            $column = $this->getShortColumnName(false);
+        } else {
+            $column = $this->column->name;
+        }
 
         return $column ? trim($table . '.' . $column, '.') : '';
     }
 
-    public function getShortColumnName($useAlias = true): string
+    public function getShortColumnName($useAlias = true, $columnName = null): string
     {
-        $columnName = $useAlias ? $this->getAlias() : '';
-        $columnName = $columnName ?: $this->column->name;
+        $column = $useAlias ? $this->getAlias() : null;
+        $column = $column ?? $columnName ?? $this->column->name;
+        $lastDelimiter = strrpos($column, '.');
+        if ($lastDelimiter !== false) {
+            $column = substr($column, strrpos($column, '.') + 1);
+        }
 
-        return $columnName;
+        return $column;
     }
 
     public function forceEarlyBindingForJoin(): void
@@ -219,6 +241,8 @@ class PropertyMapping
     public function isLateBound(bool $forJoin = false, array $row = []): bool
     {
         if ($forJoin && $this->forcedEarlyBindingForJoin) {
+            return false;
+        } elseif ($this->relationship->isEmbedded || $this->relationship->isScalarJoin()) {
             return false;
         } elseif ($this->relationship->isLateBound()) {
             return true;
@@ -303,6 +327,8 @@ class PropertyMapping
             $errorMessage = 'Could not determine collection class for %1$s. Please try adding a collectionClass attribute to the Relationship mapping for this property.';
             throw new MappingException(sprintf($errorMessage, $this->className . '::' . $this->propertyName));
         }
+
+        return '';
     }
     
     public function pointsToParent(): bool
@@ -317,14 +343,29 @@ class PropertyMapping
 
     public function getSourceJoinColumns(): array
     {
-        $table = $this->getTableAlias() ?: $this->table->name;
+        $parentProperty = $this->parentCollection->getPropertyMapping($this->getParentPath());
+        if ($parentProperty && $parentProperty->relationship->isEmbedded) {
+            $table = $parentProperty->getTableAlias() ?: $parentProperty->table->name;
+        } else {
+            $table = $this->getTableAlias() ?: $this->table->name;
+        }
+
         return $this->getJoinColumns($this->relationship->sourceJoinColumn, $table);
     }
 
     public function getTargetJoinColumns(): array
     {
-        $table = $this->getTableAlias(true);
-        return $this->getJoinColumns($this->relationship->targetJoinColumn, $table);
+//        $parentProperty = $this->parentCollection->getPropertyMapping($this->getParentPath());
+//        if ($parentProperty && $parentProperty->relationship->isEmbedded) {
+//            $table = $parentProperty->getTableAlias(true);
+//        } else {
+            $table = $this->getTableAlias(true);
+//        }
+        $targetColumn = $this->relationship->targetJoinColumn;
+        if ($this->relationship->isScalarJoin()) { //Just want the short column name
+            $targetColumn = $this->getShortColumnName(false, $targetColumn);
+        }
+        return $this->getJoinColumns($targetColumn, $table);
     }
     
     private function getJoinColumns(string $sourceOrTargetColumn, string $table): array

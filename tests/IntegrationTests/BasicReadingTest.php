@@ -114,7 +114,7 @@ class BasicReadingTest extends IntegrationTestBase
     protected function doReadingTests()
     {
         //Find by ID, as per doctrine
-            $policy = $this->objectRepository->find(19071974);
+        $policy = $this->objectRepository->find(19071974);
         $this->assertEquals('P123456', $policy->policyNo);
         $this->assertEquals('Skywalker', $policy->contact->lastName);
         $this->assertEquals(5, count($policy->vehicle->wheels));
@@ -153,7 +153,7 @@ class BasicReadingTest extends IntegrationTestBase
 //        $this->assertInstanceOf(IterableResult::class, $iterable);
 //        foreach ($iterable as $policy) {
 //            $this->assertInstanceOf(TestPolicy::class, $policy);
-//            $this->assertEQuals('P1234', substr($policy->policyNo, 0, 5));
+//            $this->assertEquals('P1234', substr($policy->policyNo, 0, 5));
 //        }
 
         //Ensure zero gets interpreted correctly when using array syntax
@@ -172,7 +172,7 @@ class BasicReadingTest extends IntegrationTestBase
         $this->assertEquals('Lister', $weirdo->last_name);
         $this->assertEquals('The End', $weirdo->a_VERY_Very_InconsistentnamingConvention_here);
         $this->assertEquals('1988-02-15 21:00:00', $weirdo->some_random_event_dateTime->format('Y-m-d H:i:s'));
-//        $this->assertEquals('United Kingdom', $weirdo->address_with_underscores->getCountryDescription());
+        $this->assertEquals('United Kingdom', $weirdo->address_with_underscores->getCountryDescription());
         $this->assertEquals('danger.mouse@example.com', $weirdo->test_user->getEmail());
     }
 

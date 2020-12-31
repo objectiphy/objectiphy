@@ -242,7 +242,7 @@ class Relationship
      */
     public function isLateBound(): bool
     {
-        return $this->isToMany() || !$this->isEager();
+        return !$this->isEmbedded && ($this->isToMany() || !$this->isEager());
     }
 
     public function isScalarJoin(): bool
@@ -267,7 +267,7 @@ class Relationship
     public function validate(PropertyMapping $propertyMapping): void
     {
         if ($this->isEmbedded) {
-            return; //Temporary measure until we support embeddables.
+            return; //No join involved
         }
         $errorMessage = '';
         if (!$this->joinTable) {

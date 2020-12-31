@@ -162,23 +162,36 @@ abstract class Query implements QueryInterface
             return;
         }
 
-        $targetProperty = $propertyMapping->relationship->getTargetProperty();
-        if (!$targetProperty) { //Just joining to single primary key value
-            $pkProperties = $mappingCollection->getPrimaryKeyProperties($propertyMapping->getChildClassName());
-            $targetProperty = reset($pkProperties);
+        if ($propertyMapping->relationship->isScalarJoin()) {
+            //There is no property to join to - just use the columns (without backticks, so they don't get processed)
+
+            //TODO: The column to select will be obj_alias_propertyPath.targetScalarValueColumn
+
+            $target = $propertyMapping->relationship->targetJoinColumn;
+            $join = new JoinExpression(
+                $propertyMapping->relationship->joinTable,
+                'obj_alias_' . str_replace('.', '_', $propertyMapping->getPropertyPath())
+            );
+        } else {
+            $targetProperty = $propertyMapping->relationship->getTargetProperty();
+            if (!$targetProperty) { //Just joining to single primary key value
+                $pkProperties = $mappingCollection->getPrimaryKeyProperties($propertyMapping->getChildClassName());
+                $targetProperty = reset($pkProperties);
+            }
+            $join = new JoinExpression(
+                $propertyMapping->getChildClassName(),
+                'obj_alias_' . str_replace('.', '_', $propertyMapping->getPropertyPath())
+            );
+            $target = "`$targetProperty`";
         }
 
-        $join = new JoinExpression(
-            $propertyMapping->getChildClassName(),
-            'obj_alias_' . str_replace('.', '_', $propertyMapping->getPropertyPath())
-        );
-        $join->propertyMapping = $propertyMapping;
 
+        $join->propertyMapping = $propertyMapping;
         $on = new CriteriaExpression(
             new FieldExpression($propertyMapping->getPropertyPath(), true),
             $propertyMapping->getAlias(),
             QB::EQ,
-            "`$targetProperty`"
+            $target
         );
 
         $this->joins[] = $join;

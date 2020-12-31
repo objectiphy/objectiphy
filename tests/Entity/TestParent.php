@@ -54,10 +54,10 @@ class TestParent
      * @Mapping\Column(name="modified_date_time")
      */
     public $modifiedDateTime;
-//    /**
-//     * @Mapping\Relationship(childClassName="TestAddress", relationshipType="one_to_one", isEmbedded=true)
-//     */
-//    protected $address;
+    /**
+     * @Mapping\Relationship(childClassName="TestAddress", relationshipType="one_to_one", isEmbedded=true)
+     */
+    protected $address;
 
     /** @var boolean */
     private $nameGetterAccessed = false;
