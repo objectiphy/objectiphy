@@ -318,13 +318,13 @@ class CriteriaReadingTest extends IntegrationTestBase
         $this->assertEquals('Tim', $employeeRob->mentee->mentee->mentee->name);
 
         //Check that multiple scalar joins on an embedded value object on a child object are hydrated
-//        $this->objectRepository->setClassName(TestSecurityPass::class);
-//        $securityPass = $this->objectRepository->findOneBy(['serialNo' => '1234567']);
-//        $this->assertEquals('SB', $securityPass->employee->position->positionKey);
-//        $this->assertEquals('Supreme Being', $securityPass->employee->position->positionValue);
-//        $this->assertEquals('Lead PHP Developer and master of the black arts', $securityPass->employee->position->positionDescription);
-//        $this->assertEquals('Tea boy', $securityPass->employee->mentee->position->positionDescription);
-//        $this->assertEquals(2, $securityPass->employee->mentee->unionRep->id);
+        $this->objectRepository->setClassName(TestSecurityPass::class);
+        $securityPass = $this->objectRepository->findOneBy(['serialNo' => '1234567']);
+        $this->assertEquals('SB', $securityPass->employee->position->positionKey);
+        $this->assertEquals('Supreme Being', $securityPass->employee->position->positionValue);
+        $this->assertEquals('Lead PHP Developer and master of the black arts', $securityPass->employee->position->positionDescription);
+        $this->assertEquals('Tea boy', $securityPass->employee->mentee->position->positionDescription);
+        $this->assertEquals(2, $securityPass->employee->mentee->unionRep->id);
     }
 
     protected function doCustomQueryTests()

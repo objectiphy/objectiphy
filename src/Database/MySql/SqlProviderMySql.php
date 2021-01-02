@@ -69,7 +69,7 @@ class SqlProviderMySql extends AbstractSqlProvider
                 throw new QueryException('Property mapping not found for: ' . $propertyPath);
             }
             $this->objectNames[] = '`' . $property->getPropertyPath() . '`';
-            $tableColumnString = $property->getFullColumnName();
+            $tableColumnString = $this->delimit($property->getFullColumnName());
             $this->persistenceNames[] = $this->delimit($tableColumnString, $delimiter);
             //Use alternative delimiter for aliases so we don't accidentally replace them
             $this->aliases[] = $this->delimit($property->getFullColumnName(), $altDelimiter)

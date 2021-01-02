@@ -116,7 +116,7 @@ final class ObjectMapper
                     $parents = array_merge($parent->parents, [$parent->propertyName]);
                     //Mark it as early bound...
                     $parent->forceEarlyBindingForJoin(); //We need to join even if it is to-many, so we can filter
-                    $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents, true);
+                    $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents, null, true);
                 } else {
                     $parent = $existingParent;
                     if ($parent && $forceJoins) {

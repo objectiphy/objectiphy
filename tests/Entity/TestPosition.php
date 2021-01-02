@@ -21,7 +21,7 @@ class TestPosition
      * @var string
      * @Mapping\Relationship(
      *     relationshipType="scalar",
-     *     type="string"
+     *     type="string",
      *     targetScalarValueColumn="objectiphy_test.position.name",
      *     joinTable="objectiphy_test.position",
      *     sourceJoinColumn="position_code",
@@ -32,7 +32,7 @@ class TestPosition
 
     /**
      * @var string
-     * @Mapping\Column(
+     * @Mapping\Relationship(
      *     relationshipType="scalar",
      *     type="string",
      *     targetScalarValueColumn="objectiphy_test.position.description",

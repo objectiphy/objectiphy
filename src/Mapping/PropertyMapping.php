@@ -68,6 +68,11 @@ class PropertyMapping
     public bool $isForeignKey = false;
 
     /**
+     * @var bool Whether or not we can fetch this property in the current query
+     */
+    public bool $isFetchable = false;
+
+    /**
      * @var string Locally cached fully qualified property path using dot notation.
      */
     private string $propertyPath = '';
@@ -171,8 +176,11 @@ class PropertyMapping
         return $this->alias;
     }
 
-    public function getTableAlias(bool $forJoin = false): string
+    public function getTableAlias(bool $forJoin = false, $populate = true): string
     {
+        if (!$populate) {
+            return $this->tableAlias;
+        }
         if (empty($this->tableAlias)
             && count($this->parents) > 0 //No need to alias scalar properties of main entity
             && (strpos($this->column->name, '.') === false || $this->relationship->isScalarJoin())) { //Already mapped to an alias manually, so don't mess
@@ -184,6 +192,9 @@ class PropertyMapping
                 $this->tableAlias = $parentPropertyMapping->getTableAlias();
             } else {
                 $this->tableAlias = rtrim('obj_alias_' . $this->getParentPath('_'), '_');
+            }
+            if ($this->relationship->isScalarJoin()) {
+                $this->parentCollection->populateOtherMatchingScalarJoinTableAliases($this);
             }
         }
         $tableAlias = $this->tableAlias;
@@ -197,6 +208,14 @@ class PropertyMapping
         }
 
         return $tableAlias;
+    }
+
+    /**
+     * @param string $alias Just used for scalar joins that share the same remote table.
+     */
+    public function setTableAlias(string $alias)
+    {
+        $this->tableAlias = $alias;
     }
 
     public function getFullColumnName(): string

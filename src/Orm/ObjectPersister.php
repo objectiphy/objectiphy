@@ -359,6 +359,9 @@ final class ObjectPersister implements TransactionInterface
             }
             $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
             $childParentProperty = $childPropertyMapping->relationship->mappedBy;
+            if ($childPropertyMapping->relationship->isEmbedded) {
+                continue;
+            }
             $child = ObjectHelper::getValueFromObject($entity, $childPropertyName);
             if (!empty($child)) {
                 $childEntities = is_iterable($child) ? $child : [$child];

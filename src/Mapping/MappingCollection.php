@@ -60,6 +60,11 @@ class MappingCollection
     private array $fetchableProperties = [];
 
     /**
+     * @var PropertyMapping[] Property mappings for scalar joins.
+     */
+    private array $scalarJoinProperties = [];
+
+    /**
      * @var PropertyMapping[] Property mappings for relationships keyed by parent class and property name
      */
     private array $relationships = [];
@@ -109,6 +114,9 @@ class MappingCollection
         if ($propertyMapping->relationship->isDefined() && !$propertyMapping->relationship->isEmbedded) {
             $relationshipKey = $propertyMapping->getRelationshipKey();
             $this->relationships[$relationshipKey] ??= $propertyMapping;
+        }
+        if ($propertyMapping->relationship->isScalarJoin()) {
+            $this->scalarJoinProperties[] = $propertyMapping;
         }
         if ((!$suppressFetch && !$propertyMapping->relationship->isDefined())
             || $propertyMapping->isForeignKey
@@ -183,6 +191,7 @@ class MappingCollection
      * @param bool $finalise Whether or not to ensure relationships are complete (should be false only while
      * populating the mapping collection).
      * @return PropertyMapping[]
+     * @throws MappingException
      */
     public function getRelationships(bool $finalise = true): array
     {
@@ -294,6 +303,24 @@ class MappingCollection
         return $this->classes;
     }
 
+    public function populateOtherMatchingScalarJoinTableAliases(PropertyMapping $sourcePropertyMapping)
+    {
+        foreach ($this->scalarJoinProperties as $propertyMapping) {
+            if ($propertyMapping !== $sourcePropertyMapping
+                && $propertyMapping->parents == $sourcePropertyMapping->parents
+                && !$propertyMapping->getTableAlias(false, false)
+                && $propertyMapping->relationship->joinTable == $sourcePropertyMapping->relationship->joinTable
+                && $propertyMapping->relationship->sourceJoinColumn == $sourcePropertyMapping->relationship->sourceJoinColumn
+                && $propertyMapping->relationship->targetJoinColumn == $sourcePropertyMapping->relationship->targetJoinColumn) {
+                $propertyMapping->setTableAlias($sourcePropertyMapping->getTableAlias());
+                //We don't need to join any more as we are re-using an existing join
+                if (($key = array_search($propertyMapping, $this->relationships)) !== false) {
+                    unset($this->relationships[$key]);
+                }
+            }
+        }
+    }
+
     /**
      * Return the column alias used for the given property
      * @param string $propertyPath
@@ -399,21 +426,21 @@ class MappingCollection
         foreach ($this->columns as $columnAlias => $propertyMapping) {
             if ($propertyMapping->parents) {
                 $parentPropertyMapping = $this->getPropertyMapping($propertyMapping->getParentPath());
-                $canFetch = false;
+                $propertyMapping->isFetchable = false;
                 if ($parentPropertyMapping && $parentPropertyMapping->relationship->isEmbedded) {
-                    $canFetch = !$propertyMapping->relationship->isScalarJoin();
+                    $propertyMapping->isFetchable = $parentPropertyMapping->isFetchable && !$propertyMapping->relationship->isScalarJoin();
                 }
-                if (!$canFetch) {
+                if (!$propertyMapping->isFetchable) {
                     foreach ($relationships as $relationship) {
                         if ($relationship->getPropertyPath() == $propertyMapping->getParentPath()
                             || ($relationship->relationship->isScalarJoin() && $relationship->getPropertyPath() == $propertyMapping->getPropertyPath())
                         ) {
-                            $canFetch = !$relationship->isLateBound();
+                            $propertyMapping->isFetchable = !$relationship->isLateBound();
                             break;
                         }
                     }
                 }
-                if (!$canFetch) {
+                if (!$propertyMapping->isFetchable) {
                     unset($this->columns[$columnAlias]);
                     unset($this->fetchableProperties[$propertyMapping->getPropertyPath()]);
                 }
