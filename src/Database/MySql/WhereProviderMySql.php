@@ -24,22 +24,22 @@ class WhereProviderMySql extends AbstractSqlProvider
      */
     public function getWhere(QueryInterface $query, array $objectNames, array $persistenceNames): string
     {
-        $sql = ' WHERE 1';
+        $sql = "WHERE 1\n";
         $removeJoiner = false;
         foreach ($query->getWhere() as $index => $criteriaExpression) {
             if ($criteriaExpression instanceof CriteriaGroup) {
                 $removeJoiner = $criteriaExpression->type != CriteriaGroup::GROUP_TYPE_END;
                 if ($index == 0 && $criteriaExpression->type == CriteriaGroup::GROUP_TYPE_START_OR) {
                     //If first item is an OR group, change it to AND, otherwise it ORs with 1 and matches every record!
-                    $sql .= ' AND ' . substr((string) $criteriaExpression, 2);
+                    $sql .= "    AND " . substr((string) $criteriaExpression, 2) . "\n";
                 } else {
-                    $sql .= ' ' . (string) $criteriaExpression;
+                    $sql .= "    " . (string) $criteriaExpression . "\n";
                 }
             } else {
                 if (!$removeJoiner) {
-                    $sql .= ' ' . $criteriaExpression->joiner;
+                    $sql .= "    " . $criteriaExpression->joiner;
                 }
-                $sql .= ' ' . $criteriaExpression->toString($this->params);
+                $sql .= $criteriaExpression->toString($this->params) . "\n";
                 $removeJoiner = false;
             }
         }
@@ -54,7 +54,7 @@ class WhereProviderMySql extends AbstractSqlProvider
                 $value = $pkValues ? reset($pkValues) : null;
             }
         });
-        $sql = str_replace($objectNames, $persistenceNames, $sql);
+        $sql = trim(str_replace($objectNames, $persistenceNames, $sql));
 
         return $sql;
     }

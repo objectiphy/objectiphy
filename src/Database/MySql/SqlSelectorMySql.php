@@ -6,7 +6,6 @@ namespace Objectiphy\Objectiphy\Database\MySql;
 
 use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
-use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 
@@ -53,7 +52,6 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
      * Get the SQL query necessary to select the records that will be used to hydrate the given entity.
      * @param SelectQueryInterface $query
      * @return string The SQL query to execute.
-     * @throws MappingException
      * @throws \Exception
      */
     public function getSelectSql(SelectQueryInterface $query): string
@@ -81,9 +79,9 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
         $sql .= $this->getOffset();
 
         $sql = str_replace('|', '`', $sql); //Revert to backticks now the replacements are done.
-        
+
         if ($this->options->count && strpos($sql, 'SELECT COUNT') === false) { //We have to select all to get the count :(
-            $sql = "SELECT COUNT(*) FROM ($sql) subquery";
+            $sql = "SELECT COUNT(*) FROM (\n$sql\n) subquery";
         }
 
         if ($this->disableMySqlCache) {
@@ -95,18 +93,19 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
 
     /**
      * @return string The SELECT part of the SQL query.
+     * @throws ObjectiphyException
      */
     public function getSelect(): string
     {
         $sql = $this->getCountSql();
-        
+
         if (!$sql) {
-            $sql = 'SELECT ';
+            $sql = "SELECT \n";
             foreach ($this->query->getSelect() as $fieldExpression) {
                 $fieldSql = trim((string) $fieldExpression);
-                $sql .= str_replace($this->objectNames, $this->aliases, $fieldSql) . ', ';
+                $sql .= "    " . str_replace($this->objectNames, $this->aliases, $fieldSql) . ", \n";
             }
-            $sql = rtrim($sql, ', ');
+            $sql = rtrim($sql, ", \n") . "\n";
         }
 
         //We cannot count using a subquery if there are duplicate column names, and only need one column for the count to work
@@ -123,7 +122,7 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
      */
     public function getFrom(): string
     {
-        return ' FROM ' . $this->replaceNames($this->query->getFrom());
+        return "FROM " . $this->replaceNames($this->query->getFrom()) . "\n";
     }
 
     /**
@@ -148,8 +147,8 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
         foreach ($this->query->getHaving() as $criteriaExpression) {
             $criteria[] = $this->replaceNames((string) $criteriaExpression);
         }
-        
-        return implode(' AND ', $criteria);
+
+        return implode("\nAND ", $criteria) . "\n";
     }
 
     /**
@@ -163,8 +162,8 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
         if (!$this->options->count) {
             $orderBy = $this->query->getOrderBy();
             if (!empty($orderBy)) {
-                $orderByString = ' ORDER BY ' . implode(', ', $orderBy);
-                $sql = $this->replaceNames($orderByString);
+                $orderByString = 'ORDER BY ' . implode(', ', $orderBy);
+                $sql = $this->replaceNames($orderByString) . "\n";
             }
         }
 
@@ -179,11 +178,11 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
         $sql = '';
 
         if (!$this->options->multiple) {
-            $sql = ' LIMIT 1 ';
+            $sql = "LIMIT 1 \n";
         } elseif (!$this->options->count && !empty($this->options->pagination)) {
-            $sql = ' LIMIT ' . $this->options->pagination->getRecordsPerPage() . ' ';
+            $sql = "LIMIT " . $this->options->pagination->getRecordsPerPage() . " \n";
         } elseif ($this->query->getLimit() ?? false) {
-            $sql = ' LIMIT ' . $this->query->getLimit();
+            $sql = "LIMIT " . $this->query->getLimit() . "\n";
         }
 
         return $sql;
@@ -197,9 +196,9 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
         $sql = '';
         if ($this->options->multiple && !$this->options->count) {
             if ($this->query->getOffset() ?? false) {
-                $sql = ' OFFSET ' . $this->query->getOffset();
+                $sql = '    OFFSET ' . $this->query->getOffset() . "\n";
             } elseif (!empty($this->options->pagination) && $this->options->pagination->getOffset()) {
-                $sql = ' OFFSET ' . $this->options->pagination->getOffset();
+                $sql = '    OFFSET ' . $this->options->pagination->getOffset() . "\n";
             }
         }
 
@@ -238,7 +237,7 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
 
         $groupBy = $this->query->getGroupBy();
         if ($groupBy) {
-            $sql = $this->replaceNames(implode(', ', $groupBy));
+            $sql = $this->replaceNames(implode(', ', $groupBy)) . "\n";
         }
 
         return $sql;

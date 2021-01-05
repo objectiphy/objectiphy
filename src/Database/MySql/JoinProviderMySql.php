@@ -61,24 +61,23 @@ class JoinProviderMySql extends AbstractSqlProvider
     private function processJoinExpression(JoinExpression $joinPart): void
     {
         $this->currentJoinAlias = $joinPart->joinAlias;
-        $this->sql .= " " . ($joinPart->type ?: 'LEFT') . " JOIN ";
+        $this->sql .= ($joinPart->type ?: "LEFT") . " JOIN ";
         $this->sql .= str_replace($this->objectNames, $this->persistenceNames, $joinPart->targetEntityClassName);
-        $this->sql .= ' ' . $this->delimit($this->currentJoinAlias);
+        $this->sql .= " " . $this->delimit($this->currentJoinAlias) . "\n";
         $this->joiner = null;
     }
 
     private function processCriteriaGroup(CriteriaGroup $joinPart): void
     {
         $this->removeJoiner = $joinPart->type != CriteriaGroup::GROUP_TYPE_END;
-        $this->sql .= ' ' . str_replace($this->objectNames, $this->persistenceNames, (string) $joinPart);
+        $this->sql .= '    ' . str_replace($this->objectNames, $this->persistenceNames, (string) $joinPart) . "\n";
     }
 
     private function processCriteriaExpression(CriteriaExpression $joinPart): void
     {
-        $this->joiner = $this->joiner ? $joinPart->joiner : " ON ";
-
+        $this->joiner = $this->joiner ? $joinPart->joiner : "    ON ";
         if (!$this->removeJoiner) {
-            $this->sql .= ' ' . $this->joiner;
+            $this->sql .= $this->joiner;
         }
         $this->isCustomJoin = false;
         if ($this->currentJoinAlias && substr($this->currentJoinAlias, 0, 10) !== 'obj_alias_') {
@@ -99,9 +98,9 @@ class JoinProviderMySql extends AbstractSqlProvider
                     $joinSql[] = $this->delimit($sourceJoinColumn) . ' = ' . $this->delimit($targetJoinColumn);
                 }
             }
-            $this->sql .= implode(' AND ', $joinSql);
+            $this->sql .= implode("\n AND ", $joinSql) . "\n";
         } else {
-            $this->sql .= ' ' . $joinPart->toString($this->params);
+            $this->sql .= "    " . $joinPart->toString($this->params) . "\n";
         }
     }
 

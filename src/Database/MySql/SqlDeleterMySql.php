@@ -41,7 +41,7 @@ class SqlDeleterMySql extends SqlProviderMySql implements SqlDeleterInterface
         $this->query = $query;
         $this->prepareReplacements($this->options->mappingCollection, '`', '|');
 
-        $sql = 'DELETE FROM ' . $this->replaceNames((string) $query->getDelete());
+        $sql = "DELETE FROM \n" . $this->replaceNames((string) $query->getDelete()) . "\n";
         $sql .= $this->addJoins();
 
         $sql = str_replace('|', '`', $sql); //Revert to backticks now the replacements are done.

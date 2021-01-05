@@ -50,6 +50,8 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
      * @param InsertQueryInterface $query
      * @param bool $replace Whether to update existing record if it already exists.
      * @return string A query to execute for inserting the record.
+     * @throws ObjectiphyException
+     * @throws QueryException
      */
     public function getInsertSql(InsertQueryInterface $query, bool $replace = false): string
     {
@@ -60,17 +62,17 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
         $this->params = [];
         $this->prepareReplacements($query, $this->options->mappingCollection, '`');
 
-        $sql = 'INSERT INTO ';
+        $sql = "INSERT INTO \n";
         $sql .= $this->replaceNames($query->getInsert());
-        $sql .= ' SET ';
+        $sql .= "SET \n";
         $sqlAssignments = [];
         foreach ($query->getAssignments() as $assignment) {
             $sqlAssignments[] = $assignment->toString($this->params);
         }
-        $assignments = $this->replaceNames(implode(', ', $sqlAssignments));
-        $sql .= $assignments;
+        $assignments = $this->replaceNames(implode(",    \n", $sqlAssignments)) . "\n";
+        $sql .= "    " . $assignments;
         if ($replace) {
-            $sql .= ' ON DUPLICATE KEY UPDATE ' . $assignments;
+            $sql .= 'ON DUPLICATE KEY UPDATE ' . $assignments . "\n";
         }
 
         array_walk($this->params, function(&$value) {
@@ -87,7 +89,6 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
      * @param array $parents
      * @return string
      * @throws ObjectiphyException
-     * @throws \ReflectionException
      */
     public function getUpdateSql(UpdateQueryInterface $query, bool $replaceExisting = false, array $parents = []): string
     {
@@ -98,17 +99,17 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
         $this->params = [];
         $this->prepareReplacements($query, $this->options->mappingCollection, '`', $parents);
 
-        $sql = 'UPDATE ';
+        $sql = "UPDATE \n";
         $sql .= $this->replaceNames($query->getUpdate());
         $this->joinProvider->setQueryParams($this->params);
         $sql .= $this->joinProvider->getJoins($query, $this->objectNames, $this->persistenceNames);
         $this->setQueryParams($this->joinProvider->getQueryParams());
-        $sql .= ' SET ';
+        $sql .= "SET \n";
         $sqlAssignments = [];
         foreach ($query->getAssignments() as $assignment) {
             $sqlAssignments[] = $assignment->toString($this->params);
         }
-        $sql .= $this->replaceNames(implode(', ', $sqlAssignments));
+        $sql .= "    " . $this->replaceNames(implode(", \n", $sqlAssignments)) . "\n";
         $this->whereProvider->setQueryParams($this->params);
         $sql .= $this->whereProvider->getWhere($query, $this->objectNames, $this->persistenceNames);
         $this->setQueryParams($this->whereProvider->getQueryParams());
@@ -161,9 +162,9 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
             $this->persistenceNames[] = $this->delimit(str_replace($delimiter, '', $table->name)) ;
         }
     }
-    
+
     private function prepareCustomJoinAliasReplacements(
-        string $propertyPath, 
+        string $propertyPath,
         QueryInterface $query,
         MappingCollection $mappingCollection
     ): bool {

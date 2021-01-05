@@ -78,7 +78,7 @@ class SqlProviderMySql extends AbstractSqlProvider
         $tables = $mappingCollection->getTables();
         foreach ($tables as $class => $table) {
             $this->objectNames[] = $class;
-            $this->persistenceNames[] = $this->delimit(str_replace($delimiter, '', $table->name)) ;
+            $this->persistenceNames[] = $this->delimit(str_replace($delimiter, '', $table->name));
         }
     }
 }
