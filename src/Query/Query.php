@@ -165,7 +165,7 @@ abstract class Query implements QueryInterface
         if ($propertyMapping->relationship->isScalarJoin()) {
             //There is no property to join to - just use the columns (without backticks, so they don't get processed)
 
-            //TODO: The column to select will be obj_alias_propertyPath.targetScalarValueColumn
+            //TODO: use alternative delimiter
 
             $target = $propertyMapping->relationship->targetJoinColumn;
             $join = new JoinExpression(

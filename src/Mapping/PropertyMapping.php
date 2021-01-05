@@ -151,7 +151,7 @@ class PropertyMapping
         //If parent is embedded, use class name from parent as we might need multiple joins for different parents
         $className = $this->className;
         $parentProperty = $this->parentCollection->getPropertyMapping($this->getParentPath());
-        if ($parentProperty && $parentProperty->relationship->isEmbedded) {
+        if ($parentProperty && ($parentProperty->relationship->isEmbedded || $parentProperty->relationship->isScalarJoin())) {
             $className = $parentProperty->className . ':' . $parentProperty->propertyName;
         }
 
@@ -259,14 +259,22 @@ class PropertyMapping
      */
     public function isLateBound(bool $forJoin = false, array $row = []): bool
     {
+//If it contains a scalar join that's already in use, we have to late bind as we won't be able to fetch it
+//if ($this->propertyName == 'position') {
+//    $stop = true;
+//}
+//if ($this->sharesClassWithAParent() && $this->childClassHasScalarJoin()) {
+//    return true;
+//}
+
         if ($forJoin && $this->forcedEarlyBindingForJoin) {
             return false;
         } elseif ($this->relationship->isEmbedded || $this->relationship->isScalarJoin()) {
             return false;
         } elseif ($this->relationship->isLateBound()) {
             return true;
-        } elseif (!$this->relationship->mappedBy && !$this->parentCollection->isPropertyFetchable($this)) {
-            //If we have to lazy load to avoid recursion, it will be late bound
+        } elseif (!$this->relationship->mappedBy && !$this->parentCollection->isPropertyFetchable($this)/* && !$this->column->isPrimaryKey*/) {
+            //If we have to lazy load to avoid recursion, it will be late bound - get pk only
             return true;
         } elseif ($this->isForeignKey) {
             //If we don't have the child primary key, it will be late bound
@@ -283,6 +291,39 @@ class PropertyMapping
 
         return false;
     }
+
+    /*private function sharesClassWithAParent(): bool
+    {
+        if ($this->getChildClassName() == $this->className
+            || $this->getChildClassName() == $this->parentCollection->getEntityClassName()
+        ) {
+            return true;
+        }
+
+        if ($this->parents) {
+            $parentPath = $this->getParentPath();
+            while ($parentPath) {
+                $parentPropertyMapping = $this->parentCollection->getPropertyMapping($parentPath);
+                if ($parentPropertyMapping->className == $this->getChildClassName()) {
+                    return true;
+                }
+                $parentPath = $parentPropertyMapping->getParentPath();
+            }
+        }
+
+        return false;
+    }
+
+    private function childClassHasScalarJoin(): bool
+    {
+        foreach ($this->parentCollection->getPropertyExamplesForClass($this->getChildClassName()) as $propertyMapping) {
+            if ($propertyMapping->relationship->isScalarJoin()) {
+                return true;
+            }
+        }
+
+        return false;
+    }*/
 
     public function isEager(): bool
     {

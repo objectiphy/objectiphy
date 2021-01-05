@@ -121,7 +121,8 @@ class MappingCollection
         if ((!$suppressFetch && !$propertyMapping->relationship->isDefined())
             || $propertyMapping->isForeignKey
             || $propertyMapping->relationship->isEmbedded
-        ) {
+        ) { //For now we will assume it is fetchable - if we have to late bind to avoid recursion, this can change
+            $propertyMapping->isFetchable = true;
             $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
             $this->fetchableProperties[$propertyMapping->getPropertyPath()] = $propertyMapping;
         } 
@@ -435,7 +436,10 @@ class MappingCollection
                         if ($relationship->getPropertyPath() == $propertyMapping->getParentPath()
                             || ($relationship->relationship->isScalarJoin() && $relationship->getPropertyPath() == $propertyMapping->getPropertyPath())
                         ) {
-                            $propertyMapping->isFetchable = !$relationship->isLateBound();
+                            $propertyMapping->isFetchable = !$relationship->isLateBound();/* || $propertyMapping->column->isPrimaryKey;
+                            if ($propertyMapping->relationship->isScalarJoin()) {
+                                $propertyMapping->isFetchable = !$this->hasLateBoundAncestor($propertyMapping);
+                            }*/
                             break;
                         }
                     }
@@ -451,6 +455,20 @@ class MappingCollection
             $this->columnMappingDone = true;
         }
     }
+
+//    private function hasLateBoundAncestor(PropertyMapping $propertyMapping)
+//    {
+//        $parentPath = $propertyMapping->getParentPath();
+//        while (strlen($parentPath) > 0) {
+//            $ancestor = $this->getPropertyMapping($parentPath);
+//            if ($ancestor->isLateBound()) {
+//                return true;
+//            }
+//            $parentPath = $ancestor->getParentPath();
+//        }
+//
+//        return false;
+//    }
 
     /**
      * Ensure joinTable, sourceJoinColumn, and targetJoinColumn are populated for
