@@ -24,7 +24,7 @@ class TestSecurityPass
     public $serialNo;
     /**
      * @var TestEmployee
-     * @Mapping\Relationship(relationshipType="one_to_one", childClassName="TestEmployee", sourceJoinColumn="employee_id")
+     * @Mapping\Relationship(relationshipType="one_to_one", childClassName="TestEmployee")
      */
     public $employee;
 }

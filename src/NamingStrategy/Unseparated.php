@@ -21,7 +21,7 @@ class Unseparated implements NamingStrategyInterface
     ): string {
         $converted = strtolower($name);
         if ($type == self::TYPE_RELATIONSHIP_PROPERTY) {
-            $targetColumnName = $propertyMapping->relationship->targetJoinColumn ?? 'id';
+            $targetColumnName = $propertyMapping->relationship->targetJoinColumn ?: 'id';
             $converted .= substr($converted, -2) != $targetColumnName ? $targetColumnName : '';
         }
         

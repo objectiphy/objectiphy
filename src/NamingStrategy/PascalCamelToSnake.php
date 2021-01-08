@@ -30,7 +30,7 @@ class PascalCamelToSnake implements NamingStrategyInterface
     ): string {
         $converted = ltrim(strtolower(preg_replace('/[A-Z]([A-Z](?![a-z]))*/', '_$0', $name)), '_');
         if ($type == self::TYPE_RELATIONSHIP_PROPERTY) {
-            $targetColumnName = $propertyMapping->relationship->targetJoinColumn ?? 'id';
+            $targetColumnName = $propertyMapping->relationship->targetJoinColumn ?: 'id';
             $converted .= substr($converted, -3) != "_$targetColumnName" ? "_$targetColumnName" : '';
         }
 

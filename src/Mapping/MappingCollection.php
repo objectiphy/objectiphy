@@ -118,6 +118,7 @@ class MappingCollection
         if ($propertyMapping->relationship->isScalarJoin()) {
             $this->scalarJoinProperties[] = $propertyMapping;
         }
+
         if ((!$suppressFetch && !$propertyMapping->relationship->isDefined())
             || $propertyMapping->isForeignKey
             || $propertyMapping->relationship->isEmbedded
@@ -126,6 +127,14 @@ class MappingCollection
             $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
             $this->fetchableProperties[$propertyMapping->getPropertyPath()] = $propertyMapping;
         } 
+    }
+
+    public function forceJoin(PropertyMapping $propertyMapping)
+    {
+        if ($propertyMapping->relationship->isDefined() && !$propertyMapping->relationship->isEmbedded) {
+            $relationshipKey = $propertyMapping->getRelationshipKey();
+            $this->relationships[$relationshipKey] ??= $propertyMapping;
+        }
     }
 
     public function forceFetch(string $propertyPath): void
@@ -436,10 +445,10 @@ class MappingCollection
                         if ($relationship->getPropertyPath() == $propertyMapping->getParentPath()
                             || ($relationship->relationship->isScalarJoin() && $relationship->getPropertyPath() == $propertyMapping->getPropertyPath())
                         ) {
-                            $propertyMapping->isFetchable = !$relationship->isLateBound();/* || $propertyMapping->column->isPrimaryKey;
+                            $propertyMapping->isFetchable = !$relationship->isLateBound() || $propertyMapping->column->isPrimaryKey;
                             if ($propertyMapping->relationship->isScalarJoin()) {
-                                $propertyMapping->isFetchable = !$this->hasLateBoundAncestor($propertyMapping);
-                            }*/
+                                $propertyMapping->isFetchable = $parentPropertyMapping && $parentPropertyMapping->relationship->isEmbedded ? true : $propertyMapping->isFetchable;
+                            }
                             break;
                         }
                     }
@@ -455,20 +464,6 @@ class MappingCollection
             $this->columnMappingDone = true;
         }
     }
-
-//    private function hasLateBoundAncestor(PropertyMapping $propertyMapping)
-//    {
-//        $parentPath = $propertyMapping->getParentPath();
-//        while (strlen($parentPath) > 0) {
-//            $ancestor = $this->getPropertyMapping($parentPath);
-//            if ($ancestor->isLateBound()) {
-//                return true;
-//            }
-//            $parentPath = $ancestor->getParentPath();
-//        }
-//
-//        return false;
-//    }
 
     /**
      * Ensure joinTable, sourceJoinColumn, and targetJoinColumn are populated for
@@ -495,8 +490,6 @@ class MappingCollection
                     //If empty, use primary key of child class
                     $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: implode(',', $this->getPrimaryKeyProperties($relationship->childClassName));
                     $relationship->joinTable = $relationship->joinTable ?: $otherSideMapping->getTableAlias();
-                } else {
-                    $stop = true;
                 }
             } elseif (!$relationship->targetJoinColumn) {
                 $pkPropertyNames = $this->getPrimaryKeyProperties($relationship->childClassName);

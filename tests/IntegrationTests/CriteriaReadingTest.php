@@ -270,24 +270,24 @@ class CriteriaReadingTest extends IntegrationTestBase
         $this->assertEquals('Flame', $parent->getPets()[0]->name);
 
         //Check that embedded value object was loaded
-//        $this->assertEquals('London', $parent->getAddress()->getTown());
+        $this->assertEquals('London', $parent->getAddress()->getTown());
 
         //And that scalar join on embedded value object was also loaded
-//        $this->assertEquals('United Kingdom', $parent->getAddress()->getCountryDescription());
+        $this->assertEquals('United Kingdom', $parent->getAddress()->getCountryDescription());
 
         //Load using property of value object as criteria
-//        $parentLoadedByAddress = $this->objectRepository->findOneBy(['address.town' => 'London']);
-//        $this->assertEquals('London', $parentLoadedByAddress->getAddress()->getTown());
+        $parentLoadedByAddress = $this->objectRepository->findOneBy(['address.town' => 'London']);
+        $this->assertEquals('London', $parentLoadedByAddress->getAddress()->getTown());
 
         //Load using scalar join value as criteria
-//        $parentLoadByCountry = $this->objectRepository->findOneBy(['address.countryDescription' => 'United Kingdom']);
-//        $this->assertEquals('GB', $parentLoadByCountry->getAddress()->getCountryCode());
+        $parentLoadByCountry = $this->objectRepository->findOneBy(['address.countryDescription' => 'United Kingdom']);
+        $this->assertEquals('GB', $parentLoadByCountry->getAddress()->getCountryCode());
 
         //Load using deeply nested property of value object as criteria
-//        $nestedParentLoadedByAddress = $this->objectRepository->findOneBy(['child.parent.address.town' => 'London']);
-//        $this->assertEquals('London', $nestedParentLoadedByAddress->getAddress()->getTown());
-//        $nestedParentLoadedByCountry = $this->objectRepository->findOneBy(['child.parent.address.countryDescription' => 'Deepest Darkest Peru']);
-//        $this->assertEquals('Eleanor Shellstrop', $nestedParentLoadedByCountry->getName());
+        $nestedParentLoadedByAddress = $this->objectRepository->findOneBy(['child.parent.address.town' => 'London']);
+        $this->assertEquals('London', $nestedParentLoadedByAddress->getAddress()->getTown());
+        $nestedParentLoadedByCountry = $this->objectRepository->findOneBy(['child.parent.address.countryDescription' => 'Deepest Darkest Peru']);
+        $this->assertEquals('Eleanor Shellstrop', $nestedParentLoadedByCountry->getName());
 
         //Load using prefixed column of value object as criteria
 //        $prefixedColumnCriteriaParent = $this->objectRepository->findOneBy(['child.address.town'=>'Loughborough']);
@@ -320,13 +320,11 @@ class CriteriaReadingTest extends IntegrationTestBase
         //Check that multiple scalar joins on an embedded value object on a child object are hydrated
         $this->objectRepository->setClassName(TestSecurityPass::class);
         $securityPass = $this->objectRepository->findOneBy(['serialNo' => '1234567']);
-        $emp = $securityPass->employee;
-        //TODO: Automatically attempt to use naming strategy to append id on foreign key if source join column not specified
         $this->assertEquals('SB', $securityPass->employee->position->positionKey);
-//        $this->assertEquals('Supreme Being', $securityPass->employee->position->positionValue);
-//        $this->assertEquals('Lead PHP Developer and master of the black arts', $securityPass->employee->position->positionDescription);
-//        $this->assertEquals('Tea boy', $securityPass->employee->mentee->position->positionDescription);
-//        $this->assertEquals(2, $securityPass->employee->mentee->unionRep->id);
+        $this->assertEquals('Supreme Being', $securityPass->employee->position->positionValue);
+        $this->assertEquals('Lead PHP Developer and master of the black arts', $securityPass->employee->position->positionDescription);
+        $this->assertEquals('Tea boy', $securityPass->employee->mentee->position->positionDescription);
+        $this->assertEquals(2, $securityPass->employee->mentee->unionRep->id);
     }
 
     protected function doCustomQueryTests()

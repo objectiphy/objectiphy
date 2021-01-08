@@ -29,8 +29,9 @@ final class ObjectMapper
     private MappingProviderInterface $mappingProvider;
     private bool $eagerLoadToOne;
     private bool $eagerLoadToMany;
+    private bool $guessMappings;
     private NameResolver $nameResolver;
-    
+
     public function __construct(MappingProviderInterface $mappingProvider, NameResolver $nameResolver)
     {
         $this->mappingProvider = $mappingProvider;
@@ -40,6 +41,7 @@ final class ObjectMapper
     public function setConfigOptions(ConfigOptions $config): void 
     {
         $this->mappingProvider->setThrowExceptions(!$config->productionMode);
+        $this->guessMappings = $config->guessMappings;
         $this->eagerLoadToOne = $config->eagerLoadToOne;
         $this->eagerLoadToMany = $config->eagerLoadToMany;
         $this->nameResolver->setConfigOptions($config);
@@ -116,7 +118,7 @@ final class ObjectMapper
                     $parents = array_merge($parent->parents, [$parent->propertyName]);
                     //Mark it as early bound...
                     $parent->forceEarlyBindingForJoin(); //We need to join even if it is to-many, so we can filter
-                    $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents, null, true);
+                    $parent = $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents, $parent->relationship, true);
                 } else {
                     $parent = $existingParent;
                     if ($parent && $forceJoins) {
@@ -174,16 +176,25 @@ final class ObjectMapper
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
             $propertyMapping = $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents, $parentRelationship);
             if ($propertyMapping && $propertyMapping->relationship->isDefined()) {
-                //For lazy loading, we must have the primary key so we can load the child
-                if ((!isset($mappingCollection->getRelationships(false)[$propertyMapping->getRelationshipKey()])
-                    || $propertyMapping->relationship->isLateBound())
-                    && !$propertyMapping->relationship->mappedBy
-                    && !$propertyMapping->relationship->isEmbedded
-                    && !$propertyMapping->relationship->isScalarJoin()
+                if ($propertyMapping->relationship->isEmbedded || $propertyMapping->relationship->isScalarJoin()) {
+                    $childParents = array_merge($parents, [$propertyMapping->propertyName]);
+                    if ($propertyMapping->relationship->isEmbedded) {
+                        $childReflectionClass = new \ReflectionClass($propertyMapping->getChildClassName());
+                        $this->populateScalarMappings($mappingCollection, $childReflectionClass, $childParents, $propertyMapping->relationship);
+                    }
+                } elseif ((!isset($mappingCollection->getRelationships(false)[$propertyMapping->getRelationshipKey()])
+                            || $propertyMapping->relationship->isLateBound())
+                        && !$propertyMapping->relationship->mappedBy
+                        && !$propertyMapping->relationship->isEmbedded
+                        && !$propertyMapping->relationship->isScalarJoin()
                 ) {
+                    //For lazy loading, we must have the primary key so we can load the child
                     $childPks = $mappingCollection->getPrimaryKeyProperties($propertyMapping->getChildClassName());
                     if (empty($childPks)) {
-                        $this->populatePrimaryKeyMappings($mappingCollection, $propertyMapping->getChildClassName());
+                        $this->populatePrimaryKeyMappings(
+                            $mappingCollection,
+                            $propertyMapping->getChildClassName()
+                        );
                     }
                 }
             }
@@ -209,6 +220,12 @@ final class ObjectMapper
         Relationship $parentRelationship = null,
         bool $suppressFetch = false
     ): ?PropertyMapping {
+        $propertyPath = ltrim(implode('.', $parents) . '.' . $reflectionProperty->getName(), '.');
+        $existingPropertyMapping = $mappingCollection->getPropertyMapping($propertyPath);
+        if ($existingPropertyMapping) {
+            return $existingPropertyMapping;
+        }
+
         $columnIsMapped = false;
         $relationshipIsMapped = false;
         $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $relationshipIsMapped);
@@ -225,19 +242,7 @@ final class ObjectMapper
             $column->name = $relationship->targetScalarValueColumn;
         }
         $this->initialiseRelationship($relationship);
-//        $immediateParent = end($parents);
-//        if (
-//            count($parents) == 1
-//            && $immediateParent
-//            && $relationship->mappedBy == $immediateParent
-//            && $relationship->childClassName == $mappingCollection->getEntityClassName()
-//        ) {
-//            $childIsRootClass = true;
-//        }
-        if ((($columnIsMapped || $relationshipIsMapped) && $column->name != 'IGNORE')
-            //&& !($immediateParent && $relationship->mappedBy == $immediateParent) //We already have the parent, no need to get it again
-            //&& !($childIsRootClass ?? true)
-        ) {
+        if ((($columnIsMapped || $relationshipIsMapped) && $column->name != 'IGNORE')) {
             $childTable = null;
             if ($relationship->childClassName) {
                 $childReflectionClass = new \ReflectionClass($relationship->childClassName);
@@ -367,6 +372,15 @@ final class ObjectMapper
         if ($relationship->childClassName && $relationship->targetJoinColumn) {
             $targetProperty = $this->findTargetProperty($relationship);
             $relationship->setTargetProperty($targetProperty);
+        }
+        if ($this->guessMappings
+            && $relationship->isDefined()
+            && !$relationship->mappedBy
+            && !$relationship->sourceJoinColumn
+        ) {
+            //For now, just add a dummy source column - it will be replaced by a resolved column name based on the
+            //naming stragegy later, but we need to know that the source column exists.
+            $relationship->sourceJoinColumn = '[' . uniqid() . ']';
         }
     }
 

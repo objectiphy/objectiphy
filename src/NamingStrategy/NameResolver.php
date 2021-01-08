@@ -53,6 +53,8 @@ class NameResolver
         $relationship = $propertyMapping->relationship;
         $column = $propertyMapping->column;
         $strategy = $this->columnNamingStrategy ?? null;
+        //If we added a placeholder, remove it now so we can populate the real value.
+        $relationship->sourceJoinColumn = substr($relationship->sourceJoinColumn, 0, 1) == '[' ? '' : $relationship->sourceJoinColumn;
 
         if ($this->guessMappings && $strategy) {
             if (empty($column->name) && !$relationship->isDefined()) {

@@ -151,8 +151,12 @@ class PropertyMapping
         //If parent is embedded, use class name from parent as we might need multiple joins for different parents
         $className = $this->className;
         $parentProperty = $this->parentCollection->getPropertyMapping($this->getParentPath());
-        if ($parentProperty && ($parentProperty->relationship->isEmbedded || $parentProperty->relationship->isScalarJoin())) {
-            $className = $parentProperty->className . ':' . $parentProperty->propertyName;
+        if ($parentProperty && ($parentProperty->relationship->isEmbedded || $this->relationship->isScalarJoin())) {
+            $className = $parentProperty->className . ':';
+            //To enable same class on different properties, allow as far as grandparent
+            $grandparent = $this->parentCollection->getPropertyMapping($parentProperty->getParentPath());
+            $className .= $grandparent ? $grandparent->propertyName . ':' : '';
+            $className .= $parentProperty->propertyName;
         }
 
         return $className . ':' . $this->propertyName;
@@ -249,6 +253,9 @@ class PropertyMapping
     public function forceEarlyBindingForJoin(): void
     {
         $this->forcedEarlyBindingForJoin = true;
+        //if ($this->relationship->isDefined() && !in_array($this, $this->parentCollection->getRelationships())) {
+            //$this->parentCollection->forceJoin($this);
+        //}
     }
 
     /**
@@ -259,14 +266,6 @@ class PropertyMapping
      */
     public function isLateBound(bool $forJoin = false, array $row = []): bool
     {
-//If it contains a scalar join that's already in use, we have to late bind as we won't be able to fetch it
-//if ($this->propertyName == 'position') {
-//    $stop = true;
-//}
-//if ($this->sharesClassWithAParent() && $this->childClassHasScalarJoin()) {
-//    return true;
-//}
-
         if ($forJoin && $this->forcedEarlyBindingForJoin) {
             return false;
         } elseif ($this->relationship->isEmbedded || $this->relationship->isScalarJoin()) {
@@ -279,6 +278,7 @@ class PropertyMapping
         } elseif ($this->isForeignKey) {
             //If we don't have the child primary key, it will be late bound
             $pkProperties = $this->parentCollection->getPrimaryKeyProperties($this->getChildClassName()) ?? [];
+            //TODO: Loop through all pk properties and ensure we have a value for all of them?
             $pkProperty = reset($pkProperties);
             if ($pkProperty) {
                 $childPkPath = $this->getPropertyPath() . '.' . $pkProperty;
@@ -291,39 +291,6 @@ class PropertyMapping
 
         return false;
     }
-
-    /*private function sharesClassWithAParent(): bool
-    {
-        if ($this->getChildClassName() == $this->className
-            || $this->getChildClassName() == $this->parentCollection->getEntityClassName()
-        ) {
-            return true;
-        }
-
-        if ($this->parents) {
-            $parentPath = $this->getParentPath();
-            while ($parentPath) {
-                $parentPropertyMapping = $this->parentCollection->getPropertyMapping($parentPath);
-                if ($parentPropertyMapping->className == $this->getChildClassName()) {
-                    return true;
-                }
-                $parentPath = $parentPropertyMapping->getParentPath();
-            }
-        }
-
-        return false;
-    }
-
-    private function childClassHasScalarJoin(): bool
-    {
-        foreach ($this->parentCollection->getPropertyExamplesForClass($this->getChildClassName()) as $propertyMapping) {
-            if ($propertyMapping->relationship->isScalarJoin()) {
-                return true;
-            }
-        }
-
-        return false;
-    }*/
 
     public function isEager(): bool
     {
@@ -415,12 +382,7 @@ class PropertyMapping
 
     public function getTargetJoinColumns(): array
     {
-//        $parentProperty = $this->parentCollection->getPropertyMapping($this->getParentPath());
-//        if ($parentProperty && $parentProperty->relationship->isEmbedded) {
-//            $table = $parentProperty->getTableAlias(true);
-//        } else {
-            $table = $this->getTableAlias(true);
-//        }
+        $table = $this->getTableAlias(true);
         $targetColumn = $this->relationship->targetJoinColumn;
         if ($this->relationship->isScalarJoin()) { //Just want the short column name
             $targetColumn = $this->getShortColumnName(false, $targetColumn);
