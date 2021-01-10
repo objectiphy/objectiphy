@@ -280,6 +280,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param boolean $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
      * set(for streaming large amounts of data).
      * @return iterable
+     * @throws \ReflectionException
      */
     public function findLatestBy(
         $criteria = [],
@@ -343,6 +344,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @param array|null $orderBy
      * @return array|null
+     * @throws \ReflectionException
      */
     public function findOnDemandBy(
         $criteria = [],
@@ -465,10 +467,12 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * cascaded if the mapping definition explicitly requires it, but you can use this flag to override that).
      * @param bool $exceptionIfDisabled Whether or not to barf if deletes are disabled (probably only useful for
      * integration or unit tests).
-     * @param int $updateCount Number of records updated (where child records lose their parents but do not get 
+     * @param int $updateCount Number of records updated (where child records lose their parents but do not get
      * deleted themsselves, they may be updated with null values for the foreign key).
      * @return int Number of records deleted.
-     * @throws \Exception
+     * @throws ObjectiphyException
+     * @throws \ReflectionException
+     * @throws \Throwable
      */
     public function deleteEntity(object $entity, $disableCascade = false, $exceptionIfDisabled = true, int &$updateCount = 0): int
     {

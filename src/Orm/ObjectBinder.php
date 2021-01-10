@@ -114,6 +114,10 @@ final class ObjectBinder
         return $entities;
     }
 
+    /**
+     * No need to bind these as we already know the values (typically used to pre-populate the parent)
+     * @param array $knownValues
+     */
     public function setKnownValues(array $knownValues)
     {
         $this->knownValues = $knownValues;

@@ -36,9 +36,6 @@ class EntityFactory implements EntityFactoryInterface
     public function createEntity(string $className, bool $requiresProxy = false): object
     {
         $entity = null;
-        if ($requiresProxy) {
-            $proxyClassName = $this->proxyFactory->createEntityProxy($className);
-        }
         if (isset($this->entityFactories[$className])) {
             $entity = $this->entityFactories[$className]->createEntity($className);
             if ($requiresProxy) {
@@ -47,7 +44,7 @@ class EntityFactory implements EntityFactoryInterface
         }
         
         if (!$entity) {
-            $className = $requiresProxy ? $proxyClassName : $className;
+            $className = $requiresProxy ? $this->proxyFactory->createEntityProxy($className) : $className;
             try {
                 $entity = new $className();
             } catch (\Throwable $ex) {

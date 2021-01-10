@@ -64,21 +64,6 @@ final class ObjectFetcher
         $this->objectBinder->setMappingCollection($findOptions->mappingCollection);
     }
 
-    private function getClassName(): string
-    {
-        if (isset($this->options) && isset($this->options->mappingCollection)) {
-            return $this->options->mappingCollection->getEntityClassName();
-        }
-        
-        return '';
-    }
-    
-    private function setClassName(string $className): void
-    {
-        $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
-        $this->setFindOptions($this->options); //To ensure everyone is kept informed
-    }
-
     public function getExistingEntity(string $className, $pkValues): ?object
     {
         if (!is_iterable($pkValues)) {
@@ -131,62 +116,6 @@ final class ObjectFetcher
     public function setKnownValues(array $knownValues)
     {
         $this->objectBinder->setKnownValues($knownValues);
-    }
-
-    /**
-     * Ensure find options have been set.
-     * @throws ObjectiphyException
-     */
-    private function validate(): void
-    {
-        if (empty($this->options)) {
-            throw new ObjectiphyException('Find options have not been set on the object fetcher.');
-        }
-    }
-
-    /**
-     * Count the records and populate the record count on the pagination object.
-     * @param SelectQueryInterface $query
-     */
-    private function doCount(SelectQueryInterface $query): void
-    {
-        if ($this->options->multiple && $this->options->pagination) {
-            $this->options->count = true;
-            $countSql = $this->sqlSelector->getSelectSql($query);
-            $params = $this->sqlSelector->getQueryParams();
-            $this->explanation->addQuery($query, $countSql, $params, $this->options->mappingCollection, $this->configOptions);
-            $recordCount = intval($this->fetchValue($countSql, $params));
-            $this->options->pagination->setTotalRecords($recordCount);
-            $this->options->count = false;
-        }
-    }
-
-    /**
-     * Return the records, in whatever format is requested.
-     * @param SelectQueryInterface $query
-     * @return array|mixed|object|IterableResult|null
-     * @throws ObjectiphyException|\Throwable
-     */
-    private function doFetch(SelectQueryInterface $query)
-    {
-        $sql = $this->sqlSelector->getSelectSql($query);
-        $params = $this->sqlSelector->getQueryParams();
-        $this->explanation->addQuery($query, $sql, $params, $this->options->mappingCollection, $this->configOptions);
-        if ($this->options->multiple && $this->options->onDemand && $this->options->scalarProperty) {
-            $result = $this->fetchIterableValues($sql, $params);
-        } elseif ($this->options->multiple && $this->options->onDemand) {
-            $result = $this->fetchIterableResult($sql, $params);
-        } elseif ($this->options->multiple && $this->options->scalarProperty) {
-            $result = $this->fetchValues($sql, $params);
-        } elseif ($this->options->multiple) {
-            $result = $this->fetchResults($sql, $params);
-        } elseif ($this->options->scalarProperty) {
-            $result = $this->fetchValue($sql, $params);
-        } else {
-            $result = $this->fetchResult($sql, $params);
-        }
-
-        return $result;
     }
 
     /**
@@ -291,5 +220,76 @@ final class ObjectFetcher
         $storage = clone($this->storage); //In case further queries happen before we iterate
         $storage->executeQuery($sql, $params ?: [], true);
         return new IterableResult($storage, null, null, true);
+    }
+
+    private function getClassName(): string
+    {
+        if (isset($this->options) && isset($this->options->mappingCollection)) {
+            return $this->options->mappingCollection->getEntityClassName();
+        }
+
+        return '';
+    }
+
+    private function setClassName(string $className): void
+    {
+        $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
+        $this->setFindOptions($this->options); //To ensure everyone is kept informed
+    }
+
+    /**
+     * Ensure find options have been set.
+     * @throws ObjectiphyException
+     */
+    private function validate(): void
+    {
+        if (empty($this->options)) {
+            throw new ObjectiphyException('Find options have not been set on the object fetcher.');
+        }
+    }
+
+    /**
+     * Count the records and populate the record count on the pagination object.
+     * @param SelectQueryInterface $query
+     */
+    private function doCount(SelectQueryInterface $query): void
+    {
+        if ($this->options->multiple && $this->options->pagination) {
+            $this->options->count = true;
+            $countSql = $this->sqlSelector->getSelectSql($query);
+            $params = $this->sqlSelector->getQueryParams();
+            $this->explanation->addQuery($query, $countSql, $params, $this->options->mappingCollection, $this->configOptions);
+            $recordCount = intval($this->fetchValue($countSql, $params));
+            $this->options->pagination->setTotalRecords($recordCount);
+            $this->options->count = false;
+        }
+    }
+
+    /**
+     * Return the records, in whatever format is requested.
+     * @param SelectQueryInterface $query
+     * @return array|mixed|object|IterableResult|null
+     * @throws ObjectiphyException|\Throwable
+     */
+    private function doFetch(SelectQueryInterface $query)
+    {
+        $sql = $this->sqlSelector->getSelectSql($query);
+        $params = $this->sqlSelector->getQueryParams();
+        $this->explanation->addQuery($query, $sql, $params, $this->options->mappingCollection, $this->configOptions);
+        if ($this->options->multiple && $this->options->onDemand && $this->options->scalarProperty) {
+            $result = $this->fetchIterableValues($sql, $params);
+        } elseif ($this->options->multiple && $this->options->onDemand) {
+            $result = $this->fetchIterableResult($sql, $params);
+        } elseif ($this->options->multiple && $this->options->scalarProperty) {
+            $result = $this->fetchValues($sql, $params);
+        } elseif ($this->options->multiple) {
+            $result = $this->fetchResults($sql, $params);
+        } elseif ($this->options->scalarProperty) {
+            $result = $this->fetchValue($sql, $params);
+        } else {
+            $result = $this->fetchResult($sql, $params);
+        }
+
+        return $result;
     }
 }
