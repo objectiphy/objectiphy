@@ -42,7 +42,7 @@ class EntityFactory implements EntityFactoryInterface
         if (isset($this->entityFactories[$className])) {
             $entity = $this->entityFactories[$className]->createEntity($className);
             if ($requiresProxy) {
-                $entity = $this->createProxyFromInstance($proxyClassName, $entity);
+                $entity = $this->createProxyFromInstance($entity);
             }
         }
         
@@ -74,18 +74,22 @@ class EntityFactory implements EntityFactoryInterface
         return $entity;
     }
     
-    public function createProxyFromInstance(string $proxyClassName, object $entity): ?EntityProxyInterface
+    public function createProxyFromInstance(object $entity): ?EntityProxyInterface
     {
         try {
+            $entityClassName = ObjectHelper::getObjectClassName($entity);
+            $proxyClassName = $this->proxyFactory->createEntityProxy($entityClassName);
+            $search = 'O:' . strlen($entityClassName) . ':"' . $entityClassName . '"';
+            $replace = 'O:' . strlen($proxyClassName) . ':"' . $proxyClassName . '"';
             $serialized = serialize($entity);
-            $length = strlen($proxyClassName);
-            $hackedString = preg_replace('/^O:\d+:"[^"]++"/', "O:$length:\"$proxyClassName\"", $serialized);
+            $hackedString = str_replace($search, $replace, $serialized);
             $proxy = unserialize($hackedString);
+            $proxy = $proxy instanceof EntityProxyInterface ? $proxy : null;
         } catch (\Throwable $ex) {
             //Tried to use a custom entity factory for an entity that is not serializable :(
             $proxy = null;
         }
-        
+
         return $proxy ?: null;
     }
 }

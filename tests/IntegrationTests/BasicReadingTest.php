@@ -262,8 +262,8 @@ class BasicReadingTest extends IntegrationTestBase
         //Load a value from a scalar join on an embedded value object
         $repositoryFactory = new RepositoryFactory($this->pdo);
         $parentRepository = $repositoryFactory->createRepository(TestParent::class);
-//        $parent = $parentRepository->find(1);
-//        $this->assertEquals('United Kingdom', $parent->address->getCountryDescription());
+        $parent = $parentRepository->find(1);
+        $this->assertEquals('United Kingdom', $parent->address->getCountryDescription());
 
         //Check error message when trying to load an entity with no table definition
         try {
@@ -274,16 +274,12 @@ class BasicReadingTest extends IntegrationTestBase
             $this->assertStringContainsString('table mapping', $ex->getMessage());
         }
 
-        //Make sure we do not try to load parent data from database when lazy loading a child (or children), even if the
-        //child has a reference to the parent - as we already know what the parent object is.
         $parent = $parentRepository->find(1);
         $pets = $parent->getPets();
-//        $query = $parentRepository->getQuery();
-//        $this->assertNotContains('`objectiphy_test`.`parent`', $query);
         $this->assertEquals('Danger Mouse', $pets[0]->parent->getName());
 
         //Column prefix on embedded object
-//        $this->assertEquals('212c Baker Street', $parent->child->address->getLine1());
+        $this->assertEquals('212c Baker Street', $parent->child->address->getLine1());
 
         //Ensure that proxies use the entity factory
         $vehicleFactory = new TestVehicleFactory();

@@ -120,9 +120,17 @@ final class ObjectFetcher
      * Clear the entity tracker to ensure objects get refreshed from the database
      * @param string|null $className
      */
-    public function clearCache(?string $className = null): void
+    public function clearCache(?string $className = null, bool $clearMappingCache = true): void
     {
         $this->entityTracker->clear($className);
+        if ($clearMappingCache) {
+            $this->objectMapper->clearMappingCache($className);
+        }
+    }
+
+    public function setKnownValues(array $knownValues)
+    {
+        $this->objectBinder->setKnownValues($knownValues);
     }
 
     /**

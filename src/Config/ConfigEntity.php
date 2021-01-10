@@ -18,8 +18,9 @@ use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 class ConfigEntity extends ConfigBase
 {
     public const REPOSITORY_CLASS_NAME = 'repositoryClassName';
-    public const TABLE_OVERRIDE = 'tableOverride';
+    public const TABLE_OVERRIDES = 'tableOverrides';
     public const COLUMN_OVERRIDES = 'columnOverrides';
+    public const RELATIONSHIP_OVERRIDES = 'relationshipOverrides';
     public const COLLECTION_TYPE = 'collectionType';
     public const ENTITY_FACTORY = 'entityFactory';
 
@@ -36,14 +37,22 @@ class ConfigEntity extends ConfigBase
     protected string $repositoryClassName;
 
     /**
-     * @var string Overridden database table name
+     * @var array Overridden table mapping information keyed on mapping key.
+     * (eg. ['name' => 'MyOtherTable', 'repositoryClassName' => 'MyRepo'])
      */
-    protected string $tableOverride;
+    protected array $tableOverrides = [];
 
     /**
-     * @var string[] Overridden database column names keyed on property name
+     * @var array Overridden columnn mapping information keyed on property name, then mapping key.
+     * (eg. ['surname' => ['name' => 'alt_surname_column', 'isReadOnly' => true]])
      */
-    protected array $columnOverrides;
+    protected array $columnOverrides =[];
+
+    /**
+     * @var array Overridden relationship mapping information keyed on property name, then mapping key.
+     * (eg. ['child' => ['sourceJoinColumn' => 'alt_child_id', 'lazyLoad' => false]])
+     */
+    protected array $relationshipOverrides = [];
 
     /**
      * @var string Name of class to use for collections where one-to-many relationships require a custom collection

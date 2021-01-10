@@ -290,8 +290,8 @@ class CriteriaReadingTest extends IntegrationTestBase
         $this->assertEquals('Eleanor Shellstrop', $nestedParentLoadedByCountry->getName());
 
         //Load using prefixed column of value object as criteria
-//        $prefixedColumnCriteriaParent = $this->objectRepository->findOneBy(['child.address.town'=>'Loughborough']);
-//        $this->assertEquals(2, $prefixedColumnCriteriaParent->getId());
+        $prefixedColumnCriteriaParent = $this->objectRepository->findOneBy(['child.address.town'=>'Loughborough']);
+        $this->assertEquals(2, $prefixedColumnCriteriaParent->getId());
 
         //Aggregate function for a property value
 //        $parentTwo = $this->objectRepository->find(2);

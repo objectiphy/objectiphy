@@ -68,7 +68,7 @@ class ConfigBase
     public function getConfigOption(string $optionName)
     {
         if (property_exists($this, $optionName)) {
-            return $this->{$optionName};
+            return $this->{$optionName} ?? null;
         } else {
             $this->throwNotExists($optionName);
         }

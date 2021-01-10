@@ -47,7 +47,8 @@ class ConfigOptions extends ConfigBase
     public const COMMON_PROPERTY = 'commonProperty';
     public const RECORD_AGE_INDICATOR = 'recordAgeIndicator';
     public const BIND_TO_ENTITIES = 'bindToEntities';
-    public const QUERY_OVERRIDES = 'queryOverrides';
+    public const ENTITY_CONFIG = 'entityConfig';
+    public const SAVE_CHILDREN_BY_DEFAULT = 'saveChildrenByDefault';
     public const DISABLE_ENTITY_CACHE = 'disableEntityCache';
     
     /**
@@ -154,13 +155,6 @@ class ConfigOptions extends ConfigBase
      * returned.
      */
     protected bool $bindToEntities = true;
-
-    /**
-     * @var array Associative array of SQL snippets to override what gets executed, keyed by one of the following
-     * values:  select, from, joinsForLatestRecord, joins, where, groupBy, having, orderBy, limit, insert, update.
-     * Try to minimise using this, so as to keep your code de-coupled from your database.
-     */
-    protected array $queryOverrides = [];
 
     /**
      * @var array Entity specific configuration options (ConfigEntity instances), keyed by entity class name.

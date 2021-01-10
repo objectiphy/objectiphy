@@ -25,7 +25,8 @@ final class ObjectBinder
     private ConfigOptions $configOptions;
     private EntityTracker $entityTracker;
     private DataTypeHandlerInterface $dataTypeHandler;
-    
+    private array $knownValues = [];
+
     public function __construct(
         RepositoryFactory $repositoryFactory, 
         EntityFactory $entityFactory,
@@ -47,8 +48,9 @@ final class ObjectBinder
     {
         $this->configOptions = $configOptions;
         foreach ($configOptions->getConfigOption('entityConfig') as $className => $configEntity) {
-            if ($configEntity->entityFactory) {
-                $this->entityFactory->registerCustomEntityFactory($className, $configEntity->entityFactory);
+            $customEntityFactory = $configEntity->getConfigOption('entityFactory');
+            if ($customEntityFactory) {
+                $this->entityFactory->registerCustomEntityFactory($className, $customEntityFactory);
                 $this->entityTracker->clear($className);
             }
         }
@@ -75,6 +77,9 @@ final class ObjectBinder
         }
         $requiresProxy = $this->mappingCollection->parentHasLateBoundProperties($parents);
         $entity = $this->entityFactory->createEntity($entityClassName, $requiresProxy);
+        foreach ($this->knownValues as $property => $value) {
+            ObjectHelper::setValueOnObject($entity, $property, $value);
+        }
         $propertiesMapped = $this->bindScalarProperties($entity, $row, $parents);
         if ($propertiesMapped && !$this->getEntityFromLocalCache($entityClassName, $entity)) {
             $this->bindRelationalProperties($entity, $row, $parents, $parentEntity);
@@ -107,6 +112,11 @@ final class ObjectBinder
         }
         
         return $entities;
+    }
+
+    public function setKnownValues(array $knownValues)
+    {
+        $this->knownValues = $knownValues;
     }
 
     /**
@@ -142,8 +152,8 @@ final class ObjectBinder
     {
         $propertiesMapped = false;
         foreach ($this->mappingCollection->getPropertyMappings($parents) as $propertyMapping) {
-            $valueFound = false;
-            if ($propertyMapping->isScalarValue()) {
+            $valueFound = isset($this->knownValues[$propertyMapping->propertyName]);
+            if (!$valueFound && $propertyMapping->isScalarValue()) {
                 if (array_key_exists($propertyMapping->getShortColumnName(), $row)) {
                     $value = $row[$propertyMapping->getShortColumnName()]; //Prioritises alias, falls back to short column
                     $this->applyValue($entity, $propertyMapping, $value);
@@ -171,16 +181,29 @@ final class ObjectBinder
         foreach ($this->mappingCollection->getPropertyMappings($parents) as $propertyMapping) {
             $value = null;
             if ($propertyMapping->getChildClassName()) {
-                if ($propertyMapping->pointsToParent()) {
+                $valueFound = boolval($value = $this->knownValues[$propertyMapping->propertyName] ?? null);
+                if (!$valueFound && $propertyMapping->pointsToParent()) {
                     $value = $parentEntity;
                     $valueFound = true;
-                } elseif ($propertyMapping->isLateBound(false, $row)) {
-                    $closure = $this->createLateBoundClosure($propertyMapping, $row);
+                } elseif (!$valueFound && $propertyMapping->isLateBound(false, $row)) {
+                    $knownValues = [];
+                    if ($propertyMapping->relationship->mappedBy) {
+                        $knownValues[$propertyMapping->relationship->mappedBy] = $entity;
+                    } else {
+                        $childProperties = $this->mappingCollection->getPropertyExamplesForClass($propertyMapping->getChildClassName());
+                        foreach ($childProperties as $childProperty) {
+                            if ($childProperty->relationship->mappedBy == $propertyMapping->propertyName) {
+                                $knownValues[$childProperty->propertyName] = $entity;
+                                break;
+                            }
+                        }
+                    }
+                    $closure = $this->createLateBoundClosure($propertyMapping, $row, $knownValues);
                     $valueFound = $closure instanceof \Closure;
                     if ($valueFound) {
-                        $value = $propertyMapping->isEager() ? $closure() : $closure;
+                        $value = $propertyMapping->isEager(true) ? $closure() : $closure;
                     }
-                }  else {
+                }  elseif (!$valueFound) {
                     $parents = array_merge($propertyMapping->parents, [$propertyMapping->propertyName]);
                     $childClass = $propertyMapping->getChildClassName();
                     $value = $this->bindRowToEntity($row, $childClass, $parents, $entity);
@@ -224,13 +247,14 @@ final class ObjectBinder
      * is triggered), so it all needs to go in the lazy load closure.
      * @param PropertyMapping $propertyMapping
      * @param array $row
+     * @param array $knownValues
      * @return \Closure|iterable|null
      */
-    private function createLateBoundClosure(PropertyMapping $propertyMapping, array $row)
+    private function createLateBoundClosure(PropertyMapping $propertyMapping, array $row, array $knownValues = [])
     {
         $mappingCollection = $this->mappingCollection;
         $configOptions = clone($this->configOptions);
-        return function() use ($mappingCollection, $configOptions, $propertyMapping, $row) {
+        return function() use ($mappingCollection, $configOptions, $propertyMapping, $row, $knownValues) {
             //Get the repository
             $result = null;
             $className = $propertyMapping->getChildClassName();
@@ -299,6 +323,7 @@ final class ObjectBinder
 
             //Do the search
             if (!empty($query) && $query->getWhere()) {
+                $repository->setKnownValues($knownValues);
                 if ($propertyMapping->relationship->isToOne()) {
                     if ($usePrimaryKey) {
                         $result = $repository->find($query->getWhere()[0]->value);

@@ -100,13 +100,13 @@ class MappingCollection
     public function addMapping(PropertyMapping $propertyMapping, bool $suppressFetch = false): void
     {
         $propertyMapping->parentCollection = $this;
-        $this->properties[$propertyMapping->getPropertyPath()] = $propertyMapping;
+        $this->properties[$propertyMapping->getPropertyPath()] ??= $propertyMapping;
         $parentPath = $propertyMapping->getParentPath();
-        $this->propertiesByParent[$parentPath][$propertyMapping->propertyName] = $propertyMapping;
+        $this->propertiesByParent[$parentPath][$propertyMapping->propertyName] ??= $propertyMapping;
         $this->propertiesByClass[$propertyMapping->className][$propertyMapping->propertyName] ??= $propertyMapping;
-        $this->classes[$propertyMapping->className] = $propertyMapping->table;
+        $this->classes[$propertyMapping->className] ??= $propertyMapping->table;
         if ($propertyMapping->childTable && $propertyMapping->getChildClassName()) {
-            $this->classes[$propertyMapping->getChildClassName()] = $propertyMapping->childTable;
+            $this->classes[$propertyMapping->getChildClassName()] ??= $propertyMapping->childTable;
         }
         if ($propertyMapping->column->isPrimaryKey || $propertyMapping->relationship->isPrimaryKey) {
             $this->addPrimaryKeyMapping($propertyMapping->className, $propertyMapping->propertyName);
@@ -124,9 +124,14 @@ class MappingCollection
             || $propertyMapping->relationship->isEmbedded
         ) { //For now we will assume it is fetchable - if we have to late bind to avoid recursion, this can change
             $propertyMapping->isFetchable = true;
-            $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
-            $this->fetchableProperties[$propertyMapping->getPropertyPath()] = $propertyMapping;
+            $this->columns[$propertyMapping->getAlias()] ??= $propertyMapping;
+            $this->fetchableProperties[$propertyMapping->getPropertyPath()] ??= $propertyMapping;
         } 
+    }
+
+    public function usesClass(string $className): bool
+    {
+        return isset($this->classes[$className]);
     }
 
     public function forceJoin(PropertyMapping $propertyMapping)
@@ -259,12 +264,12 @@ class MappingCollection
         }
 
         if ($exceptionIfNotFound) {
-            $sourceProperty = $property->className . '::' . $property->propertyName;
-            $targetProperty = $property->getChildClassName() . '::' . $property->relationship->mappedBy;
+            $sourceProperty = isset($property) ? $property->className . '::' . $property->propertyName : 'Unknown';
+            $targetProperty = isset($property) ? $property->getChildClassName() . '::' . $property->relationship->mappedBy : 'Unknown';
             $message = sprintf('The join between %1$s and %2$s cannot be late bound because there is no property on %3$s that maps to the join column `%4$s`. Please ensure you have defined a property for each column that is used in the join.',
                 $sourceProperty,
                 $targetProperty,
-                $property->className,
+                isset($property) ? $property->className : 'Unknown',
                 $columnName
             );
             throw new MappingException($message);
@@ -276,6 +281,17 @@ class MappingCollection
     public function getPropertyMapping(string $propertyPath): ?PropertyMapping
     {
         return $this->properties[$propertyPath] ?? null;
+    }
+
+    /**
+     * Return example property mappings for the given class name. This is out of context so must only be used to obtain
+     * generic information such as short column name.
+     * @param string $className
+     * @return PropertyMapping[]
+     */
+    public function getPropertyExamplesForClass(string $className): array
+    {
+        return $this->propertiesByClass[$className] ?? [];
     }
 
     /**

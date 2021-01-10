@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
@@ -24,12 +25,18 @@ use Objectiphy\Objectiphy\NamingStrategy\NameResolver;
  */
 final class ObjectMapper
 {
-    /* @var MappingCollection[] $mappingCollection */
+    /**
+     * @var MappingCollection[] $mappingCollection
+     */
     private array $mappingCollections;
     private MappingProviderInterface $mappingProvider;
     private bool $eagerLoadToOne;
     private bool $eagerLoadToMany;
     private bool $guessMappings;
+    /**
+     * @var ConfigEntity[]
+     */
+    private array $entityConfig = [];
     private NameResolver $nameResolver;
 
     public function __construct(MappingProviderInterface $mappingProvider, NameResolver $nameResolver)
@@ -45,6 +52,24 @@ final class ObjectMapper
         $this->eagerLoadToOne = $config->eagerLoadToOne;
         $this->eagerLoadToMany = $config->eagerLoadToMany;
         $this->nameResolver->setConfigOptions($config);
+        $this->entityConfig = $config->getConfigOption(ConfigOptions::ENTITY_CONFIG);
+    }
+
+    public function clearMappingCache(?string $className = null)
+    {
+        if ($className) {
+            $unsets = [];
+            foreach ($this->mappingCollections as $class => $mappingCollection) {
+                if ($mappingCollection->usesClass($className)) {
+                    $unsets[] = $class;
+                }
+            }
+            foreach ($unsets as $unset) {
+                unset($this->mappingCollections[$unset]);
+            }
+        } else {
+            $this->mappingCollections = [];
+        }
     }
 
     /**
@@ -103,7 +128,7 @@ final class ObjectMapper
      */
     public function addMappingForProperty(string $className, string $propertyPath, bool $forceJoins = false): void
     {
-        $mappingCollection = $this->mappingCollections[$className];
+        $mappingCollection = $this->getMappingCollectionForClass($className);
         if (!$mappingCollection->getColumnForPropertyPath($propertyPath) || $forceJoins) {
             $parts = explode('.', $propertyPath);
             $property = '';
@@ -228,8 +253,8 @@ final class ObjectMapper
 
         $columnIsMapped = false;
         $relationshipIsMapped = false;
-        $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $relationshipIsMapped);
-        $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $columnIsMapped);
+        $relationship = $this->getRelationship($reflectionProperty, $relationshipIsMapped);
+        $column = $this->getColumn($reflectionProperty, $columnIsMapped);
         if ($parentRelationship && $parentRelationship->isEmbedded) {
             $column = clone($column);
             $column->name = $parentRelationship->embeddedColumnPrefix . $column->name;
@@ -247,7 +272,7 @@ final class ObjectMapper
             if ($relationship->childClassName) {
                 $childReflectionClass = new \ReflectionClass($relationship->childClassName);
                 $childTable = $relationship->isEmbedded ? $table : null;
-                $childTable = $childTable ?? $this->mappingProvider->getTableMapping($childReflectionClass);
+                $childTable = $childTable ?? $this->getTableMapping($childReflectionClass);
             }
             $propertyMapping = new PropertyMapping(
                 $reflectionProperty->getDeclaringClass()->getName(),
@@ -268,6 +293,38 @@ final class ObjectMapper
         return null;
     }
 
+    private function getRelationship(\ReflectionProperty $reflectionProperty, bool &$relationshipIsMapped = false)
+    {
+        $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $relationshipIsMapped);
+        $entityConfig = $this->entityConfig[$reflectionProperty->class] ?? null;
+        if ($entityConfig) {
+            $overrides = $entityConfig->getConfigOption(ConfigEntity::RELATIONSHIP_OVERRIDES);
+        }
+        foreach ($overrides[$reflectionProperty->getName()] ?? [] as $overrideKey => $overrideValue) {
+            if (property_exists($relationship, $overrideKey)) {
+                $relationship->$overrideKey = $overrideValue;
+            }
+        }
+
+        return $relationship;
+    }
+
+    private function getColumn(\ReflectionProperty $reflectionProperty, bool &$columnIsMapped = false)
+    {
+        $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $columnIsMapped);
+        $entityConfig = $this->entityConfigs[$reflectionProperty->class] ?? null;
+        if ($entityConfig) {
+            $overrides = $entityConfig->getConfigOption(ConfigEntity::COLUMN_OVERRIDES);
+        }
+        foreach ($overrides[$reflectionProperty->getName()] ?? [] as $overrideKey => $overrideValue) {
+            if (property_exists($column, $overrideKey)) {
+                $column->$overrideKey = $overrideValue;
+            }
+        }
+
+        return $column;
+    }
+
     /**
      * Add minimal information about any primary keys
      * @param MappingCollection $mappingCollection
@@ -278,7 +335,7 @@ final class ObjectMapper
     {
         $reflectionClass = new \ReflectionClass($className);
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-            $column = $this->mappingProvider->getColumnMapping($reflectionProperty);
+            $column = $this->getColumn($reflectionProperty);
             if ($column->isPrimaryKey) {
                 $mappingCollection->addPrimaryKeyMapping($reflectionClass->getName(), $reflectionProperty->getName());
             }
@@ -300,7 +357,7 @@ final class ObjectMapper
         bool $drillDown = false
     ): void {
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-            $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty);
+            $relationship = $this->getRelationship($reflectionProperty);
             if ($relationship->isDefined()) {
                 $this->initialiseRelationship($relationship);
                 $propertyName = $reflectionProperty->getName();
@@ -334,7 +391,7 @@ final class ObjectMapper
             if ($relationship->mappedBy) { //Go this far, but no further
                 $childReflectionClass = new \ReflectionClass($relationship->childClassName);
                 $childReflectionProperty = $childReflectionClass->getProperty($relationship->mappedBy);
-                $childRelationship = $this->mappingProvider->getRelationshipMapping($childReflectionProperty);
+                $childRelationship = $this->getRelationship($childReflectionProperty);
                 $this->initialiseRelationship($childRelationship);
                 $childTable = $this->getTableMapping($childReflectionClass, true);
                 $propertyMapping = new PropertyMapping(
@@ -396,7 +453,7 @@ final class ObjectMapper
         $reflectionClass = new \ReflectionClass($relationship->childClassName);
         $targetColumns = explode(',', $relationship->targetJoinColumn);
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-            $columnMapping = $this->mappingProvider->getColumnMapping($reflectionProperty);
+            $columnMapping = $this->getColumn($reflectionProperty);
             foreach ($targetColumns as $targetColumn) {
                 if ($columnMapping->name == trim($targetColumn)) {
                     $properties[] = $reflectionProperty->getName();
@@ -415,13 +472,25 @@ final class ObjectMapper
      * Get the table mapping for the parent entity.
      * @param \ReflectionClass $reflectionClass
      * @param bool $exceptionIfUnmapped Whether or not to throw an exception if table mapping not found (parent only).
+     * @param bool $tableIsMapped
      * @return Table
      * @throws ObjectiphyException
      */
-    private function getTableMapping(\ReflectionClass $reflectionClass, bool $exceptionIfUnmapped = false): Table
-    {
-        $tableIsMapped = false;
+    public function getTableMapping(
+        \ReflectionClass $reflectionClass,
+        bool $exceptionIfUnmapped = false,
+        bool &$tableIsMapped = false
+    ): Table {
         $table = $this->mappingProvider->getTableMapping($reflectionClass, $tableIsMapped);
+        $entityConfig = $this->entityConfig[$reflectionClass->getName()] ?? null;
+        if ($entityConfig) {
+            $overrides = $entityConfig->getConfigOption(ConfigEntity::TABLE_OVERRIDES);
+            foreach ($overrides ?? [] as $overrideKey => $overrideValue) {
+                if (property_exists($table, $overrideKey)) {
+                    $table->$overrideKey = $overrideValue;
+                }
+            }
+        }
         $this->nameResolver->resolveTableName($reflectionClass, $table);
         if ($exceptionIfUnmapped && !$tableIsMapped) {
             $message = 'Cannot populate mapping collection for class %1$s as there is no table mapping specified. Did you forget to add a Table annotation to your entity class?';

@@ -2,9 +2,14 @@
 
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
+use Objectiphy\Objectiphy\Config\ConfigEntity;
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
+use Objectiphy\Objectiphy\Factory\EntityFactory;
+use Objectiphy\Objectiphy\Factory\ProxyFactory;
 use Objectiphy\Objectiphy\Orm\ObjectReference;
 use Objectiphy\Objectiphy\Query\QB;
+use Objectiphy\Objectiphy\Tests\Entity\TestAddress;
 use Objectiphy\Objectiphy\Tests\Entity\TestPet;
 use Objectiphy\Objectiphy\Tests\Entity\TestUnderwriter;
 use Objectiphy\Objectiphy\Tests\Entity\TestParent;
@@ -58,16 +63,16 @@ class BasicWritingTest extends IntegrationTestBase
         $this->doTests();
     }
 
-//    public function testSaveEmbeddedDirectly()
-//    {
-//        //You cannot save an embedded value object on its own - it needs a parent
-//        $newAddress2 = new TestAddress();
-//        $newAddress2->setTown('Chipping Sodbury');
-//        $newAddress2->setCountryCode('YY');
-//        $newAddress2->setCountryDescription('Absurdistan');
-//        $this->expectExceptionMessage('Failed to insert row');
-//        $this->objectRepository->saveEntity($newAddress2);
-//    }
+    public function testSaveEmbeddedDirectly()
+    {
+        //You cannot save an embedded value object on its own - it needs a parent
+        $newAddress2 = new TestAddress();
+        $newAddress2->setTown('Chipping Sodbury');
+        $newAddress2->setCountryCode('YY');
+        $newAddress2->setCountryDescription('Absurdistan');
+        $this->expectExceptionMessage('no table mapping');
+        $this->objectRepository->saveEntity($newAddress2);
+    }
 
     //Repeat with cache turned off
     public function testWritingDefaultNoCache()
@@ -129,6 +134,25 @@ class BasicWritingTest extends IntegrationTestBase
         $this->objectRepository->saveEntity($policy2, false);
         
         //Verify update
+        if ($this->objectRepository->getConfiguration()->eagerLoadToOne && $this->objectRepository->getConfiguration()->eagerLoadToMany) {
+            //Doctrine annotation will set lazy load mapping anyway, so we have to override it
+            $this->objectRepository->setEntityConfigOption(
+                TestVehicle::class,
+                ConfigEntity::RELATIONSHIP_OVERRIDES,
+                ['telematicsBox' => ['lazyLoad' => null]]
+            );
+            $this->objectRepository->setEntityConfigOption(
+                TestVehicle::class,
+                ConfigEntity::RELATIONSHIP_OVERRIDES,
+                ['wheels' => ['lazyLoad' => null]]
+            );
+            //This one is not necessary, but we do it to test that clearing the mapping cache for the main entity doesn't break anything.
+            $this->objectRepository->setEntityConfigOption(
+                TestPolicy::class,
+                ConfigEntity::RELATIONSHIP_OVERRIDES,
+                ['vehicle' => ['lazyLoad' => null]]
+            );
+        }
         $this->objectRepository->clearCache(); //Necessary to force refresh from database
         $policy3 = $this->objectRepository->find(19071974);
         $this->assertEquals('TESTPOLICY UPDATED AGAIN', $policy3->policyNo);
@@ -168,28 +192,32 @@ class BasicWritingTest extends IntegrationTestBase
         $this->assertEquals('TESTPOLICY UPDATED YET AGAIN', $policy4a->policyNo);
         $this->assertEquals('UpdatedRegNoTwo', $policy4a->vehicle->regNo);
 
+        //Save a proxy
+        $proxyFactory = new ProxyFactory();
+        $entityFactory = new EntityFactory($proxyFactory);
+        if ($this->objectRepository->getConfiguration()->eagerLoadToOne && $this->objectRepository->getConfiguration()->eagerLoadToMany) {
+            $policy3a = $entityFactory->createProxyFromInstance($policy3);
+            $policy3a->policyNo = 'TESTPOLICY UPDATED YET AGAIN';
+            $policy3a->contact->lastName = 'DoNotIgnoreMe!';
+            $this->objectRepository->saveEntity($policy3a);
 
-//        $proxyFactory = new ProxyFactory();
-//        $entityFactory = new EntityFactory($proxyFactory);
-//        $policy3a = $entityFactory->createProxyFromInstance(TestPolicy::class, $policy3);
-//        $policy3a->policyNo = 'TESTPOLICY UPDATED YET AGAIN';
-//        $policy3a->contact->lastName = 'DoNotIgnoreMe!';
-//        $this->objectRepository->saveEntity($policy3a);
-//
-//        //Verify update
-//        $policy4 = $this->objectRepository->find(19071974);
-//        $this->assertEquals('TESTPOLICY UPDATED YET AGAIN', $policy4->policyNo);
-//        $this->assertEquals('DoNotIgnoreMe!', $policy4->contact->lastName);
-//
-//        $policy4a = $proxyFactory->createEntityProxy($policy4);
-//        $policy4a->policyNo = 'TESTPOLICY UPDATED ONE LAST TIME';
-//        $policy4a->contact->lastName = 'IgnoreMeAgain!';
-//        $this->objectRepository->saveEntity($policy4a, false);
-//
-//        //Verify update
-//        $policy5 = $this->objectRepository->find(19071974);
-//        $this->assertEquals('TESTPOLICY UPDATED ONE LAST TIME', $policy5->policyNo);
-//        $this->assertEquals('DoNotIgnoreMe!', $policy5->contact->lastName);
+            //Verify update
+            $this->objectRepository->clearCache(); //Necessary to force refresh from database
+            $policy4 = $this->objectRepository->find(19071974);
+            $this->assertEquals('TESTPOLICY UPDATED YET AGAIN', $policy4->policyNo);
+            $this->assertEquals('DoNotIgnoreMe!', $policy4->contact->lastName);
+
+            $policy4a = $entityFactory->createProxyFromInstance($policy4);
+            $policy4a->policyNo = 'TESTPOLICY UPDATED ONE LAST TIME';
+            $policy4a->contact->lastName = 'IgnoreMeAgain!';
+            $this->objectRepository->saveEntity($policy4a, false);
+
+            //Verify update
+            $this->objectRepository->clearCache(); //Necessary to force refresh from database
+            $policy5 = $this->objectRepository->find(19071974);
+            $this->assertEquals('TESTPOLICY UPDATED ONE LAST TIME', $policy5->policyNo);
+            $this->assertEquals('DoNotIgnoreMe!', $policy5->contact->lastName);
+        }
     }
     
     protected function doInsertTestsOneToOne()

@@ -292,11 +292,11 @@ class PropertyMapping
         return false;
     }
 
-    public function isEager(): bool
+    public function isEager(bool $allowRecursion = false): bool
     {
         if ($this->relationship->isEager()) {
             //Only if we can get it without recursion
-            return $this->parentCollection->isPropertyFetchable($this);
+            return $allowRecursion || $this->parentCollection->isPropertyFetchable($this);
         }
 
         return false;
@@ -314,7 +314,12 @@ class PropertyMapping
         if (!$collectionClass || $collectionClass == 'array') {
             if ($this->reflectionProperty->hasType()) {
                 $collectionClass = ObjectHelper::getTypeName($this->reflectionProperty->getType()); //Sometimes returns gibberish
-                if ($collectionClass && (!class_exists($collectionClass) || !is_a($collectionClass, '\Traversable', true))) {
+                if ($collectionClass && (
+                        !is_string($collectionClass)
+                        || strlen($collectionClass) > 1000
+                        || !class_exists($collectionClass)
+                        || !is_a($collectionClass, '\Traversable', true
+                    ))) {
                     $collectionClass = $this->getTypeHacky();
                 }
             }

@@ -24,7 +24,6 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Factory\ProxyFactory;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
-use Objectiphy\Objectiphy\Meta\Explanation;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 use Objectiphy\Objectiphy\Query\Pagination;
 use Objectiphy\Objectiphy\Query\QB;
@@ -48,6 +47,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     protected StorageInterface $storage;
     protected ?PaginationInterface $pagination = null;
     protected array $orderBy;
+    protected string $className = '';
     protected MappingCollection $mappingCollection;
     protected ExplanationInterface $explanation;
 
@@ -120,11 +120,16 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     public function setEntityConfigOption(string $entityClassName, string $optionName, $value): void
     {
-        $entityConfigs = $this->configOptions->getConfigOption('entityConfig');
-        $entityConfig = $entityConfig[$entityClassName] ?? new ConfigEntity();
+        $entityConfigs = $this->configOptions->getConfigOption(ConfigOptions::ENTITY_CONFIG);
+        $entityConfig = $entityConfigs[$entityClassName] ?? new ConfigEntity();
+        if (is_array($value)) {
+            $existingValue = $entityConfig->getConfigOption($optionName);
+            $value = array_merge($existingValue, $value);
+        }
         $entityConfig->setConfigOption($optionName, $value);
         $entityConfigs[$entityClassName] = $entityConfig;
-        $this->setConfigOption('entityConfig', $entityConfigs);
+        $this->setConfigOption(ConfigOptions::ENTITY_CONFIG, $entityConfigs);
+        $this->clearCache($entityClassName, true);
     }
 
     /**
@@ -134,10 +139,11 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     public function setClassName(string $className): void
     {
-        if ($className != $this->getClassName()) {
-            $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
+        $oldClassName = $this->className;
+        $this->className = $className;
+        $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
+        if ($className != $oldClassName) {
             $this->orderBy = [];
-
             //In case of custom repository that does not pass along the find/save options, set defaults here
             $findOptions = FindOptions::create($this->mappingCollection);
             $this->objectFetcher->setFindOptions($findOptions);
@@ -154,7 +160,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     public function getClassName(): string
     {
-        if (isset($this->mappingCollection)) {
+        if ($this->className) {
+            return $this->className;
+        } elseif (isset($this->mappingCollection)) {
+            $this->className = $this->mappingCollection->getEntityClassName();
             return $this->mappingCollection->getEntityClassName();
         }
 
@@ -598,10 +607,39 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     /**
      * Clear entities from memory and require them to be re-loaded afresh from the database.
      * @param string|null $className If supplied, only the cache for the given class will be cleared, otherwise all.
+     * @param bool $clearMappings
+     * @throws \ReflectionException
      */
-    public function clearCache(?string $className = null): void
+    public function clearCache(?string $className = null, bool $clearMappings = false): void
     {
-        $this->objectFetcher->clearCache($className);
+        $this->objectFetcher->clearCache($className, $clearMappings);
+        if ($clearMappings) {
+            unset($this->mappingCollection);
+        }
+    }
+
+    /**
+     * If any values are already known, they can be specified here to avoid having to look them up when reading. This
+     * is mainly used to allow a late bound child to know about its parent, and helps to avoid recursion when eager
+     * loading.
+     * @param array $knownValues The known values, keyed on property name.
+     * @throws ObjectiphyException
+     * @throws \ReflectionException
+     */
+    public function setKnownValues(array $knownValues)
+    {
+        if (!$this->mappingCollection) {
+            $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($this->className);
+        }
+        if ($this->mappingCollection) { //Don't bother trying to hydrate it
+            foreach ($knownValues as $property => $value) {
+                $propertyMapping = $this->mappingCollection->getPropertyMapping($property);
+                if ($propertyMapping) {
+                    $propertyMapping->isFetchable = false;
+                }
+            }
+        }
+        $this->objectFetcher->setKnownValues($knownValues);
     }
 
     /**
@@ -686,10 +724,13 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     protected function assertClassNameSet(): void
     {
-        if (!$this->getClassName()) {
+        $className = $this->getClassName();
+        if (!$className) {
             $callingMethod = debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['function'] ?? 'Unknown method';
             $message = sprintf('Please call setClassName before calling %1$s.', $callingMethod);
             throw new ObjectiphyException($message);
+        } elseif (!isset($this->mappingCollection) || $this->mappingCollection->getEntityClassName() != $className) {
+            $this->setClassName($className);
         }
     }
 

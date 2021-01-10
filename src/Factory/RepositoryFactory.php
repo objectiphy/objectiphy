@@ -325,7 +325,7 @@ class RepositoryFactory
         if ($this->validateEntityClass($entityClassName) && $repositoryClassName == ObjectRepository::class) {
             //Check for an annotation or other mapping definition that specifies a custom repository
             $entityReflectionClass = new \ReflectionClass($entityClassName);
-            $classMapping = $this->getMappingProvider()->getTableMapping($entityReflectionClass, $mappingFound);
+            $classMapping = $this->getObjectMapper()->getTableMapping($entityReflectionClass, false, $mappingFound);
             $repositoryClassName = $classMapping->repositoryClassName;
         }
         $useCustomClass = $this->validateCustomRepository($repositoryClassName, $entityClassName, $mappingFound);
