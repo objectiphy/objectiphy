@@ -6,6 +6,7 @@ use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Factory\RepositoryFactory;
+use Objectiphy\Objectiphy\Orm\IterableResult;
 use Objectiphy\Objectiphy\Tests\Entity\TestAddress;
 use Objectiphy\Objectiphy\Tests\Entity\TestAssumedPk;
 use Objectiphy\Objectiphy\Tests\Entity\TestChild;
@@ -149,12 +150,12 @@ class BasicReadingTest extends IntegrationTestBase
         $this->assertEquals(19071973, $policies[0]->id);
         
         //Iterable result
-//        $iterable = $this->objectRepository->findIterableBy($criteria);
-//        $this->assertInstanceOf(IterableResult::class, $iterable);
-//        foreach ($iterable as $policy) {
-//            $this->assertInstanceOf(TestPolicy::class, $policy);
-//            $this->assertEquals('P1234', substr($policy->policyNo, 0, 5));
-//        }
+        $iterable = $this->objectRepository->findOnDemandBy($criteria);
+        $this->assertInstanceOf(IterableResult::class, $iterable);
+        foreach ($iterable as $policy) {
+            $this->assertInstanceOf(TestPolicy::class, $policy);
+            $this->assertEquals('P1234', substr($policy->policyNo, 0, 5));
+        }
 
         //Ensure zero gets interpreted correctly when using array syntax
         $this->objectRepository->setClassName(TestChild::class);

@@ -131,10 +131,16 @@ class EntityTracker
         return $changes;
     }
 
+    /**
+     * Detect which children are missing.
+     * @param object $entity
+     * @param string $propertyName
+     * @param array $childPks
+     * @return array|null
+     */
     public function getRemovedChildren(object $entity, string $propertyName, array $childPks): ?array
     {
         $removedChildren = [];
-        $pkIndex = '';
         $className = ObjectHelper::getObjectClassName($entity);
         $pkIndex = $this->hasEntity($entity);
 

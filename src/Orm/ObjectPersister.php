@@ -55,11 +55,18 @@ final class ObjectPersister implements TransactionInterface
         $this->explanation = $explanation;
     }
 
+    /**
+     * In case we have to remove some child objects from a collection.
+     * @param ObjectRemover $objectRemover
+     */
     public function setObjectRemover(ObjectRemover $objectRemover): void
     {
         $this->objectRemover = $objectRemover;
     }
-    
+
+    /**
+     * @param ConfigOptions $config
+     */
     public function setConfigOptions(ConfigOptions $config): void 
     {
         $this->config = $config;
@@ -78,6 +85,9 @@ final class ObjectPersister implements TransactionInterface
         $this->objectUnbinder->setMappingCollection($this->options->mappingCollection);
     }
 
+    /**
+     * @return string
+     */
     public function getClassName(): string
     {
         if (isset($this->options) && isset($this->options->mappingCollection)) {
@@ -187,7 +197,7 @@ final class ObjectPersister implements TransactionInterface
      * @param int $updateCount Number of rows updated
      * @param int $deleteCount
      * @return int Total number of rows updated or inserted
-     * @throws QueryException|\ReflectionException| ObjectiphyException
+     * @throws QueryException|\ReflectionException|ObjectiphyException
      */
     private function doSaveEntity(
         object $entity,
@@ -235,9 +245,7 @@ final class ObjectPersister implements TransactionInterface
      * @param int $updateCount Number of rows updated
      * @param int $deleteCount
      * @return int Total number of rows updated or inserted
-     * @throws QueryException
-     * @throws ObjectiphyException
-     * @throws \ReflectionException
+     * @throws QueryException|ObjectiphyException|\ReflectionException
      */
     private function updateEntity(
         object $entity,

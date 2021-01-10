@@ -12,7 +12,9 @@ use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
  */
 class EntityProxy implements EntityProxyInterface
 {
-    /** @var \Closure[] The closure to execute to get the data, keyed on property name. */
+    /**
+     * @var \Closure[] The closure to execute to get the data, keyed on property name.
+     */
     protected array $lazyLoaders = [];
     protected array $objectiphySettingValue = [];
 
@@ -39,7 +41,7 @@ class EntityProxy implements EntityProxyInterface
 
     public function getClassName(): string
     {
-        return parent::class;
+        return parent::class; //When in use, it will have a parent
     }
 
     /**
@@ -137,7 +139,6 @@ class EntityProxy implements EntityProxyInterface
     /**
      * @param string $propertyName
      * @param $value
-     * @throws \ReflectionException
      */
     protected function setValueObjectiphy(string $propertyName, $value): void
     {

@@ -55,11 +55,19 @@ final class ObjectRemover implements TransactionInterface
         $this->explanation = $explanation;
     }
 
+    /**
+     * Deleting relationships requires an update to the parent.
+     * @param ObjectPersister $objectPersister
+     */
     public function setObjectPersister(ObjectPersister $objectPersister): void
     {
         $this->objectPersister = $objectPersister;
     }
 
+    /**
+     * @param ConfigOptions $config
+     * @throws ObjectiphyException
+     */
     public function setConfigOptions(ConfigOptions $config): void
     {
         $this->config = $config;
@@ -76,6 +84,9 @@ final class ObjectRemover implements TransactionInterface
         $this->sqlDeleter->setDeleteOptions($deleteOptions);
     }
 
+    /**
+     * @return string
+     */
     public function getClassName(): string
     {
         if (isset($this->options) && isset($this->options->mappingCollection)) {
@@ -101,7 +112,7 @@ final class ObjectRemover implements TransactionInterface
      * @param object $entity
      * @param int $updateCount
      * @param int $deleteCount
-     * @throws ObjectiphyException|\ReflectionException
+     * @throws ObjectiphyException|\ReflectionException|\Throwable
      */
     public function checkForRemovals(object $entity, int &$updateCount, int &$deleteCount): void
     {
@@ -150,7 +161,7 @@ final class ObjectRemover implements TransactionInterface
      * @param DeleteOptions $deleteOptions
      * @param int $updateCount
      * @return int
-     * @throws \ReflectionException
+     * @throws \ReflectionException|ObjectiphyException
      */
     public function deleteEntity(object $entity, DeleteOptions $deleteOptions, int &$updateCount): int
     {
@@ -171,11 +182,17 @@ final class ObjectRemover implements TransactionInterface
         return $deleteCount + $this->executeDelete($deleteQuery, $this->options);
     }
 
+    /**
+     * @param DeleteQueryInterface $deleteQuery
+     * @param DeleteOptions $options
+     * @return int
+     * @throws ObjectiphyException
+     * @throws \ReflectionException
+     */
     public function executeDelete(DeleteQueryInterface $deleteQuery, DeleteOptions $options): int
     {
         $this->setDeleteOptions($options);
         $deleteCount = 0;
-        $originalClass = $this->getClassName();
         $this->setClassName($deleteQuery->getDelete() ?: $this->getClassName());
         $deleteQuery->finalise($this->options->mappingCollection, $this->getClassName());
         $sql = $this->sqlDeleter->getDeleteSql($deleteQuery);
@@ -278,6 +295,12 @@ final class ObjectRemover implements TransactionInterface
         return $removedChildren;
     }
 
+    /**
+     * @param iterable $dbChildren
+     * @param iterable $entityChildren
+     * @param array $childPks
+     * @return array
+     */
     private function detectRemovals(iterable $dbChildren, iterable $entityChildren, array $childPks): array
     {
         $removedChildren = [];
@@ -341,14 +364,12 @@ final class ObjectRemover implements TransactionInterface
         $goingToBelize = [];
         $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($propertyName);
         foreach ($removedChildren as $removedChild) {
-            $oneWayTicket = false;
             if (!$this->config->disableDeleteEntities
                 && !$this->options->disableCascade
                 && ($childPropertyMapping->relationship->cascadeDeletes
                     || $childPropertyMapping->relationship->orphanRemoval)
             ) { //Nobody wants this baby
                 $goingToBelize[] = $removedChild;
-                $oneWayTicket = true;
             } else { //Available for adoption
                 $parentProperty = $childPropertyMapping->relationship->mappedBy;
                 if ($parentProperty && !$this->config->disableDeleteRelationships) {
@@ -369,9 +390,7 @@ final class ObjectRemover implements TransactionInterface
      * @param array $orphans
      * @param string $parentProperty
      * @param $updateCount
-     * @throws ObjectiphyException
-     * @throws QueryException
-     * @throws \ReflectionException
+     * @throws ObjectiphyException|QueryException|\ReflectionException
      */
     private function sendKidsToOrphanage(array $orphans, string $parentProperty, &$updateCount): void
     {

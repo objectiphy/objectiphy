@@ -10,6 +10,7 @@ use Objectiphy\Objectiphy\Contract\ExplanationInterface;
 use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
+use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 
 /**
@@ -42,11 +43,19 @@ final class ObjectFetcher
         $this->explanation = $explanation;
     }
 
+    /**
+     * Exposing our private parts :o
+     * @return StorageInterface
+     */
     public function getStorage(): StorageInterface
     {
         return $this->storage;
     }
 
+    /**
+     * @param ConfigOptions $configOptions
+     * @throws ObjectiphyException
+     */
     public function setConfigOptions(ConfigOptions $configOptions): void
     {
         $this->configOptions = $configOptions;
@@ -64,6 +73,21 @@ final class ObjectFetcher
         $this->objectBinder->setMappingCollection($findOptions->mappingCollection);
     }
 
+    /**
+     * No need to bind these as we already know the values (typically used to pre-populate the parent)
+     * @param array $knownValues
+     */
+    public function setKnownValues(array $knownValues)
+    {
+        $this->objectBinder->setKnownValues($knownValues);
+    }
+
+    /**
+     * If we already have this entity in the tracker, return it.
+     * @param string $className
+     * @param $pkValues
+     * @return object|null
+     */
     public function getExistingEntity(string $className, $pkValues): ?object
     {
         if (!is_iterable($pkValues)) {
@@ -104,6 +128,8 @@ final class ObjectFetcher
     /**
      * Clear the entity tracker to ensure objects get refreshed from the database
      * @param string|null $className
+     * @param bool $clearMappingCache Whether or not to also clear the mapping information (only useful when the
+     * mapping information is being overridden).
      */
     public function clearCache(?string $className = null, bool $clearMappingCache = true): void
     {
@@ -111,11 +137,6 @@ final class ObjectFetcher
         if ($clearMappingCache) {
             $this->objectMapper->clearMappingCache($className);
         }
-    }
-
-    public function setKnownValues(array $knownValues)
-    {
-        $this->objectBinder->setKnownValues($knownValues);
     }
 
     /**
@@ -170,8 +191,7 @@ final class ObjectFetcher
      * @param string $sql SQL Statement to execute.
      * @param array|null $params Parameter values to bind.
      * @return array Array of arrays of data or array of entities.
-     * @throws \Objectiphy\Objectiphy\Exception\MappingException
-     * @throws \Throwable
+     * @throws MappingException|\Throwable
      */
     public function fetchResults(string $sql, array $params = null): array
     {
@@ -200,7 +220,6 @@ final class ObjectFetcher
         $storage->executeQuery($sql, $params ?: [], true);
 
         if ($this->options->bindToEntities) {
-            //$this->objectBinder->setIsIterable(true);
             $result = new IterableResult($storage, $this->objectBinder, $this->getClassName());
         } else {
             $result = new IterableResult($storage);

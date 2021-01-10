@@ -10,6 +10,7 @@ use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
+use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\Column;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
@@ -45,6 +46,10 @@ final class ObjectMapper
         $this->nameResolver = $nameResolver;
     }
 
+    /**
+     * @param ConfigOptions $config
+     * @throws ObjectiphyException
+     */
     public function setConfigOptions(ConfigOptions $config): void 
     {
         $this->mappingProvider->setThrowExceptions(!$config->productionMode);
@@ -55,6 +60,10 @@ final class ObjectMapper
         $this->entityConfig = $config->getConfigOption(ConfigOptions::ENTITY_CONFIG);
     }
 
+    /**
+     * Remove any mapping information for the given class, and any classes that have a property that uses it.
+     * @param string|null $className
+     */
     public function clearMappingCache(?string $className = null)
     {
         if ($className) {
@@ -155,7 +164,7 @@ final class ObjectMapper
     }
 
     /**
-     * Get the table mapping for the parent entity.
+     * Get the table mapping for the parent entity and apply any overrides if applicable.
      * @param \ReflectionClass $reflectionClass
      * @param bool $exceptionIfUnmapped Whether or not to throw an exception if table mapping not found (parent only).
      * @param bool $tableIsMapped
@@ -186,6 +195,13 @@ final class ObjectMapper
         return $table;
     }
 
+    /**
+     * Load mapping information, and apply any overrides, if applicable.
+     * @param \ReflectionProperty $reflectionProperty
+     * @param bool $relationshipIsMapped
+     * @return Relationship
+     * @throws ObjectiphyException
+     */
     private function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$relationshipIsMapped = false): Relationship
     {
         $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $relationshipIsMapped);
@@ -202,6 +218,12 @@ final class ObjectMapper
         return $relationship;
     }
 
+    /**
+     * Load mapping information, and apply any overrides, if applicable.
+     * @param \ReflectionProperty $reflectionProperty
+     * @param bool $columnIsMapped
+     * @return Column
+     */
     private function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$columnIsMapped = false): Column
     {
         $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $columnIsMapped);
@@ -247,8 +269,8 @@ final class ObjectMapper
      * @param MappingCollection $mappingCollection
      * @param \ReflectionClass $reflectionClass
      * @param array $parents
-     * @throws ObjectiphyException
-     * @throws \ReflectionException
+     * @param Relationship|null $parentRelationship
+     * @throws ObjectiphyException|MappingException|\ReflectionException
      */
     private function populateScalarMappings(
         MappingCollection $mappingCollection,
@@ -299,7 +321,7 @@ final class ObjectMapper
      * @param Relationship|null $parentRelationship
      * @param bool $suppressFetch
      * @return PropertyMapping|null
-     * @throws \ReflectionException
+     * @throws \ReflectionException|ObjectiphyException
      */
     private function mapProperty(
         MappingCollection $mappingCollection,
@@ -380,7 +402,7 @@ final class ObjectMapper
      * @param \ReflectionClass $reflectionClass
      * @param array $parents
      * @param bool $drillDown
-     * @throws \ReflectionException
+     * @throws \ReflectionException|ObjectiphyException
      */
     private function populateRelationalMappings(
         MappingCollection $mappingCollection,
@@ -468,7 +490,7 @@ final class ObjectMapper
             && !$relationship->sourceJoinColumn
         ) {
             //For now, just add a dummy source column - it will be replaced by a resolved column name based on the
-            //naming stragegy later, but we need to know that the source column exists.
+            //naming strategy later, but we need to know that the source column exists.
             $relationship->sourceJoinColumn = '[' . uniqid() . ']';
         }
     }

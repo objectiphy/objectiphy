@@ -8,6 +8,7 @@ use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
+use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Query\QB;
@@ -39,11 +40,18 @@ final class ObjectBinder
         $this->dataTypeHandler = $dataTypeHandler;
     }
 
+    /**
+     * @param MappingCollection $mappingCollection
+     */
     public function setMappingCollection(MappingCollection $mappingCollection): void
     {
         $this->mappingCollection = $mappingCollection;
     }
-    
+
+    /**
+     * @param ConfigOptions $configOptions
+     * @throws ObjectiphyException
+     */
     public function setConfigOptions(ConfigOptions $configOptions): void
     {
         $this->configOptions = $configOptions;
@@ -54,6 +62,15 @@ final class ObjectBinder
                 $this->entityTracker->clear($className);
             }
         }
+    }
+
+    /**
+     * No need to bind these as we already know the values (typically used to pre-populate the parent)
+     * @param array $knownValues
+     */
+    public function setKnownValues(array $knownValues)
+    {
+        $this->knownValues = $knownValues;
     }
 
     /**
@@ -112,15 +129,6 @@ final class ObjectBinder
         }
         
         return $entities;
-    }
-
-    /**
-     * No need to bind these as we already know the values (typically used to pre-populate the parent)
-     * @param array $knownValues
-     */
-    public function setKnownValues(array $knownValues)
-    {
-        $this->knownValues = $knownValues;
     }
 
     /**
@@ -227,7 +235,6 @@ final class ObjectBinder
      * @param object $entity
      * @param PropertyMapping $propertyMapping
      * @param $value
-     * @throws \ReflectionException
      */
     private function applyValue(object $entity, PropertyMapping $propertyMapping, $value): void
     {

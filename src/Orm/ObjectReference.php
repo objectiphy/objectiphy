@@ -95,7 +95,6 @@ class ObjectReference implements ObjectReferenceInterface
      * Set the value of a primary key property
      * @param string $propertyName
      * @param $value
-     * @throws \ReflectionException
      */
     public function setPrimaryKeyValue(string $propertyName, $value): void
     {

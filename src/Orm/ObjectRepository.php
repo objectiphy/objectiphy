@@ -75,6 +75,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $this->setConfiguration($configOptions);
     }
 
+    /**
+     * For you filthy animals who want access to the PDO object
+     * @return StorageInterface
+     */
     public function getStorage(): StorageInterface
     {
         return $this->storage;
@@ -116,7 +120,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param string $entityClassName
      * @param string $optionName
      * @param $value
-     * @throws ObjectiphyException
+     * @throws ObjectiphyException|\ReflectionException
      */
     public function setEntityConfigOption(string $entityClassName, string $optionName, $value): void
     {
@@ -193,8 +197,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * equivalent method in Doctrine.
      * @param mixed $id Primary key value - for composite keys, can be an array
      * @return object|array|null
-     * @throws ObjectiphyException
-     * @throws \Throwable
+     * @throws ObjectiphyException|\Throwable
      */
     public function find($id)
     {
@@ -222,7 +225,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param array|SelectQueryInterface $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @return object|array|null
-     * @throws ObjectiphyException
+     * @throws ObjectiphyException|QueryException|\ReflectionException
      */
     public function findOneBy($criteria = [])
     {
@@ -244,7 +247,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param string|null $recordAgeIndicator Fully qualified database column or expression that determines record age
      * (see also the setCommonProperty method).
      * @return object|array|null
-     * @throws ObjectiphyException
+     * @throws ObjectiphyException|\ReflectionException
      */
     public function findLatestOneBy(
         $criteria = [],
@@ -310,7 +313,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
      * set (for streaming large amounts of data).
      * @return array|object|null
-     * @throws ObjectiphyException
+     * @throws ObjectiphyException|\ReflectionException
      */
     public function findBy(
         $criteria = [],
@@ -350,8 +353,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $criteria = [],
         ?array $orderBy = null
     ): ?iterable {
-        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
-        return null;
+        return $this->findBy($criteria, $orderBy, null, null, null, true);
     }
 
     /**
@@ -364,7 +366,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
      * set(for streaming large amounts of data).
      * @return array|null
-     * @throws ObjectiphyException
+     * @throws ObjectiphyException|\ReflectionException
      */
     public function findAll(?array $orderBy = null, ?string $keyProperty = null, bool $fetchOnDemand = false): ?iterable
     {
@@ -380,9 +382,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param int $updateCount Number of rows updated.
      * @param int $deleteCount Number of rows deleted.
      * @return int Total number of rows affected (inserts + updates).
-     * @throws ObjectiphyException
-     * @throws \ReflectionException
-     * @throws \Throwable
+     * @throws ObjectiphyException|\ReflectionException|\Throwable
      */
     public function saveEntity(
         object $entity,
@@ -422,9 +422,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param int $updateCount Number of rows updated.
      * @param int $deleteCount
      * @return int Number of rows affected.
-     * @throws ObjectiphyException
-     * @throws \ReflectionException
-     * @throws \Throwable
+     * @throws ObjectiphyException|\ReflectionException|\Throwable
      */
     public function saveEntities(
         iterable $entities,
@@ -470,9 +468,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param int $updateCount Number of records updated (where child records lose their parents but do not get
      * deleted themsselves, they may be updated with null values for the foreign key).
      * @return int Number of records deleted.
-     * @throws ObjectiphyException
-     * @throws \ReflectionException
-     * @throws \Throwable
+     * @throws ObjectiphyException|\ReflectionException|\Throwable
      */
     public function deleteEntity(object $entity, $disableCascade = false, $exceptionIfDisabled = true, int &$updateCount = 0): int
     {
@@ -546,8 +542,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param int $updateCount Number of rows updated.
      * @param int $deleteCount
      * @return int|object|array|null Query results, or total number of rows affected.
-     * @throws ObjectiphyException
-     * @throws QueryException
+     * @throws ObjectiphyException|QueryException
      */
     public function executeQuery(
         QueryInterface $query,
@@ -577,8 +572,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param array $constructorParams If the constructor requires parameters, pass them in here.
      * @return ObjectReferenceInterface|null The resulting object will extend the class name specified, as well as
      * implementing the ObjectReferenceInterface. Returns null if the class does not exist.
-     * @throws ObjectiphyException
-     * @throws \Throwable
+     * @throws ObjectiphyException|\Throwable
      */
     public function getObjectReference(
         string $className,
@@ -612,7 +606,6 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * Clear entities from memory and require them to be re-loaded afresh from the database.
      * @param string|null $className If supplied, only the cache for the given class will be cleared, otherwise all.
      * @param bool $clearMappings
-     * @throws \ReflectionException
      */
     public function clearCache(?string $className = null, bool $clearMappings = false): void
     {
@@ -627,8 +620,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * is mainly used to allow a late bound child to know about its parent, and helps to avoid recursion when eager
      * loading.
      * @param array $knownValues The known values, keyed on property name.
-     * @throws ObjectiphyException
-     * @throws \ReflectionException
+     * @throws ObjectiphyException|\ReflectionException
      */
     public function setKnownValues(array $knownValues)
     {
@@ -651,8 +643,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param array | SelectQueryInterface $criteria
      * @return mixed
      * @throws ObjectiphyException
-     * @throws QueryException
-     * @throws \ReflectionException
+     * @throws QueryException|\ReflectionException|\Throwable
      */
     protected function doFindBy(FindOptions $findOptions, $criteria)
     {
@@ -724,7 +715,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     }
 
     /**
-     * @throws ObjectiphyException
+     * @throws ObjectiphyException|\ReflectionException
      */
     protected function assertClassNameSet(): void
     {
@@ -738,6 +729,11 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         }
     }
 
+    /**
+     * @param bool $exceptionIfDisabled
+     * @return bool
+     * @throws ObjectiphyException
+     */
     protected function validateDeletable(bool $exceptionIfDisabled = true): bool
     {
         if ($this->configOptions->disableDeleteEntities && $exceptionIfDisabled) {
@@ -766,8 +762,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
 
     /**
      * @param \Throwable $ex
-     * @throws ObjectiphyException
-     * @throws \Throwable
+     * @throws ObjectiphyException|\Throwable
      */
     private function throwException(\Throwable $ex): void
     {

@@ -11,6 +11,7 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
+ * Grab values off an object and plonk them in an array ready to be applied to a database query.
  */
 final class ObjectUnbinder
 {
@@ -29,12 +30,18 @@ final class ObjectUnbinder
         $this->dataTypeHandler = $dataTypeHandler;
         $this->objectMapper = $objectMapper;
     }
-    
+
+    /**
+     * @param MappingCollection $mappingCollection
+     */
     public function setMappingCollection(MappingCollection $mappingCollection): void
     {
         $this->mappingCollection = $mappingCollection;
     }
 
+    /**
+     * @param ConfigOptions $config
+     */
     public function setConfigOptions(ConfigOptions $config): void
     {
         $this->disableDeleteRelationships = $config->disableDeleteRelationships;
@@ -46,8 +53,7 @@ final class ObjectUnbinder
      * @param array $pkValues
      * @param bool $processChildren
      * @return array Values to be updated, keyed on property name
-     * @throws ObjectiphyException
-     * @throws \ReflectionException
+     * @throws ObjectiphyException|\ReflectionException
      */
     public function unbindEntityToRow(object $entity, array $pkValues = [], bool $processChildren = false): array
     {
