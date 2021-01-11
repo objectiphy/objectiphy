@@ -225,7 +225,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param array|SelectQueryInterface $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @return object|array|null
-     * @throws ObjectiphyException|QueryException|\ReflectionException
+     * @throws ObjectiphyException|QueryException|\ReflectionException|\Throwable
      */
     public function findOneBy($criteria = [])
     {
@@ -247,7 +247,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param string|null $recordAgeIndicator Fully qualified database column or expression that determines record age
      * (see also the setCommonProperty method).
      * @return object|array|null
-     * @throws ObjectiphyException|\ReflectionException
+     * @throws ObjectiphyException|\ReflectionException|\Throwable
      */
     public function findLatestOneBy(
         $criteria = [],
@@ -279,11 +279,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
      * child object, but make sure the property you use has a unique value in the result set, otherwise some records
      * will be lost).
-     * @param boolean $multiple For internal use (when this method is called by the findLatestOneBy method).
-     * @param boolean $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
+     * @param bool $multiple For internal use (when this method is called by the findLatestOneBy method).
+     * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
      * set(for streaming large amounts of data).
      * @return iterable
-     * @throws \ReflectionException
      */
     public function findLatestBy(
         $criteria = [],
@@ -313,7 +312,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
      * set (for streaming large amounts of data).
      * @return array|object|null
-     * @throws ObjectiphyException|\ReflectionException
+     * @throws ObjectiphyException|\ReflectionException|\Throwable
      */
     public function findBy(
         $criteria = [],
@@ -347,7 +346,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * with Doctrine criteria arrays, but also supports more options (see documentation).
      * @param array|null $orderBy
      * @return array|null
-     * @throws \ReflectionException
+     * @throws ObjectiphyException|\ReflectionException|\Throwable
      */
     public function findOnDemandBy(
         $criteria = [],
@@ -366,11 +365,46 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
      * set(for streaming large amounts of data).
      * @return array|null
-     * @throws ObjectiphyException|\ReflectionException
+     * @throws ObjectiphyException|\ReflectionException|\Throwable
      */
     public function findAll(?array $orderBy = null, ?string $keyProperty = null, bool $fetchOnDemand = false): ?iterable
     {
         return $this->findBy([], $orderBy, null, null, $keyProperty, $fetchOnDemand);
+    }
+
+    public function findOneValueBy($criteria = [])
+    {
+        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
+        $findOptions = FindOptions::create($this->mappingCollection, [
+            'multiple' => false,
+            'bindToEntities' => false,
+        ]);
+
+        $result = $this->doFindBy($findOptions, $criteria);
+        return $result ? reset($result) : null;
+    }
+
+    public function findValuesBy(
+        $criteria = [],
+        ?array $orderBy = null,
+        bool $fetchOnDemand = false)
+    {
+        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
+        $this->setOrderBy(array_filter($orderBy ?? $this->orderBy ?? []));
+        $findOptions = FindOptions::create($this->mappingCollection, [
+            'multiple' => true,
+            'orderBy' => $this->orderBy,
+            'onDemand' => $fetchOnDemand,
+            'pagination' => $this->pagination ?? null,
+            'bindToEntities' => false,
+        ]);
+        $result = $this->doFindBy($findOptions, $criteria);
+        if ($result) {
+            $key = array_key_first(reset($result));
+            return array_column($result, $key);
+        }
+
+        return [];
     }
 
     /**

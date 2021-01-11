@@ -2,11 +2,14 @@
 
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Factory\RepositoryFactory;
 use Objectiphy\Objectiphy\Orm\IterableResult;
+use Objectiphy\Objectiphy\Query\FieldExpression;
+use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Tests\Entity\TestAddress;
 use Objectiphy\Objectiphy\Tests\Entity\TestAssumedPk;
 use Objectiphy\Objectiphy\Tests\Entity\TestChild;
@@ -222,16 +225,32 @@ class BasicReadingTest extends IntegrationTestBase
 
     protected function doUnboundTests()
     {
-        //Get unbound results
         $this->objectRepository->setClassName(TestPolicy::class);
-//        $regNo = $this->objectRepository->findOneValueBy(['contact' => 123], 'vehicle.regNo');
-//        $this->assertEquals('PJ63LXR', $regNo);
-        //Make sure we still get bound results after calling that
-        $policy = $this->objectRepository->findOneBy(['contact' => 123]);
-        $this->assertInstanceOf(TestPolicy::class, $policy);
-        //Get array of scalar values
-//        $policyNumbers = $this->objectRepository->findValuesBy(['contact.lastName' => 'Skywalker'], 'policyNo',
-//            ['policyNo']);
+
+        //Get unbound results
+//        $query = QB::create()
+//            ->select('vehicle.regNo')
+//            ->from(TestPolicy::class)
+//            ->where('contact', '=', 123)
+//            ->buildSelectQuery();
+//        $result = $this->objectRepository->findOneValueBy($query);
+//        $this->assertEquals('PJ63LXR', $result);
+//
+//
+////        $regNo = $this->objectRepository->findOneValueBy(['contact' => 123], 'vehicle.regNo');
+////        $this->assertEquals('PJ63LXR', $regNo);
+////        //Make sure we still get bound results after calling that
+////        $policy = $this->objectRepository->findOneBy(['contact' => 123]);
+////        $this->assertInstanceOf(TestPolicy::class, $policy);
+//        //Get array of scalar values
+//        $query2 = QB::create()
+//            ->select('policyNo')
+//            ->from(TestPolicy::class)
+//            ->where('contact.lastName', QB::EQ, 'Skywalker')
+//            ->buildSelectQuery();
+//        $policyNumbers = $this->objectRepository->findValuesBy($query2, ['policyNo']);
+////        $policyNumbers = $this->objectRepository->findValuesBy(['contact.lastName' => 'Skywalker'], 'policyNo',
+////            ['policyNo']);
 //        $this->assertEquals(2, count($policyNumbers));
 //        $this->assertEquals('P123456', $policyNumbers[0]);
 //        $this->assertEquals('P123457', $policyNumbers[1]);

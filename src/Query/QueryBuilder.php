@@ -81,10 +81,16 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
     public function select(string ...$fields): QueryBuilder
     {
         foreach ($fields as $field) {
-            $fieldExpression = new FieldExpression($field, false);
+            $fieldExpression = new FieldExpression($field);
             $this->select[] = $fieldExpression;
         }
 
+        return $this;
+    }
+
+    public function selectExpressions(FieldExpression ...$fields): QueryBuilder
+    {
+        $this->select = $fields;
         return $this;
     }
 
