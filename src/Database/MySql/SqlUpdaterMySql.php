@@ -60,7 +60,7 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
         }
 
         $this->params = [];
-        $this->prepareReplacements($query, $this->options->mappingCollection, '`');
+        $this->prepareReplacements($query, $this->options->mappingCollection);
 
         $sql = "INSERT INTO \n";
         $sql .= $this->replaceNames($query->getInsert());
@@ -97,7 +97,7 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
         }
 
         $this->params = [];
-        $this->prepareReplacements($query, $this->options->mappingCollection, '`', $parents);
+        $this->prepareReplacements($query, $this->options->mappingCollection, $parents);
 
         $sql = "UPDATE \n";
         $sql .= $this->replaceNames($query->getUpdate());
@@ -121,15 +121,17 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
      * Build arrays of strings to replace and what to replace them with.
      * @param QueryInterface $query
      * @param MappingCollection $mappingCollection
-     * @param string $delimiter
+     * @param string $objectDelimiter Delimiter for property paths
+     * @param string $databaseDelimiter Delimiter for tables and columns
      * @param array $parents
      * @throws QueryException
      */
     protected function prepareReplacements(
         QueryInterface $query,
         MappingCollection $mappingCollection,
-        string $delimiter = '`',
-        array $parents = []
+        array $parents = [],
+        string $objectDelimiter = '%',
+        string $databaseDelimiter = '`'
     ): void {
         $this->sql = '';
         $this->objectNames = [];
@@ -144,29 +146,35 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
                 if ($this->prepareCustomJoinAliasReplacements($propertyPath, $query, $mappingCollection)) {
                     continue;
                 } else {
-                    $message = sprintf('Property mapping not found for: %1$s on class %2$s.', $parentPath . $propertyPath, $mappingCollection->getEntityClassName());
-                    throw new QueryException($message);
+                    //Just use the value as a literal string
+                    $this->objectNames[] = '%' . $propertyPath . '%';
+                    $this->persistenceNames[] = $propertyPath;
+                    continue;
+//                    $message = sprintf('Property mapping not found for: %1$s on class %2$s.', $parentPath . $propertyPath, $mappingCollection->getEntityClassName());
+//                    throw new QueryException($message);
                 }
             }
-            $this->objectNames[] = '`' . $property->getPropertyPath() . '`';
-            $this->persistenceNames[] = $this->delimit($property->getFullColumnName(), $delimiter);
+            $this->objectNames[] = $objectDelimiter . $property->getPropertyPath() . $objectDelimiter;
+            $this->persistenceNames[] = $this->delimit($property->getFullColumnName(), $databaseDelimiter);
             if (strlen($parentPath) > 0) {
-                $this->objectNames[] = '`' . substr($property->getPropertyPath(), strlen($parentPath)) . '`';
+                $this->objectNames[] = $objectDelimiter . substr($property->getPropertyPath(), strlen($parentPath)) . $objectDelimiter;
                 $tableColumnString = $property->getShortColumnName(false);
-                $this->persistenceNames[] = $this->delimit($tableColumnString, $delimiter);
+                $this->persistenceNames[] = $this->delimit($tableColumnString, $databaseDelimiter);
             }
         }
         $tables = $mappingCollection->getTables();
         foreach ($tables as $class => $table) {
             $this->objectNames[] = $class;
-            $this->persistenceNames[] = $this->delimit(str_replace($delimiter, '', $table->name)) ;
+            $this->persistenceNames[] = $this->delimit(str_replace($databaseDelimiter, '', $table->name), $databaseDelimiter) ;
         }
     }
 
     private function prepareCustomJoinAliasReplacements(
         string $propertyPath,
         QueryInterface $query,
-        MappingCollection $mappingCollection
+        MappingCollection $mappingCollection,
+        string $objectDelimiter = '%',
+        string $databaseDelimiter = '`'
     ): bool {
         $aliasDelimiterPos = strpos($propertyPath, '.');
         if ($aliasDelimiterPos !== false) {
@@ -175,9 +183,9 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
             $propertyName = substr($propertyPath, $aliasDelimiterPos + 1);
             $propertyMapping = $mappingCollection->getPropertyExample($aliasClass, $propertyName);
             if ($propertyMapping) {
-                $this->objectNames[] = '`' . $alias . '.' . $propertyMapping->propertyName . '`';
+                $this->objectNames[] = $objectDelimiter . $alias . '.' . $propertyMapping->propertyName . $objectDelimiter;
                 $aliasAndColumn = $alias . '.' . $propertyMapping->getShortColumnName(false);
-                $this->persistenceNames[] = $this->delimit($aliasAndColumn);
+                $this->persistenceNames[] = $this->delimit($aliasAndColumn, $databaseDelimiter);
 
                 return true;
             }

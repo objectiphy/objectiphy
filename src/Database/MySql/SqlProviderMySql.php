@@ -48,14 +48,14 @@ class SqlProviderMySql extends AbstractSqlProvider
     /**
      * Build arrays of strings to replace and what to replace them with.
      * @param MappingCollection $mappingCollection
-     * @param string $delimiter
-     * @param string $altDelimiter
+     * @param string $objectDelimiter Delimiter for property paths
+     * @param string $databaseDelimiter Delimiter for tables and columns
      * @throws QueryException
      */
     protected function prepareReplacements(
         MappingCollection $mappingCollection,
-        string $delimiter = '`',
-        $altDelimiter = '|'
+        string $objectDelimiter = '%',
+        $databaseDelimiter = '`'
     ): void {
         $this->sql = '';
         $this->objectNames = [];
@@ -66,19 +66,23 @@ class SqlProviderMySql extends AbstractSqlProvider
         foreach ($propertiesUsed as $propertyPath) {
             $property = $mappingCollection->getPropertyMapping($propertyPath);
             if (!$property) {
-                throw new QueryException('Property mapping not found for: ' . $propertyPath);
+                //throw new QueryException('Property mapping not found for: ' . $propertyPath);
+                //Just use the value as a literal string
+                $this->objectNames[] = '%' . $propertyPath . '%';
+                $this->persistenceNames[] = $propertyPath;
+                $this->aliases[] = '';
+                continue;
             }
-            $this->objectNames[] = '`' . $property->getPropertyPath() . '`';
-            $tableColumnString = $this->delimit($property->getFullColumnName());
-            $this->persistenceNames[] = $this->delimit($tableColumnString, $delimiter);
-            //Use alternative delimiter for aliases so we don't accidentally replace them
-            $this->aliases[] = $this->delimit($property->getFullColumnName(), $altDelimiter)
-                . ' AS ' . $this->delimit($property->getAlias(), $altDelimiter);
+            $this->objectNames[] = '%' . $propertyPath . '%';
+            $tableColumnString = $property->getFullColumnName();
+            $this->persistenceNames[] = $this->delimit($tableColumnString, $databaseDelimiter);
+            $this->aliases[] = $this->delimit($property->getFullColumnName(), $databaseDelimiter)
+                . ' AS ' . $this->delimit($property->getAlias(), $databaseDelimiter);
         }
         $tables = $mappingCollection->getTables();
         foreach ($tables as $class => $table) {
             $this->objectNames[] = $class;
-            $this->persistenceNames[] = $this->delimit(str_replace($delimiter, '', $table->name));
+            $this->persistenceNames[] = $this->delimit(str_replace($databaseDelimiter, '', $table->name), $databaseDelimiter);
         }
     }
 }

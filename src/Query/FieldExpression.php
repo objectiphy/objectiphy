@@ -28,21 +28,15 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
      */
     private bool $isPropertyPath;
 
-    public function __construct($expression = null, $isPropertyPath = true)
+    public function __construct($expression = null)
     {
-        if ($isPropertyPath) {
-            $this->setPropertyPath($expression);
-        } else {
-            $this->setExpression($expression);
-        }
+        $this->setExpression($expression);
     }
 
     public function __toString(): string
     {
-        $expression = $this->isPropertyPath
-            ? '`' . str_replace('`', '', $this->expression) . '`'
-            : $this->expression;
-        return strval($expression);
+        $delimiter = $this->isPropertyPath ? '%' : '';
+        return $delimiter . strval($this->expression) . $delimiter;
     }
 
     /**
@@ -63,32 +57,29 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
         return $this->expression;
     }
 
-    public function setPropertyPath(string $propertyPath): void
-    {
-        $this->expression = $propertyPath;
-        $this->isPropertyPath = true;
-    }
-
     /**
-     * Set the value of the expression - will try to automatically detect a property path if wrapped in backticks.
+     * Set the value of the expression - if anything is wrapped in percent signs, it will be treated as a property path.
+     * Anything outside of the percent signs will be treated as a string literal. If there are no percent signs, the
+     * whole thing will be treated as a property path (as this is the most common use case).
      * @param $value 
      */
     public function setExpression($value): void
     {
-        $this->isPropertyPath = false; //If it turns out to be a property path, it will get changed.
+        $this->isPropertyPath = false;
         $this->expression = $value;
         if (is_string($value)) {
-            $count = 0;
-            $potentialPropertyPath = str_replace('`', '', $value, $count);
-            if ($count == 2 && strpos($value, '`') === 0 && strrpos($value, '`') === strlen($value) - 1) {
-                $this->setPropertyPath($potentialPropertyPath);
+            $this->isPropertyPath = !(preg_match("/(\s|\%|\')/", $value));
+            //If the whole thing is wrapped in % though, it could still be a property path...
+            $count = substr_count($value, '%');
+            if ($count == 2 && strpos($value, '%') === 0 && strrpos($value, '%') === strlen($value) - 1) {
+                $this->isPropertyPath = !(preg_match("/(\s|\')/", $value));
             }
         }
     }
 
     /**
      * @return array Array of property paths used in the expression. Eg. an expression such as
-     * CONCAT(`child.propertyOne`, '_', `otherChild.otherProperty`) would yield the following array:
+     * CONCAT(%child.propertyOne%, '_', %otherChild.otherProperty%) would yield the following array:
      * ['child.propertyOne', 'otherChild.otherProperty'].
      */
     public function getPropertyPaths(): array
@@ -98,7 +89,7 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
             $paths[] = $this->expression;
         } elseif (is_string($this->expression)) {
             $match = [];
-            preg_match('/`(.*?)`/', $this->expression, $match);
+            preg_match('/\%(.*?)\%/', $this->expression, $match);
             $property = $match[1] ?? '';
             if ($property) {
                 $paths[] = $property;

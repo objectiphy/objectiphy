@@ -163,12 +163,10 @@ abstract class Query implements QueryInterface
         }
 
         if ($propertyMapping->relationship->isScalarJoin()) {
-            // There is no property to join to - just use the columns. Delimit with a pipe character which will get
-            // replaced with backticks in the SQL (backticks in a query at this stage would indicate property names,
-            // which we don't want).
+            // There is no property to join to - just use the columns.
             $target = $propertyMapping->relationship->targetJoinColumn;
             $join = new JoinExpression(
-                '|' . str_replace('.', '|.|', $propertyMapping->relationship->joinTable) . '|',
+                '`' . str_replace('.', '`.`', $propertyMapping->relationship->joinTable) . '`',
                 'obj_alias_' . str_replace('.', '_', $propertyMapping->getPropertyPath())
             );
         } else {

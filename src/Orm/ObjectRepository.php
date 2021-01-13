@@ -741,7 +741,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             } elseif (!in_array(strtoupper($direction), ['ASC', 'DESC'])) {
                 $direction = 'ASC';
             }
-            $field = new FieldExpression('`' . $property . '` ' . $direction, false);
+            $field = new FieldExpression('%' . $property . '% ' . $direction, false);
             $normalisedOrderBy[] = $field;
         }
 

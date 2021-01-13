@@ -62,7 +62,7 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
 
         $this->query = $query;
         $this->params = [];
-        $this->prepareReplacements($this->options->mappingCollection, '`', '|');
+        $this->prepareReplacements($this->options->mappingCollection);
 
         $sql = $this->getSelect();
         $sql .= $this->getFrom();
@@ -77,8 +77,6 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
         $sql .= $this->getOrderBy();
         $sql .= $this->getLimit();
         $sql .= $this->getOffset();
-
-        $sql = str_replace('|', '`', $sql); //Revert to backticks now the replacements are done.
 
         if ($this->options->count && strpos($sql, 'SELECT COUNT') === false) { //We have to select all to get the count :(
             $sql = "SELECT COUNT(*) FROM (\n$sql\n) subquery";

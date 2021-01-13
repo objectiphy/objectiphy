@@ -39,7 +39,7 @@ class WhereProviderMySql extends AbstractSqlProvider
                 if (!$removeJoiner) {
                     $sql .= "    " . $criteriaExpression->joiner;
                 }
-                $sql .= $criteriaExpression->toString($this->params) . "\n";
+                $sql .= " " . $criteriaExpression->toString($this->params) . "\n";
                 $removeJoiner = false;
             }
         }

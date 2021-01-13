@@ -139,7 +139,7 @@ class SelectQuery extends Query implements SelectQueryInterface
                 //See if we can order by primary key of main entity
                 $pkProperties = $mappingCollection->getPrimaryKeyProperties();
                 foreach ($pkProperties as $pkProperty) {
-                    $this->orderBy[] = new FieldExpression('`' . $pkProperty . '` ASC', false);
+                    $this->orderBy[] = new FieldExpression('%' . $pkProperty . '% ASC', false);
                 }
             }
             parent::finalise($mappingCollection, $className);

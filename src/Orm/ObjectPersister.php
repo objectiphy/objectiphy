@@ -226,9 +226,9 @@ final class ObjectPersister implements TransactionInterface
             }
         }
 
-        $this->objectRemover->setDeleteOptions(DeleteOptions::create($this->options->mappingCollection));
-        $this->objectRemover->checkForRemovals($entity, $updateCount, $deleteCount);
         if ($update) {
+            $this->objectRemover->setDeleteOptions(DeleteOptions::create($this->options->mappingCollection));
+            $this->objectRemover->checkForRemovals($entity, $updateCount, $deleteCount);
             $result = $this->updateEntity($entity, $pkValues, $insertCount, $updateCount, $deleteCount);
         } else {
             $result = $this->insertEntity($entity, $insertCount, $updateCount);

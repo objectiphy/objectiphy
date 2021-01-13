@@ -6,6 +6,7 @@ use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
+use Objectiphy\Objectiphy\Exception\StorageException;
 use Objectiphy\Objectiphy\Factory\RepositoryFactory;
 use Objectiphy\Objectiphy\Orm\IterableResult;
 use Objectiphy\Objectiphy\Query\FieldExpression;
@@ -71,7 +72,7 @@ class BasicReadingTest extends IntegrationTestBase
     public function testReadingExceptions()
     {
         $this->testName = 'Reading exceptions' . $this->getCacheSuffix();
-        $this->expectException(QueryException::class);
+        $this->expectException(StorageException::class);
         $this->objectRepository->findBy(['something invalid'=>'gibberish']);
     }
 
@@ -228,34 +229,34 @@ class BasicReadingTest extends IntegrationTestBase
         $this->objectRepository->setClassName(TestPolicy::class);
 
         //Get unbound results
-//        $query = QB::create()
-//            ->select('vehicle.regNo')
-//            ->from(TestPolicy::class)
-//            ->where('contact', '=', 123)
-//            ->buildSelectQuery();
-//        $result = $this->objectRepository->findOneValueBy($query);
-//        $this->assertEquals('PJ63LXR', $result);
-//
-//
-////        $regNo = $this->objectRepository->findOneValueBy(['contact' => 123], 'vehicle.regNo');
-////        $this->assertEquals('PJ63LXR', $regNo);
-////        //Make sure we still get bound results after calling that
-////        $policy = $this->objectRepository->findOneBy(['contact' => 123]);
-////        $this->assertInstanceOf(TestPolicy::class, $policy);
-//        //Get array of scalar values
-//        $query2 = QB::create()
-//            ->select('policyNo')
-//            ->from(TestPolicy::class)
-//            ->where('contact.lastName', QB::EQ, 'Skywalker')
-//            ->buildSelectQuery();
-//        $policyNumbers = $this->objectRepository->findValuesBy($query2, ['policyNo']);
-////        $policyNumbers = $this->objectRepository->findValuesBy(['contact.lastName' => 'Skywalker'], 'policyNo',
-////            ['policyNo']);
-//        $this->assertEquals(2, count($policyNumbers));
-//        $this->assertEquals('P123456', $policyNumbers[0]);
-//        $this->assertEquals('P123457', $policyNumbers[1]);
-//        //Get iterable scalar values
-//        $iterablePolicyNumbers = $this->objectRepository->findIterableValuesBy(['contact.lastName' => 'Skywalker'],
+        $query = QB::create()
+            ->select('vehicle.regNo')
+            ->from(TestPolicy::class)
+            ->where('contact', '=', 123)
+            ->buildSelectQuery();
+        $result = $this->objectRepository->findOneValueBy($query);
+        $this->assertEquals('PJ63LXR', $result);
+
+//        $regNo = $this->objectRepository->findOneValueBy(['contact' => 123], 'vehicle.regNo');
+//        $this->assertEquals('PJ63LXR', $regNo);
+//        //Make sure we still get bound results after calling that
+//        $policy = $this->objectRepository->findOneBy(['contact' => 123]);
+//        $this->assertInstanceOf(TestPolicy::class, $policy);
+
+        //Get array of scalar values
+        $query2 = QB::create()
+            ->select('policyNo')
+            ->from(TestPolicy::class)
+            ->where('contact.lastName', QB::EQ, 'Skywalker')
+            ->buildSelectQuery();
+        $policyNumbers = $this->objectRepository->findValuesBy($query2, ['policyNo']);
+//        $policyNumbers = $this->objectRepository->findValuesBy(['contact.lastName' => 'Skywalker'], 'policyNo',
+//            ['policyNo']);
+        $this->assertEquals(2, count($policyNumbers));
+        $this->assertEquals('P123456', $policyNumbers[0]);
+        $this->assertEquals('P123457', $policyNumbers[1]);
+        //Get iterable scalar values
+//        $iterablePolicyNumbers = $this->objectRepository->findOnDemandBy(['contact.lastName' => 'Skywalker'],
 //            'policyNo', ['policyNo']);
 //        $this->assertInstanceOf(IterableResult::class, $iterablePolicyNumbers);
 //        $iterablePolicyNumbers->next();

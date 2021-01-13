@@ -119,7 +119,6 @@ class BasicWritingTest extends IntegrationTestBase
         $policy = $this->objectRepository->find(19071974);
         $policy->policyNo = 'TESTPOLICY UPDATED';
         $policy->contact->lastName = 'ChildUpdate';
-
         $recordsAffected = $this->objectRepository->saveEntity($policy);
         $this->assertEquals(2, $recordsAffected);
 
@@ -162,7 +161,7 @@ class BasicWritingTest extends IntegrationTestBase
         $query = QB::create()
             ->update(TestPolicy::class)
             ->innerJoin(TestContact::class, 'c')
-                ->on('contact', '=', '`c.id`')
+                ->on('contact', '=', 'c.id')
             ->set(['policyNo' => 'TP6', 'c.lastName' => 'LastName6'])
             ->where('id', QB::EQ, 19071974)
             ->buildUpdateQuery();

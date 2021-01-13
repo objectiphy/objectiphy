@@ -275,11 +275,11 @@ final class ObjectRemover implements TransactionInterface
         $removedChildren = [];
         $parentProperty = $childPropertyMapping->relationship->mappedBy;
         if ($parentProperty) {
-            $delimitedPks = array_map(function($value){ return '`' . $value . '`'; }, $childPks);
+            //$delimitedPks = array_map(function($value){ return '%' . $value . '%'; }, $childPks);
             $originalClass = $this->getClassName();
             $this->setClassName($childPropertyMapping->getChildClassName());
             $query = QB::create()
-                ->select(...$delimitedPks)
+                ->select(...$childPks)
                 ->from($this->getClassName())
                 ->where($parentProperty, QB::EQ, $entity)
                 ->buildSelectQuery();

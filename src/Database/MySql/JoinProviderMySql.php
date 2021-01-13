@@ -91,11 +91,15 @@ class JoinProviderMySql extends AbstractSqlProvider
             foreach ($sourceJoinColumns as $index => $sourceJoinColumn) {
                 if ($index == 0 && $this->isCustomJoin) {
                     $targetJoinColumn = $joinPart->value;
+                    if (!(preg_match("/(\s|\%|\')/", $targetJoinColumn))) {
+                        //Assume it is a column, not a literal value
+                        $targetJoinColumn = $this->delimit($targetJoinColumn);
+                    }
                 }  else {
-                    $targetJoinColumn = $targetJoinColumns[$index] ?? '';
+                    $targetJoinColumn = $this->delimit($targetJoinColumns[$index] ?? '');
                 }
                 if ($targetJoinColumn) {
-                    $joinSql[] = $this->delimit($sourceJoinColumn) . ' = ' . $this->delimit($targetJoinColumn);
+                    $joinSql[] = $this->delimit($sourceJoinColumn) . ' = ' . $targetJoinColumn;
                 }
             }
             $this->sql .= implode("\n AND ", $joinSql) . "\n";

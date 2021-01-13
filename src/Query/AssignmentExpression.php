@@ -25,11 +25,11 @@ class AssignmentExpression implements QueryPartInterface, PropertyPathConsumerIn
     }
 
     /**
-     * @param string $proprtyPath Property to which a value needs to be assigned.
+     * @param string $propertyPath Property to which a value needs to be assigned.
      */
-    public function setPropertyPath(string $proprtyPath): void
+    public function setPropertyPath(string $propertyPath): void
     {
-        $this->propertyPath = $proprtyPath;
+        $this->propertyPath = $propertyPath;
     }
 
     /**
@@ -62,7 +62,7 @@ class AssignmentExpression implements QueryPartInterface, PropertyPathConsumerIn
      */
     public function toString(array &$params = []): string
     {
-        $string = "`$this->propertyPath` = ";
+        $string = "%$this->propertyPath% = ";
         if ($this->value === null) {
             $string .= 'null';
         } else {
@@ -84,7 +84,7 @@ class AssignmentExpression implements QueryPartInterface, PropertyPathConsumerIn
         $paths = [$this->propertyPath];
         if (is_string($this->value)) {
             $match = [];
-            preg_match('/`(.*?)`/', $this->value, $match);
+            preg_match('/\%(.*?)\%/', $this->value, $match);
             $property = $match[1] ?? '';
             if ($property) {
                 $paths[] = $property;
