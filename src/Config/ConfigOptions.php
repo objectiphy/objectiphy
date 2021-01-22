@@ -10,7 +10,7 @@ use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
- * @property bool $productionMode
+ * @property bool $devMode
  * @property string $cacheDirectory
  * @property array $serializationGroups
  * @property bool $hydrateUngroupedProperties
@@ -31,7 +31,7 @@ use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
  */
 class ConfigOptions extends ConfigBase
 {
-    public const PRODUCTION_MODE = 'productionMode';
+    public const DEBUG_MODE = 'devMode';
     public const CACHE_DIRECTORY = 'cacheDirectory';
     public const SERIALIZATION_GROUPS = 'serializationGroups';
     public const HYDRATE_UNGROUPED_PROPERTIES = 'hydrateUngroupedProperties';
@@ -52,9 +52,9 @@ class ConfigOptions extends ConfigBase
     public const DISABLE_ENTITY_CACHE = 'disableEntityCache';
     
     /**
-     * @var bool Whether or not we are running in production (proxy classes do not get rebuilt on each run).
+     * @var bool Whether or not we are running in debug mode (proxy classes get rebuilt on each run).
      */
-    protected bool $productionMode;
+    protected bool $devMode;
     
     /**
      * @var string Directory in which to store cache and proxy class files.
@@ -180,7 +180,7 @@ class ConfigOptions extends ConfigBase
      * @throws ObjectiphyException
      */
     public function __construct(
-        array $options = ['cacheDirectory' => '', 'productionMode' => false],
+        array $options = ['cacheDirectory' => '', 'devMode' => true],
         string $configFile = ''
     ) {
         $this->setInitialOptions($options);
@@ -195,7 +195,7 @@ class ConfigOptions extends ConfigBase
     private function setCacheDirectory(string $cacheDirectory): void
     {
         if ($cacheDirectory) {
-            $usedCacheDir = ($this->productionMode ? '.' : ' (' . $cacheDirectory . ').');
+            $usedCacheDir = (!$this->devMode ? '.' : ' (' . $cacheDirectory . ').');
             if (!file_exists($cacheDirectory)) {
                 throw new ObjectiphyException('Objectiphy cache directory does not exist' . $usedCacheDir);
             } elseif (!is_writable($cacheDirectory)) {
@@ -203,8 +203,8 @@ class ConfigOptions extends ConfigBase
             } else {
                 $this->cacheDirectory = $cacheDirectory;
             }
-        } elseif ($this->productionMode) {
-            throw new ObjectiphyException('You must specify a cache directory for Objectiphy when running in production mode.');
+        } elseif (!$this->devMode) {
+            throw new ObjectiphyException('You must specify a cache directory for Objectiphy when not running in debug mode.');
         } else {
             $this->cacheDirectory = sys_get_temp_dir(); //Not safe in production due to garbage collection
         }

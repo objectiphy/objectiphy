@@ -238,6 +238,16 @@ class PropertyMapping
         return $column ? trim($table . '.' . $column, '.') : '';
     }
 
+    public function isReadOnly(): bool
+    {
+        //Scalar joins are read only by default - everything else is writeable by default
+        if ($this->column->isReadOnly === null) {
+            return $this->relationship->isScalarJoin();
+        }
+
+        return $this->column->isReadOnly === false ? false : true;
+    }
+
     public function getShortColumnName($useAlias = true, $columnName = null): string
     {
         $column = $useAlias ? $this->getAlias() : null;

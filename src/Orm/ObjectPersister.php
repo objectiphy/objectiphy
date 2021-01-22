@@ -378,16 +378,9 @@ final class ObjectPersister implements TransactionInterface
                         continue; //Prevent recursion
                     }
                     if (!($childEntity instanceof ObjectReferenceInterface)) {
-                        $childPkValues = $this->options->mappingCollection->getPrimaryKeyValues($childEntity);
                         //Populate parent
                         if ($childParentProperty) {
                             ObjectHelper::setValueOnObject($childEntity, $childParentProperty, $entity);
-                        }
-                        if (!$childPkValues) {
-                            //If child is late bound, we might not know its primary key, so get its own mapping collection
-                            $childClass = ObjectHelper::getObjectClassName($childEntity);
-                            $childMappingCollection = $this->objectMapper->getMappingCollectionForClass($childClass);
-                            $childPkValues = $childMappingCollection->getPrimaryKeyValues($childEntity);
                         }
                         $this->doSaveEntity($childEntity, $insertCount, $updateCount, $deleteCount);
                     }

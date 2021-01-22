@@ -10,6 +10,7 @@ use Objectiphy\Objectiphy\Factory\ProxyFactory;
 use Objectiphy\Objectiphy\Orm\ObjectReference;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Tests\Entity\TestAddress;
+use Objectiphy\Objectiphy\Tests\Entity\TestChild;
 use Objectiphy\Objectiphy\Tests\Entity\TestPet;
 use Objectiphy\Objectiphy\Tests\Entity\TestUnderwriter;
 use Objectiphy\Objectiphy\Tests\Entity\TestParent;
@@ -418,49 +419,53 @@ class BasicWritingTest extends IntegrationTestBase
     
     protected function doEmbeddedUpdateTests()
     {
-//        //Update a property on an embedded value object
-//        $this->objectRepository->setEntityClassName(TestParent::class);
-//        $parent = $this->objectRepository->find(1);
-//        $add = $parent->getAddress();
-//        $parent->getAddress()->setTown('Somewhereborough');
-//        $this->objectRepository->saveEntity($parent);
-//        $refreshedParent = $this->objectRepository->find(1);
-//        $this->assertEquals('Somewhereborough', $refreshedParent->getAddress()->getTown());
+        //Update a property on an embedded value object
+        $this->objectRepository->setClassName(TestParent::class);
+        $parent = $this->objectRepository->find(1);
+        $parent->getAddress()->setTown('Somewhereborough');
+        $this->objectRepository->saveEntity($parent);
+        $refreshedParent = $this->objectRepository->find(1);
+        $this->assertEquals('Somewhereborough', $refreshedParent->getAddress()->getTown());
     }
     
     protected function doReadOnlyTests()
     {
-//        //Check default readOnly behaviour...
-//        //1) Normal scalar property (writable - already tested)
-//        //2) Normal child object property (writable - already tested)
-//        //3) Scalar join target value (value/description) (not writable)
-//        //4) Scalar join source value (key) (writable)
-//        $this->objectRepository->setClassName(TestParent::class);
-//        $parent = $this->objectRepository->find(1);
-//        $parent->getAddress()->setCountryDescription('Mos Eisley');
-//        $this->objectRepository->saveEntity($parent);
-//        $unrefreshedParent = $this->objectRepository->find(1);
-//        $this->assertEquals('United Kingdom', $unrefreshedParent->getAddress()->getCountryDescription());
-//        $parent->getAddress()->setCountryCode('EU');
-//        $this->objectRepository->saveEntity($parent);
-//        $refreshedParent = $this->objectRepository->find(1);
-//        $this->assertEquals('Somewhere in Europe', $refreshedParent->getAddress()->getCountryDescription());
-//
-//        //Override default readOnly behaviour
-//        $this->objectRepository->setColumnOverrides(TestAddress::class,
-//            ['countryDescription' => ['isReadOnly' => false]]);
-//
-//        //Update scalar join value (keep code the same)
-//        $refreshedParent->getAddress()->setCountryDescription('Mos Eisley');
-//        $this->objectRepository->saveEntity($refreshedParent);
-//        $refreshedParent2 = $this->objectRepository->find(1);
-//        $this->assertEquals('EU', $refreshedParent2->getAddress()->getCountryCode());
-//        $this->assertEquals('Mos Eisley', $refreshedParent2->getAddress()->getCountryDescription());
-//
-//        //Insert new scalar join value
+        //Check default readOnly behaviour...
+        //1) Normal scalar property (writable - already tested)
+        //2) Normal child object property (writable - already tested)
+        //3) Scalar join target value (value/description) (not writable)
+        //4) Scalar join source value (key) (writable)
+        $this->objectRepository->setClassName(TestParent::class);
+        $parent = $this->objectRepository->find(1);
+        $parent->getAddress()->setCountryDescription('Mos Eisley');
+        $this->objectRepository->saveEntity($parent);
+        $this->objectRepository->clearCache();
+        $unrefreshedParent = $this->objectRepository->find(1);
+        $this->assertEquals('United Kingdom', $unrefreshedParent->getAddress()->getCountryDescription());
+        $parent->getAddress()->setCountryCode('EU');
+        $this->objectRepository->saveEntity($parent);
+        $this->objectRepository->clearCache();
+        $refreshedParent = $this->objectRepository->find(1);
+        $this->assertEquals('Somewhere in Europe', $refreshedParent->getAddress()->getCountryDescription());
+
+        //Override default readOnly behaviour
+        $this->objectRepository->setEntityConfigOption(
+            TestAddress::class,
+            ConfigEntity::COLUMN_OVERRIDES,
+            ['countryDescription' => ['isReadOnly' => false]]
+        );
+
+        //Update scalar join value (keep code the same)
+        $refreshedParent->getAddress()->setCountryDescription('Mos Eisley');
+        $this->objectRepository->saveEntity($refreshedParent);
+        $refreshedParent2 = $this->objectRepository->find(1);
+        $this->assertEquals('EU', $refreshedParent2->getAddress()->getCountryCode());
+        $this->assertEquals('Mos Eisley', $refreshedParent2->getAddress()->getCountryDescription());
+
+        //Insert new scalar join value
 //        $refreshedParent2->getAddress()->setCountryCode('ZZ');
 //        $refreshedParent2->getAddress()->setCountryDescription('Middle Earth');
-//        $this->objectRepository->saveEntity($refreshedParent2);
+//        $this->objectRepository->saveEntity($refreshedParent2, false); //When clearing cache, we lose track of changes, so child address updates the scalar join value after our change, so don't save childrenn.
 //        $refreshedParent3 = $this->objectRepository->find(1);
 //        $this->assertEquals('ZZ', $refreshedParent3->getAddress()->getCountryCode());
 //        $this->assertEquals('Middle Earth', $refreshedParent3->getAddress()->getCountryDescription());
@@ -468,11 +473,14 @@ class BasicWritingTest extends IntegrationTestBase
     
     protected function doScalarJoinTests()
     {
-//        $this->objectRepository->setEntityClassName(TestParent::class);
-//        //Revert to default readOnly behaviour
-//        $this->objectRepository->setColumnOverrides(TestAddress::class,
-//            ['countryDescription' => ['isReadOnly' => null]]);
-//
+        $this->objectRepository->setClassName(TestParent::class);
+        //Revert to default readOnly behaviour
+        $this->objectRepository->setEntityConfigOption(
+            TestAddress::class,
+            ConfigEntity::COLUMN_OVERRIDES,
+            ['countryDescription' => ['isReadOnly' => null]]
+        );
+
 //        //Insert new entity with existing scalar join value
 //        $newParent = new TestParent();
 //        $newChild = new TestChild();
@@ -508,8 +516,11 @@ class BasicWritingTest extends IntegrationTestBase
 //        //By default, the description won't save due to the safe default read-only behaviour
 //        $this->assertEquals(null, $refreshedNewParent2->getAddress()->getCountryDescription());
 //        //Set read only to false, so we can save the description
-//        $this->objectRepository->setColumnOverrides(TestAddress::class,
-//            ['countryDescription' => ['isReadOnly' => false]]);
+//        $this->objectRepository->setEntityConfigOption(
+//            TestAddress::class,
+//            ConfigEntity::COLUMN_OVERRIDES,
+//            ['countryDescription' => ['isReadOnly' => false]]
+//        );
 //        $newParent3 = new TestParent();
 //        $newParent3->setAddress($newAddress2);
 //        $newChild3 = new TestChild();
@@ -523,23 +534,41 @@ class BasicWritingTest extends IntegrationTestBase
 //        $this->assertEquals('Cabo Verde', $refreshedNewParent3->getChild()->address->getCountryDescription());
 //
 //        //Override readOnly behaviour for non-scalar-join properties
-//        $this->objectRepository->setColumnOverrides(TestAddress::class,
-//            ['countryDescription' => ['isReadOnly' => null]]);
-//        $this->objectRepository->setColumnOverrides(TestChild::class, ['height' => ['isReadOnly' => false]]);
+//        $this->objectRepository->setEntityConfigOption(
+//            TestAddress::class,
+//            ConfigEntity::COLUMN_OVERRIDES,
+//            ['countryDescription' => ['isReadOnly' => null]]
+//        );
+//        $this->objectRepository->setEntityConfigOption(
+//            TestChild::class,
+//            ConfigEntity::COLUMN_OVERRIDES,
+//            ['height' => ['isReadOnly' => false]]
+//        );
 //        $refreshedNewParent->getChild()->setHeight('48');
 //
 //        $this->objectRepository->saveEntity($refreshedNewParent);
 //        $refreshedNewParent4 = $this->objectRepository->find($refreshedNewParent->getId());
 //        $this->assertEquals(48, $refreshedNewParent4->getChild()->getHeight());
-//        $this->objectRepository->setColumnOverrides(TestChild::class, ['height' => ['isReadOnly' => true]]);
+//        $this->objectRepository->setEntityConfigOption(
+//            TestChild::class,
+//            ConfigEntity::COLUMN_OVERRIDES,
+//            ['height' => ['isReadOnly' => true]]
+//        );
 //        $refreshedNewParent4->getChild()->setHeight(49);
 //        $this->objectRepository->saveEntity($refreshedNewParent4);
 //        $refreshedNewParent5 = $this->objectRepository->find($refreshedNewParent4->getId());
 //        $this->assertEquals(48, $refreshedNewParent5->getChild()->getHeight());
-//        $this->objectRepository->setColumnOverrides(TestChild::class, ['height' => ['isReadOnly' => null]]);
+//        $this->objectRepository->setEntityConfigOption(
+//            TestChild::class,
+//            ConfigEntity::COLUMN_OVERRIDES,
+//            ['height' => ['isReadOnly' => null]]
+//        );
 //
 //        //Check that new mapping properties work on normal relationship joins (not just scalar joins)
-//        $this->objectRepository->setColumnOverrides(TestChild::class, [
+//        $this->objectRepository->setEntityConfigOption(
+//            TestChild::class,
+//            ConfigEntity::COLUMN_OVERRIDES,
+//            [
 //            'user' => [
 //                'joinTable' => 'objectiphy_test.user_alternative',
 //                'sourceJoinColumn' => 'user_id',

@@ -14,27 +14,27 @@ use Objectiphy\Objectiphy\Orm\ObjectHelper;
  */
 final class ProxyFactory
 {
-    /** @var bool In production mode, we do not include the directory path in error messages, and we cache proxies. */
-    protected bool $productionMode = false;
+    /** @var bool In debug mode, we do include the directory path in error messages, and we don't cache proxies. */
+    protected bool $devMode = true;
 
     /** @var string Directory in which to store files containing proxy class definitions */
     protected string $cacheDirectory;
 
     /**
-     * @var array List of proxy classes this factory has used (if not in production mode, these will be deleted on
+     * @var array List of proxy classes this factory has used (if in debug mode, these will be deleted on
      * destruction of the factory.
      */
     protected array $proxyClasses = [];
 
     /**
      * ProxyFactory constructor.
-     * @param bool $productionMode
+     * @param bool $devMode
      * @param string|null $cacheDirectory
      * @throws ObjectiphyException
      */
-    public function __construct(bool $productionMode = false, ?string $cacheDirectory = null)
+    public function __construct(bool $devMode = true, ?string $cacheDirectory = null)
     {
-        $this->productionMode = $productionMode;
+        $this->devMode = $devMode;
         if ($cacheDirectory) {
             if (!file_exists($cacheDirectory) && substr($cacheDirectory, -10) == 'objectiphy' && strlen($cacheDirectory) > 12) {
                 //Won't do any harm to try and create this directory
@@ -45,9 +45,9 @@ final class ProxyFactory
                 }
             }
             if (!file_exists($cacheDirectory)) {
-                throw new ObjectiphyException('Objectiphy proxy directory does not exist' . ($productionMode ? '' : ' (' . $cacheDirectory . ')'));
+                throw new ObjectiphyException('Objectiphy proxy directory does not exist' . ($devMode ? ' (' . $cacheDirectory . ')' : ''));
             } elseif (!is_writable($cacheDirectory)) {
-                throw new ObjectiphyException('Objectiphy proxy directory is not writable' . ($productionMode ? '' : ' (' . $cacheDirectory . ')'));
+                throw new ObjectiphyException('Objectiphy proxy directory is not writable' . ($devMode ? ' (' . $cacheDirectory . ')' : ''));
             } else {
                 $this->cacheDirectory = $cacheDirectory;
             }
@@ -55,7 +55,7 @@ final class ProxyFactory
             $this->cacheDirectory = sys_get_temp_dir();
         }
 
-        if (!$this->productionMode) {
+        if ($this->devMode) {
             $this->clearProxyCache();
         }
     }
@@ -168,11 +168,11 @@ final class ProxyFactory
     }
 
     /**
-     * If not in production mode, delete proxy class files after use.
+     * If in debug mode, delete proxy class files after use.
      */
     public function __destruct()
     {
-        if (!$this->productionMode && $this->proxyClasses) {
+        if ($this->devMode && $this->proxyClasses) {
             foreach ($this->proxyClasses as $proxyClass) {
                 if (file_exists($this->cacheDirectory . DIRECTORY_SEPARATOR . $proxyClass . '.php')) {
                     unlink ($this->cacheDirectory . DIRECTORY_SEPARATOR . $proxyClass . '.php');

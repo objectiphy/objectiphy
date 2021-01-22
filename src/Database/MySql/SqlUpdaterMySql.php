@@ -104,7 +104,7 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
         $this->joinProvider->setQueryParams($this->params);
         $sql .= $this->joinProvider->getJoins($query, $this->objectNames, $this->persistenceNames);
         $this->setQueryParams($this->joinProvider->getQueryParams());
-        $sql .= "SET \n";
+        $sql .= " SET \n";
         $sqlAssignments = [];
         foreach ($query->getAssignments() as $assignment) {
             $sqlAssignments[] = $assignment->toString($this->params);

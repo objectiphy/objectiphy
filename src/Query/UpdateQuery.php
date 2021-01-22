@@ -45,6 +45,7 @@ class UpdateQuery extends Query implements UpdateQueryInterface
      * @param string|null $className
      * @param array $assignments Keyed by property name (these will be the dirty properties passed in from the
      * entity tracker).
+     * @throws QueryException
      */
     public function finalise(
         MappingCollection $mappingCollection,
@@ -58,13 +59,20 @@ class UpdateQuery extends Query implements UpdateQueryInterface
             if (!$this->getAssignments() && $assignments) {
                 $assignmentExpressions = [];
                 foreach ($assignments as $key => $value) {
+                    $propertyMapping = $mappingCollection->getPropertyMapping($key);
+                    if ($propertyMapping->isReadOnly()) {
+                        continue;
+                    }
                     if (!($value instanceof AssignmentExpression)) {
                         $assignmentExpressions[] = new AssignmentExpression($key, $value);
+                        //If scalar join, ensure we have the join
+                        if ($propertyMapping->relationship->isScalarJoin()) {
+                            $this->populateRelationshipJoin($mappingCollection, $propertyMapping);
+                        }
                     }
                 }
                 $this->setAssignments(...$assignmentExpressions);
             }
-            //Don't call parent finalise as we don't need joins by default
         }
     }
 

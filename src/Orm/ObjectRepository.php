@@ -323,6 +323,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         bool $fetchOnDemand = false
     ): ?iterable {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
+        $eagerLoadToOneSetting = $this->getConfiguration()->eagerLoadToOne;
+        if ($fetchOnDemand) { //Try to eager load to avoid nested queries
+            $this->setConfigOption(ConfigOptions::EAGER_LOAD_TO_ONE, true);
+        }
         $this->setOrderBy(array_filter($orderBy ?? $this->orderBy ?? []));
         if ($limit) { //Only for Doctrine compatibility
             $this->pagination = new Pagination($limit, round($offset / $limit) + 1);
@@ -336,7 +340,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             'bindToEntities' => $this->configOptions->bindToEntities,
         ]);
 
-        return $this->doFindBy($findOptions, $criteria);
+        $result = $this->doFindBy($findOptions, $criteria);
+        $this->setConfigOption(ConfigOptions::EAGER_LOAD_TO_ONE, $eagerLoadToOneSetting);
+
+        return $result;
     }
 
     /**
@@ -629,11 +636,12 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     }
 
     /**
+     * @param bool $parameterise Whether or not to replace parameters with their actual values.
      * @return string Convenience method to get the last SQL query generated.
      */
-    public function getSql(): string
+    public function getSql(bool $parameterise = true): string
     {
-        return $this->explanation->getSql();
+        return $this->explanation->getSql($parameterise);
     }
 
     /**

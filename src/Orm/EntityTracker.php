@@ -51,7 +51,7 @@ class EntityTracker
             }
         } elseif (is_object($entityOrClassName)) {
             $className = ObjectHelper::getObjectClassName($entityOrClassName);
-            $searchResult = array_search($entityOrClassName, $this->entities[$className] ?? []);
+            $searchResult = array_search($entityOrClassName, $this->entities[$className] ?? [], true);
             return $searchResult ? strval($searchResult) : null;
         }
 
@@ -121,7 +121,7 @@ class EntityTracker
                         true,
                         true
                     ) : $notFound;
-                    if ($entityValue != $cloneValue) {
+                    if ($entityValue !== $cloneValue) {
                         $changes[$property] = $entityValue;
                     }
                 }

@@ -69,7 +69,7 @@ class IterableResult implements \Iterator
             $row = $this->storage->fetchResult();
         }
         $this->current = $row && $this->objectBinder
-            ? $this->objectBinder->bindRowToEntity($row, $this->entityClassName)
+            ? $this->objectBinder->bindRowToEntity($row, $this->entityClassName, [], null, false)
             : $row;
 
         $this->key++;

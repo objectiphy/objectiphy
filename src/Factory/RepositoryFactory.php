@@ -1,7 +1,8 @@
 <?php
 
 /**
- * RSW: TODO: Make this better. Possibly create objects in a generic way (kinda like autowiring), or split into smaller factories.
+ * RSW: TODO: Make this better. Possibly create objects in a generic way (kinda like autowiring),
+ * or split into smaller factories.
  */
 declare(strict_types=1);
 
@@ -65,18 +66,31 @@ class RepositoryFactory
      */
     private array $repositories = [];
 
-    public function __construct(\PDO $pdo, ?ConfigOptions $configOptions = null)
+    /**
+     * @param \PDO $pdo A PDO database connection
+     * @param string $cacheDirectory Where to store proxy class definition files and cache files
+     * @param bool $devMode Whether to rebuild the proxies on each call or not (performance penalty)
+     * @throws ObjectiphyException
+     */
+    public function __construct(\PDO $pdo, string $cacheDirectory = '', bool $devMode = true)
     {
         $this->pdo = $pdo;
-        if (!$configOptions) {
-            $configOptions = new ConfigOptions();
-        }
-        $this->setConfigOptions($configOptions);
-    }
-    
-    public function setConfigOptions(ConfigOptions $configOptions): void
-    {
+        $configOptions = new ConfigOptions([
+            'cacheDirectory' => $cacheDirectory,
+            'devMode' => $devMode,
+        ]);
         $this->configOptions = $configOptions;
+    }
+
+    /**
+     * @param array $configOptions Keyed by option name
+     * @throws ObjectiphyException
+     */
+    public function setConfigOptions(array $configOptions): void
+    {
+        foreach ($configOptions as $key => $value) {
+            $this->configOptions->setConfigOption($key, $value);
+        }
     }
 
     public function reset(): void
@@ -124,7 +138,7 @@ class RepositoryFactory
             $baseMappingProvider = new MappingProvider();
             $doctrineMappingProvider = new MappingProviderDoctrineAnnotation($baseMappingProvider, $annotationReader);
             $this->mappingProvider = new MappingProviderAnnotation($doctrineMappingProvider, $annotationReader);
-            $this->mappingProvider->setThrowExceptions(!$this->configOptions->productionMode);
+            $this->mappingProvider->setThrowExceptions($this->configOptions->devMode);
         }
 
         return $this->mappingProvider;
@@ -291,7 +305,7 @@ class RepositoryFactory
     final protected function createProxyFactory(?ConfigOptions $configOptions = null): ProxyFactory
     {
         $configOptions ??= $this->configOptions;
-        return new ProxyFactory($configOptions->productionMode, $configOptions->cacheDirectory);
+        return new ProxyFactory($configOptions->devMode, $configOptions->cacheDirectory);
     }
     
     final protected function createStorage(): StorageInterface

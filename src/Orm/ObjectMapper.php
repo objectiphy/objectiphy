@@ -52,7 +52,7 @@ final class ObjectMapper
      */
     public function setConfigOptions(ConfigOptions $config): void 
     {
-        $this->mappingProvider->setThrowExceptions(!$config->productionMode);
+        $this->mappingProvider->setThrowExceptions($config->devMode);
         $this->guessMappings = $config->guessMappings;
         $this->eagerLoadToOne = $config->eagerLoadToOne;
         $this->eagerLoadToMany = $config->eagerLoadToMany;
@@ -227,7 +227,7 @@ final class ObjectMapper
     private function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$columnIsMapped = false): Column
     {
         $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $columnIsMapped);
-        $entityConfig = $this->entityConfigs[$reflectionProperty->class] ?? null;
+        $entityConfig = $this->entityConfig[$reflectionProperty->class] ?? null;
         if ($entityConfig) {
             $overrides = $entityConfig->getConfigOption(ConfigEntity::COLUMN_OVERRIDES);
         }

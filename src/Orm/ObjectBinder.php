@@ -79,6 +79,9 @@ final class ObjectBinder
      * @param string $entityClassName
      * @param array $parents
      * @param object|null $parentEntity
+     * @param bool $useLateBinding If false, lazy-loaded and to-many relationships will return null
+     * (this is used by IterableResult to prevent MySQL crashes trying to run a query with an already
+     * open connection).
      * @return object|null
      * @throws MappingException
      * @throws \Throwable
@@ -87,7 +90,8 @@ final class ObjectBinder
         array $row,
         string $entityClassName,
         array $parents = [],
-        ?object $parentEntity = null
+        ?object $parentEntity = null,
+        bool $useLateBinding = true
     ): ?object {
         if (!isset($this->mappingCollection)) {
             throw new MappingException('Mapping collection has not been supplied to the object binder.');
@@ -99,7 +103,7 @@ final class ObjectBinder
         }
         $propertiesMapped = $this->bindScalarProperties($entity, $row, $parents);
         if ($propertiesMapped && !$this->getEntityFromLocalCache($entityClassName, $entity)) {
-            $this->bindRelationalProperties($entity, $row, $parents, $parentEntity);
+            $this->bindRelationalProperties($entity, $row, $parents, $parentEntity, $useLateBinding);
             $this->entityTracker->storeEntity($entity, $this->mappingCollection->getPrimaryKeyValues($entity));
         }
 
@@ -183,12 +187,18 @@ final class ObjectBinder
      * @param array $row
      * @param array $parents
      * @param object|null $parentEntity
+     * @param bool $useLateBinding
      * @return bool
      * @throws MappingException
      * @throws \Throwable
      */
-    private function bindRelationalProperties(object $entity, array $row, array $parents, ?object $parentEntity): bool
-    {
+    private function bindRelationalProperties(
+        object $entity,
+        array $row,
+        array $parents,
+        ?object $parentEntity,
+        bool $useLateBinding = true
+    ): bool {
         $valueFound = false;
         foreach ($this->mappingCollection->getPropertyMappings($parents) as $propertyMapping) {
             $value = null;
@@ -210,10 +220,15 @@ final class ObjectBinder
                             }
                         }
                     }
-                    $closure = $this->createLateBoundClosure($propertyMapping, $row, $knownValues);
-                    $valueFound = $closure instanceof \Closure;
-                    if ($valueFound) {
-                        $value = $propertyMapping->isEager(true) ? $closure() : $closure;
+                    if ($useLateBinding) {
+                        $closure = $this->createLateBoundClosure($propertyMapping, $row, $knownValues);
+                        $valueFound = $closure instanceof \Closure;
+                        if ($valueFound) {
+                            $value = $propertyMapping->isEager(true) ? $closure() : $closure;
+                        }
+                    } else {
+                        $value = null;
+                        $valueFound = true;
                     }
                 }  elseif (!$valueFound) {
                     $parents = array_merge($propertyMapping->parents, [$propertyMapping->propertyName]);
@@ -263,6 +278,7 @@ final class ObjectBinder
      */
     private function createLateBoundClosure(PropertyMapping $propertyMapping, array $row, array $knownValues = [])
     {
+
         $mappingCollection = $this->mappingCollection;
         $configOptions = clone($this->configOptions);
         return function() use ($mappingCollection, $configOptions, $propertyMapping, $row, $knownValues) {

@@ -62,14 +62,27 @@ final class ObjectUnbinder
         foreach ($properties as $property => $value) {
             $this->objectMapper->addMappingForProperty(ObjectHelper::getObjectClassName($entity), $property, true);
             $propertyMapping = $this->mappingCollection->getPropertyMapping($property);
-            if ($propertyMapping && ($processChildren || !$propertyMapping->getChildClassName())
+            if ($propertyMapping && ($processChildren || !$propertyMapping->getChildClassName() || $propertyMapping->relationship->isEmbedded)
                 && $this->mappingCollection->isPropertyFetchable($propertyMapping)) {
                 if ($this->disableDeleteRelationships && $propertyMapping->getChildClassName() && !$value) {
                     continue; //Not allowed to remove the relationship
                 }
-                $columnName = $propertyMapping->getFullColumnName();
-                if ($columnName) {
-                    $row[$property] = $this->unbindValue($value);
+                if ($propertyMapping->relationship->isEmbedded) {
+                    //Unbind all values on the embedded object...
+                    if ($embeddedChild = ObjectHelper::getValueFromObject($entity, $property)) {
+                        foreach ($this->mappingCollection->getPropertyMappings([$property]) as $childPropertyMapping) {
+                            $columnName = $childPropertyMapping->getFullColumnName();
+                            if ($columnName) {
+                                $childValue = ObjectHelper::getValueFromObject($value, $childPropertyMapping->propertyName);
+                                $row[$childPropertyMapping->getPropertyPath()] = $this->unbindValue($childValue);
+                            }
+                        }
+                    }
+                } else {
+                    $columnName = $propertyMapping->getFullColumnName();
+                    if ($columnName) {
+                        $row[$property] = $this->unbindValue($value);
+                    }
                 }
             }
         }
