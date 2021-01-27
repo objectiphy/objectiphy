@@ -15,6 +15,7 @@ use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 use Objectiphy\Objectiphy\Contract\ExplanationInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
+use Objectiphy\Objectiphy\Contract\RepositoryFactoryInterface;
 use Objectiphy\Objectiphy\Contract\SqlDeleterInterface;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
@@ -44,7 +45,7 @@ use Objectiphy\Objectiphy\Orm\ObjectUnbinder;
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-class RepositoryFactory
+class RepositoryFactory implements RepositoryFactoryInterface
 {
     private \PDO $pdo;
     private ConfigOptions $configOptions;
@@ -178,6 +179,7 @@ class RepositoryFactory
                 $this->getObjectRemover(),
                 $this->getProxyFactory($configOptions),
                 $this->getExplanation(),
+                $this,
                 $configOptions
             );
             if ($entityClassName) {
@@ -189,7 +191,22 @@ class RepositoryFactory
         return $this->repositories[$entityClassName][$configHash];
     }
 
-    final protected function getObjectMapper(): ObjectMapper
+    public function clearCache(?string $className = null, bool $clearMappingCache = true): void
+    {
+        $this->entityTracker->clear($className);
+        if ($clearMappingCache) {
+            if (isset($this->objectMapper)) {
+                $this->objectMapper->clearMappingCache($className);
+            }
+            foreach ($this->repositories ?? [] as $key => $repositoryList) {
+                foreach ($repositoryList ?? [] as $repository) {
+                    $repository->clearCache($className, $clearMappingCache, true);
+                }
+            }
+        }
+    }
+
+    final public function getObjectMapper(): ObjectMapper
     {
         if (!isset($this->objectMapper)) {
             $this->objectMapper = $this->createObjectMapper();

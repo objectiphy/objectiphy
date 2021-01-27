@@ -222,12 +222,12 @@ class PropertyMapping
         $this->tableAlias = $alias;
     }
 
-    public function getFullColumnName(): string
+    public function getFullColumnName(string $overrideTableAlias = ''): string
     {
         if ($this->column->aggregateFunctionName) {
             return ''; //Temporary measure until we support aggregates.
         }
-        $table = $this->getTableAlias();
+        $table = $overrideTableAlias ?: $this->getTableAlias();
         $table = $table ?: $this->table->name;
         if ($this->relationship->isScalarJoin()) {
             $column = $this->getShortColumnName(false);

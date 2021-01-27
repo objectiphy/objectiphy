@@ -106,7 +106,8 @@ final class ObjectFetcher
     public function executeFind(SelectQueryInterface $query) 
     {
         $this->validate();
-        if ($query->getFrom()) {
+        $queryClass = $query->getFrom();
+        if ($queryClass && strpos($queryClass, '`') === false) { //No explicit table specified
             $originalClass = $this->getClassName();
             $this->setClassName($query->getFrom());            
         }
@@ -136,6 +137,7 @@ final class ObjectFetcher
         $this->entityTracker->clear($className);
         if ($clearMappingCache) {
             $this->objectMapper->clearMappingCache($className);
+            $this->objectBinder->clearMappingCache($className); //Has factory which uses separate mapper for late binding
         }
     }
 

@@ -81,16 +81,14 @@ class UpdateQuery extends Query implements UpdateQueryInterface
         if (!$this->assignments || !$this->getUpdate()) {
             throw new QueryException('Please finalise the query before use (ie. call the finalise method).');
         }
-        $useParams = $params !== null;
+
         $queryString = 'UPDATE ' . $this->getUpdate();
         $queryString .= ' ' . implode(' ', $this->getJoins());
         $queryString .= 'SET ' . implode(', ', $this->assignments);
         $queryString .= ' WHERE 1 ';
         if ($this->where) {
             foreach ($this->getWhere() as $criteriaExpression) {
-                $queryString .= ' AND ' . ($useParams
-                        ? $criteriaExpression->toString($params)
-                        : (string) $criteriaExpression);
+                $queryString .= ' AND ' . (string) $criteriaExpression;
             }
         }
 

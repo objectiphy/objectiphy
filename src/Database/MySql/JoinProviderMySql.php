@@ -62,7 +62,11 @@ class JoinProviderMySql extends AbstractSqlProvider
     {
         $this->currentJoinAlias = $joinPart->joinAlias;
         $this->sql .= ($joinPart->type ?: "LEFT") . " JOIN ";
-        $this->sql .= str_replace($this->objectNames, $this->persistenceNames, $joinPart->targetEntityClassName);
+        if ($joinPart->propertyMapping && $joinPart->propertyMapping->relationship->joinTable) {
+            $this->sql .= $this->delimit($joinPart->propertyMapping->relationship->joinTable);
+        } else {
+            $this->sql .= str_replace($this->objectNames, $this->persistenceNames, $joinPart->targetEntityClassName);
+        }
         $this->sql .= " " . $this->delimit($this->currentJoinAlias) . "\n";
         $this->joiner = null;
     }
@@ -125,8 +129,9 @@ class JoinProviderMySql extends AbstractSqlProvider
         if ($joinPartPropertyMapping) {
             $sourceJoinColumns = $joinPartPropertyMapping->getSourceJoinColumns();
             $targetJoinColumns = $joinPartPropertyMapping->getTargetJoinColumns();
-            if ((empty($sourceJoinColumns) && empty($targetJoinColumns))
-                || (count($sourceJoinColumns) != count($targetJoinColumns))
+            if (count($sourceJoinColumns) != 1 && !$this->isCustomJoin //Don't need target for custom join
+                && ((empty($sourceJoinColumns) && empty($targetJoinColumns))
+                || (count($sourceJoinColumns) != count($targetJoinColumns)))
             ) {
                 throw new MappingException(
                     sprintf(

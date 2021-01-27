@@ -50,7 +50,6 @@ class SqlProviderMySql extends AbstractSqlProvider
      * @param MappingCollection $mappingCollection
      * @param string $objectDelimiter Delimiter for property paths
      * @param string $databaseDelimiter Delimiter for tables and columns
-     * @throws QueryException
      */
     protected function prepareReplacements(
         MappingCollection $mappingCollection,
@@ -66,7 +65,6 @@ class SqlProviderMySql extends AbstractSqlProvider
         foreach ($propertiesUsed as $propertyPath) {
             $property = $mappingCollection->getPropertyMapping($propertyPath);
             if (!$property) {
-                //throw new QueryException('Property mapping not found for: ' . $propertyPath);
                 //Just use the value as a literal string
                 $this->objectNames[] = '%' . $propertyPath . '%';
                 $this->persistenceNames[] = $propertyPath;
@@ -74,9 +72,14 @@ class SqlProviderMySql extends AbstractSqlProvider
                 continue;
             }
             $this->objectNames[] = '%' . $propertyPath . '%';
-            $tableColumnString = $property->getFullColumnName();
+            if (strpos($propertyPath, '.') === false && strpos($this->query->getClassName(), '`') !== false) {
+                //We are fetching from an explicitly specified table name - use it for any root properties
+                $tableColumnString = $property->getFullColumnName($this->query->getClassName());
+            } else {
+                $tableColumnString = $property->getFullColumnName();
+            }
             $this->persistenceNames[] = $this->delimit($tableColumnString, $databaseDelimiter);
-            $this->aliases[] = $this->delimit($property->getFullColumnName(), $databaseDelimiter)
+            $this->aliases[] = $this->delimit($tableColumnString, $databaseDelimiter)
                 . ' AS ' . $this->delimit($property->getAlias(), $databaseDelimiter);
         }
         $tables = $mappingCollection->getTables();

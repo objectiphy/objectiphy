@@ -58,13 +58,20 @@ class InsertQuery extends Query implements InsertQueryInterface
             if (!$this->getAssignments() && $assignments) {
                 $assignmentExpressions = [];
                 foreach ($assignments as $key => $value) {
+                    $propertyMapping = $mappingCollection->getPropertyMapping($key);
+                    if ($propertyMapping->isReadOnly()) {
+                        continue;
+                    }
                     if (!($value instanceof AssignmentExpression)) {
                         $assignmentExpressions[] = new AssignmentExpression($key, $value);
+                        //If scalar join, ensure we have the join
+                        if ($propertyMapping->relationship->isScalarJoin()) {
+                            $this->populateRelationshipJoin($mappingCollection, $propertyMapping);
+                        }
                     }
                 }
                 $this->setAssignments(...$assignmentExpressions);
             }
-            //Don't call parent finalise as we don't need joins by default
         }
     }
 

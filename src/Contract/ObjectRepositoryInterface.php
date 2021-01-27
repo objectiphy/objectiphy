@@ -37,6 +37,15 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
     public function setConfigOption(string $optionName, $value);
 
     /**
+     * Set an entity-specific configuration option by name. Available options are
+     * defined on the Objectiphy\Objectiphy\Config\ConfigEntity class.
+     * @param string $entityClassName
+     * @param string $optionName
+     * @param $value
+     */
+    public function setEntityConfigOption(string $entityClassName, string $optionName, $value): void;
+
+    /**
      * @param string $className Name of the parent entity class.
      */
     public function setClassName(string $className): void;

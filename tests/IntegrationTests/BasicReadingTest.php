@@ -268,8 +268,10 @@ class BasicReadingTest extends IntegrationTestBase
         //Get some arrays
         $this->objectRepository->setConfigOption('bindToEntities', false);
         $policy = $this->objectRepository->findOneBy(['contact' => 123]);
-        $this->assertEquals(123, $policy['contact_id']);
-        $this->assertEquals('Skywalker', $policy['contact_lastName']);
+        $this->assertEquals(123, $policy['contact']);
+        if (strpos($this->testName, 'lazy') === false) {
+            $this->assertEquals('Skywalker', $policy['contact_lastName']);
+        }
         $this->assertEquals('P123456', $policy['policyNo']);
         $this->assertEquals('Vauxhall', $policy['vehicle_makeDesc']);
         $this->objectRepository->setOrderBy(['id']);

@@ -16,6 +16,7 @@ use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
+use Objectiphy\Objectiphy\Contract\RepositoryFactoryInterface;
 use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Contract\TransactionInterface;
@@ -50,6 +51,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     protected string $className = '';
     protected MappingCollection $mappingCollection;
     protected ExplanationInterface $explanation;
+    protected RepositoryFactoryInterface $repositoryFactory;
 
     public function __construct(
         ObjectMapper $objectMapper,
@@ -58,6 +60,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         ObjectRemover $objectRemover,
         ProxyFactory $proxyFactory,
         ExplanationInterface $explanation,
+        RepositoryFactoryInterface $repositoryFactory,
         ?ConfigOptions $configOptions = null
     ) {
         $this->objectMapper = $objectMapper;
@@ -69,6 +72,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $this->objectRemover->setObjectPersister($objectPersister);
         $this->proxyFactory = $proxyFactory;
         $this->explanation = $explanation;
+        $this->repositoryFactory = $repositoryFactory;
         if (!$configOptions) {
             $configOptions = new ConfigOptions();
         }
@@ -201,8 +205,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     public function find($id)
     {
-        $this->assertClassNameSet();
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
+        $this->assertClassNameSet();
         $existingEntity = $this->objectFetcher->getExistingEntity($this->getClassName(), $id);
         if ($existingEntity) {
             return $existingEntity;
@@ -230,6 +234,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     public function findOneBy($criteria = [])
     {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
+        $this->assertClassNameSet();
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => false,
             'bindToEntities' => $this->configOptions->bindToEntities,
@@ -258,6 +263,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         //TODO: common property/age indicator
 
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
+        $this->assertClassNameSet();
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => false,
             'latest' => true,
@@ -293,6 +299,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         bool $fetchOnDemand = false
     ): ?iterable {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
+        $this->assertClassNameSet();
         return null;
     }
 
@@ -323,6 +330,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         bool $fetchOnDemand = false
     ): ?iterable {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
+        $this->assertClassNameSet();
         $eagerLoadToOneSetting = $this->getConfiguration()->eagerLoadToOne;
         if ($fetchOnDemand) { //Try to eager load to avoid nested queries
             $this->setConfigOption(ConfigOptions::EAGER_LOAD_TO_ONE, true);
@@ -382,6 +390,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     public function findOneValueBy($criteria = [])
     {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
+        $this->assertClassNameSet();
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => false,
             'bindToEntities' => false,
@@ -397,6 +406,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         bool $fetchOnDemand = false)
     {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
+        $this->assertClassNameSet();
         $this->setOrderBy(array_filter($orderBy ?? $this->orderBy ?? []));
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => true,
@@ -593,6 +603,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     ): ?int {
         //TODO: Use command bus pattern to send queries of different types to different handlers
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
+        $this->setClassName($query->getClassName());
         if ($query instanceof SelectQueryInterface) {
             return $this->findBy($query);
         } elseif ($query instanceof InsertQueryInterface || $query instanceof UpdateQueryInterface) {
@@ -647,12 +658,23 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     /**
      * Clear entities from memory and require them to be re-loaded afresh from the database.
      * @param string|null $className If supplied, only the cache for the given class will be cleared, otherwise all.
-     * @param bool $clearMappings
+     * @param bool $clearMappings Whether or not to also clear mapping information.
+     * @param bool $thisRepoOnly For internal use only, to prevent recursion.
      */
-    public function clearCache(?string $className = null, bool $clearMappings = false): void
+    public function clearCache(?string $className = null, bool $clearMappings = false, bool $thisRepoOnly = false): void
     {
-        $this->objectFetcher->clearCache($className, $clearMappings);
+        if (!$thisRepoOnly) {
+            $this->repositoryFactory->clearCache($className, $clearMappings);
+        }
         if ($clearMappings) {
+            $this->clearLocalMappingCache();
+        }
+    }
+
+    public function clearLocalMappingCache(?string $className = null)
+    {
+        $this->objectMapper->clearMappingCache($className);
+        if (!$className || $this->mappingCollection->usesClass($className)) {
             unset($this->mappingCollection);
         }
     }
@@ -666,10 +688,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     public function setKnownValues(array $knownValues)
     {
-        if (!$this->mappingCollection) {
+        if (empty($this->mappingCollection)) {
             $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($this->className);
         }
-        if ($this->mappingCollection) { //Don't bother trying to hydrate it
+        if ($this->mappingCollection) {
             foreach ($knownValues as $property => $value) {
                 $propertyMapping = $this->mappingCollection->getPropertyMapping($property);
                 if ($propertyMapping) {
@@ -698,7 +720,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             }
         }
         if (!$this->getClassName() && $query) {
-            $this->setClassName($query->getFrom());
+            $this->setClassName($query->getClassName());
         }
         $this->assertClassNameSet();
 

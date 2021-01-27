@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
@@ -133,6 +134,11 @@ final class ObjectBinder
         }
         
         return $entities;
+    }
+
+    public function clearMappingCache(?string $className = null)
+    {
+        $this->repositoryFactory->getObjectMapper()->clearMappingCache($className);
     }
 
     /**
@@ -278,7 +284,6 @@ final class ObjectBinder
      */
     private function createLateBoundClosure(PropertyMapping $propertyMapping, array $row, array $knownValues = [])
     {
-
         $mappingCollection = $this->mappingCollection;
         $configOptions = clone($this->configOptions);
         return function() use ($mappingCollection, $configOptions, $propertyMapping, $row, $knownValues) {
@@ -350,6 +355,15 @@ final class ObjectBinder
 
             //Do the search
             if (!empty($query) && $query->getWhere()) {
+                // In case the joinTable is different to the one on the entity (overridden, or just a cloned table for
+                // a different use case on this relationship), specify the table instead of looking it up via the class
+                // name (so it works in the same as a join would have)
+                $joinTable = $propertyMapping->relationship->joinTable ?? '';
+                if ($joinTable && ($mappingCollection->getTableForClass($className)->name ?? '') != $joinTable) {
+                    $joinTable = '`' . str_replace('.', '`.`', $propertyMapping->relationship->joinTable) . '`';
+                    $query->setClassName($joinTable);
+                    $usePrimaryKey = false;
+                }
                 $repository->setKnownValues($knownValues);
                 if ($propertyMapping->relationship->isToOne()) {
                     if ($usePrimaryKey) {

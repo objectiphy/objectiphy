@@ -462,10 +462,10 @@ class BasicWritingTest extends IntegrationTestBase
         $this->assertEquals('EU', $refreshedParent2->getAddress()->getCountryCode());
         $this->assertEquals('Mos Eisley', $refreshedParent2->getAddress()->getCountryDescription());
 
-        //Insert new scalar join value
+        //Insert new scalar join value (NOT YET SUPPORTED)
 //        $refreshedParent2->getAddress()->setCountryCode('ZZ');
 //        $refreshedParent2->getAddress()->setCountryDescription('Middle Earth');
-//        $this->objectRepository->saveEntity($refreshedParent2, false); //When clearing cache, we lose track of changes, so child address updates the scalar join value after our change, so don't save childrenn.
+//        $this->objectRepository->saveEntity($refreshedParent2, false);
 //        $refreshedParent3 = $this->objectRepository->find(1);
 //        $this->assertEquals('ZZ', $refreshedParent3->getAddress()->getCountryCode());
 //        $this->assertEquals('Middle Earth', $refreshedParent3->getAddress()->getCountryDescription());
@@ -481,28 +481,30 @@ class BasicWritingTest extends IntegrationTestBase
             ['countryDescription' => ['isReadOnly' => null]]
         );
 
-//        //Insert new entity with existing scalar join value
-//        $newParent = new TestParent();
-//        $newChild = new TestChild();
-//        $newAddress = new TestAddress();
-//        $newAddress->setTown('Gotham');
-//        $newAddress->setCountryCode('XX');
-//        $newAddress->setCountryDescription('This should have no effect!');
-//        $newChild->setName('Marvin');
-//        $newChild->address = new TestAddress();
-//        $newChild->address->setTown('São Vicente');
-//        $newChild->address->setCountryCode('CV');
-//
-//        $newParent->setName('Arthur Dent');
-//        $newParent->setChild($newChild);
-//        $newParent->setAddress($newAddress);
-//        $newParentId = $this->objectRepository->saveEntity($newParent);
-//        $this->assertGreaterThan(0, $newParentId);
-//        $refreshedNewParent = $this->objectRepository->find($newParentId);
-//        $this->assertEquals('Deepest Darkest Peru', $refreshedNewParent->getAddress()->getCountryDescription());
-//        $this->assertEquals('CV', $refreshedNewParent->getChild()->address->getCountryCode());
-//
-//        //Insert new entity with new scalar join value
+        //Insert new entity with existing scalar join value
+        $newParent = new TestParent();
+        $newChild = new TestChild();
+        $newAddress = new TestAddress();
+        $newAddress->setTown('Gotham');
+        $newAddress->setCountryCode('XX');
+        $newAddress->setCountryDescription('This should have no effect!');
+        $newChild->setName('Marvin');
+        $newChild->address = new TestAddress();
+        $newChild->address->setTown('São Vicente');
+        $newChild->address->setCountryCode('US');
+
+        $newParent->setName('Arthur Dent');
+        $newParent->setChild($newChild);
+        $newParent->setAddress($newAddress);
+        $this->objectRepository->saveEntity($newParent);
+        $newParentId = $newParent->getId();
+        $this->assertGreaterThan(0, $newParentId);
+        $this->objectRepository->clearCache();
+        $refreshedNewParent = $this->objectRepository->find($newParentId);
+        $this->assertEquals('Deepest Darkest Peru', $refreshedNewParent->getAddress()->getCountryDescription());
+        $this->assertEquals('US', $refreshedNewParent->getChild()->address->getCountryCode());
+
+//        //Insert new entity with new scalar join value (NOT YET SUPPORTED)
 //        $newAddress2 = new TestAddress();
 //        $newAddress2->setTown('Chipping Sodbury');
 //        $newAddress2->setCountryCode('YY');
@@ -533,55 +535,56 @@ class BasicWritingTest extends IntegrationTestBase
 //        $this->assertEquals('Absurdistan', $refreshedNewParent3->getAddress()->getCountryDescription());
 //        $this->assertEquals('Cabo Verde', $refreshedNewParent3->getChild()->address->getCountryDescription());
 //
-//        //Override readOnly behaviour for non-scalar-join properties
-//        $this->objectRepository->setEntityConfigOption(
-//            TestAddress::class,
-//            ConfigEntity::COLUMN_OVERRIDES,
-//            ['countryDescription' => ['isReadOnly' => null]]
-//        );
-//        $this->objectRepository->setEntityConfigOption(
-//            TestChild::class,
-//            ConfigEntity::COLUMN_OVERRIDES,
-//            ['height' => ['isReadOnly' => false]]
-//        );
-//        $refreshedNewParent->getChild()->setHeight('48');
-//
-//        $this->objectRepository->saveEntity($refreshedNewParent);
-//        $refreshedNewParent4 = $this->objectRepository->find($refreshedNewParent->getId());
-//        $this->assertEquals(48, $refreshedNewParent4->getChild()->getHeight());
-//        $this->objectRepository->setEntityConfigOption(
-//            TestChild::class,
-//            ConfigEntity::COLUMN_OVERRIDES,
-//            ['height' => ['isReadOnly' => true]]
-//        );
-//        $refreshedNewParent4->getChild()->setHeight(49);
-//        $this->objectRepository->saveEntity($refreshedNewParent4);
-//        $refreshedNewParent5 = $this->objectRepository->find($refreshedNewParent4->getId());
-//        $this->assertEquals(48, $refreshedNewParent5->getChild()->getHeight());
-//        $this->objectRepository->setEntityConfigOption(
-//            TestChild::class,
-//            ConfigEntity::COLUMN_OVERRIDES,
-//            ['height' => ['isReadOnly' => null]]
-//        );
-//
-//        //Check that new mapping properties work on normal relationship joins (not just scalar joins)
-//        $this->objectRepository->setEntityConfigOption(
-//            TestChild::class,
-//            ConfigEntity::COLUMN_OVERRIDES,
-//            [
-//            'user' => [
-//                'joinTable' => 'objectiphy_test.user_alternative',
-//                'sourceJoinColumn' => 'user_id',
-//                'joinColumn' => 'id'
-//            ]
-//        ]);
-//        $altParent = $this->objectRepository->find(1);
-//        $this->assertEquals('alternative2@example.com', $altParent->getChild()->getUser()->getEmail());
+        //Override readOnly behaviour for non-scalar-join properties
+        $this->objectRepository->setEntityConfigOption(
+            TestAddress::class,
+            ConfigEntity::COLUMN_OVERRIDES,
+            ['countryDescription' => ['isReadOnly' => null]]
+        );
+        $this->objectRepository->setEntityConfigOption(
+            TestChild::class,
+            ConfigEntity::COLUMN_OVERRIDES,
+            ['height' => ['isReadOnly' => false]]
+        );
+        $refreshedNewParent->getChild()->setHeight('48');
+
+        $this->objectRepository->saveEntity($refreshedNewParent);
+        $refreshedNewParent4 = $this->objectRepository->find($refreshedNewParent->getId());
+        $this->assertEquals(48, $refreshedNewParent4->getChild()->getHeight());
+        $this->objectRepository->setEntityConfigOption(
+            TestChild::class,
+            ConfigEntity::COLUMN_OVERRIDES,
+            ['height' => ['isReadOnly' => true]]
+        );
+        $refreshedNewParent4->getChild()->setHeight(49);
+        $this->objectRepository->saveEntity($refreshedNewParent4);
+        $this->objectRepository->clearCache();
+        $refreshedNewParent5 = $this->objectRepository->find($refreshedNewParent4->getId());
+        $this->assertEquals(48, $refreshedNewParent5->getChild()->getHeight());
+        $this->objectRepository->setEntityConfigOption(
+            TestChild::class,
+            ConfigEntity::COLUMN_OVERRIDES,
+            ['height' => ['isReadOnly' => null]]
+        );
+
+        //Check that new mapping properties work on normal relationship joins (not just scalar joins)
+        $this->objectRepository->setEntityConfigOption(
+            TestChild::class,
+            ConfigEntity::RELATIONSHIP_OVERRIDES,
+            [
+            'user' => [
+                'joinTable' => 'objectiphy_test.user_alternative',
+                'sourceJoinColumn' => 'user_id',
+                'targetJoinColumn' => 'id'
+            ]
+        ]);
+        $altParent = $this->objectRepository->find(1);
+        $this->assertEquals('alternative2@example.com', $altParent->getChild()->getUser()->getEmail());
     }
     
     protected function doEmbeddedValueObjectTests()
     {
-//        $this->objectRepository->setEntityClassName(TestParent::class);
+//        $this->objectRepository->setClassName(TestParent::class);
 //        //Remove an embedded value object
 //        $parent = $this->objectRepository->find(1);
 //        $parent->setAddress(null);

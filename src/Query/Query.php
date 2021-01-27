@@ -8,6 +8,7 @@ use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
 use Objectiphy\Objectiphy\Contract\JoinPartInterface;
 use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
+use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
@@ -142,6 +143,7 @@ abstract class Query implements QueryInterface
     /**
      * Override if required to only return the relationships actually needed for the query
      * @return PropertyMapping[]
+     * @throws MappingException
      */
     protected function getRelationshipsUsed(): array
     {

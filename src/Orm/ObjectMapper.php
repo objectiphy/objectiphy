@@ -68,7 +68,7 @@ final class ObjectMapper
     {
         if ($className) {
             $unsets = [];
-            foreach ($this->mappingCollections as $class => $mappingCollection) {
+            foreach ($this->mappingCollections ?? [] as $class => $mappingCollection) {
                 if ($mappingCollection->usesClass($className)) {
                     $unsets[] = $class;
                 }
