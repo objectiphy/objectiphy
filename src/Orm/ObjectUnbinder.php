@@ -69,13 +69,11 @@ final class ObjectUnbinder
                 }
                 if ($propertyMapping->relationship->isEmbedded) {
                     //Unbind all values on the embedded object...
-                    if ($embeddedChild = ObjectHelper::getValueFromObject($entity, $property)) {
-                        foreach ($this->mappingCollection->getPropertyMappings([$property]) as $childPropertyMapping) {
-                            $columnName = $childPropertyMapping->getFullColumnName();
-                            if ($columnName) {
-                                $childValue = ObjectHelper::getValueFromObject($value, $childPropertyMapping->propertyName);
-                                $row[$childPropertyMapping->getPropertyPath()] = $this->unbindValue($childValue);
-                            }
+                    foreach ($this->mappingCollection->getPropertyMappings([$property]) as $childPropertyMapping) {
+                        $columnName = $childPropertyMapping->getFullColumnName();
+                        if ($columnName) {
+                            $childValue = ObjectHelper::getValueFromObject($value, $childPropertyMapping->propertyName);
+                            $row[$childPropertyMapping->getPropertyPath()] = $this->unbindValue($childValue);
                         }
                     }
                 } else {

@@ -584,21 +584,21 @@ class BasicWritingTest extends IntegrationTestBase
     
     protected function doEmbeddedValueObjectTests()
     {
-//        $this->objectRepository->setClassName(TestParent::class);
-//        //Remove an embedded value object
-//        $parent = $this->objectRepository->find(1);
-//        $parent->setAddress(null);
-//        $this->objectRepository->saveEntity($parent);
-//        $refreshedParent = $this->objectRepository->find(1);
-//        $this->assertEquals(null, $refreshedParent->getAddress());
-//
-//        //Add a new embedded value object
-//        $newAddress = new TestAddress();
-//        $newAddress->setTown('Waffleville');
-//        $refreshedParent->setAddress($newAddress);
-//        $this->objectRepository->saveEntity($refreshedParent);
-//        $refreshedParent2 = $this->objectRepository->find(1);
-//        $this->assertEquals('Waffleville', $refreshedParent2->getAddress()->getTown());
+        $this->objectRepository->setClassName(TestParent::class);
+        //Remove an embedded value object
+        $parent = $this->objectRepository->find(1);
+        $parent->setAddress(null);
+        $this->objectRepository->saveEntity($parent);
+        $refreshedParent = $this->objectRepository->find(1);
+        $this->assertEquals(null, $refreshedParent->getAddress());
+
+        //Add a new embedded value object
+        $newAddress = new TestAddress();
+        $newAddress->setTown('Waffleville');
+        $refreshedParent->setAddress($newAddress);
+        $this->objectRepository->saveEntity($refreshedParent);
+        $refreshedParent2 = $this->objectRepository->find(1);
+        $this->assertEquals('Waffleville', $refreshedParent2->getAddress()->getTown());
     }
     
     protected function doSerializationGroupTests()
