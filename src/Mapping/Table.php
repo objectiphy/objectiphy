@@ -15,10 +15,14 @@ class Table
     public string $name = '';
     
     /**
-     * @var string Specifies that a specific repository must be used when loading instances of this class.
-     * Use of this attribute is expensive as it requires a separate call to the database for this class when it
-     * appears as a child of another class. Only set a value if you really need to (you can still use a custom
-     * repository to load this class as a parent, by passing a custom repository name to the repository factory).
+     * @var string Specifies a custom repository to use when loading entities from this table.
      */
     public string $repositoryClassName = '';
+
+    /**
+     * @var bool Whether or not to always insist that the custom repository is used - ie. never join to the table
+     * to load entities, always use a separate query on the custom repository. Setting this to true will have a
+     * negative performance impact (and only takes effect if $repositoryClassName is also set).
+     */
+    public bool $alwaysLateBind = false;
 }

@@ -290,7 +290,7 @@ final class ObjectBinder
             //Get the repository
             $result = null;
             $className = $propertyMapping->getChildClassName();
-            $repositoryClassName = $propertyMapping->table->repositoryClassName;
+            $repositoryClassName = $propertyMapping->childTable->repositoryClassName;
             $repository = $this->repositoryFactory->createRepository(
                 $className,
                 $repositoryClassName,

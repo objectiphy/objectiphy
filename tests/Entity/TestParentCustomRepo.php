@@ -3,11 +3,12 @@
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
 use Objectiphy\Objectiphy\Mapping;
+use Objectiphy\Objectiphy\Tests\Repository\CustomRepository;
 
 /**
- * @Mapping\Table(name="objectiphy_test.parent")
+ * @Mapping\Table(name="objectiphy_test.parent", repositoryClassName="CustomRepository", alwaysLateBind=true)
  */
-class TestParent
+class TestParentCustomRepo
 {
     /**
      * @var int
@@ -49,7 +50,7 @@ class TestParent
      */
     public $totalWeightOfPets;
     /**
-     * @var \DateTime
+     * @var datetime
      * @Mapping\Column(name="modified_date_time")
      */
     public $modifiedDateTime;

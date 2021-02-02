@@ -134,7 +134,8 @@ class RepositoryFactory implements RepositoryFactoryInterface
                 'childClassName',
                 'targetEntity',
                 'collectionClass',
-                'collectionFactoryClass'
+                'collectionFactoryClass',
+                'repositoryClassName'
             ]);
             $baseMappingProvider = new MappingProvider();
             $doctrineMappingProvider = new MappingProviderDoctrineAnnotation($baseMappingProvider, $annotationReader);
@@ -456,7 +457,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
     private function getJoinProviderMySql(): JoinProviderMySql
     {
         if (!isset($this->joinProvider)) {
-            $this->joinProvider = new JoinProviderMySql($this->getDataTypeHandlerMySql());
+            $this->joinProvider = new JoinProviderMySql($this->getDataTypeHandlerMySql(), $this->getObjectMapper());
         }
 
         return $this->joinProvider;

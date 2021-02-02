@@ -3,6 +3,7 @@
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
 use Doctrine\ORM\Mapping AS ORM;
+use Objectiphy\Objectiphy\Mapping\Column;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 /**
@@ -16,6 +17,7 @@ use Symfony\Component\Serializer\Annotation\Groups;
  * @property TestPolicy $policy
  * @property TestTelematicsBox $telematicsBox
  * @property array<TestWheel> $wheels
+ * @property string $type
  */
 class TestVehicle
 {
@@ -68,6 +70,18 @@ class TestVehicle
      * @ORM\OneToMany(targetEntity="TestWheel",mappedBy="vehicle")
      */
     protected TestCollection $wheels;
+
+//    /**
+//     * @var string $type
+//     * @Column(name="type")
+//     */
+//    protected string $type;
+//
+//    /**
+//     * @var int
+//     * @Column(name="owner_contact_id")
+//     */
+//    protected int $ownerContactId;
 
     //This property is unmapped and used to test that a factory can be used even when we need a proxy
     public $factoryTest = '';

@@ -14,14 +14,17 @@ use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Tests\Entity\TestAddress;
 use Objectiphy\Objectiphy\Tests\Entity\TestAssumedPk;
 use Objectiphy\Objectiphy\Tests\Entity\TestChild;
+use Objectiphy\Objectiphy\Tests\Entity\TestChildCustomParentRepo;
 use Objectiphy\Objectiphy\Tests\Entity\TestCollection;
 use Objectiphy\Objectiphy\Tests\Entity\TestNonPkChild;
 use Objectiphy\Objectiphy\Tests\Entity\TestParent;
+use Objectiphy\Objectiphy\Tests\Entity\TestParentCustomRepo;
 use Objectiphy\Objectiphy\Tests\Entity\TestParentOfNonPkChild;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\Tests\Entity\TestVehicle;
 use Objectiphy\Objectiphy\Tests\Entity\TestWeirdPropertyNames;
 use Objectiphy\Objectiphy\Tests\Factory\TestVehicleFactory;
+use Objectiphy\Objectiphy\Tests\Repository\CustomRepository;
 
 class BasicReadingTest extends IntegrationTestBase
 {
@@ -282,8 +285,21 @@ class BasicReadingTest extends IntegrationTestBase
 
     protected function doAdvancedTests()
     {
-        //Load a value from a scalar join on an embedded value object
         $repositoryFactory = new RepositoryFactory($this->pdo);
+
+        //Ensure custom repo rules are respected
+        $childWithCustomParentRepo = $repositoryFactory->createRepository(TestChildCustomParentRepo::class);
+        $this->assertNotInstanceOf(CustomRepository::class, $childWithCustomParentRepo);
+
+        //Fetch a record, then check that the custom repo was used for parent...
+        $child = $childWithCustomParentRepo->find(1);
+        $this->assertEquals('Loaded with custom repo!', $child->parent->name);
+
+        //Ask for an entity with a custom repo
+        $customParentRepo = $repositoryFactory->createRepository(TestParentCustomRepo::class);
+        $this->assertInstanceOf(CustomRepository::class, $customParentRepo);
+
+        //Load a value from a scalar join on an embedded value object
         $parentRepository = $repositoryFactory->createRepository(TestParent::class);
         $parent = $parentRepository->find(1);
         $this->assertEquals('United Kingdom', $parent->address->getCountryDescription());

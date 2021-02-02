@@ -3,7 +3,7 @@
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Serializer\Annotation\Groups;
+use Objectiphy\Objectiphy\Mapping\Relationship;
 
 /**
  * @ORM\Entity
@@ -46,14 +46,20 @@ class TestContact
     protected $titleText;
     /**
      * Unidirectional relationship (TODO: allow for other side of unidirectional relationship to have a scalar ID that stays scalar)
-     * @Objectiphy\Objectiphy\Relationship(relationshipType="one_to_one", childClassName="TestSecurityPass", sourceJoinColumn="security_pass_id")
+     * @Relationship(relationshipType="one_to_one", childClassName="TestSecurityPass", sourceJoinColumn="security_pass_id")
      */
     protected $securityPass;
     /**
      * Unidirectional relationship on non PK column
-     * @Objectiphy\Objectiphy\Relationship(relationshipType="one_to_one", childClassName="TestNonPkChild", sourceJoinColumn="child_nebulous_identifier", targetJoinColumn="nebulous_identifier")
+     * @Relationship(relationshipType="one_to_one", childClassName="TestNonPkChild", sourceJoinColumn="child_nebulous_identifier", targetJoinColumn="nebulous_identifier")
      */
     protected $nonPkChild;
+
+//    /**
+//     * @var TestDepartment
+//     * @Relationship(relationshipType="one_to_one", childClassName="TestDepartment", sourceJoinColumn="department_id")
+//     */
+//    protected TestDepartment $department;
 
     /**
      * This is a dirty bodge, just for unit test purposes - not recommended

@@ -205,7 +205,7 @@ final class ObjectPersister implements TransactionInterface
         int &$updateCount,
         int &$deleteCount
     ): int {
-        $result = 0;
+        //$result = 0;
         $originalClassName = $this->getClassName();
         $this->setClassName(ObjectHelper::getObjectClassName($entity));
 

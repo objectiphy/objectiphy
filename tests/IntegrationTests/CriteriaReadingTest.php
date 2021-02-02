@@ -333,12 +333,10 @@ class CriteriaReadingTest extends IntegrationTestBase
         $repositoryFactory = new RepositoryFactory($this->pdo);
         /** @var CustomRepository $customRepository */
         $customRepository = $repositoryFactory->createRepository(TestParent::class, CustomRepository::class);
-        $parent = $customRepository->findParentUsingCustomSql(2);
-        $this->assertEquals('Eleanor Shellstrop', $parent->getName());
-        $this->assertEquals('Chidi', $parent->child->getName());
-        $this->assertEquals(134, $parent->child->getHeight());
+        $parent = $customRepository->find(2);
+        $this->assertEquals('Loaded with custom repo!', $parent->getName());
 
-        //Removed support for overrides for now...
+        //Removed support for overrides for now... (hopefully not necessary any more)
 
         //Override query parts (check count and main query) - use strings and closures
 //        $parents = $customRepository->findParentsUsingStringOverrides();

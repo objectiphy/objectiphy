@@ -91,6 +91,8 @@ CREATE TABLE `contact` (
   `postcode` varchar(29) DEFAULT NULL,
   `security_pass_id` int(11) DEFAULT NULL,
   `child_nebulous_identifier` varchar(50) DEFAULT NULL,
+  `is_permanent` tinyint DEFAULT 1,
+  `department_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=170 DEFAULT CHARSET=utf8mb4;
 
@@ -99,49 +101,49 @@ CREATE TABLE `contact` (
 -- ----------------------------
 
 INSERT INTO `contact` VALUES
-('123', '001', 'Master', 'Luke', 'Skywalker', null, 6, 'Ariadne'),
-('124', '002', 'Dark Lord', 'Anakin', 'Skywalker', null, 5, 'Lambeth'),
-('125', '003', 'Mr', 'Han', 'Solo', null, 4, 'Lambeth'),
-('126', '003', 'Mr', 'Boba', 'Fett', null, 3, 'Ariadne'),
-('127', '004', 'Ms', 'Ellen', 'Ripley', null, 2, 'Ariadne'),
-('128', '005', 'Captain', 'Arthur', 'Dallas', null, 1, 'Lambeth'),
-('129', '003', 'Mr', 'Samuel', 'Brett', null, null, null),
-('130', '001', 'Master', 'Gilbert', 'Kane', null, null, null),
-('131', '007', 'Mrs', 'Joan', 'Lambert', null, null, null),
-('132', '003', 'Mr', 'Dennis', 'Parker', null, null, null),
-('133', '001', 'Master', 'Marty', 'McFly', null, null, null),
-('134', '008', 'Doctor', 'Emmet', 'Brown', null, null, null),
-('135', '003', 'Mr', 'Biff', 'Tannen', null, null, null),
-('136', '006', 'Miss', 'Lorraine', 'Baines', null, null, null),
-('137', '003', 'Mr', 'George', 'McFly', null, null, null),
-('138', '003', 'Mr', 'Ulysses', 'McGill', 'PO27AJ', null, null),
-('139', '008', 'Doctor', 'Carla', 'Porter', null, null, null),
-('140', '003', 'Mr', 'James', 'Walker', null, null, null),
-('141', '007', 'Mrs', 'Famke', 'Elliot', null, null, null),
-('142', '006', 'Miss', 'Selena', 'Johnson', null, null, null),
-('143', '003', 'Mr', 'Adrian', 'Thorn', null, null, null),
-('144', '006', 'Miss', 'Katherine', "O'Neil", null, null, null),
-('145', '006', 'Miss', 'Rachael', 'Darlington', null, null, null),
-('146', '003', 'Mr', 'Ashley', 'Giles', null, null, null),
-('147', '003', 'Mr', 'Mark', 'McMillan', null, null, null),
-('148', '003', 'Mr', 'Jack', 'Butler', null, null, null),
-('149', '003', 'Mr', 'Francis', 'Smith', null, null, null),
-('150', '006', 'Miss', 'Katrina', 'Leaver', null, null, null),
-('151', '003', 'Mr', 'Charles', 'Barnet', null, null, null),
-('152', '007', 'Mrs', 'Sarah', 'Rumbelow', null, null, null),
-('153', '006', 'Miss', 'Amelia', 'Dermot', null, null, null),
-('154', '003', 'Mr', 'Graham', 'Christopher', null, null, null),
-('155', '003', 'Mr', 'Axel', 'Robertson', null, null, null),
-('156', '007', 'Mrs', 'Kate', 'Morgado', null, null, null),
-('157', '008', 'Doctor', 'Jerry', 'Thatcham', null, null, null),
-('158', '008', 'Doctor', 'Liz', 'Newman', null, null, null),
-('159', '003', 'Mr', 'Andrew', 'Kent', null, null, null),
-('160', '006', 'Miss', 'Michaela', 'Holloway', null, null, null),
-('161', '007', 'Mrs', 'Gabby', 'Fenchurch', null, null, null),
-('162', '003', 'Mr', 'Frank', 'Urquhart', null, null, null),
-('163', '007', 'Mrs', 'Emma', 'Cartwright', null, null, null),
-('164', '003', 'Mr', 'Mohammed', 'Patel', null, null, null),
-('165', '003', 'Mr', 'Felix', 'Dodgson', null, null, null);
+('123', '001', 'Master', 'Luke', 'Skywalker', null, 6, 'Ariadne', 1, 1),
+('124', '002', 'Dark Lord', 'Anakin', 'Skywalker', null, 5, 'Lambeth', 1, 1),
+('125', '003', 'Mr', 'Han', 'Solo', null, 4, 'Lambeth', 0, 1),
+('126', '003', 'Mr', 'Boba', 'Fett', null, 3, 'Ariadne', 0, 2),
+('127', '004', 'Ms', 'Ellen', 'Ripley', null, 2, 'Ariadne',1, 3),
+('128', '005', 'Captain', 'Arthur', 'Dallas', null, 1, 'Lambeth', 1, 1),
+('129', '003', 'Mr', 'Samuel', 'Brett', null, null, null, 1, 1),
+('130', '001', 'Master', 'Gilbert', 'Kane', null, null, null, 1, 2),
+('131', '007', 'Mrs', 'Joan', 'Lambert', null, null, null, 1, 2),
+('132', '003', 'Mr', 'Dennis', 'Parker', null, null, null, 1, 2),
+('133', '001', 'Master', 'Marty', 'McFly', null, null, null, 1, 2),
+('134', '008', 'Doctor', 'Emmet', 'Brown', null, null, null, 1, 2),
+('135', '003', 'Mr', 'Biff', 'Tannen', null, null, null, 0, 3),
+('136', '006', 'Miss', 'Lorraine', 'Baines', null, null, null, 1, 3),
+('137', '003', 'Mr', 'George', 'McFly', null, null, null, 1, 3),
+('138', '003', 'Mr', 'Ulysses', 'McGill', 'PO27AJ', null, null, 1, 3),
+('139', '008', 'Doctor', 'Carla', 'Porter', null, null, null, 1, 3),
+('140', '003', 'Mr', 'James', 'Walker', null, null, null, 1, 3),
+('141', '007', 'Mrs', 'Famke', 'Elliot', null, null, null, 1, 3),
+('142', '006', 'Miss', 'Selena', 'Johnson', null, null, null, 1, 4),
+('143', '003', 'Mr', 'Adrian', 'Thorn', null, null, null, 1, 4),
+('144', '006', 'Miss', 'Katherine', "O'Neil", null, null, null, 1, 4),
+('145', '006', 'Miss', 'Rachael', 'Darlington', null, null, null, 1, 4),
+('146', '003', 'Mr', 'Ashley', 'Giles', null, null, null, 0, 4),
+('147', '003', 'Mr', 'Mark', 'McMillan', null, null, null, 1, 4),
+('148', '003', 'Mr', 'Jack', 'Butler', null, null, null, 1, 4),
+('149', '003', 'Mr', 'Francis', 'Smith', null, null, null, 1, 5),
+('150', '006', 'Miss', 'Katrina', 'Leaver', null, null, null, 1, 5),
+('151', '003', 'Mr', 'Charles', 'Barnet', null, null, null, 1, 5),
+('152', '007', 'Mrs', 'Sarah', 'Rumbelow', null, null, null, 1, 5),
+('153', '006', 'Miss', 'Amelia', 'Dermot', null, null, null, 1, 5),
+('154', '003', 'Mr', 'Graham', 'Christopher', null, null, null, 1, 1),
+('155', '003', 'Mr', 'Axel', 'Robertson', null, null, null, 1, 2),
+('156', '007', 'Mrs', 'Kate', 'Morgado', null, null, null, 1, 3),
+('157', '008', 'Doctor', 'Jerry', 'Thatcham', null, null, null, 1, 4),
+('158', '008', 'Doctor', 'Liz', 'Newman', null, null, null, 1, 5),
+('159', '003', 'Mr', 'Andrew', 'Kent', null, null, null, 1, 1),
+('160', '006', 'Miss', 'Michaela', 'Holloway', null, null, null, 0, 1),
+('161', '007', 'Mrs', 'Gabby', 'Fenchurch', null, null, null, 1, 2),
+('162', '003', 'Mr', 'Frank', 'Urquhart', null, null, null, 1, 2),
+('163', '007', 'Mrs', 'Emma', 'Cartwright', null, null, null, 1, 1),
+('164', '003', 'Mr', 'Mohammed', 'Patel', null, null, null, 1, 3),
+('165', '003', 'Mr', 'Felix', 'Dodgson', null, null, null, 1, 3);
 
 -- ----------------------------
 --  Table structure for `country`
@@ -158,6 +160,22 @@ CREATE TABLE `country` (
 -- ----------------------------
 
 INSERT INTO `country` VALUES ('GB', 'United Kingdom'), ('EU', 'Somewhere in Europe'), ('US', 'United States'), ('XX', 'Deepest Darkest Peru');
+
+-- ----------------------------
+--  Table structure for `department`
+-- ----------------------------
+DROP TABLE IF EXISTS `department`;
+CREATE TABLE `department` (
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `name` varchar(255) DEFAULT NULL,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------
+--  Records of `country`
+-- ----------------------------
+
+INSERT INTO `department` VALUES (1, 'Sales'), (2, 'Marketing'), (3, 'Development'), (4, 'Operations'), (5, 'Warehouse');
 
 -- ----------------------------
 --  Table structure for `security_pass`
@@ -473,7 +491,9 @@ CREATE TABLE `vehicle` (
   `reg_no` varchar(15) DEFAULT NULL,
   `make` varchar(255) DEFAULT NULL,
   `model` varchar(255) DEFAULT NULL,
+  `type` varchar(20) DEFAULT 'car',
   `telematics_box_id` int(11) DEFAULT NULL,
+  `owner_contact_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=42 DEFAULT CHARSET=utf8mb4;
 
@@ -483,7 +503,48 @@ ALTER TABLE `objectiphy_test`.`vehicle` ADD INDEX `regNo` USING BTREE (`reg_no`)
 --  Records of `vehicle`
 -- ----------------------------
 
-INSERT INTO `vehicle` VALUES ('1', '19071974', '12345678', 'PJ63LXR', 'Vauxhall', 'Corsa', '1'), ('2', '19071975', '12345679', 'PJ63LXA', 'Fiat', '500', '2'), ('3', '19071976', '12345678', 'PJ63LXB', 'Ford', 'Fiesta', '3'), ('4', '19071977', '12345680', 'PJ63LXC', 'Vauxhall', 'Corsa', '4'), ('5', '19071978', '12345678', 'PJ63LXD', 'Vauxhall', 'Corsa', '5'), ('6', '19071979', '12345681', 'PJ63LXE', 'Ford', 'Fiesta', '6'), ('7', '19071980', '12345682', 'PJ63LXF', 'Ford', 'Fiesta', '7'), ('8', '19071981', '12345678', 'PJ63LXG', 'Vauxhall', 'Corsa', '8'), ('9', '19071982', '12345683', 'PJ63LXH', 'Fiat', '500', '9'), ('10', '19071983', '12345678', 'PJ63LXI', 'Vauxhall', 'Corsa', '10'), ('11', '19071984', '12345684', 'PJ63LXJ', 'Ford', 'Fiesta', '11'), ('12', '19071985', '12345678', 'PJ63LXK', 'Vauxhall', 'Corsa', '12'), ('13', '19071986', '12345678', 'PJ63LXL', 'Vauxhall', 'Corsa', '13'), ('14', '19071987', '12345688', 'PJ63LXM', 'Ford', 'Fiesta', '14'), ('15', '19071988', '12345678', 'PJ63LXN', 'Vauxhall', 'Corsa', '15'), ('16', '19071989', '12345699', 'PJ63LXO', 'Audi', 'A2', '16'), ('17', '19071990', '12345678', 'PJ63LXP', 'Vauxhall', 'Corsa', '17'), ('18', '19071991', '12345612', 'PJ63LXQ', 'Hyundai', 'i20', '18'), ('19', '19071992', '12345678', 'PJ63LXR', 'Vauxhall', 'Corsa', '19'), ('20', '19071993', '12345615', 'PJ63LXS', 'Audi', 'A2', '20'), ('21', '19071994', '12345678', 'PJ63LXT', 'Vauxhall', 'Corsa', '21'), ('22', '19071995', '12345678', 'PJ63LXU', 'Vauxhall', 'Corsa', '22'), ('23', '19071996', '12345716', 'PJ63LXV', 'Vauxhall', 'Corsa', '23'), ('24', '19071997', '12345668', 'PJ63LXW', 'Audi', 'A2', '24'), ('25', '19071998', '12345645', 'PJ63LXX', 'Vauxhall', 'Corsa', '25'), ('26', '19071999', '12345664', 'PJ63LXY', 'Vauxhall', 'Corsa', '26'), ('27', '19072000', '12345678', 'PJ63LXZ', 'Fiat', '500', '27'), ('28', '19072001', '12345678', 'PJ63LAR', 'Vauxhall', 'Corsa', '28'), ('29', '19072002', '12345678', 'PJ63LBR', 'Fiat', '500', '29'), ('30', '19072003', '12345672', 'PJ63LCR', 'Fiat', '500', '30'), ('31', '19072004', '12345678', 'PJ63LDR', 'Vauxhall', 'Corsa', '31'), ('32', '19072005', '12345678', 'PJ63LER', 'Hyundai', 'i20', '32'), ('33', '19072006', '12345678', 'PJ63LFR', 'Vauxhall', 'Corsa', '33'), ('34', '19072007', '12345678', 'PJ63LGR', 'Audi', 'A2', '34'), ('35', '19072008', '12345678', 'PJ63LHR', 'Vauxhall', 'Corsa', '35'), ('36', '19072009', '12345678', 'PJ63LJR', 'Volkswagon', 'Polo', '36'), ('37', '19072010', '12345678', 'PJ63LKR', 'Vauxhall', 'Corsa', '37'), ('38', '19072011', '12345678', 'PJ63LLR', 'Vauxhall', 'Corsa', '38'), ('39', '19072012', '12345678', 'PJ63LMR', 'Vauxhall', 'Corsa', '39'), ('40', '19072013', '12345678', 'PJ63LNR', 'Hyundai', 'i20', '40'), ('41', '19072014', '12345678', 'PJ63LPR', 'Hyundai', 'i20', '41');
+INSERT INTO `vehicle` VALUES
+    ('1', '19071974', '12345678', 'PJ63LXR', 'Vauxhall', 'Corsa', '1', null, 1),
+    ('2', '19071975', '12345679', 'PJ63LXA', 'Fiat', '500', '2', null, 2),
+    ('3', '19071976', '12345678', 'PJ63LXB', 'Ford', 'Fiesta', '3', null, 3),
+    ('4', '19071977', '12345680', 'PJ63LXC', 'Vauxhall', 'Corsa', '4', null, null),
+    ('5', '19071978', '12345678', 'PJ63LXD', 'Vauxhall', 'Corsa', '5', null, null),
+    ('6', '19071979', '12345681', 'PJ63LXE', 'Ford', 'Fiesta', '6', null, null),
+    ('7', '19071980', '12345682', 'PJ63LXF', 'Ford', 'Fiesta', '7', null, null),
+    ('8', '19071981', '12345678', 'PJ63LXG', 'Vauxhall', 'Corsa', '8', null, null),
+    ('9', '19071982', '12345683', 'PJ63LXH', 'Fiat', '500', '9', null, null),
+    ('10', '19071983', '12345678', 'PJ63LXI', 'Vauxhall', 'Corsa', '10', null, null),
+    ('11', '19071984', '12345684', 'PJ63LXJ', 'Ford', 'Fiesta', '11', null, null),
+    ('12', '19071985', '12345678', 'PJ63LXK', 'Vauxhall', 'Corsa', '12', null, null),
+    ('13', '19071986', '12345678', 'PJ63LXL', 'Vauxhall', 'Corsa', '13', null, null),
+    ('14', '19071987', '12345688', 'PJ63LXM', 'Ford', 'Fiesta', '14', null, null),
+    ('15', '19071988', '12345678', 'PJ63LXN', 'Vauxhall', 'Corsa', '15', null, null),
+    ('16', '19071989', '12345699', 'PJ63LXO', 'Audi', 'A2', '16', null, null),
+    ('17', '19071990', '12345678', 'PJ63LXP', 'Vauxhall', 'Corsa', '17', null, null),
+    ('18', '19071991', '12345612', 'PJ63LXQ', 'Hyundai', 'i20', '18', null, null),
+    ('19', '19071992', '12345678', 'PJ63LXR', 'Vauxhall', 'Corsa', '19', null, null),
+    ('20', '19071993', '12345615', 'PJ63LXS', 'Audi', 'A2', '20', null, null),
+    ('21', '19071994', '12345678', 'PJ63LXT', 'Vauxhall', 'Corsa', '21', null, null),
+    ('22', '19071995', '12345678', 'PJ63LXU', 'Vauxhall', 'Corsa', '22', null, null),
+    ('23', '19071996', '12345716', 'PJ63LXV', 'Vauxhall', 'Corsa', '23', null, null),
+    ('24', '19071997', '12345668', 'PJ63LXW', 'Audi', 'A2', '24', null, null),
+    ('25', '19071998', '12345645', 'PJ63LXX', 'Vauxhall', 'Corsa', '25', null, null),
+    ('26', '19071999', '12345664', 'PJ63LXY', 'Vauxhall', 'Corsa', '26', null, null),
+    ('27', '19072000', '12345678', 'PJ63LXZ', 'Fiat', '500', '27', null, null),
+    ('28', '19072001', '12345678', 'PJ63LAR', 'Vauxhall', 'Corsa', '28', null, null),
+    ('29', '19072002', '12345678', 'PJ63LBR', 'Fiat', '500', '29', null, null),
+    ('30', '19072003', '12345672', 'PJ63LCR', 'Fiat', '500', '30', null, null),
+    ('31', '19072004', '12345678', 'PJ63LDR', 'Vauxhall', 'Corsa', '31', null, null),
+    ('32', '19072005', '12345678', 'PJ63LER', 'Hyundai', 'i20', '32', null, null),
+    ('33', '19072006', '12345678', 'PJ63LFR', 'Vauxhall', 'Corsa', '33', null, null),
+    ('34', '19072007', '12345678', 'PJ63LGR', 'Audi', 'A2', '34', null, null),
+    ('35', '19072008', '12345678', 'PJ63LHR', 'Vauxhall', 'Corsa', '35', null, null),
+    ('36', '19072009', '12345678', 'PJ63LJR', 'Volkswagon', 'Polo', '36', null, null),
+    ('37', '19072010', '12345678', 'PJ63LKR', 'Vauxhall', 'Corsa', '37', null, null),
+    ('38', '19072011', '12345678', 'PJ63LLR', 'Vauxhall', 'Corsa', '38', null, null),
+    ('39', '19072012', '12345678', 'PJ63LMR', 'Vauxhall', 'Corsa', '39', null, null),
+    ('40', '19072013', '12345678', 'PJ63LNR', 'Hyundai', 'i20', '40', null, null),
+    ('41', '19072014', '12345678', 'PJ63LPR', 'Hyundai', 'i20', '41', null, null);
 
 -- ----------------------------
 --  Table structure for `wheel`
@@ -501,6 +562,15 @@ CREATE TABLE `wheel` (
 --  Records of `wheel`
 -- ----------------------------
 
-INSERT INTO `wheel` VALUES ('1', '1', '1', 'front nearside'), ('2', '1', '1', 'front offside'), ('3', '1', '1', 'rear nearside'), ('4', '1', '1', 'rear offside'), ('5', '1', '0', 'steering'), ('6', '2', '1', 'front middle'), ('7', '2', '1', 'rear nearside'), ('8', '2', '1', 'rear offside'), ('9', '2', '0', 'steering');
+INSERT INTO `wheel` VALUES
+    ('1', '1', '1', 'front nearside'),
+    ('2', '1', '1', 'front offside'),
+    ('3', '1', '1', 'rear nearside'),
+    ('4', '1', '1', 'rear offside'),
+    ('5', '1', '0', 'steering'),
+    ('6', '2', '1', 'front middle'),
+    ('7', '2', '1', 'rear nearside'),
+    ('8', '2', '1', 'rear offside'),
+    ('9', '2', '0', 'steering');
 
 SET FOREIGN_KEY_CHECKS = 1;

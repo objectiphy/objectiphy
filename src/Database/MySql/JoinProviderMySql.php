@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Database\MySql;
 
-use Objectiphy\Objectiphy\Contract\JoinPartInterface;
+use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
 use Objectiphy\Objectiphy\Exception\MappingException;
+use Objectiphy\Objectiphy\Orm\ObjectMapper;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\CriteriaGroup;
 use Objectiphy\Objectiphy\Query\JoinExpression;
@@ -18,12 +19,20 @@ use Objectiphy\Objectiphy\Query\JoinExpression;
  */
 class JoinProviderMySql extends AbstractSqlProvider
 {
+    private ObjectMapper $objectMapper;
     private ?string $joiner = null;
     private bool $removeJoiner = false;
     private string $currentJoinAlias = '';
+    private string $currentJoinTargetClass = '';
     private bool $isCustomJoin = false;
     private array $objectNames = [];
     private array $persistenceNames = [];
+
+    public function __construct(DataTypeHandlerInterface $dataTypeHandler, ObjectMapper $objectMapper)
+    {
+        parent::__construct($dataTypeHandler);
+        $this->objectMapper = $objectMapper;
+    }
 
     /**
      * @param QueryInterface $query
@@ -53,6 +62,7 @@ class JoinProviderMySql extends AbstractSqlProvider
         $this->joiner = null;
         $this->removeJoiner = false;
         $this->currentJoinAlias = '';
+        $this->currentJoinTargetClass = '';
         $this->isCustomJoin = false;
         $this->objectNames = $objectNames;
         $this->persistenceNames = $persistenceNames;
@@ -61,6 +71,7 @@ class JoinProviderMySql extends AbstractSqlProvider
     private function processJoinExpression(JoinExpression $joinPart): void
     {
         $this->currentJoinAlias = $joinPart->joinAlias;
+        $this->currentJoinTargetClass = $joinPart->targetEntityClassName;
         $this->sql .= ($joinPart->type ?: "LEFT") . " JOIN ";
         if ($joinPart->propertyMapping && $joinPart->propertyMapping->relationship->joinTable) {
             $this->sql .= $this->delimit($joinPart->propertyMapping->relationship->joinTable);
@@ -87,10 +98,27 @@ class JoinProviderMySql extends AbstractSqlProvider
         if ($this->currentJoinAlias && substr($this->currentJoinAlias, 0, 10) !== 'obj_alias_') {
             $this->isCustomJoin = true;
         }
-        if ($this->mappingCollection) {
-            $sourceJoinColumns = [];
-            $targetJoinColumns = [];
-            $this->getJoinColumns($joinPart, $sourceJoinColumns, $targetJoinColumns);
+        $propertyPath = $joinPart->property->getPropertyPath();
+        $sourceJoinColumns = [];
+        $targetJoinColumns = [];
+
+        if ($this->isCustomJoin
+            && substr($propertyPath, 0, strlen($this->currentJoinAlias) + 1) == $this->currentJoinAlias . '.') {
+            $propertyPath = substr($propertyPath, strpos($propertyPath, '.') + 1);
+
+
+            //Split this out and call for both property and value to get any aliased columns
+            $mappingCollection = $this->objectMapper->getMappingCollectionForClass($this->currentJoinTargetClass);
+            $propertyMapping = $mappingCollection->getPropertyMapping($propertyPath);
+            $sourceJoinColumn = $this->currentJoinAlias . '.' . $propertyMapping->getShortColumnName(false);
+            $stop = true;
+
+
+        } elseif ($this->mappingCollection) {
+            $this->getJoinColumns($propertyPath, $sourceJoinColumns, $targetJoinColumns);
+        }
+
+        if ($sourceJoinColumns && $targetJoinColumns) {
             $joinSql = [];
             foreach ($sourceJoinColumns as $index => $sourceJoinColumn) {
                 if ($index == 0 && $this->isCustomJoin) {
@@ -113,18 +141,18 @@ class JoinProviderMySql extends AbstractSqlProvider
     }
 
     /**
-     * @param JoinPartInterface $joinPart
+     * @param string $propertyPath
      * @param array $sourceJoinColumns
      * @param array $targetJoinColumns
      * @throws MappingException
      */
     private function getJoinColumns(
-        JoinPartInterface $joinPart,
+        string $propertyPath,
         array &$sourceJoinColumns,
         array &$targetJoinColumns
     ): void {
         $joinPartPropertyMapping = $this->mappingCollection->getPropertyMapping(
-            $joinPart->property->getPropertyPath()
+            $propertyPath
         );
         if ($joinPartPropertyMapping) {
             $sourceJoinColumns = $joinPartPropertyMapping->getSourceJoinColumns();
@@ -143,7 +171,7 @@ class JoinProviderMySql extends AbstractSqlProvider
             }
         } else {
             throw new MappingException(
-                sprintf('No mapping information found for `%1$s`', $joinPart->property->getPropertyPath())
+                sprintf('No mapping information found for `%1$s`', $propertyPath)
             );
         }
     }

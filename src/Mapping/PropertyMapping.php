@@ -263,27 +263,31 @@ class PropertyMapping
     public function forceEarlyBindingForJoin(): void
     {
         $this->forcedEarlyBindingForJoin = true;
-        //if ($this->relationship->isDefined() && !in_array($this, $this->parentCollection->getRelationships())) {
-            //$this->parentCollection->forceJoin($this);
-        //}
     }
 
     /**
      * Check whether this property requires a late bound proxy (because we cannot fetch the properties of its child)
+     * See also Relationship::isLateBound
      * @param bool $forJoin
      * @param array $row
      * @return bool
      */
     public function isLateBound(bool $forJoin = false, array $row = []): bool
     {
+        if ($this->parents &&
+            $this->parentCollection->getPropertyMapping($this->getParentPath())->isLateBound($forJoin)) {
+            return true;
+        }
         if ($forJoin && $this->forcedEarlyBindingForJoin) {
             return false;
         } elseif ($this->relationship->isEmbedded || $this->relationship->isScalarJoin()) {
             return false;
         } elseif ($this->relationship->isLateBound()) {
             return true;
-        } elseif (!$this->relationship->mappedBy && !$this->parentCollection->isPropertyFetchable($this)/* && !$this->column->isPrimaryKey*/) {
+        } elseif (!$this->relationship->mappedBy && !$this->parentCollection->isPropertyFetchable($this)) {
             //If we have to lazy load to avoid recursion, it will be late bound - get pk only
+            return true;
+        } elseif (!empty($this->childTable) && $this->childTable->repositoryClassName && $this->childTable->alwaysLateBind) {
             return true;
         } elseif ($this->isForeignKey) {
             //If we don't have the child primary key, it will be late bound
@@ -359,7 +363,7 @@ class PropertyMapping
         } catch (\Throwable $ex) {
             $classStart = strpos($ex->getMessage(), 'must be an instance of ');
             if ($classStart !== false) {
-                $classEnd = strpos($ex->getMessage(), ',') ?: strlen($ex->getMessage());
+                $classEnd = strpos($ex->getMessage(), ' or ') ?: (strpos($ex->getMessage(), ',') ?: strlen($ex->getMessage()));
                 $length = $classEnd - ($classStart + 23);
                 $className = substr($ex->getMessage(), $classStart + 23, $length);
                 if (class_exists($className) && is_a($className, '\Traversable', true)) {

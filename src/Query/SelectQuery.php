@@ -135,13 +135,14 @@ class SelectQuery extends Query implements SelectQueryInterface
                 }
                 $this->setSelect(...$selects);
             }
-            if (!$this->orderBy) {
-                //See if we can order by primary key of main entity
-                $pkProperties = $mappingCollection->getPrimaryKeyProperties();
-                foreach ($pkProperties as $pkProperty) {
-                    $this->orderBy[] = new FieldExpression('%' . $pkProperty . '% ASC', false);
-                }
-            }
+////This is probably a waste of resources
+//            if (!$this->orderBy) {
+//                //See if we can order by primary key of main entity
+//                $pkProperties = $mappingCollection->getPrimaryKeyProperties();
+//                foreach ($pkProperties as $pkProperty) {
+//                    $this->orderBy[] = new FieldExpression('%' . $pkProperty . '% ASC', false);
+//                }
+//            }
             parent::finalise($mappingCollection, $className);
         }
     }

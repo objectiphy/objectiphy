@@ -439,7 +439,7 @@ final class ObjectMapper
         array $parents,
         bool $drillDown = false
     ): void {
-        if ($relationship->isLateBound()
+        if ($relationship->isLateBound($mappingCollection->getTableForClass($relationship->childClassName))
             || $mappingCollection->isRelationshipAlreadyMapped($parents, $propertyName, $reflectionClass->getName())
         ) {
             if ($relationship->mappedBy) { //Go this far, but no further

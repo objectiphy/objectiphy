@@ -238,11 +238,17 @@ class Relationship
     /**
      * Determines whether child is loaded in same query as parent, or in a separate query.
      * ToMany relationships and lazy loaded ones require a separate query.
+     * See also PropertyMapping::isLateBound, which can artificially force late binding by
+     * taking into account the context.
      * @return bool
      */
-    public function isLateBound(): bool
+    public function isLateBound(?Table $childTable = null): bool
     {
-        return !$this->isEmbedded && ($this->isToMany() || !$this->isEager());
+        if ($childTable && $childTable->repositoryClassName && $childTable->alwaysLateBind) {
+            return true;
+        } else {
+            return !$this->isEmbedded && ($this->isToMany() || !$this->isEager());
+        }
     }
 
     public function isScalarJoin(): bool
