@@ -71,17 +71,17 @@ class TestVehicle
      */
     protected TestCollection $wheels;
 
-//    /**
-//     * @var string $type
-//     * @Column(name="type")
-//     */
-//    protected string $type;
-//
-//    /**
-//     * @var int
-//     * @Column(name="owner_contact_id")
-//     */
-//    protected int $ownerContactId;
+    /**
+     * @var string $type
+     * @Column(name="type")
+     */
+    protected string $type;
+
+    /**
+     * @var int
+     * @Column(name="owner_contact_id")
+     */
+    protected int $ownerContactId;
 
     //This property is unmapped and used to test that a factory can be used even when we need a proxy
     public $factoryTest = '';

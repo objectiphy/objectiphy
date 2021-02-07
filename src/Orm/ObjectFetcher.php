@@ -113,6 +113,7 @@ final class ObjectFetcher
         }
         $this->objectMapper->addExtraMappings($this->getClassName(), $this->options);
         $this->objectMapper->addExtraMappings($this->getClassName(), $query);
+        $this->objectMapper->addExtraClassMappings($this->getClassName(), $query);
         if ($this->options->keyProperty) {
             $this->options->mappingCollection->forceFetch($this->options->keyProperty);
         }

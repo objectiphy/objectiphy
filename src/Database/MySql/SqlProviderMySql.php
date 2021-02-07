@@ -7,7 +7,6 @@ namespace Objectiphy\Objectiphy\Database\MySql;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
-use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
 /**
@@ -19,9 +18,6 @@ class SqlProviderMySql extends AbstractSqlProvider
     protected QueryInterface $query;
     protected JoinProviderMySql $joinProvider;
     protected WhereProviderMySql $whereProvider;
-    protected array $objectNames = [];
-    protected array $persistenceNames = [];
-    protected array $aliases = [];
 
     public function __construct(
         DataTypeHandlerInterface $dataTypeHandler,
@@ -33,16 +29,38 @@ class SqlProviderMySql extends AbstractSqlProvider
         $this->whereProvider = $whereProvider;
     }
 
-    protected function addJoins(): string
+    /**
+     * For a custom join, if you use a column (not a property), you must delimit yourself
+     * If you use an expression or function, you must delimit values ('), properties (%), and columns (`) yourself
+     * So if no delimiter, it is either a property, or a literal value
+     * Detect a property by seeing if the property path exists
+     * Otherwise fall back to a value - and wrap in quotes (works for ints/dates as well as strings)
+     * @param string $fieldValue
+     */
+    protected function getSqlForField(string $fieldValue)
     {
-        $this->joinProvider->setQueryParams($this->params);
-        $sql = $this->joinProvider->getJoins($this->query, $this->objectNames, $this->persistenceNames);
-        $this->setQueryParams($this->joinProvider->getQueryParams());
-        $this->whereProvider->setQueryParams($this->params);
-        $sql .= $this->whereProvider->getWhere($this->query, $this->objectNames, $this->persistenceNames);
-        $this->setQueryParams($this->whereProvider->getQueryParams());
+        if (substr_count($fieldValue, '%') >= 2 || substr_count($fieldValue, '`') >= 2) {
+            //Delimited - use as is
 
-        return $sql;
+        } elseif (substr_count($fieldValue, "'") >= 2) {
+            //Check how many are unescaped - if 2 or more are unescaped, treat it as already delimited, otherwise, value
+
+        } else {
+            //Check if is is a property path
+
+            //If not, treat it as a value
+
+        }
+
+        /*
+        substr($propertyPath, 0, strlen($this->currentJoinAlias) + 1) == $this->currentJoinAlias . '.') {
+        $propertyPath = substr($propertyPath, strpos($propertyPath, '.') + 1);
+
+        //Split this out and call for both property and value to get any aliased columns
+        $mappingCollection = $this->objectMapper->getMappingCollectionForClass($this->currentJoinTargetClass);
+        $propertyMapping = $mappingCollection->getPropertyMapping($propertyPath);
+        $column = $this->currentJoinAlias . '.' . $propertyMapping->getShortColumnName(false);
+         */
     }
 
     /**

@@ -6,6 +6,7 @@ namespace Objectiphy\Objectiphy\Database;
 
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\SqlProviderInterface;
+use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
 /**
@@ -19,6 +20,9 @@ class AbstractSqlProvider implements SqlProviderInterface
     protected string $sql = '';
     protected MappingCollection $mappingCollection;
     protected DataTypeHandlerInterface $dataTypeHandler;
+    protected array $objectNames = [];
+    protected array $persistenceNames = [];
+    protected array $aliases = [];
 
     public function __construct(DataTypeHandlerInterface $dataTypeHandler)
     {
@@ -84,5 +88,19 @@ class AbstractSqlProvider implements SqlProviderInterface
         }
 
         return $delimited;
+    }
+
+    /**
+     * @param string $subject
+     * @return string
+     * @throws ObjectiphyException
+     */
+    protected function replaceNames(string $subject): string
+    {
+        if (!isset($this->objectNames)) {
+            throw new ObjectiphyException('Please call prepareReplacements method before attempting to replace.');
+        }
+
+        return str_replace($this->objectNames, $this->persistenceNames, $subject);
     }
 }

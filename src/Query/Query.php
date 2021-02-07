@@ -73,6 +73,17 @@ abstract class Query implements QueryInterface
         return $this->joins ?? [];
     }
 
+    public function getJoinAliases(): array
+    {
+        $joins = $this->getJoins();
+        foreach ($joins as $joinExpression) {
+            if ($joinExpression instanceof JoinExpression
+                && $joinExpression->joinAlias && $joinExpression->targetEntityClassName) {
+                $aliases[$joinExpression->joinAlias] = $joinExpression->targetEntityClassName;
+            }
+        }
+    }
+
     public function setWhere(CriteriaPartInterface ...$criteria): void
     {
         $this->where = $criteria;
@@ -120,6 +131,18 @@ abstract class Query implements QueryInterface
             }
             $this->isFinalised = true; //Overriding subclass could change this back if it has its own finalising to do.
         }
+    }
+
+    public function getClassesUsed(): array
+    {
+        $classesUsed = !empty($this->className) ? [$this->className] : [];
+        foreach ($this->joins as $joinExpression) {
+            if ($joinExpression instanceof JoinExpression) {
+                $classesUsed[] = $joinExpression->targetEntityClassName;
+            }
+        }
+
+        return $classesUsed;
     }
 
     /**

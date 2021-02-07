@@ -25,8 +25,6 @@ class JoinProviderMySql extends AbstractSqlProvider
     private string $currentJoinAlias = '';
     private string $currentJoinTargetClass = '';
     private bool $isCustomJoin = false;
-    private array $objectNames = [];
-    private array $persistenceNames = [];
 
     public function __construct(DataTypeHandlerInterface $dataTypeHandler, ObjectMapper $objectMapper)
     {
@@ -72,7 +70,7 @@ class JoinProviderMySql extends AbstractSqlProvider
     {
         $this->currentJoinAlias = $joinPart->joinAlias;
         $this->currentJoinTargetClass = $joinPart->targetEntityClassName;
-        $this->sql .= ($joinPart->type ?: "LEFT") . " JOIN ";
+        $this->sql .= " " . ($joinPart->type ?: "LEFT") . " JOIN ";
         if ($joinPart->propertyMapping && $joinPart->propertyMapping->relationship->joinTable) {
             $this->sql .= $this->delimit($joinPart->propertyMapping->relationship->joinTable);
         } else {
@@ -92,7 +90,7 @@ class JoinProviderMySql extends AbstractSqlProvider
     {
         $this->joiner = $this->joiner ? $joinPart->joiner : "    ON ";
         if (!$this->removeJoiner) {
-            $this->sql .= $this->joiner;
+            $this->sql .= $this->joiner . ' ';
         }
         $this->isCustomJoin = false;
         if ($this->currentJoinAlias && substr($this->currentJoinAlias, 0, 10) !== 'obj_alias_') {
@@ -110,23 +108,30 @@ class JoinProviderMySql extends AbstractSqlProvider
             //Split this out and call for both property and value to get any aliased columns
             $mappingCollection = $this->objectMapper->getMappingCollectionForClass($this->currentJoinTargetClass);
             $propertyMapping = $mappingCollection->getPropertyMapping($propertyPath);
-            $sourceJoinColumn = $this->currentJoinAlias . '.' . $propertyMapping->getShortColumnName(false);
-            $stop = true;
+            $column = $this->currentJoinAlias . '.' . $propertyMapping->getShortColumnName(false);
+            $sourceJoinColumns[] = $column;
+
 
 
         } elseif ($this->mappingCollection) {
             $this->getJoinColumns($propertyPath, $sourceJoinColumns, $targetJoinColumns);
         }
 
-        if ($sourceJoinColumns && $targetJoinColumns) {
+        if ($sourceJoinColumns && ($targetJoinColumns || $this->isCustomJoin)) {
             $joinSql = [];
             foreach ($sourceJoinColumns as $index => $sourceJoinColumn) {
                 if ($index == 0 && $this->isCustomJoin) {
                     $targetJoinColumn = $joinPart->value;
-                    if (!(preg_match("/(\s|\%|\')/", $targetJoinColumn))) {
-                        //Assume it is a column, not a literal value
-                        $targetJoinColumn = $this->delimit($targetJoinColumn);
-                    }
+
+                    //For a custom join, if you use a column (not a property), you must delimit yourself
+                    //If you use an expression or function, you must delimit values, properties, and columns yourself
+                    //So if no delimiter, it is either a property, or a literal value
+                    //Detect a property by seeing if the property path exists (USE ABOVE code, separated out)
+                    //Otherwise fall back to a value - and wrap in quotes (works for ints/dates as well as strings)
+//                    if (!(preg_match("/(\%|\'|\`)/", $targetJoinColumn))) {
+//                        $targetJoinColumn = "'" . $targetJoinColumn . "'";
+//                    }
+
                 }  else {
                     $targetJoinColumn = $this->delimit($targetJoinColumns[$index] ?? '');
                 }
@@ -136,7 +141,7 @@ class JoinProviderMySql extends AbstractSqlProvider
             }
             $this->sql .= implode("\n AND ", $joinSql) . "\n";
         } else {
-            $this->sql .= "    " . $joinPart->toString($this->params) . "\n";
+            $this->sql .= "    " . str_replace($this->objectNames, $this->persistenceNames, $joinPart->toString($this->params)) . "\n";
         }
     }
 

@@ -107,7 +107,7 @@ class CriteriaReadingTest extends IntegrationTestBase
         //Ordering, pagination, and more complex criteria are possible. You can even order
         //by properties on child objects (not possible in Doctrine).
         $this->objectRepository->setOrderBy(['contact.lastName' => 'DESC', 'policyNo']);
-        $pagination = new Pagination(20, 1);
+        $pagination = new Pagination(7, 1);
         $this->objectRepository->setPagination($pagination);
         $decemberDateRangeCriteria = [
             'effectiveStartDateTime' =>
@@ -119,7 +119,7 @@ class CriteriaReadingTest extends IntegrationTestBase
 //        $latestCount = $this->objectRepository->countLatestBy($decemberDateRangeCriteria);
 //        $this->assertEquals(37, $policyCount);
 //        $this->assertEquals(34, $latestCount);
-        $this->assertEquals(20, count($policiesForDecember));
+        $this->assertEquals(7, count($policiesForDecember));
 //        $this->assertEquals(20, count($latestPoliciesForDecember));
 
         //Load using criteria from a criteria builder.
@@ -219,9 +219,9 @@ class CriteriaReadingTest extends IntegrationTestBase
         ]);
         $this->assertGreaterThan(0, count($policiesNotIn));
 
-        //Read using IS NULL
-        $policiesIsNull = $this->objectRepository->findBy(['modification' => ['operator' => 'IS', 'value' => null]]);
-        $this->assertEquals(43, count($policiesIsNull));
+        //Read using IS NULL (also have to limit to certain contacts to reduce memory usage when not caching)
+        $policiesIsNull = $this->objectRepository->findBy(['modification' => ['operator' => 'IS', 'value' => null], 'contact' => ['operator' => '>', 'value' => 160]]);
+        $this->assertEquals(5, count($policiesIsNull));
         $policiesNotIsNull = $this->objectRepository->findBy(['modification' => ['operator' => 'IS NOT', 'value' => null]]);
         $this->assertEquals(1, count($policiesNotIsNull));
 

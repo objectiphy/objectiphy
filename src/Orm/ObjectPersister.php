@@ -205,7 +205,6 @@ final class ObjectPersister implements TransactionInterface
         int &$updateCount,
         int &$deleteCount
     ): int {
-        //$result = 0;
         $originalClassName = $this->getClassName();
         $this->setClassName(ObjectHelper::getObjectClassName($entity));
 
@@ -257,6 +256,7 @@ final class ObjectPersister implements TransactionInterface
         if (in_array($entity, $this->savedObjects)) {
             return 0;
         }
+        $this->savedObjects[] = $entity; //Even if nothing changed, don't attempt to save again
         if ($this->options->saveChildren) {
             //Insert new child entities first so that we can populate the foreign keys on the parent
             $this->saveChildren($entity, $insertCount, $updateCount, $deleteCount, true);
@@ -282,7 +282,6 @@ final class ObjectPersister implements TransactionInterface
                 $this->entityTracker->storeEntity($entity, $pkValues);
             }
         }
-        $this->savedObjects[] = $entity; //Even if nothing changed, don't attempt to save again
         if ($this->options->saveChildren) {
             $this->saveChildren($entity, $insertCount, $updateCount, $deleteCount);
         }
@@ -361,6 +360,7 @@ final class ObjectPersister implements TransactionInterface
         bool $ownedOnly = false
     ): void {
         $childProperties = $this->options->mappingCollection->getChildObjectProperties($ownedOnly);
+
         foreach ($childProperties as $childPropertyName) {
             if ($entity instanceof EntityProxyInterface && $entity->isChildAsleep($childPropertyName)) {
                 continue; //Don't wake it up
@@ -377,7 +377,15 @@ final class ObjectPersister implements TransactionInterface
                     if (in_array($childEntity, $this->savedObjects)) {
                         continue; //Prevent recursion
                     }
-                    if (!($childEntity instanceof ObjectReferenceInterface)) {
+                    $childEntityPkValues = $this->options->mappingCollection->getPrimaryKeyValues($childEntity);
+                    if (!$childEntityPkValues) {
+                        //If we have a pk, this is an insert - if we don't, we cannot do anything with it
+                        $childPkProperties = $this->options->mappingCollection->getPrimaryKeyProperties($childPropertyMapping->getChildClassName());
+                    }
+                    if (($childEntityPkValues || $childPkProperties)
+                        && !($childEntity instanceof ObjectReferenceInterface)
+                        && $this->entityTracker->isEntityDirty($childEntity, $childEntityPkValues)
+                    ) {
                         //Populate parent
                         if ($childParentProperty) {
                             ObjectHelper::setValueOnObject($childEntity, $childParentProperty, $entity);

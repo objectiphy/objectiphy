@@ -217,10 +217,10 @@ final class ObjectBinder
                     $knownValues = [];
                     if ($propertyMapping->relationship->mappedBy) {
                         $knownValues[$propertyMapping->relationship->mappedBy] = $entity;
-                    } else {
+                    } elseif (!$propertyMapping->relationship->mappedBy) {
                         $childProperties = $this->mappingCollection->getPropertyExamplesForClass($propertyMapping->getChildClassName());
                         foreach ($childProperties as $childProperty) {
-                            if ($childProperty->relationship->mappedBy == $propertyMapping->propertyName) {
+                            if ($childProperty->relationship->isToOne() && $childProperty->relationship->mappedBy == $propertyMapping->propertyName) {
                                 $knownValues[$childProperty->propertyName] = $entity;
                                 break;
                             }

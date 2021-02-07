@@ -361,6 +361,9 @@ class PropertyMapping
             $hackyClass = new $className();
             $hackyClass->$property = 1; //Should cause an exception containing the actual type in the message
         } catch (\Throwable $ex) {
+            if (strpos($ex->getMessage(), 'must be array') !== false) {
+                return 'array';
+            }
             $classStart = strpos($ex->getMessage(), 'must be an instance of ');
             if ($classStart !== false) {
                 $classEnd = strpos($ex->getMessage(), ' or ') ?: (strpos($ex->getMessage(), ',') ?: strlen($ex->getMessage()));

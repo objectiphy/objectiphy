@@ -55,11 +55,11 @@ class TestContact
      */
     protected $nonPkChild;
 
-//    /**
-//     * @var TestDepartment
-//     * @Relationship(relationshipType="one_to_one", childClassName="TestDepartment", sourceJoinColumn="department_id")
-//     */
-//    protected TestDepartment $department;
+    /**
+     * @var TestDepartment
+     * @Relationship(relationshipType="one_to_one", childClassName="TestDepartment", sourceJoinColumn="department_id")
+     */
+    protected TestDepartment $department;
 
     /**
      * This is a dirty bodge, just for unit test purposes - not recommended

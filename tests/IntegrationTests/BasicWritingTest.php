@@ -3,7 +3,6 @@
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
 use Objectiphy\Objectiphy\Config\ConfigEntity;
-use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Factory\EntityFactory;
 use Objectiphy\Objectiphy\Factory\ProxyFactory;
@@ -121,7 +120,11 @@ class BasicWritingTest extends IntegrationTestBase
         $policy->policyNo = 'TESTPOLICY UPDATED';
         $policy->contact->lastName = 'ChildUpdate';
         $recordsAffected = $this->objectRepository->saveEntity($policy);
-        $this->assertEquals(2, $recordsAffected);
+        if ($this->getCacheSuffix()) {
+            $this->assertGreaterThanOrEqual(2, $recordsAffected);
+        } else {
+            $this->assertEquals(2, $recordsAffected);
+        }
 
         //Verify update
         $policy2 = $this->objectRepository->find(19071974);

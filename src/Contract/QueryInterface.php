@@ -29,4 +29,6 @@ interface QueryInterface extends PropertyPathConsumerInterface
     public function setWhere(CriteriaPartInterface ...$criteria): void;
 
     public function getWhere(): array;
+
+    public function getClassesUsed(): array;
 }

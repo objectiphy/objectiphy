@@ -88,17 +88,17 @@ class QueryTest extends IntegrationTestBase
 
     protected function doSelectQueryTests()
     {
-//        $criteria = ['departments' => ['Sales', 'Finance']];
-//        $query = QueryBuilder::create()
-//            ->select('firstName', 'lastName')
-//            ->from(TestContact::class)
-//            ->innerJoin(TestVehicle::class, 'v')
-//                ->on('id', '=', 'v.ownerContactId')
-//                ->and('v.type', '=', 'car')
-//            ->where('department.name', 'IN', ':departments')
-//            ->and('isPermanent', '=', true)
-//            ->buildSelectQuery($criteria);
-//        $contacts = $this->objectRepository->findBy($query);
+        $criteria = ['departments' => ['Sales', 'Finance']];
+        $query = QueryBuilder::create()
+            ->select('firstName', 'lastName')
+            ->from(TestContact::class)
+            ->innerJoin(TestVehicle::class, 'v')
+                ->on('id', '=', 'v.ownerContactId')
+                ->and('v.type', '=', 'car')
+            ->where('department.name', 'IN', ':departments')
+            ->and('isPermanent', '=', true)
+            ->buildSelectQuery($criteria);
+        //$contacts = $this->objectRepository->findBy($query);
         $this->assertEquals(true, true);
     }
 

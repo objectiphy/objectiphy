@@ -47,17 +47,15 @@ class SqlDeleterMySql extends SqlProviderMySql implements SqlDeleterInterface
         return $sql;
     }
 
-    /**
-     * @param string $subject
-     * @return string
-     * @throws ObjectiphyException
-     */
-    protected function replaceNames(string $subject): string
+    protected function addJoins(): string
     {
-        if (!isset($this->objectNames)) {
-            throw new ObjectiphyException('Please call prepareReplacements method before attempting to replace.');
-        }
+        $this->joinProvider->setQueryParams($this->params);
+        $sql = $this->joinProvider->getJoins($this->query, $this->objectNames, $this->persistenceNames);
+        $this->setQueryParams($this->joinProvider->getQueryParams());
+        $this->whereProvider->setQueryParams($this->params);
+        $sql .= $this->whereProvider->getWhere($this->query, $this->objectNames, $this->persistenceNames);
+        $this->setQueryParams($this->whereProvider->getQueryParams());
 
-        return str_replace($this->objectNames, $this->persistenceNames, $subject);
+        return $sql;
     }
 }

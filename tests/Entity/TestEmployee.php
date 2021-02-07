@@ -36,7 +36,7 @@ class TestEmployee
     protected $mentee;
     /**
      * @var TestEmployee
-     * @Mapping\Relationship(childClassName="TestEmployee", sourceJoinColumn="union_rep_id", relationshipType="one_to_one")
+     * @Mapping\Relationship(childClassName="TestEmployee", sourceJoinColumn="union_rep_id", relationshipType="many_to_one")
      */
     protected $unionRep;
     /**

@@ -10,6 +10,7 @@ use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
+use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\Column;
@@ -121,6 +122,19 @@ final class ObjectMapper
         if ($pathConsumer) {
             foreach ($pathConsumer->getPropertyPaths() ?? [] as $propertyPath) {
                 $this->addMappingForProperty($className, $propertyPath, true);
+            }
+        }
+    }
+
+    public function addExtraClassMappings(string $parentClass, QueryInterface $query)
+    {
+        $mappingCollection = $this->getMappingCollectionForClass($parentClass);
+        $queryClasses = $query->getClassesUsed();
+        foreach ($queryClasses as $queryClass) {
+            if (!$mappingCollection->usesClass($queryClass) && class_exists($queryClass)) {
+                $reflectionClass = new \ReflectionClass($queryClass);
+                $table = $this->getTableMapping($reflectionClass);
+                $mappingCollection->addExtraTableMapping($queryClass, $table);
             }
         }
     }

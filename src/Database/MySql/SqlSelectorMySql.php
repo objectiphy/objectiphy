@@ -240,18 +240,4 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
 
         return $sql;
     }
-
-    /**
-     * @param string $subject
-     * @return string
-     * @throws ObjectiphyException
-     */
-    protected function replaceNames(string $subject): string
-    {
-        if (!isset($this->objectNames)) {
-            throw new ObjectiphyException('Please call prepareReplacements method before attempting to replace.');
-        }
-
-        return str_replace($this->objectNames, $this->persistenceNames, $subject);
-    }
 }

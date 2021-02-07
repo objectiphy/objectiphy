@@ -21,6 +21,7 @@ class IntegrationTestBase extends TestCase
 
     protected function setUp(): void
     {
+        ini_set('memory_limit', '256M'); //Only because PHP 7.4.5 has memory leaks when running PHPUnit
         $config = require(__DIR__ . '/../config.php');
         if (empty($config['DB_HOST']) || empty($config['DB_NAME']) || empty($config['DB_USER'])) {
             throw new \RuntimeException('Please populate the database credentials either in environment variables (recommended) or directly in /src/test/config.php (if you must).');

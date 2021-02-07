@@ -129,6 +129,11 @@ class MappingCollection
         } 
     }
 
+    public function addExtraTableMapping(string $className, Table $table)
+    {
+        $this->classes[$className] = $table;
+    }
+
     public function usesClass(string $className): bool
     {
         return isset($this->classes[$className]);
