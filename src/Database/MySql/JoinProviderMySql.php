@@ -94,17 +94,8 @@ class JoinProviderMySql extends AbstractSqlProvider
         if ($this->isCustomJoin
             && substr($propertyPath, 0, strlen($this->currentJoinAlias) + 1) == $this->currentJoinAlias . '.') {
             $propertyPath = substr($propertyPath, strpos($propertyPath, '.') + 1);
-
             $column = $this->getSqlForField($query, $propertyPath);
-//
-//            //Split this out and call for both property and value to get any aliased columns
-//            $mappingCollection = $this->objectMapper->getMappingCollectionForClass($this->currentJoinTargetClass);
-//            $propertyMapping = $mappingCollection->getPropertyMapping($propertyPath);
-//            $column = $this->currentJoinAlias . '.' . $propertyMapping->getShortColumnName(false);
             $sourceJoinColumns[] = $column;
-
-
-
         } elseif ($this->mappingCollection) {
             $this->getJoinColumns($propertyPath, $sourceJoinColumns, $targetJoinColumns);
         }
@@ -114,17 +105,6 @@ class JoinProviderMySql extends AbstractSqlProvider
             foreach ($sourceJoinColumns as $index => $sourceJoinColumn) {
                 if ($index == 0 && $this->isCustomJoin) {
                     $targetJoinColumn = $this->getSqlForField($query, $joinPart->value);
-//                    $targetJoinColumn = $joinPart->value;
-
-                    //For a custom join, if you use a column (not a property), you must delimit yourself
-                    //If you use an expression or function, you must delimit values, properties, and columns yourself
-                    //So if no delimiter, it is either a property, or a literal value
-                    //Detect a property by seeing if the property path exists (USE ABOVE code, separated out)
-                    //Otherwise fall back to a value - and wrap in quotes (works for ints/dates as well as strings)
-//                    if (!(preg_match("/(\%|\'|\`)/", $targetJoinColumn))) {
-//                        $targetJoinColumn = "'" . $targetJoinColumn . "'";
-//                    }
-
                 }  else {
                     $targetJoinColumn = $this->delimit($targetJoinColumns[$index] ?? '');
                 }
