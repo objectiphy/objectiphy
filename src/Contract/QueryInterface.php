@@ -31,4 +31,11 @@ interface QueryInterface extends PropertyPathConsumerInterface
     public function getWhere(): array;
 
     public function getClassesUsed(): array;
+
+    /**
+     * Extract target class name from a join.
+     * @param string $alias
+     * @return string
+     */
+    public function getClassForAlias(string $alias): string;
 }

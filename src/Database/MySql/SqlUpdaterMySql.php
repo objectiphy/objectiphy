@@ -14,6 +14,7 @@ use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
+use Objectiphy\Objectiphy\Orm\ObjectMapper;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
@@ -28,11 +29,12 @@ class SqlUpdaterMySql extends AbstractSqlProvider implements SqlUpdaterInterface
     private WhereProviderMySql $whereProvider;
 
     public function __construct(
+        ObjectMapper $objectMapper,
         DataTypeHandlerInterface $dataTypeHandler,
         JoinProviderMySql $joinProvider,
         WhereProviderMySql $whereProvider
     ) {
-        parent::__construct($dataTypeHandler);
+        parent::__construct($objectMapper, $dataTypeHandler);
         $this->joinProvider = $joinProvider;
         $this->whereProvider = $whereProvider;
     }

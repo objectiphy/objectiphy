@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Database\MySql;
 
-use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
 use Objectiphy\Objectiphy\Exception\MappingException;
-use Objectiphy\Objectiphy\Orm\ObjectMapper;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\CriteriaGroup;
 use Objectiphy\Objectiphy\Query\JoinExpression;
@@ -19,18 +17,11 @@ use Objectiphy\Objectiphy\Query\JoinExpression;
  */
 class JoinProviderMySql extends AbstractSqlProvider
 {
-    private ObjectMapper $objectMapper;
     private ?string $joiner = null;
     private bool $removeJoiner = false;
     private string $currentJoinAlias = '';
     private string $currentJoinTargetClass = '';
     private bool $isCustomJoin = false;
-
-    public function __construct(DataTypeHandlerInterface $dataTypeHandler, ObjectMapper $objectMapper)
-    {
-        parent::__construct($dataTypeHandler);
-        $this->objectMapper = $objectMapper;
-    }
 
     /**
      * @param QueryInterface $query
@@ -47,7 +38,7 @@ class JoinProviderMySql extends AbstractSqlProvider
             } elseif ($joinPart instanceof CriteriaGroup) {
                 $this->processCriteriaGroup($joinPart);
             } elseif ($joinPart instanceof CriteriaExpression) {
-                $this->processCriteriaExpression($joinPart);
+                $this->processCriteriaExpression($query, $joinPart);
             }
         }
 
@@ -86,7 +77,7 @@ class JoinProviderMySql extends AbstractSqlProvider
         $this->sql .= '    ' . str_replace($this->objectNames, $this->persistenceNames, (string) $joinPart) . "\n";
     }
 
-    private function processCriteriaExpression(CriteriaExpression $joinPart): void
+    private function processCriteriaExpression(QueryInterface $query, CriteriaExpression $joinPart): void
     {
         $this->joiner = $this->joiner ? $joinPart->joiner : "    ON ";
         if (!$this->removeJoiner) {
@@ -104,11 +95,12 @@ class JoinProviderMySql extends AbstractSqlProvider
             && substr($propertyPath, 0, strlen($this->currentJoinAlias) + 1) == $this->currentJoinAlias . '.') {
             $propertyPath = substr($propertyPath, strpos($propertyPath, '.') + 1);
 
-
-            //Split this out and call for both property and value to get any aliased columns
-            $mappingCollection = $this->objectMapper->getMappingCollectionForClass($this->currentJoinTargetClass);
-            $propertyMapping = $mappingCollection->getPropertyMapping($propertyPath);
-            $column = $this->currentJoinAlias . '.' . $propertyMapping->getShortColumnName(false);
+            $column = $this->getSqlForField($query, $propertyPath);
+//
+//            //Split this out and call for both property and value to get any aliased columns
+//            $mappingCollection = $this->objectMapper->getMappingCollectionForClass($this->currentJoinTargetClass);
+//            $propertyMapping = $mappingCollection->getPropertyMapping($propertyPath);
+//            $column = $this->currentJoinAlias . '.' . $propertyMapping->getShortColumnName(false);
             $sourceJoinColumns[] = $column;
 
 
@@ -121,7 +113,8 @@ class JoinProviderMySql extends AbstractSqlProvider
             $joinSql = [];
             foreach ($sourceJoinColumns as $index => $sourceJoinColumn) {
                 if ($index == 0 && $this->isCustomJoin) {
-                    $targetJoinColumn = $joinPart->value;
+                    $targetJoinColumn = $this->getSqlForField($query, $joinPart->value);
+//                    $targetJoinColumn = $joinPart->value;
 
                     //For a custom join, if you use a column (not a property), you must delimit yourself
                     //If you use an expression or function, you must delimit values, properties, and columns yourself

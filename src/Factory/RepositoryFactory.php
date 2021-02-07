@@ -333,10 +333,12 @@ class RepositoryFactory implements RepositoryFactoryInterface
 
     final protected function createSqlUpdater(): SqlUpdaterInterface
     {
+        $objectMapper = $this->getObjectMapper();
         $dataTypeHandler = $this->getDataTypeHandlerMySql();
         $joinProvider = $this->getJoinProviderMySql();
         $whereProvider = $this->getWhereProviderMySql();
-        return new SqlUpdaterMySql($dataTypeHandler, $joinProvider, $whereProvider);
+
+        return new SqlUpdaterMySql($objectMapper, $dataTypeHandler, $joinProvider, $whereProvider);
     }
 
     /**
@@ -415,10 +417,11 @@ class RepositoryFactory implements RepositoryFactoryInterface
     private function getSqlSelector(): SqlSelectorInterface
     {
         if (!isset($this->sqlSelector)) {
+            $objectMapper = $this->getObjectMapper();
             $dataTypeHandler = $this->getDataTypeHandlerMySql();
             $joinProvider = $this->getJoinProviderMySql();
             $whereProvider = $this->getWhereProviderMySql();
-            $this->sqlSelector = new SqlSelectorMySql($dataTypeHandler, $joinProvider, $whereProvider);
+            $this->sqlSelector = new SqlSelectorMySql($objectMapper, $dataTypeHandler, $joinProvider, $whereProvider);
         }
         
         return $this->sqlSelector;
@@ -436,10 +439,11 @@ class RepositoryFactory implements RepositoryFactoryInterface
     private function getSqlDeleter(): SqlDeleterInterface
     {
         if (!isset($this->sqlDeleter)) {
+            $objectMapper = $this->getObjectMapper();
             $joinProvider = $this->getJoinProviderMySql();
             $whereProvider = $this->getWhereProviderMySql();
             $dataTypeHandler = $this->getDataTypeHandlerMySql();
-            $this->sqlDeleter = new SqlDeleterMySql($dataTypeHandler, $joinProvider, $whereProvider);
+            $this->sqlDeleter = new SqlDeleterMySql($objectMapper, $dataTypeHandler, $joinProvider, $whereProvider);
         }
 
         return $this->sqlDeleter;
@@ -457,7 +461,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
     private function getJoinProviderMySql(): JoinProviderMySql
     {
         if (!isset($this->joinProvider)) {
-            $this->joinProvider = new JoinProviderMySql($this->getDataTypeHandlerMySql(), $this->getObjectMapper());
+            $this->joinProvider = new JoinProviderMySql($this->getObjectMapper(), $this->getDataTypeHandlerMySql());
         }
 
         return $this->joinProvider;
@@ -466,7 +470,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
     private function getWhereProviderMySql(): WhereProviderMySql
     {
         if (!isset($this->whereProvider)) {
-            $this->whereProvider = new WhereProviderMySql($this->getDataTypeHandlerMySql());
+            $this->whereProvider = new WhereProviderMySql($this->getObjectMapper(), $this->getDataTypeHandlerMySql());
         }
 
         return $this->whereProvider;
