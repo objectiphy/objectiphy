@@ -62,6 +62,12 @@ class TestContact
     protected TestDepartment $department;
 
     /**
+     * @var bool
+     * @ORM\Column(type="bool")
+     */
+    protected bool $isPermanent;
+
+    /**
      * This is a dirty bodge, just for unit test purposes - not recommended
      * for real entities in an application
      * @param $property

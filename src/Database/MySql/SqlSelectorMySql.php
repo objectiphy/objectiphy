@@ -6,6 +6,7 @@ namespace Objectiphy\Objectiphy\Database\MySql;
 
 use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
+use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 
@@ -13,10 +14,24 @@ use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
  * @author Russell Walker <rwalker.php@gmail.com>
  * Provider of SQL for select queries on MySQL
  */
-class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
+class SqlSelectorMySql implements SqlSelectorInterface
 {
+    private SqlStringReplacer $stringReplacer;
+    private JoinProviderMySql $joinProvider;
+    private WhereProviderMySql $whereProvider;
     private bool $disableMySqlCache = false;
     private FindOptions $options;
+    private SelectQueryInterface $query;
+
+    public function __construct(
+        SqlStringReplacer $stringReplacer,
+        JoinProviderMySql $joinProvider,
+        WhereProviderMySql $whereProvider
+    ) {
+        $this->stringReplacer = $stringReplacer;
+        $this->joinProvider = $joinProvider;
+        $this->whereProvider = $whereProvider;
+    }
 
     /**
      * These are options that are likely to change on each call (unlike config options).
@@ -25,9 +40,6 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
     public function setFindOptions(FindOptions $options): void
     {
         $this->options = $options;
-        $this->setMappingCollection($options->mappingCollection);
-        $this->joinProvider->setMappingCollection($options->mappingCollection);
-        $this->whereProvider->setMappingCollection($options->mappingCollection);
     }
 
     /**
@@ -59,19 +71,13 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
         if (!isset($this->options->mappingCollection)) {
             throw new ObjectiphyException('SQL Selector has not been initialised. There is no mapping information!');
         }
-
         $this->query = $query;
-        $this->params = [];
-        $this->prepareReplacements($this->options->mappingCollection);
+        $this->stringReplacer->prepareReplacements($query);
 
         $sql = $this->getSelect();
         $sql .= $this->getFrom();
-        $this->joinProvider->setQueryParams($this->params);
-        $sql .= $this->joinProvider->getJoins($this->query, $this->objectNames, $this->persistenceNames);
-        $this->setQueryParams($this->joinProvider->getQueryParams());
-        $this->whereProvider->setQueryParams($this->params);
-        $sql .= $this->whereProvider->getWhere($this->query, $this->objectNames, $this->persistenceNames);
-        $this->setQueryParams($this->whereProvider->getQueryParams());
+        $sql .= $this->joinProvider->getJoins($query);
+        $sql .= $this->whereProvider->getWhere($query);
         $sql .= $this->getGroupBy();
         $sql .= $this->getHaving();
         $sql .= $this->getOrderBy();
@@ -101,7 +107,7 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
             $sql = "SELECT \n";
             foreach ($this->query->getSelect() as $fieldExpression) {
                 $fieldSql = trim((string) $fieldExpression);
-                $sql .= "    " . str_replace($this->objectNames, $this->aliases, $fieldSql) . ", \n";
+                $sql .= "    " . $this->stringReplacer->replaceNames($fieldSql, true) . ", \n";
             }
             $sql = rtrim($sql, ", \n") . "\n";
         }
@@ -120,18 +126,22 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
      */
     public function getFrom(): string
     {
-        return "FROM " . $this->replaceNames($this->query->getFrom()) . "\n";
+        return "FROM " . $this->stringReplacer->replaceNames($this->query->getFrom()) . "\n";
     }
 
     /**
-     * @param bool $ignoreCount
      * @return string The SQL string for the GROUP BY clause, if applicable.
      * @throws ObjectiphyException
      */
-    public function getGroupBy($ignoreCount = false): string
+    public function getGroupBy(): string
     {
-        //This function can be overridden, but baseGroupBy cannot be - we need to know whether the value is ours or not.
-        return $this->baseGroupBy($ignoreCount);
+        $sql = '';
+        $groupBy = $this->query->getGroupBy();
+        if ($groupBy) {
+            $sql = $this->stringReplacer->replaceNames(implode(', ', $groupBy)) . "\n";
+        }
+
+        return $sql;
     }
 
     /**
@@ -143,7 +153,7 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
     {
         $criteria = [];
         foreach ($this->query->getHaving() as $criteriaExpression) {
-            $criteria[] = $this->replaceNames((string) $criteriaExpression);
+            $criteria[] = $this->stringReplacer->replaceNames((string) $criteriaExpression);
         }
 
         return implode("\nAND ", $criteria) . "\n";
@@ -161,7 +171,7 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
             $orderBy = $this->query->getOrderBy();
             if (!empty($orderBy)) {
                 $orderByString = 'ORDER BY ' . implode(', ', $orderBy);
-                $sql = $this->replaceNames($orderByString) . "\n";
+                $sql = $this->stringReplacer->replaceNames($orderByString) . "\n";
             }
         }
 
@@ -211,31 +221,9 @@ class SqlSelectorMySql extends SqlProviderMySql implements SqlSelectorInterface
     {
         $sql = '';
         if ($this->options->count && empty($this->queryOverrides)) { //See if we can do a more efficient count
-            $groupBy = trim(str_replace('GROUP BY', '', $this->getGroupBy(true)));
-            $baseGroupBy = trim(str_replace('GROUP BY', '', $this->baseGroupBy(true)));
-            if ($groupBy) {
-                if (!$this->mappingCollection->hasAggregateFunctions() && $groupBy == $baseGroupBy) {
-                    $sql .= "SELECT COUNT(DISTINCT " . $groupBy . ") ";
-                } // else: we do the full select, and use it as a sub-query - the count happens outside, in getSelect
-            } else {
+            if (!$this->getGroupBy()) { //If grouping, count must happen using a subquery (see getSelectSql, above)
                 $sql .= "SELECT COUNT(*) ";
             }
-        }
-
-        return $sql;
-    }
-
-    /**
-     * @return string SQL string for the GROUP BY clause, base implementation (cannot be overridden).
-     * @throws ObjectiphyException
-     */
-    private function baseGroupBy(): string
-    {
-        $sql = '';
-
-        $groupBy = $this->query->getGroupBy();
-        if ($groupBy) {
-            $sql = $this->replaceNames(implode(', ', $groupBy)) . "\n";
         }
 
         return $sql;

@@ -296,20 +296,19 @@ final class ObjectFetcher
     private function doFetch(SelectQueryInterface $query)
     {
         $sql = $this->sqlSelector->getSelectSql($query);
-        $params = $this->sqlSelector->getQueryParams();
-        $this->explanation->addQuery($query, $sql, $params, $this->options->mappingCollection, $this->configOptions);
+        $this->explanation->addQuery($query, $sql, $this->options->mappingCollection, $this->configOptions);
         if ($this->options->multiple && $this->options->onDemand && $this->options->scalarProperty) {
-            $result = $this->fetchIterableValues($sql, $params);
+            $result = $this->fetchIterableValues($sql, $query->getParams());
         } elseif ($this->options->multiple && $this->options->onDemand) {
-            $result = $this->fetchIterableResult($sql, $params);
+            $result = $this->fetchIterableResult($sql, $query->getParams());
         } elseif ($this->options->multiple && $this->options->scalarProperty) {
-            $result = $this->fetchValues($sql, $params);
+            $result = $this->fetchValues($sql, $query->getParams());
         } elseif ($this->options->multiple) {
-            $result = $this->fetchResults($sql, $params);
+            $result = $this->fetchResults($sql, $query->getParams());
         } elseif ($this->options->scalarProperty) {
-            $result = $this->fetchValue($sql, $params);
+            $result = $this->fetchValue($sql, $query->getParams());
         } else {
-            $result = $this->fetchResult($sql, $params);
+            $result = $this->fetchResult($sql, $query->getParams());
         }
 
         return $result;

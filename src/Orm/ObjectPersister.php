@@ -275,9 +275,8 @@ final class ObjectPersister implements TransactionInterface
         if ($rows) {
             $updateQuery->finalise($this->options->mappingCollection, $className, $rows);
             $sql = $this->sqlUpdater->getUpdateSql($updateQuery, $this->options->replaceExisting);
-            $params = $this->sqlUpdater->getQueryParams();
-            $this->explanation->addQuery($updateQuery, $sql, $params, $this->options->mappingCollection, $this->config);
-            if ($this->storage->executeQuery($sql, $params)) {
+            $this->explanation->addQuery($updateQuery, $sql, $this->options->mappingCollection, $this->config);
+            if ($this->storage->executeQuery($sql, $updateQuery->getParams())) {
                 $updateCount += $this->storage->getAffectedRecordCount();
                 $this->entityTracker->storeEntity($entity, $pkValues);
             }

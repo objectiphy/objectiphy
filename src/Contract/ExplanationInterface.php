@@ -17,14 +17,12 @@ interface ExplanationInterface
      * Called by Objectiphy when a query has been prepared for execution.
      * @param QueryInterface $query
      * @param string $sql
-     * @param array $params
      * @param MappingCollection|null $mappingCollection
      * @param ConfigOptions|null $config
      */
     public function addQuery(
         QueryInterface $query,
         string $sql,
-        array $params,
         MappingCollection $mappingCollection = null,
         ConfigOptions $config = null
     ): void;

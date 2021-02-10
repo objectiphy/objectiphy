@@ -98,7 +98,7 @@ class QueryTest extends IntegrationTestBase
             ->where('department.name', 'IN', ':departments')
             ->and('isPermanent', '=', true)
             ->buildSelectQuery($criteria);
-        //$contacts = $this->objectRepository->findBy($query);
+        $contacts = $this->objectRepository->findBy($query);
         $this->assertEquals(true, true);
     }
 

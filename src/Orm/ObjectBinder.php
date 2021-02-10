@@ -7,6 +7,7 @@ namespace Objectiphy\Objectiphy\Orm;
 use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
+use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
@@ -22,7 +23,7 @@ use Objectiphy\Objectiphy\Factory\RepositoryFactory;
 final class ObjectBinder
 {
     private RepositoryFactory $repositoryFactory;
-    private EntityFactory $entityFactory;
+    private EntityFactoryInterface $entityFactory;
     private MappingCollection $mappingCollection;
     private ConfigOptions $configOptions;
     private EntityTracker $entityTracker;
@@ -31,7 +32,7 @@ final class ObjectBinder
 
     public function __construct(
         RepositoryFactory $repositoryFactory, 
-        EntityFactory $entityFactory,
+        EntityFactoryInterface $entityFactory,
         EntityTracker $entityTracker,
         DataTypeHandlerInterface $dataTypeHandler
     ) {

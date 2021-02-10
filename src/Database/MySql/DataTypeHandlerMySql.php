@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Database\MySql;
 
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
-use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Orm\ObjectHelper;
 
@@ -75,6 +74,7 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
      * @param string|null $dataType Optionally specify one of the data type constants or a class name.
      * @param string|null $format If the data type requires a format (eg. datetimestring), specify it here.
      * @return bool Whether or not the value was successfully converted.
+     * @throws \Exception
      */
     public function toObjectValue(&$value, ?string $dataType = null, ?string $format = null): bool
     {
@@ -112,7 +112,7 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
                     || $value instanceof $dataType
                     || ($value === null && class_exists($dataType))
                     || ($dataType != 'array' && !class_exists($dataType) && !is_object($value))
-                    || ($value instanceof \Closure && $object instanceof EntityProxyInterface)
+                    || ($value instanceof \Closure)
                 ) {
                     $valueToSet = $value;
                 }

@@ -10,7 +10,7 @@ use Objectiphy\Objectiphy\Config\SaveOptions;
  * @author Russell Walker <rwalker.php@gmail.com>
  * For an object that provides SQL for a update query.
  */
-interface SqlUpdaterInterface extends SqlProviderInterface
+interface SqlUpdaterInterface
 {
     /**
      * Set runtime configuration for a find query.

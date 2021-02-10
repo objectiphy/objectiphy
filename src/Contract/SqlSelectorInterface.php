@@ -10,7 +10,7 @@ use Objectiphy\Objectiphy\Config\FindOptions;
  * @author Russell Walker <rwalker.php@gmail.com>
  * For an object that provides SQL for a select query.
  */
-interface SqlSelectorInterface extends SqlProviderInterface
+interface SqlSelectorInterface
 {
     /**
      * Set runtime configuration for a find query.

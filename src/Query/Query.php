@@ -42,6 +42,7 @@ abstract class Query implements QueryInterface
 
     protected MappingCollection $mappingCollection;
     protected bool $isFinalised = false;
+    protected array $params = [];
 
     public function setFields(FieldExpression ...$fields): void
     {
@@ -118,6 +119,8 @@ abstract class Query implements QueryInterface
      * Ensure query is complete, filling in any missing bits as necessary
      * @param MappingCollection $mappingCollection
      * @param string|null $className
+     * @throws MappingException
+     * @throws QueryException
      */
     public function finalise(MappingCollection $mappingCollection, ?string $className = null): void
     {
@@ -161,6 +164,31 @@ abstract class Query implements QueryInterface
         }
 
         return '';
+    }
+
+    public function &getParams(): array
+    {
+        return $this->params;
+    }
+
+    public function setParams(array $params): void
+    {
+        $this->params = $params;
+    }
+
+    public function getParam(string $paramName)
+    {
+        return $this->params[$paramName] ?? null;
+    }
+
+    public function addParam($paramValue, ?string $paramName = null): string
+    {
+        if (!$paramName) {
+            $paramName = 'param_' . strval(count($this->params ?? []) + 1);
+        }
+        $this->params[$paramName] = $paramValue;
+
+        return $paramName;
     }
 
     /**

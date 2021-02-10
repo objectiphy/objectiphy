@@ -32,6 +32,11 @@ class AssignmentExpression implements QueryPartInterface, PropertyPathConsumerIn
         $this->propertyPath = $propertyPath;
     }
 
+    public function getPropertyPath(): string
+    {
+        return $this->propertyPath;
+    }
+
     /**
      * @param mixed $value Value to assign.
      */
@@ -40,39 +45,20 @@ class AssignmentExpression implements QueryPartInterface, PropertyPathConsumerIn
         $this->value = $value;
     }
 
+    public function getValue()
+    {
+        return $this->value;
+    }
+
     /**
      * Return query with parameters resolved (for display only, NOT for execution!)
      * @return string
      */
     public function __toString(): string
     {
-        $params = [];
-        $assignmentString = $this->toString($params);
-        foreach ($params as $key => $value) {
-            $assignmentString = str_replace(':' . $key, "'" . $value . "'", $assignmentString);
-        }
-
-        return $assignmentString;
-    }
-
-    /**
-     * Return parameterised query
-     * @param array $params
-     * @return string
-     */
-    public function toString(array &$params = []): string
-    {
         $string = "%$this->propertyPath% = ";
-        if ($this->value === null) {
-            $string .= 'null';
-        } else {
-            //If there are quotes in the value, extract anything between quotes...?
+        $string .= $this->value === null ? 'null' : $this->value;
 
-            $paramCount = count($params) + 1;
-            $params['param_' . $paramCount] = $this->value;
-            $string .= ':param_' . $paramCount;
-        }
-        
         return $string;
     }
 

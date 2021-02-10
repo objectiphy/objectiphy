@@ -8,7 +8,7 @@ namespace Objectiphy\Objectiphy\Contract;
  * @author Russell Walker <rwalker.php@gmail.com>
  * For an object that provides SQL for a delete query.
  */
-interface SqlDeleterInterface extends SqlProviderInterface
+interface SqlDeleterInterface
 {
     /**
      * @param DeleteQueryInterface $query

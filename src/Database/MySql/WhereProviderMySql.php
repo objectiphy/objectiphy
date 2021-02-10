@@ -6,23 +6,34 @@ namespace Objectiphy\Objectiphy\Database\MySql;
 
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
-use Objectiphy\Objectiphy\Database\AbstractSqlProvider;
+use Objectiphy\Objectiphy\Database\SqlStringReplacer;
+use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Orm\ObjectMapper;
 use Objectiphy\Objectiphy\Query\CriteriaGroup;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
  * Provider of SQL for where clause on MySQL
  */
-class WhereProviderMySql extends AbstractSqlProvider
+class WhereProviderMySql
 {
+    private ObjectMapper $objectMapper;
+    private SqlStringReplacer $stringReplacer;
+
+    public function __construct(SqlStringReplacer $stringReplacer, ObjectMapper $objectMapper)
+    {
+        $this->stringReplacer = $stringReplacer;
+        $this->objectMapper = $objectMapper;
+    }
+
     /**
      * The WHERE part of the SQL query.
      * @param QueryInterface $query
-     * @param array $objectNames
-     * @param array $persistenceNames
      * @return string
+     * @throws ObjectiphyException
+     * @throws \ReflectionException
      */
-    public function getWhere(QueryInterface $query, array $objectNames, array $persistenceNames): string
+    public function getWhere(QueryInterface $query): string
     {
         $sql = "WHERE 1\n";
         $removeJoiner = false;
@@ -39,22 +50,11 @@ class WhereProviderMySql extends AbstractSqlProvider
                 if (!$removeJoiner) {
                     $sql .= "    " . $criteriaExpression->joiner;
                 }
-                $sql .= " " . $criteriaExpression->toString($this->params) . "\n";
+                $sql .= " " . $criteriaExpression->toString($query->getParams()) . "\n";
                 $removeJoiner = false;
             }
         }
-        array_walk($this->params, function(&$value) {
-            if (!$this->dataTypeHandler->toPersistenceValue($value)) {
-                //We have an object - extract the primary key value if we can
-                if ($value instanceof ObjectReferenceInterface) {
-                    $pkValues = $value->getPkValues();
-                } else {
-                    $pkValues = $this->mappingCollection->getPrimaryKeyValues($value);
-                }
-                $value = $pkValues ? reset($pkValues) : null;
-            }
-        });
-        $sql = trim(str_replace($objectNames, $persistenceNames, $sql));
+        $sql = trim($this->stringReplacer->replaceNames($sql));
 
         return $sql;
     }

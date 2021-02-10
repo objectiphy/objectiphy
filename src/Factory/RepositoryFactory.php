@@ -27,6 +27,7 @@ use Objectiphy\Objectiphy\Database\MySql\WhereProviderMySql;
 use Objectiphy\Objectiphy\Database\PdoStorage;
 use Objectiphy\Objectiphy\Database\MySql\SqlSelectorMySql;
 use Objectiphy\Objectiphy\Database\MySql\SqlUpdaterMySql;
+use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\MappingProvider\MappingProvider;
 use Objectiphy\Objectiphy\MappingProvider\MappingProviderAnnotation;
@@ -60,6 +61,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
     private EntityTracker $entityTracker;
     private JoinProviderMySql $joinProvider;
     private WhereProviderMySql $whereProvider;
+    private SqlStringReplacer $stringReplacer;
     private ObjectRemover $objectRemover;
     private ?ExplanationInterface $explanation = null;
     /**
@@ -234,6 +236,11 @@ class RepositoryFactory implements RepositoryFactoryInterface
         return $this->storage;
     }
 
+    /**
+     * @param ConfigOptions|null $configOptions
+     * @return ProxyFactory
+     * @throws ObjectiphyException
+     */
     final protected function getProxyFactory(?ConfigOptions $configOptions): ProxyFactory
     {
         if (!isset($this->proxyFactory)) {
@@ -248,6 +255,11 @@ class RepositoryFactory implements RepositoryFactoryInterface
         return new ObjectMapper($this->getMappingProvider(), $this->createNameResolver());
     }
 
+    /**
+     * @param ConfigOptions|null $configOptions
+     * @return ObjectFetcher
+     * @throws ObjectiphyException
+     */
     final protected function createObjectFetcher(?ConfigOptions $configOptions = null): ObjectFetcher
     {
         $sqlSelector = $this->getSqlSelector();
@@ -294,6 +306,11 @@ class RepositoryFactory implements RepositoryFactoryInterface
         return new EntityTracker();
     }
 
+    /**
+     * @param ConfigOptions|null $configOptions
+     * @return ObjectBinder
+     * @throws ObjectiphyException
+     */
     final protected function createObjectBinder(?ConfigOptions $configOptions = null): ObjectBinder
     {
         $entityFactory = $this->createEntityFactory($configOptions);
@@ -309,7 +326,12 @@ class RepositoryFactory implements RepositoryFactoryInterface
         $objectMapper = $this->getObjectMapper();
         return new ObjectUnbinder($this->getEntityTracker(), $dataTypeHandler, $objectMapper);
     }
-    
+
+    /**
+     * @param ConfigOptions|null $configOptions
+     * @return EntityFactoryInterface
+     * @throws ObjectiphyException
+     */
     final protected function createEntityFactory(?ConfigOptions $configOptions = null): EntityFactoryInterface
     {
         return new EntityFactory($this->createProxyFactory($configOptions));
@@ -329,16 +351,6 @@ class RepositoryFactory implements RepositoryFactoryInterface
     final protected function createStorage(): StorageInterface
     {
         return new PdoStorage($this->pdo);
-    }
-
-    final protected function createSqlUpdater(): SqlUpdaterInterface
-    {
-        $objectMapper = $this->getObjectMapper();
-        $dataTypeHandler = $this->getDataTypeHandlerMySql();
-        $joinProvider = $this->getJoinProviderMySql();
-        $whereProvider = $this->getWhereProviderMySql();
-
-        return new SqlUpdaterMySql($objectMapper, $dataTypeHandler, $joinProvider, $whereProvider);
     }
 
     /**
@@ -368,6 +380,11 @@ class RepositoryFactory implements RepositoryFactoryInterface
         return '\\' . ltrim($repositoryClassName, '\\');
     }
 
+    /**
+     * @param string|null $entityClassName
+     * @return bool
+     * @throws ObjectiphyException
+     */
     private function validateEntityClass(?string $entityClassName = null): bool
     {
         if ($entityClassName && !class_exists($entityClassName)) {
@@ -410,18 +427,17 @@ class RepositoryFactory implements RepositoryFactoryInterface
 
     private function getExplanation()
     {
-        $this->explanation ??= new Explanation();
+        $this->explanation ??= new Explanation($this->getSqlStringReplacer());
         return $this->explanation;
     }
     
     private function getSqlSelector(): SqlSelectorInterface
     {
         if (!isset($this->sqlSelector)) {
-            $objectMapper = $this->getObjectMapper();
-            $dataTypeHandler = $this->getDataTypeHandlerMySql();
+            $stringReplacer = $this->getSqlStringReplacer();
             $joinProvider = $this->getJoinProviderMySql();
             $whereProvider = $this->getWhereProviderMySql();
-            $this->sqlSelector = new SqlSelectorMySql($objectMapper, $dataTypeHandler, $joinProvider, $whereProvider);
+            $this->sqlSelector = new SqlSelectorMySql($stringReplacer, $joinProvider, $whereProvider);
         }
         
         return $this->sqlSelector;
@@ -430,7 +446,11 @@ class RepositoryFactory implements RepositoryFactoryInterface
     private function getSqlUpdater(): SqlUpdaterInterface
     {
         if (!isset($this->sqlUpdater)) {
-            $this->sqlUpdater = $this->createSqlUpdater();
+            $stringReplacer = $this->getSqlStringReplacer();
+            $joinProvider = $this->getJoinProviderMySql();
+            $whereProvider = $this->getWhereProviderMySql();
+
+            $this->sqlUpdater = new SqlUpdaterMySql($stringReplacer, $joinProvider, $whereProvider);
         }
 
         return $this->sqlUpdater;
@@ -439,11 +459,10 @@ class RepositoryFactory implements RepositoryFactoryInterface
     private function getSqlDeleter(): SqlDeleterInterface
     {
         if (!isset($this->sqlDeleter)) {
-            $objectMapper = $this->getObjectMapper();
+            $stringReplacer = $this->getSqlStringReplacer();
             $joinProvider = $this->getJoinProviderMySql();
             $whereProvider = $this->getWhereProviderMySql();
-            $dataTypeHandler = $this->getDataTypeHandlerMySql();
-            $this->sqlDeleter = new SqlDeleterMySql($objectMapper, $dataTypeHandler, $joinProvider, $whereProvider);
+            $this->sqlDeleter = new SqlDeleterMySql($stringReplacer, $joinProvider, $whereProvider);
         }
 
         return $this->sqlDeleter;
@@ -461,7 +480,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
     private function getJoinProviderMySql(): JoinProviderMySql
     {
         if (!isset($this->joinProvider)) {
-            $this->joinProvider = new JoinProviderMySql($this->getObjectMapper(), $this->getDataTypeHandlerMySql());
+            $this->joinProvider = new JoinProviderMySql($this->getSqlStringReplacer(), $this->getObjectMapper());
         }
 
         return $this->joinProvider;
@@ -470,10 +489,19 @@ class RepositoryFactory implements RepositoryFactoryInterface
     private function getWhereProviderMySql(): WhereProviderMySql
     {
         if (!isset($this->whereProvider)) {
-            $this->whereProvider = new WhereProviderMySql($this->getObjectMapper(), $this->getDataTypeHandlerMySql());
+            $this->whereProvider = new WhereProviderMySql($this->getSqlStringReplacer(), $this->getObjectMapper());
         }
 
         return $this->whereProvider;
+    }
+
+    private function getSqlStringReplacer(): SqlStringReplacer
+    {
+        if (!isset($this->stringReplacer)) {
+            $this->stringReplacer = new SqlStringReplacer($this->getObjectMapper(), $this->getDataTypeHandlerMySql());
+        }
+
+        return $this->stringReplacer;
     }
 
     private function getDataTypeHandlerMySql(): DataTypeHandlerInterface

@@ -16,7 +16,7 @@ class TestDepartment
     public $id;
 
     /**
-     * @Columnn(type="string")
+     * @Column(type="string")
      */
     public $name;
 }

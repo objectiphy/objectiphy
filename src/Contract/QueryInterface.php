@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Contract;
 
+use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 
 /**
@@ -30,6 +31,21 @@ interface QueryInterface extends PropertyPathConsumerInterface
 
     public function getWhere(): array;
 
+    public function &getParams(): array;
+
+    public function setParams(array $params): void;
+
+    public function getParam(string $paramName);
+
+    /**
+     * @param $paramValue
+     * @param $paramName
+     * @return string Name of the parameter (either the value supplied in $paramName, or a generated name if that is blank)
+     */
+    public function addParam($paramValue, ?string $paramName = null): string;
+
+    public function getPropertyPaths(): array;
+
     public function getClassesUsed(): array;
 
     /**
@@ -38,4 +54,6 @@ interface QueryInterface extends PropertyPathConsumerInterface
      * @return string
      */
     public function getClassForAlias(string $alias): string;
+
+    public function finalise(MappingCollection $mappingCollection, ?string $className = null): void;
 }

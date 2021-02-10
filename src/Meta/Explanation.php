@@ -7,6 +7,7 @@ namespace Objectiphy\Objectiphy\Meta;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\ExplanationInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
+use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
 /**
@@ -17,6 +18,8 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
  */
 class Explanation implements ExplanationInterface
 {
+    private SqlStringReplacer $stringReplacer;
+
     /**
      * @var QueryInterface[]
      */
@@ -39,25 +42,28 @@ class Explanation implements ExplanationInterface
      */
     private array $config = [];
 
+    public function __construct(SqlStringReplacer $stringReplacer)
+    {
+        $this->stringReplacer = $stringReplacer;
+    }
+
     /**
      * Used internally to record query activity - not part of the interface
      * @param QueryInterface $query
      * @param string $sql
-     * @param array $params
      * @param MappingCollection|null $mappingCollection
      * @param ConfigOptions|null $config
      */
     public function addQuery(
         QueryInterface $query,
         string $sql,
-        array $params,
         MappingCollection $mappingCollection = null,
         ConfigOptions $config = null
     ): void {
         $index = count($this->queryHistory);
         $this->queryHistory[$index] = $query;
         $this->sqlHistory[$index] = $sql;
-        $this->paramHistory[$index] = $params;
+        $this->paramHistory[$index] = $query->getParams();
         $this->mapping[$index] = $mappingCollection;
         $this->config[$index] = $config;
     }
@@ -93,7 +99,7 @@ class Explanation implements ExplanationInterface
             $lastQuery = $this->sqlHistory[array_key_last($this->sqlHistory)];
             $lastParams = $this->getParams();
 
-            return $parameterise ? $this->replaceTokens($lastQuery, $lastParams) : $lastQuery;
+            return $parameterise ? $this->stringReplacer->replaceTokens($lastQuery, $lastParams) : $lastQuery;
         }
 
         return '';
@@ -111,7 +117,7 @@ class Explanation implements ExplanationInterface
         $sqlHistory = $this->sqlHistory;
         if ($parameterise) {
             array_walk($sqlHistory, function (&$sql, $index, $paramHistory = []) {
-                $sql = $this->replaceTokens($sql, $paramHistory[$index]);
+                $sql = $this->stringReplacer->replaceTokens($sql, $paramHistory[$index]);
             }, $this->paramHistory);
         }
 
@@ -167,23 +173,5 @@ class Explanation implements ExplanationInterface
     public function getConfigHistory(): array
     {
         return $this->config;
-    }
-
-    /**
-     * Replace prepared statement parameters with actual values (for debugging output only, not for execution!)
-     * @param string $query Parameterised query string
-     * @param array $params Parameter values to replace tokens with
-     * @return string Query string with values instead of parameters
-     */
-    private function replaceTokens(string $query, array $params): string
-    {
-        if (count($params)) {
-            foreach (array_reverse($params) as $key => $value) { //Don't want to replace param_10 with column name for param_1 followed by a zero!
-                $resolvedValue = $value === null || $value === true || $value === false ? var_export($value, true) : "'$value'";
-                $query = str_replace(':' . $key, $resolvedValue, $query);
-            }
-        }
-
-        return $query;
     }
 }
