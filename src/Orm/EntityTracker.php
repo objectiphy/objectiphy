@@ -23,9 +23,14 @@ class EntityTracker
      */
     public function storeEntity(object $entity, array $pkValues): void
     {
-        $pkIndex = $this->getIndexForPk($pkValues);
+        $entityClass = ObjectHelper::getObjectClassName($entity);
+        if (!$pkValues) { //No primary key, but we can still track it
+            $pkIndex = $this->hasEntity($entity) ?: ('NO_PK_' . (count($this->entities[$entityClass] ?? []) + 1));
+        } else {
+            $pkIndex = $this->getIndexForPk($pkValues);
+        }
+
         if (strlen($pkIndex) > 2) {
-            $entityClass = ObjectHelper::getObjectClassName($entity);
             $this->entities[$entityClass][$pkIndex] = $entity;
             try {
                 $this->clones[$entityClass][$pkIndex] = $this->cloneEntity($entity);
@@ -79,7 +84,11 @@ class EntityTracker
     public function isEntityDirty(object $entity, array $pkValues): bool
     {
         $entityClass = ObjectHelper::getObjectClassName($entity);
-        $pkIndex = $this->getIndexForPk($pkValues);
+        if (!$pkValues) { //No primary key, but we can still track it
+            $pkIndex = $this->hasEntity($entity) ?: ('NO_PK_' . (count($this->entities[$entityClass] ?? []) + 1));
+        } else {
+            $pkIndex = $this->getIndexForPk($pkValues);
+        }
         if (isset($this->trackedChanges[$entityClass][$pkIndex])) {
             return true;
         } elseif (isset($this->clones[$entityClass])) {
@@ -92,6 +101,9 @@ class EntityTracker
             //We have values for both clone and entity, so check if they are the same (skip children as they will be checked separately if required)
             $reflectionProperties = (new \ReflectionClass($entityClass))->getProperties();
             foreach ($reflectionProperties as $reflectionProperty) {
+                if ($entity instanceof EntityProxyInterface && $entity->isChildAsleep($reflectionProperty->getName())) {
+                    continue;
+                }
                 $entityValue = ObjectHelper::getValueFromObject($entity, $reflectionProperty->getName());
                 if (!(is_object($entityValue) || ($entityValue instanceof \DateTimeInterface))) {
                     $cloneValue = ObjectHelper::getValueFromObject($clone, $reflectionProperty->getName());
@@ -234,7 +246,7 @@ class EntityTracker
     }
 
     /**
-     * Generate a string that can be used as an index for the primary key value. For keys which 
+     * Generate a string that can be used as an index for the primary key value. For keys which
      * contain a lot of data (should be rare), use a hash.
      * @param array $pkValues
      * @return string

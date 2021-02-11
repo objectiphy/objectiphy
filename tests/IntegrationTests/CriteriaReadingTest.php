@@ -197,7 +197,7 @@ class CriteriaReadingTest extends IntegrationTestBase
             ]
         ]);
         $this->assertEquals(2, count($refreshedPolicies));
-        $this->assertEquals(10, $pagination->getTotalRecords());
+        $this->assertEquals(9, $pagination->getTotalRecords());
         $this->objectRepository->setPagination(null);
 
         //Read using IN

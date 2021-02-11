@@ -79,7 +79,7 @@ final class ObjectUnbinder
                 } else {
                     $columnName = $propertyMapping->getFullColumnName();
                     if ($columnName) {
-                        $row[$property] = $this->unbindValue($value);
+                        $row[$property] = $this->unbindValue($value, $propertyMapping->relationship->targetJoinColumn);
                     }
                 }
             }
@@ -89,11 +89,13 @@ final class ObjectUnbinder
     }
 
     /**
-     * If value is an entity, extract the primary key value, otherwise just return the value
+     * If value is an entity, extract the primary key value, or if it is an entity without a primary key, and a known
+     * column is the foreign key, get the value of the property mapped to that column, otherwise just return the value
      * @param mixed $value
+     * @param string $targetJoinColumn
      * @return mixed
      */
-    public function unbindValue($value)
+    public function unbindValue($value, string $targetJoinColumn = '')
     {
         $result = null;
         if (is_object($value) && !($value instanceof \DateTimeInterface)) {
@@ -101,6 +103,15 @@ final class ObjectUnbinder
             $pkProperties = $this->mappingCollection->getPrimaryKeyProperties($valueClass);
             if ($pkProperties && count($pkProperties) == 1) {
                 $result = ObjectHelper::getValueFromObject($value, reset($pkProperties));
+            } elseif ($targetJoinColumn) {
+                //Try to find a property that maps to the given column
+                $properties = $this->mappingCollection->getPropertyExamplesForClass(ObjectHelper::getObjectClassName($value));
+                foreach ($properties ?? [] as $propertyMapping) {
+                    if ($propertyMapping->getShortColumnName(false) == $propertyMapping->getShortColumnName(false, $targetJoinColumn)) {
+                        $result = ObjectHelper::getValueFromObject($value, $propertyMapping->propertyName);
+                        break;
+                    }
+                }
             } else {
                 $result = $value; //I hope you know what you're doing, coz I don't.
             }

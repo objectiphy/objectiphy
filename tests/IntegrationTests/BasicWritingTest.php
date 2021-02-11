@@ -119,9 +119,7 @@ class BasicWritingTest extends IntegrationTestBase
         $policy = $this->objectRepository->find(19071974);
         $policy->policyNo = 'TESTPOLICY UPDATED';
         $policy->contact->lastName = 'ChildUpdate';
-//TODO: For some reason, this updates non pk child's nebulous identifier with null.
-// It should not be trying to update that at all when the entity tracker is in
-// use, but if it does (ie when cache is disabled), it should not be null - it has a value
+//TODO: If tracking entities, this should not try to update foreign keys that have not changed (security_pass_id, and child_nebulous_identifier)
         $recordsAffected = $this->objectRepository->saveEntity($policy);
         if ($this->getCacheSuffix()) {
             $this->assertGreaterThanOrEqual(2, $recordsAffected);
@@ -239,7 +237,6 @@ class BasicWritingTest extends IntegrationTestBase
         $newPolicy->contact = new TestContact();
         $newPolicy->contact->firstName = 'Frederick';
         $newPolicy->contact->lastName = 'Bloggs';
-//TODO: Ensure integers (and bools, and nulls) are parameterised in the query
         $insertCount = $this->objectRepository->saveEntity($newPolicy);
         $this->assertEquals(3, $insertCount);
         $this->assertGreaterThan(0, $newPolicy->id);

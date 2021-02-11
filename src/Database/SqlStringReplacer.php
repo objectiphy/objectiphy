@@ -313,7 +313,7 @@ class SqlStringReplacer
         } else {
             $this->dataTypeHandler->toPersistenceValue($fieldValue);
             if ($fieldValue === null) {
-                $fieldValue = 'null';
+                $fieldValue = "null";
             } elseif (is_scalar($fieldValue)) {
                 $fieldValue = strval($fieldValue);
                 $escapedChar = $this->escapeCharacter . $this->valueDelimiter;
