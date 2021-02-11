@@ -3,17 +3,14 @@
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
-use Objectiphy\Objectiphy\Query\FieldExpression;
 use Objectiphy\Objectiphy\Tests\Entity\TestCollection;
 use Objectiphy\Objectiphy\Tests\Entity\TestEmployee;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\Tests\Entity\TestSecurityPass;
 use Objectiphy\Objectiphy\Tests\Entity\TestParent;
 use Objectiphy\Objectiphy\Tests\Repository\CustomRepository;
-use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Factory\RepositoryFactory;
 use Objectiphy\Objectiphy\Query\Pagination;
-use Objectiphy\Objectiphy\Query\QueryBuilder;
 use Objectiphy\Objectiphy\Query\QB;
 
 class CriteriaReadingTest extends IntegrationTestBase
@@ -25,7 +22,7 @@ class CriteriaReadingTest extends IntegrationTestBase
      */
     public function testReadingDefault()
     {
-        $this->testName = 'Critiera Reading Default' . $this->getCacheSuffix();
+        $this->testName = 'Criteria Reading Default' . $this->getCacheSuffix();
         $this->doTests();
     }
 

@@ -172,16 +172,14 @@ final class ObjectPersister implements TransactionInterface
         $query->finalise($this->options->mappingCollection);
         if ($query instanceof UpdateQueryInterface) {
             $sql = $this->sqlUpdater->getUpdateSql($query, $this->options->replaceExisting);
-            $params = $this->sqlUpdater->getQueryParams();
-            $this->explanation->addQuery($query, $sql, $params, $this->options->mappingCollection, $this->config);
-            if ($this->storage->executeQuery($sql, $params)) {
+            $this->explanation->addQuery($query, $sql, $this->options->mappingCollection, $this->config);
+            if ($this->storage->executeQuery($sql, $query->getParams())) {
                 $updateCount += $this->storage->getAffectedRecordCount();
             }
         } elseif ($query instanceof InsertQueryInterface) {
             $sql = $this->sqlUpdater->getInsertSql($query);
-            $params = $this->sqlUpdater->getQueryParams();
-            $this->explanation->addQuery($query, $sql, $params, $this->options->mappingCollection, $this->config);
-            if ($this->storage->executeQuery($sql, $params)) {
+            $this->explanation->addQuery($query, $sql, $this->options->mappingCollection, $this->config);
+            if ($this->storage->executeQuery($sql, $query->getParams())) {
                 $insertCount += $this->storage->getAffectedRecordCount();
             }
         } else {
@@ -318,9 +316,8 @@ final class ObjectPersister implements TransactionInterface
         if ($row) {
             $insertQuery->finalise($this->options->mappingCollection, $this->getClassName(), $row);
             $sql = $this->sqlUpdater->getInsertSql($insertQuery, $this->options->replaceExisting);
-            $params = $this->sqlUpdater->getQueryParams();
-            $this->explanation->addQuery($insertQuery, $sql, $params, $this->options->mappingCollection, $this->config);
-            if ($this->storage->executeQuery($sql, $params)) {
+            $this->explanation->addQuery($insertQuery, $sql, $this->options->mappingCollection, $this->config);
+            if ($this->storage->executeQuery($sql, $insertQuery->getParams())) {
                 $insertId = $this->storage->getLastInsertId();
                 $insertCount += $this->storage->getAffectedRecordCount();
                 $pkProperties = $this->options->mappingCollection->getPrimaryKeyProperties($this->getClassName());

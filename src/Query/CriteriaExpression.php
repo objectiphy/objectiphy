@@ -173,22 +173,6 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
      */
     public function __toString(): string
     {
-        $params = [];
-        $queryString = $this->toString($params);
-        foreach ($params as $key => $value) {
-            $queryString = str_replace(':' . $key, "'" . $value . "'", $queryString);
-        }
-
-        return $queryString;
-    }
-
-    /**
-     * Return parameterised query
-     * @param array $params
-     * @return string
-     */
-    public function toString(array &$params = []): string
-    {
         $string = $this->property . ' ' . $this->operator . ' ';
         if (is_array($this->value)) {
             $string .= '(';
@@ -199,9 +183,7 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
             if ($value === null) {
                 $stringValues[] = 'null';
             } else {
-                $paramCount = count($params) + 1;
-                $params['param_' . $paramCount] = $value;
-                $stringValues[] = ':param_' . $paramCount;
+                $stringValues[] = strval($value);
             }
         }
         $string .= implode(',', $stringValues);
@@ -213,9 +195,7 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
             if ($this->value2 === null) {
                 $string .= 'null';
             } else {
-                $paramCount = count($params) + 1;
-                $params['param_' . $paramCount] = $this->value2;
-                $string .= ':param_' . $paramCount;
+                $string .= ':param_' . $this->value2;
             }
         }
 

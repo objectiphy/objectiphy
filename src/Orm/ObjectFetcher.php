@@ -279,9 +279,8 @@ final class ObjectFetcher
         if ($this->options->multiple && $this->options->pagination) {
             $this->options->count = true;
             $countSql = $this->sqlSelector->getSelectSql($query);
-            $params = $this->sqlSelector->getQueryParams();
-            $this->explanation->addQuery($query, $countSql, $params, $this->options->mappingCollection, $this->configOptions);
-            $recordCount = intval($this->fetchValue($countSql, $params));
+            $this->explanation->addQuery($query, $countSql, $this->options->mappingCollection, $this->configOptions);
+            $recordCount = intval($this->fetchValue($countSql, $query->getParams()));
             $this->options->pagination->setTotalRecords($recordCount);
             $this->options->count = false;
         }

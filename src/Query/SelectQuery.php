@@ -6,6 +6,7 @@ namespace Objectiphy\Objectiphy\Query;
 
 use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
 use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
+use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
@@ -121,6 +122,8 @@ class SelectQuery extends Query implements SelectQueryInterface
      * Ensure query is complete, filling in any missing bits as necessary
      * @param MappingCollection $mappingCollection
      * @param string|null $className
+     * @throws QueryException
+     * @throws MappingException
      */
     public function finalise(MappingCollection $mappingCollection, ?string $className = null): void
     {
@@ -135,14 +138,6 @@ class SelectQuery extends Query implements SelectQueryInterface
                 }
                 $this->setSelect(...$selects);
             }
-////This is probably a waste of resources
-//            if (!$this->orderBy) {
-//                //See if we can order by primary key of main entity
-//                $pkProperties = $mappingCollection->getPrimaryKeyProperties();
-//                foreach ($pkProperties as $pkProperty) {
-//                    $this->orderBy[] = new FieldExpression('%' . $pkProperty . '% ASC', false);
-//                }
-//            }
             parent::finalise($mappingCollection, $className);
         }
     }

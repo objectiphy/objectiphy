@@ -183,6 +183,11 @@ abstract class Query implements QueryInterface
 
     public function addParam($paramValue, ?string $paramName = null): string
     {
+        $existingParam = array_search($paramValue, $this->params);
+        if ($existingParam !== false) {
+            return $existingParam;
+        }
+
         if (!$paramName) {
             $paramName = 'param_' . strval(count($this->params ?? []) + 1);
         }

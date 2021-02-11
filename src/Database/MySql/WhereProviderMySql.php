@@ -8,8 +8,11 @@ use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Orm\ObjectMapper;
+use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\CriteriaGroup;
+use Objectiphy\Objectiphy\Query\QueryBuilder;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
@@ -17,13 +20,11 @@ use Objectiphy\Objectiphy\Query\CriteriaGroup;
  */
 class WhereProviderMySql
 {
-    private ObjectMapper $objectMapper;
     private SqlStringReplacer $stringReplacer;
 
-    public function __construct(SqlStringReplacer $stringReplacer, ObjectMapper $objectMapper)
+    public function __construct(SqlStringReplacer $stringReplacer)
     {
         $this->stringReplacer = $stringReplacer;
-        $this->objectMapper = $objectMapper;
     }
 
     /**
@@ -33,7 +34,7 @@ class WhereProviderMySql
      * @throws ObjectiphyException
      * @throws \ReflectionException
      */
-    public function getWhere(QueryInterface $query): string
+    public function getWhere(QueryInterface $query, MappingCollection $mappingCollection): string
     {
         $sql = "WHERE 1\n";
         $removeJoiner = false;
@@ -50,11 +51,41 @@ class WhereProviderMySql
                 if (!$removeJoiner) {
                     $sql .= "    " . $criteriaExpression->joiner;
                 }
-                $sql .= " " . $criteriaExpression->toString($query->getParams()) . "\n";
+                $sql .= " " . $this->addCriteriaSql($criteriaExpression, $query, $mappingCollection);
                 $removeJoiner = false;
             }
         }
         $sql = trim($this->stringReplacer->replaceNames($sql));
+
+        return $sql;
+    }
+
+    private function addCriteriaSql(
+        CriteriaExpression $criteriaExpression,
+        QueryInterface $query,
+        MappingCollection $mappingCollection
+    ): string {
+        $sql = $this->stringReplacer->getPersistenceValueForField(
+            $query,
+            $criteriaExpression->property->getExpression(),
+            $mappingCollection
+        );
+        $sql .= ' ' . $criteriaExpression->operator . ' ';
+        if (is_array($criteriaExpression->value)) {
+            $sql .= '(';
+        }
+        $values = is_array($criteriaExpression->value) ? $criteriaExpression->value : [$criteriaExpression->value];
+        $stringValues = [];
+        foreach ($values as $value) {
+            $stringValues[] = $this->stringReplacer->getPersistenceValueForField($query, $value, $mappingCollection);
+        }
+        $sql .= implode(',', $stringValues);
+        if (is_array($criteriaExpression->value)) {
+            $sql .= ')';
+        }
+        if ($criteriaExpression->operator == QueryBuilder::BETWEEN) {
+            $sql .= ' AND ' . $this->stringReplacer->getPersistenceValueForField($query, $criteriaExpression->value2, $mappingCollection);
+        }
 
         return $sql;
     }

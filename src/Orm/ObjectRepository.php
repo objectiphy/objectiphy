@@ -25,6 +25,7 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Factory\ProxyFactory;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
+use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 use Objectiphy\Objectiphy\Query\Pagination;
 use Objectiphy\Objectiphy\Query\QB;
@@ -745,6 +746,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         } elseif (is_array($criteria)) {
             $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
             $normalizedCriteria = QB::create()->normalize($criteria, $pkProperties[0] ?? 'id');
+            $this->validateCriteria($normalizedCriteria);
             $query = new $queryType();
             $query->setWhere(...$normalizedCriteria);
         } else {
@@ -752,6 +754,37 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         }
 
         return $query;
+    }
+
+    /**
+     * If associative array, key MUST relate to a property path - otherwise query will try to join everything
+     * and criteria will likely find nothing (for what is most likely just a typo). If you really want to
+     * specify a query with no property, use an actual query, not an associative array.
+     * @param array $normalizedCriteria
+     * @throws QueryException
+     */
+    protected function validateCriteria(array $normalizedCriteria): void
+    {
+        $propertyFound = false;
+        foreach ($normalizedCriteria as $criteriaExpression) {
+            if ($criteriaExpression instanceof CriteriaExpression) {
+                $propertyPath = $criteriaExpression->property->getPropertyPath();
+                if ($propertyPath && $this->mappingCollection->getPropertyMapping($propertyPath)) {
+                    $propertyFound = true;
+                    break;
+                } elseif ($propertyPath && strpos($propertyPath, '.') !== false) {
+                    //If lazy loading, we might not know about child properties
+                    $firstPart = strtok($propertyPath, '.');
+                    $propertyMapping = $this->mappingCollection->getPropertyMapping($firstPart);
+                    $propertyFound = $propertyMapping && $propertyMapping->isLateBound();
+                }
+            }
+        }
+
+        if (!$propertyFound) {
+            $message = sprintf('Criteria specified does not relate to a known property on %1$s. Please specify a property path, or use the Query Builder to create a custom query.', $this->getClassName());
+            throw new QueryException($message);
+        }
     }
 
     /**

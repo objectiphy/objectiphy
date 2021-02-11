@@ -196,9 +196,8 @@ final class ObjectRemover implements TransactionInterface
         $this->setClassName($deleteQuery->getDelete() ?: $this->getClassName());
         $deleteQuery->finalise($this->options->mappingCollection, $this->getClassName());
         $sql = $this->sqlDeleter->getDeleteSql($deleteQuery);
-        $params = $this->sqlDeleter->getQueryParams();
-        $this->explanation->addQuery($deleteQuery, $sql, $params, $this->options->mappingCollection, $this->config);
-        if ($sql && $this->storage->executeQuery($sql, $params)) {
+        $this->explanation->addQuery($deleteQuery, $sql, $this->options->mappingCollection, $this->config);
+        if ($sql && $this->storage->executeQuery($sql, $deleteQuery->getParams())) {
             $deleteCount = $this->storage->getAffectedRecordCount();
             $this->entityTracker->clear($this->getClassName());
         }

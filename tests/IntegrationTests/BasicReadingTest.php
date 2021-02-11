@@ -75,7 +75,7 @@ class BasicReadingTest extends IntegrationTestBase
     public function testReadingExceptions()
     {
         $this->testName = 'Reading exceptions' . $this->getCacheSuffix();
-        $this->expectException(StorageException::class);
+        $this->expectException(QueryException::class);
         $this->objectRepository->findBy(['something invalid'=>'gibberish']);
     }
 

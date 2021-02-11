@@ -72,12 +72,12 @@ class SqlSelectorMySql implements SqlSelectorInterface
             throw new ObjectiphyException('SQL Selector has not been initialised. There is no mapping information!');
         }
         $this->query = $query;
-        $this->stringReplacer->prepareReplacements($query);
+        $this->stringReplacer->prepareReplacements($query, $this->options->mappingCollection);
 
         $sql = $this->getSelect();
         $sql .= $this->getFrom();
         $sql .= $this->joinProvider->getJoins($query);
-        $sql .= $this->whereProvider->getWhere($query);
+        $sql .= $this->whereProvider->getWhere($query, $this->options->mappingCollection);
         $sql .= $this->getGroupBy();
         $sql .= $this->getHaving();
         $sql .= $this->getOrderBy();

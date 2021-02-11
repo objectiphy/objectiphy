@@ -8,6 +8,7 @@ use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Orm\ObjectHelper;
 use Objectiphy\Objectiphy\Orm\ObjectMapper;
 
@@ -81,28 +82,31 @@ class SqlStringReplacer
     /**
      * Build arrays of strings to replace and what to replace them with.
      * @param QueryInterface $query
+     * @param MappingCollection $mappingCollection
      * @throws ObjectiphyException
      * @throws \ReflectionException
      */
-    public function prepareReplacements(QueryInterface $query): void
+    public function prepareReplacements(QueryInterface $query, MappingCollection $mappingCollection): void
     {
         $this->objectNames = [];
         $this->persistenceNames = [];
         $this->aliases = [];
-        $mappingCollection = $this->objectMapper->getMappingCollectionForClass($query->getClassName());
+        $mappingCollection = $mappingCollection ?? $this->getMappingCollection($query->getClassName());
 
         $propertiesUsed = $query->getPropertyPaths();
         foreach ($propertiesUsed as $propertyPath) {
             $this->objectNames[] = $this->delimit($propertyPath, $this->propertyPathDelimiter, '');
             $alias = '';
-            $persistenceValue = $this->getPersistenceValueForField($query, $propertyPath, $alias);
+            $persistenceValue = $this->getPersistenceValueForField($query, $propertyPath, $mappingCollection, $alias);
             $this->persistenceNames[] = $persistenceValue;
             $this->aliases[] = $alias ?: $persistenceValue;
         }
-        $tables = $mappingCollection->getTables();
-        foreach ($tables as $class => $table) {
-            $this->objectNames[] = $class;
-            $this->persistenceNames[] = $this->delimit($table->name);
+        if (!empty($mappingCollection)) {
+            $tables = $mappingCollection->getTables();
+            foreach ($tables as $class => $table) {
+                $this->objectNames[] = $class;
+                $this->persistenceNames[] = $this->delimit($table->name);
+            }
         }
     }
 
@@ -117,7 +121,7 @@ class SqlStringReplacer
      * @param string $separator Character that separates components that need to be delimited
      * @return string Delimited string.
      */
-    public function delimit(string $value, ?string $delimiter = null, string $separator = '.'): string
+    public function delimit(string $value, ?string $delimiter = null, string $separator = '.', bool $delimitEmptyString = false): string
     {
         $delimiter ??= $this->databaseDelimiter;
         $delimited = '';
@@ -128,6 +132,8 @@ class SqlStringReplacer
             } else {
                 $delimited = $delimiter . $value . $delimiter;
             }
+        } elseif ($delimitEmptyString) {
+            $delimited = $delimiter . $value . $delimiter;
         }
 
         return $delimited;
@@ -168,6 +174,7 @@ class SqlStringReplacer
      * @param QueryInterface $query
      * @param mixed $fieldValue Literal value, property path, expression, or database table/column.
      * @param ?string $alias If value relates to a property, returns the column alias
+     * @param MappingCollection $mappingCollection
      * @return string
      * @throws ObjectiphyException
      * @throws \ReflectionException
@@ -175,6 +182,7 @@ class SqlStringReplacer
     public function getPersistenceValueForField(
         QueryInterface $query,
         $fieldValue,
+        MappingCollection $mappingCollection,
         ?string &$alias = null
     ): string {
         $persistenceValue = null;
@@ -182,7 +190,7 @@ class SqlStringReplacer
             //Check if already delimited - if so, use as is
             if ($this->checkDelimited($fieldValue)) {
                 $persistenceValue = strval($fieldValue);
-            } elseif ($this->checkPropertyPath($fieldValue, $alias, $query)) {
+            } elseif ($this->checkPropertyPath($fieldValue, $alias, $query, $mappingCollection)) {
                 //Check if is is a property path
                 $persistenceValue = strval($fieldValue);
             }
@@ -192,6 +200,21 @@ class SqlStringReplacer
         }
 
         return $this->replaceLiteralsWithParams($query, $persistenceValue);
+    }
+
+    /**
+     * @param string $className
+     * @return MappingCollection|null
+     * @throws ObjectiphyException
+     * @throws \ReflectionException
+     */
+    private function getMappingCollection(string $className): ?MappingCollection
+    {
+        if ($className && substr($className, 0, 1) != $this->databaseDelimiter && class_exists($className)) {
+            return $this->objectMapper->getMappingCollectionForClass($className);
+        }
+
+        return null;
     }
 
     private function replaceLiteralsWithParams(QueryInterface $query, string $fieldValue): string
@@ -229,38 +252,45 @@ class SqlStringReplacer
      * @param string $fieldValue
      * @param $alias
      * @param QueryInterface $query
+     * @param MappingCollection $mappingCollection
      * @return bool
      * @throws ObjectiphyException
      * @throws \ReflectionException
      */
-    private function checkPropertyPath(string &$fieldValue, &$alias, QueryInterface $query): bool
+    private function checkPropertyPath(string &$fieldValue, &$alias, QueryInterface $query, MappingCollection $mappingCollection): bool
     {
         if (strpos($fieldValue, '.') !== false) {
             //Check if first part is a custom join alias
             $alias = strtok($fieldValue, '.');
             $aliasClass = $query->getClassForAlias($alias);
             if ($aliasClass) {
-                $mappingCollection = $this->objectMapper->getMappingCollectionForClass($aliasClass);
-                $propertyPath = substr($fieldValue, strpos($fieldValue, '.') + 1);
-                $propertyMapping = $mappingCollection->getPropertyMapping($propertyPath);
-                if ($propertyMapping) {
-                    $fieldValue = $this->delimit($alias . '.' . $propertyMapping->getShortColumnName(false));
-                    $alias = $this->delimit($propertyMapping->getAlias());
-                    return true;
+                if ($mappingCollection = $this->getMappingCollection($aliasClass)) {
+                    $propertyPath = substr($fieldValue, strpos($fieldValue, '.') + 1);
+                    $propertyMapping = $mappingCollection->getPropertyMapping($propertyPath);
+                    if ($propertyMapping) {
+                        $fieldValue = $this->delimit($alias . '.' . $propertyMapping->getShortColumnName(false));
+                        $alias = $this->delimit($propertyMapping->getAlias());
+                        return true;
+                    }
                 }
             }
         }
-        $mappingCollection = $this->objectMapper->getMappingCollectionForClass($query->getClassName());
-        $propertyMapping = $mappingCollection->getPropertyMapping($fieldValue);
-        if ($propertyMapping) {
-            $explicitTable = '';
-            if (strpos($fieldValue, '.') === false && strpos($query->getClassName(), $this->databaseDelimiter) !== false) {
-                //We are fetching from an explicitly specified table name - use it for any root properties
-                $explicitTable = $query->getClassName();
+
+        if ($mappingCollection = $mappingCollection ?? $this->getMappingCollection($query->getClassName())) {
+            $propertyMapping = $mappingCollection->getPropertyMapping($fieldValue);
+            if ($propertyMapping) {
+                $explicitTable = '';
+                if (strpos($fieldValue, '.') === false && strpos(
+                        $query->getClassName(),
+                        $this->databaseDelimiter
+                    ) !== false) {
+                    //We are fetching from an explicitly specified table name - use it for any root properties
+                    $explicitTable = $query->getClassName();
+                }
+                $alias = $this->delimit($propertyMapping->getAlias());
+                $fieldValue = $this->delimit($propertyMapping->getFullColumnName($explicitTable));
+                return true;
             }
-            $alias = $this->delimit($propertyMapping->getAlias());
-            $fieldValue = $this->delimit($propertyMapping->getFullColumnName($explicitTable));
-            return true;
         }
 
         return false;
@@ -279,15 +309,18 @@ class SqlStringReplacer
                     $pkValues = $mappingCollection->getPrimaryKeyValues($fieldValue);
                 }
             }
-            $fieldValue = $pkValues ? reset($pkValues) : null;
+            $fieldValue = !empty($pkValues) ? reset($pkValues) : 'null';
         } else {
             $this->dataTypeHandler->toPersistenceValue($fieldValue);
-            if (is_string($fieldValue)) {
+            if ($fieldValue === null) {
+                $fieldValue = 'null';
+            } elseif (is_scalar($fieldValue)) {
+                $fieldValue = strval($fieldValue);
                 $escapedChar = $this->escapeCharacter . $this->valueDelimiter;
                 if (strpos($fieldValue, $escapedChar) !== false) {
                     $fieldValue = str_replace($this->valueDelimiter, $escapedChar, $fieldValue);
                 }
-                $fieldValue = $this->delimit($fieldValue, $this->valueDelimiter, '');
+                $fieldValue = $this->delimit($fieldValue, $this->valueDelimiter, '', true);
             }
         }
 

@@ -92,20 +92,37 @@ class JoinProviderMySql
         }
 
         $propertyPath = $joinPart->property->getPropertyPath();
+        $propertyAlias = strtok($propertyPath, '.');
+        $propertyUsesAlias = $query->getClassForAlias($propertyAlias) ? true : false;
+        $valueAlias = strtok($joinPart->value, '.');
+        $valueUsesAlias = $query->getClassForAlias($valueAlias) ? true : false;
+
         $mappingCollection = $this->objectMapper->getMappingCollectionForClass($query->getClassName());
         $joinPartPropertyMapping = $mappingCollection->getPropertyMapping($propertyPath);
         if ($joinPartPropertyMapping) {
-            $sourceJoinColumns = array_map(function($sourceColumn) {
-                 return $sourceColumn ? $this->stringReplacer->delimit($sourceColumn) : '';
-            }, $joinPartPropertyMapping->getSourceJoinColumns());
-            $targetJoinColumns = array_map(function($targetColumn) {
-                return $targetColumn ? $this->stringReplacer->delimit($targetColumn) : '';
-            }, $joinPartPropertyMapping->getTargetJoinColumns());
+            if (!$propertyUsesAlias) {
+                $sourceJoinColumns = array_map(
+                    function ($sourceColumn) {
+                        return $sourceColumn ? $this->stringReplacer->delimit($sourceColumn) : '';
+                    },
+                    $joinPartPropertyMapping->getSourceJoinColumns()
+                );
+            }
+            if (!$valueUsesAlias) {
+                $targetJoinColumns = array_map(
+                    function ($targetColumn) {
+                        return $targetColumn ? $this->stringReplacer->delimit($targetColumn) : '';
+                    },
+                    $joinPartPropertyMapping->getTargetJoinColumns()
+                );
+            }
         }
 
-        if (empty($sourceJoinColumns) && empty($targetJoinColumns)) {
-            $sourceJoinColumns[] = $this->stringReplacer->getPersistenceValueForField($query, $propertyPath);
-            $targetJoinColumns[] = $this->stringReplacer->getPersistenceValueForField($query, $joinPart->value);
+        if (empty($sourceJoinColumns)) {
+            $sourceJoinColumns[] = $this->stringReplacer->getPersistenceValueForField($query, $propertyPath, $mappingCollection);
+        }
+        if (empty($targetJoinColumns)) {
+            $targetJoinColumns[] = $this->stringReplacer->getPersistenceValueForField($query, $joinPart->value, $mappingCollection);
         }
 
         if (empty($sourceJoinColumns) || count($sourceJoinColumns ?? []) != count($targetJoinColumns ?? [])) {

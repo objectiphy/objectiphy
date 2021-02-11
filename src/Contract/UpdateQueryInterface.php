@@ -45,7 +45,8 @@ interface UpdateQueryInterface extends QueryInterface
      * @param array $assignments Keyed by property name (these will be the dirty properties passed in from the
      * entity tracker).
      */
-    public function finalise(MappingCollection $mappingCollection,
+    public function finalise(
+        MappingCollection $mappingCollection,
         ?string $className = null,
         array $assignments = []
     ): void;
