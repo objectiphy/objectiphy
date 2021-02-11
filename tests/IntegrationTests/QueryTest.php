@@ -90,7 +90,7 @@ class QueryTest extends IntegrationTestBase
     {
         $criteria = ['departments' => ['Sales', 'Finance']];
         $query = QueryBuilder::create()
-            ->select('firstName', 'lastName')
+            ->select('id', 'firstName', 'lastName')
             ->from(TestContact::class)
             ->innerJoin(TestVehicle::class, 'v')
                 ->on('id', '=', 'v.ownerContactId')
@@ -99,7 +99,9 @@ class QueryTest extends IntegrationTestBase
             ->and('isPermanent', '=', true)
             ->buildSelectQuery($criteria);
         $contacts = $this->objectRepository->findBy($query);
-        $this->assertEquals(true, true);
+        $this->assertEquals(2, count($contacts));
+        $this->assertEquals(123, $contacts[0]->id);
+        $this->assertEquals(124, $contacts[1]->id);
     }
 
     protected function doInsertQueryTests()
