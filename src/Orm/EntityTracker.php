@@ -190,6 +190,47 @@ class EntityTracker
         return $removedChildren;
     }
 
+    public function isRelationshipDirty(object $entity, string $propertyPath): bool
+    {
+        try {
+            //Drill down on both entity and clone to check if they are different.
+            $className = ObjectHelper::getObjectClassName($entity);
+            $pkIndex = array_search($entity, $this->entities[$className] ?? [], true);
+            if ($pkIndex) {
+                $clone = $this->clones[$className][$pkIndex] ?? null;
+                if ($clone) {
+                    //Drill down into both
+                    while (strpos($propertyPath, '.') !== false) {
+                        $nextPart = strtok($propertyPath, '.');
+                        if ($entity instanceof EntityProxyInterface && $entity->isChildAsleep($nextPart)) {
+                            return false;
+                        }
+                        if ($clone instanceof EntityProxyInterface && $clone->isChildAsleep($nextPart)) {
+                            return true;
+                        }
+                        $entity = ObjectHelper::getValueFromObject($entity, $nextPart);
+                        $clone = ObjectHelper::getValueFromObject($clone, $nextPart);
+                        $propertyPath = substr($propertyPath, strlen($nextPart) + 1);
+                    }
+
+                    $entityValue = ObjectHelper::getValueFromObject($entity, $propertyPath);
+                    $cloneValue = ObjectHelper::getValueFromObject($clone, $propertyPath);
+
+                    //Compare
+                    if (is_object($entityValue) && !($entityValue instanceof \DateTimeInterface)) {
+                        return true;
+                    } else {
+                        return $entityValue != $cloneValue;
+                    }
+                }
+            }
+        } catch (\Throwable $ex) {
+            //assume dirt
+        }
+
+        return true;
+    }
+
     private function isPropertyDirty(object $entity, string $property, &$entityValue = null, ?object $clone = null): bool
     {
         if (!($entity instanceof EntityProxyInterface) || !$entity->isChildAsleep($property)) { //Shh. Don't wake up the kids.
@@ -206,8 +247,10 @@ class EntityTracker
                     true,
                     true
                 ) : $notFound;
-                if ($entityValue !== $cloneValue) {
-                    return true;
+                if (is_scalar($entityValue) || $entityValue instanceof \DateTimeInterface) {
+                    return $entityValue != $cloneValue;
+                } else {
+                    return $entityValue !== $cloneValue;
                 }
             }
         }

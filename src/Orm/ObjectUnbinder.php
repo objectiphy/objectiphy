@@ -79,7 +79,15 @@ final class ObjectUnbinder
                 } else {
                     $columnName = $propertyMapping->getFullColumnName();
                     if ($columnName) {
-                        $row[$property] = $this->unbindValue($value, $propertyMapping->relationship->targetJoinColumn);
+                        $keyProperty = '';
+                        $unboundValue = $this->unbindValue($value, $propertyMapping->relationship->targetJoinColumn, $keyProperty);
+                        if ($keyProperty) {
+                            //Check whether this has actually changed - entity tracker will not have known the property to compare before
+                            if (!$this->entityTracker->isRelationshipDirty($entity, $property . '.' . $keyProperty)) {
+                                continue;
+                            }
+                        }
+                        $row[$property] = $unboundValue;
                     }
                 }
             }
@@ -95,20 +103,22 @@ final class ObjectUnbinder
      * @param string $targetJoinColumn
      * @return mixed
      */
-    public function unbindValue($value, string $targetJoinColumn = '')
+    public function unbindValue($value, string $targetJoinColumn = '', ?string &$keyProperty = null)
     {
         $result = null;
         if (is_object($value) && !($value instanceof \DateTimeInterface)) {
             $valueClass = ObjectHelper::getObjectClassName($value);
             $pkProperties = $this->mappingCollection->getPrimaryKeyProperties($valueClass);
             if ($pkProperties && count($pkProperties) == 1) {
-                $result = ObjectHelper::getValueFromObject($value, reset($pkProperties));
+                $keyProperty = reset($pkProperties);
+                $result = ObjectHelper::getValueFromObject($value, $keyProperty);
             } elseif ($targetJoinColumn) {
                 //Try to find a property that maps to the given column
                 $properties = $this->mappingCollection->getPropertyExamplesForClass(ObjectHelper::getObjectClassName($value));
                 foreach ($properties ?? [] as $propertyMapping) {
                     if ($propertyMapping->getShortColumnName(false) == $propertyMapping->getShortColumnName(false, $targetJoinColumn)) {
-                        $result = ObjectHelper::getValueFromObject($value, $propertyMapping->propertyName);
+                        $keyProperty = $propertyMapping->propertyName;
+                        $result = ObjectHelper::getValueFromObject($value, $keyProperty);
                         break;
                     }
                 }

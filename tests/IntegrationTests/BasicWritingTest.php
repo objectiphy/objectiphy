@@ -116,10 +116,10 @@ class BasicWritingTest extends IntegrationTestBase
     protected function doUpdateTests()
     {
         //Update an existing entity (will also update any child entities)
+//TODO: Is it really correct that this find has to execute 8 queries? Shouldn't we lazy load late bound by default?
         $policy = $this->objectRepository->find(19071974);
         $policy->policyNo = 'TESTPOLICY UPDATED';
         $policy->contact->lastName = 'ChildUpdate';
-//TODO: If tracking entities, this should not try to update foreign keys that have not changed (security_pass_id, and child_nebulous_identifier)
         $recordsAffected = $this->objectRepository->saveEntity($policy);
         if ($this->getCacheSuffix()) {
             $this->assertGreaterThanOrEqual(2, $recordsAffected);
