@@ -112,7 +112,7 @@ class ConfigOptions extends ConfigBase
     /**
      * @var bool Whether to load one-to-one and many-to-one relationships immediately (typically using SQL joins).
      */
-    protected bool $eagerLoadToOne = true;
+    protected ?bool $eagerLoadToOne = null;
 
     /**
      * @var bool Whether to load one-to-many and many-to-many relationships immediately (requires a separate query

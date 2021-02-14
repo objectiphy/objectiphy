@@ -129,7 +129,7 @@ class Relationship
     /**
      * @var bool Global config setting (ie. the default value if not defined on this relationship)
      */
-    private bool $eagerLoadToOne;
+    private ?bool $eagerLoadToOne = null;
 
     /**
      * @var bool Global config setting (ie. the default value if not defined on this relationship)
@@ -156,10 +156,15 @@ class Relationship
         $this->setCollectionFactoryClass(CollectionFactory::class);
     }
 
-    public function setConfigOptions(bool $eagerLoadToOne, bool $eagerLoadToMany): void
+    public function setConfigOptions(?bool $eagerLoadToOne, bool $eagerLoadToMany): void
     {
         $this->eagerLoadToOne = $eagerLoadToOne;
         $this->eagerLoadToMany = $eagerLoadToMany;
+    }
+
+    public function getEagerLoadToOne(): ?bool
+    {
+        return $this->eagerLoadToOne;
     }
 
     /**
@@ -223,13 +228,21 @@ class Relationship
 
     /**
      * Determines whether or not to eager load the child.
+     * @param bool $isLateBound
      * @return bool
      */
-    public function isEager(): bool
+    public function isEager(bool $isLateBound = false): bool
     {
         $eager = !$this->lazyLoad;
         if ($this->isDefined() && $this->lazyLoad === null) {
-            $eager = ($this->eagerLoadToOne && $this->isToOne()) || ($this->eagerLoadToMany && $this->isToMany());
+            if ($this->isToOne()) {
+                $eager = ($this->eagerLoadToOne === null || $this->eagerLoadToOne) && $this->isToOne();
+                if ($eager && $isLateBound && $this->eagerLoadToOne === null) {
+                    $eager = false;
+                }
+            } else {
+                $eager = $this->eagerLoadToMany && $this->isToMany();
+            }
         }
 
         return $eager;
@@ -240,14 +253,17 @@ class Relationship
      * ToMany relationships and lazy loaded ones require a separate query.
      * See also PropertyMapping::isLateBound, which can artificially force late binding by
      * taking into account the context.
+     * @param Table|null $childTable
      * @return bool
      */
     public function isLateBound(?Table $childTable = null): bool
     {
         if ($childTable && $childTable->repositoryClassName && $childTable->alwaysLateBind) {
             return true;
+        } elseif ($this->isEmbedded) {
+            return false;
         } else {
-            return !$this->isEmbedded && ($this->isToMany() || !$this->isEager());
+            return $this->isToMany() || !$this->isEager();
         }
     }
 

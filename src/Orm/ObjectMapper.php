@@ -32,7 +32,7 @@ final class ObjectMapper
      */
     private array $mappingCollections;
     private MappingProviderInterface $mappingProvider;
-    private bool $eagerLoadToOne;
+    private ?bool $eagerLoadToOne = null;
     private bool $eagerLoadToMany;
     private bool $guessMappings;
     /**

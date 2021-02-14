@@ -436,7 +436,7 @@ class MappingCollection
     public function parentHasLateBoundProperties(array $parents): bool
     {
         foreach ($this->getPropertyMappings($parents) as $propertyMapping) {
-            if ($propertyMapping->isLateBound()) {
+            if ($propertyMapping->mightBeLateBound()) {
                 return true;
             }
         }

@@ -306,9 +306,21 @@ class PropertyMapping
         return false;
     }
 
-    public function isEager(bool $allowRecursion = false): bool
+    /**
+     * @return bool Whether or not we might need a lazy loader (used to decide whether to create a proxy or not)
+     */
+    public function mightBeLateBound(): bool
     {
-        if ($this->relationship->isEager()) {
+        if ($this->relationship->isToOne() && $this->relationship->getEagerLoadToOne() === null) {
+            return true; //Can't be sure at this stage, but always safe to use a proxy
+        } else {
+            return $this->isLateBound();
+        }
+    }
+
+    public function isEager(bool $allowRecursion = false, bool $isLateBound = false): bool
+    {
+        if ($this->relationship->isEager($isLateBound || $this->isLateBound())) {
             //Only if we can get it without recursion
             return $allowRecursion || $this->parentCollection->isPropertyFetchable($this);
         }

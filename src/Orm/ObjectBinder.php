@@ -231,7 +231,7 @@ final class ObjectBinder
                         $closure = $this->createLateBoundClosure($propertyMapping, $row, $knownValues);
                         $valueFound = $closure instanceof \Closure;
                         if ($valueFound) {
-                            $value = $propertyMapping->isEager(true) ? $closure() : $closure;
+                            $value = $propertyMapping->isEager(true, true) ? $closure() : $closure;
                         }
                     } else {
                         $value = null;
