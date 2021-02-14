@@ -110,6 +110,7 @@ class CriteriaReadingTest extends IntegrationTestBase
             'effectiveStartDateTime' =>
                 ['operator' => 'BETWEEN', 'value' => '2018-12-01', 'value2' => '2018-12-31']
         ];
+
         $policiesForDecember = $this->objectRepository->findBy($decemberDateRangeCriteria);
 //        $latestPoliciesForDecember = $this->objectRepository->findLatestBy($decemberDateRangeCriteria);
 //        $policyCount = $this->objectRepository->countBy($decemberDateRangeCriteria);

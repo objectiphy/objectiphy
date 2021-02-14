@@ -86,9 +86,20 @@ class MappingCollection
      */
     private bool $columnMappingDone = false;
 
-    public function __construct(string $entityClassName)
+    /**
+     * @var int|null Maximum number of children that can be early bound
+     */
+    private ?int $maxDepth;
+
+    public function __construct(string $entityClassName, ?int $maxDepth)
     {
         $this->entityClassName = $entityClassName;
+        $this->maxDepth = $maxDepth;
+    }
+
+    public function getMaxDepth(): ?int
+    {
+        return $this->maxDepth;
     }
 
     /**
@@ -119,14 +130,20 @@ class MappingCollection
             $this->scalarJoinProperties[] = $propertyMapping;
         }
 
-        if ((!$suppressFetch && !$propertyMapping->relationship->isDefined())
+        if ((
+                !$suppressFetch
+                && (!$propertyMapping->relationship->isDefined()
+                || ($propertyMapping->relationship->isEmbedded || $propertyMapping->relationship->isScalarJoin() || $this->maxDepth === null || count($propertyMapping->parents ?? []) < $this->maxDepth))
+            )
             || $propertyMapping->isForeignKey
             || $propertyMapping->relationship->isEmbedded
         ) { //For now we will assume it is fetchable - if we have to late bind to avoid recursion, this can change
             $propertyMapping->isFetchable = true;
             $this->columns[$propertyMapping->getAlias()] ??= $propertyMapping;
             $this->fetchableProperties[$propertyMapping->getPropertyPath()] ??= $propertyMapping;
-        } 
+        } else {
+            $stop = true;
+        }
     }
 
     public function addExtraTableMapping(string $className, Table $table)
@@ -334,6 +351,11 @@ class MappingCollection
         return $this->classes;
     }
 
+    /**
+     * If there is more than one scalar join to the same table on an entity, it is only necessary to define the join
+     * once, and we copy it to the others here.
+     * @param PropertyMapping $sourcePropertyMapping
+     */
     public function populateOtherMatchingScalarJoinTableAliases(PropertyMapping $sourcePropertyMapping)
     {
         foreach ($this->scalarJoinProperties as $propertyMapping) {
@@ -458,19 +480,26 @@ class MappingCollection
             if ($propertyMapping->parents) {
                 $parentPropertyMapping = $this->getPropertyMapping($propertyMapping->getParentPath());
                 $propertyMapping->isFetchable = false;
-                if ($parentPropertyMapping && $parentPropertyMapping->relationship->isEmbedded) {
-                    $propertyMapping->isFetchable = $parentPropertyMapping->isFetchable && !$propertyMapping->relationship->isScalarJoin();
-                }
-                if (!$propertyMapping->isFetchable) {
-                    foreach ($relationships as $relationship) {
-                        if ($relationship->getPropertyPath() == $propertyMapping->getParentPath()
-                            || ($relationship->relationship->isScalarJoin() && $relationship->getPropertyPath() == $propertyMapping->getPropertyPath())
-                        ) {
-                            $propertyMapping->isFetchable = !$relationship->isLateBound() || $propertyMapping->column->isPrimaryKey;
-                            if ($propertyMapping->relationship->isScalarJoin()) {
-                                $propertyMapping->isFetchable = $parentPropertyMapping && $parentPropertyMapping->relationship->isEmbedded ? true : $propertyMapping->isFetchable;
+                if ($propertyMapping->isWithinDepth()) {
+                    if ($parentPropertyMapping && $parentPropertyMapping->relationship->isEmbedded) {
+                        $propertyMapping->isFetchable = $parentPropertyMapping->isFetchable
+                            && !$propertyMapping->relationship->isScalarJoin();
+                    }
+                    if (!$propertyMapping->isFetchable) {
+                        foreach ($relationships as $relationship) {
+                            if ($relationship->getPropertyPath() == $propertyMapping->getParentPath()
+                                || (
+                                    $relationship->relationship->isScalarJoin()
+                                    && $relationship->getPropertyPath() == $propertyMapping->getPropertyPath()
+                                )
+                            ) {
+                                $propertyMapping->isFetchable = !$relationship->isLateBound(
+                                    ) || $propertyMapping->column->isPrimaryKey;
+                                if ($propertyMapping->relationship->isScalarJoin()) {
+                                    $propertyMapping->isFetchable = $parentPropertyMapping && $parentPropertyMapping->relationship->isEmbedded ? true : $propertyMapping->isFetchable;
+                                }
+                                break;
                             }
-                            break;
                         }
                     }
                 }
@@ -496,27 +525,39 @@ class MappingCollection
     {
         foreach ($this->relationships ?? [] as $relationshipMapping) {
             $relationship = $relationshipMapping->relationship;
-            if (!$relationship->joinTable) {
-                $relationship->joinTable = $this->classes[$relationship->childClassName]->name ?? '';
-            }
-            if (!$relationship->sourceJoinColumn && $relationship->mappedBy) {
-                //Get it from the other side...
-                $otherSidePropertyPath = $relationshipMapping->getPropertyPath() . '.' . $relationship->mappedBy;
-                $otherSideMapping = $this->getPropertyMapping($otherSidePropertyPath);
-                if ($otherSideMapping && $otherSideMapping->relationship) {
-                    $relationship->sourceJoinColumn = $relationship->sourceJoinColumn ?: $otherSideMapping->relationship->targetJoinColumn;
-                    //If empty, use primary key of $relationshipMapping's class
-                    $relationship->sourceJoinColumn = $relationship->sourceJoinColumn ?: implode(',', $this->getPrimaryKeyProperties($relationshipMapping->className));
-                    $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: $otherSideMapping->relationship->sourceJoinColumn;
-                    //If empty, use primary key of child class
-                    $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: implode(',', $this->getPrimaryKeyProperties($relationship->childClassName));
-                    $relationship->joinTable = $relationship->joinTable ?: $otherSideMapping->getTableAlias();
+            if ($relationship->isEmbedded || $relationship->isScalarJoin() || $this->maxDepth === null || count($relationshipMapping->parents ?? []) < $this->maxDepth) {
+                if (!$relationship->joinTable) {
+                    $relationship->joinTable = $this->classes[$relationship->childClassName]->name ?? '';
                 }
-            } elseif (!$relationship->targetJoinColumn) {
-                $pkPropertyNames = $this->getPrimaryKeyProperties($relationship->childClassName);
-                $relationship->targetJoinColumn = implode(',', $pkPropertyNames);
+                if (!$relationship->sourceJoinColumn && $relationship->mappedBy) {
+                    //Get it from the other side...
+                    $otherSidePropertyPath = $relationshipMapping->getPropertyPath() . '.' . $relationship->mappedBy;
+                    $otherSideMapping = $this->getPropertyMapping($otherSidePropertyPath);
+                    if ($otherSideMapping && $otherSideMapping->relationship) {
+                        $relationship->sourceJoinColumn = $relationship->sourceJoinColumn ?: $otherSideMapping->relationship->targetJoinColumn;
+                        //If empty, use primary key of $relationshipMapping's class
+                        $relationship->sourceJoinColumn = $relationship->sourceJoinColumn ?: implode(
+                            ',',
+                            $this->getPrimaryKeyProperties(
+                                $relationshipMapping->className
+                            )
+                        );
+                        $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: $otherSideMapping->relationship->sourceJoinColumn;
+                        //If empty, use primary key of child class
+                        $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: implode(
+                            ',',
+                            $this->getPrimaryKeyProperties(
+                                $relationship->childClassName
+                            )
+                        );
+                        $relationship->joinTable = $relationship->joinTable ?: $otherSideMapping->getTableAlias();
+                    }
+                } elseif (!$relationship->targetJoinColumn) {
+                    $pkPropertyNames = $this->getPrimaryKeyProperties($relationship->childClassName);
+                    $relationship->targetJoinColumn = implode(',', $pkPropertyNames);
+                }
+                $relationship->validate($relationshipMapping);
             }
-            $relationship->validate($relationshipMapping);
         }
         if (isset($relationship)) {
             $this->relationshipMappingDone = true;

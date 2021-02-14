@@ -265,6 +265,17 @@ class PropertyMapping
         $this->forcedEarlyBindingForJoin = true;
     }
 
+    public function isWithinDepth(): bool
+    {
+        $maxDepth = $this->parentCollection->getMaxDepth();
+
+        return !$this->relationship->isDefined()
+        || $maxDepth === null
+        || $this->relationship->isEmbedded
+        || $this->relationship->isScalarJoin()
+        || count($this->parents ?? []) < $maxDepth;
+    }
+
     /**
      * Check whether this property requires a late bound proxy (because we cannot fetch the properties of its child)
      * See also Relationship::isLateBound
@@ -274,6 +285,9 @@ class PropertyMapping
      */
     public function isLateBound(bool $forJoin = false, array $row = []): bool
     {
+        if (!$forJoin && !$this->isWithinDepth()) {
+            return true;
+        }
         if ($this->parents &&
             $this->parentCollection->getPropertyMapping($this->getParentPath())->isLateBound($forJoin)) {
             return true;

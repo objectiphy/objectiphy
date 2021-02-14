@@ -40,6 +40,8 @@ final class ObjectMapper
      */
     private array $entityConfig = [];
     private NameResolver $nameResolver;
+    private ?int $maxDepth = 3;
+    private int $currentDepth = 0;
 
     public function __construct(MappingProviderInterface $mappingProvider, NameResolver $nameResolver)
     {
@@ -57,6 +59,7 @@ final class ObjectMapper
         $this->guessMappings = $config->guessMappings;
         $this->eagerLoadToOne = $config->eagerLoadToOne;
         $this->eagerLoadToMany = $config->eagerLoadToMany;
+        $this->maxDepth = $config->maxDepth;
         $this->nameResolver->setConfigOptions($config);
         $this->entityConfig = $config->getConfigOption(ConfigOptions::ENTITY_CONFIG);
     }
@@ -101,8 +104,9 @@ final class ObjectMapper
             $className = get_parent_class($className);
         }
         if (!isset($this->mappingCollections[$className])) {
-            $mappingCollection = new MappingCollection($className);
+            $mappingCollection = new MappingCollection($className, $this->maxDepth);
             $this->mappingCollections[$className] = $mappingCollection;
+            $this->currentDepth = 0;
             $this->populateMappingCollection($mappingCollection);
         }
 
@@ -237,6 +241,7 @@ final class ObjectMapper
      * @param \ReflectionProperty $reflectionProperty
      * @param bool $columnIsMapped
      * @return Column
+     * @throws ObjectiphyException
      */
     private function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$columnIsMapped = false): Column
     {
@@ -270,6 +275,7 @@ final class ObjectMapper
     ): void {
         // We have to do all the scalar properties on the parent object first, then go through the kids -
         // otherwise recursive mappings will be detected and stopped on the child instead of the parent.
+        $this->currentDepth++;
         $className = $className ?: $mappingCollection->getEntityClassName();
         $reflectionClass = new \ReflectionClass($className);
         if (!$parents) { //If a parent is present, we will already have done the scalar mappings
@@ -277,6 +283,7 @@ final class ObjectMapper
         }
         $this->populateRelationalMappings($mappingCollection, $reflectionClass, $parents);
         $this->populateRelationalMappings($mappingCollection, $reflectionClass, $parents, true);
+        $this->currentDepth--;
     }
 
     /**
@@ -308,10 +315,10 @@ final class ObjectMapper
                         $this->populateScalarMappings($mappingCollection, $childReflectionClass, $childParents, $propertyMapping->relationship);
                     }
                 } elseif ((!isset($mappingCollection->getRelationships(false)[$propertyMapping->getRelationshipKey()])
-                            || $propertyMapping->relationship->isLateBound())
+                            || $propertyMapping->isLateBound())
                         && !$propertyMapping->relationship->mappedBy
-                        && !$propertyMapping->relationship->isEmbedded
-                        && !$propertyMapping->relationship->isScalarJoin()
+                        /*&& !$propertyMapping->relationship->isEmbedded
+                        && !$propertyMapping->relationship->isScalarJoin()*/
                 ) {
                     //For lazy loading, we must have the primary key so we can load the child
                     $childPks = $mappingCollection->getPrimaryKeyProperties($propertyMapping->getChildClassName());
@@ -453,7 +460,8 @@ final class ObjectMapper
         array $parents,
         bool $drillDown = false
     ): void {
-        if ($relationship->isLateBound($mappingCollection->getTableForClass($relationship->childClassName))
+        if (($this->maxDepth !== null && count($parents) >= $this->maxDepth - 1)
+            || $relationship->isLateBound($mappingCollection->getTableForClass($relationship->childClassName))
             || $mappingCollection->isRelationshipAlreadyMapped($parents, $propertyName, $reflectionClass->getName())
         ) {
             if ($relationship->mappedBy) { //Go this far, but no further
@@ -475,7 +483,7 @@ final class ObjectMapper
             }
         } else {
             $childParents = array_merge($parents, [$propertyName]);
-            if (!$drillDown) {
+            if (!$drillDown || ($this->maxDepth !== null && $this->currentDepth >= $this->maxDepth)) {
                 //Just do the scalar properties and return
                 $childReflectionClass = new \ReflectionClass($relationship->childClassName);
                 $this->populateScalarMappings($mappingCollection, $childReflectionClass, $childParents, $relationship);

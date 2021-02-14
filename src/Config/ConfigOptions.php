@@ -28,6 +28,7 @@ use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
  * @property bool $bindToEntities
  * @property bool $saveChildrenByDefault
  * @property bool $disableEntityCache
+ * @property int $maxDepth
  */
 class ConfigOptions extends ConfigBase
 {
@@ -50,6 +51,7 @@ class ConfigOptions extends ConfigBase
     public const ENTITY_CONFIG = 'entityConfig';
     public const SAVE_CHILDREN_BY_DEFAULT = 'saveChildrenByDefault';
     public const DISABLE_ENTITY_CACHE = 'disableEntityCache';
+    public const MAX_DEPTH = 'maxDepth';
     
     /**
      * @var bool Whether or not we are running in debug mode (proxy classes get rebuilt on each run).
@@ -172,6 +174,14 @@ class ConfigOptions extends ConfigBase
      * cause performance degradation.
      */
     protected bool $disableEntityCache = false;
+
+    /**
+     * @var int|null Maximum depth of hierarchy to load. Anything beyond this level will be lazy loaded, even if it is
+     * set to eager load normally. If null, there is no limit to the depth - in that case, it will continue to load
+     * the entire hierarchy until it hits recursion, a lazy load setting, runs out of memory, or hits the database
+     * join limit.
+     */
+    protected ?int $maxDepth = 3;  //TODO: Does not work with 0, 1, or 2, or 4 - very slow otherwise
 
     /**
      * Initialise config options.
