@@ -40,7 +40,7 @@ final class ObjectMapper
      */
     private array $entityConfig = [];
     private NameResolver $nameResolver;
-    private ?int $maxDepth = 3;
+    private int $maxDepth;
     private int $currentDepth = 0;
 
     public function __construct(MappingProviderInterface $mappingProvider, NameResolver $nameResolver)
@@ -460,7 +460,7 @@ final class ObjectMapper
         array $parents,
         bool $drillDown = false
     ): void {
-        if (($this->maxDepth !== null && count($parents) >= $this->maxDepth - 1)
+        if (($this->maxDepth && count($parents) > $this->maxDepth - 1)
             || $relationship->isLateBound($mappingCollection->getTableForClass($relationship->childClassName))
             || $mappingCollection->isRelationshipAlreadyMapped($parents, $propertyName, $reflectionClass->getName())
         ) {
@@ -483,7 +483,7 @@ final class ObjectMapper
             }
         } else {
             $childParents = array_merge($parents, [$propertyName]);
-            if (!$drillDown || ($this->maxDepth !== null && $this->currentDepth >= $this->maxDepth)) {
+            if (!$drillDown || ($this->maxDepth && $this->currentDepth >= $this->maxDepth)) {
                 //Just do the scalar properties and return
                 $childReflectionClass = new \ReflectionClass($relationship->childClassName);
                 $this->populateScalarMappings($mappingCollection, $childReflectionClass, $childParents, $relationship);

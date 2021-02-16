@@ -87,17 +87,17 @@ class MappingCollection
     private bool $columnMappingDone = false;
 
     /**
-     * @var int|null Maximum number of children that can be early bound
+     * @var int Maximum number of children that can be early bound
      */
-    private ?int $maxDepth;
+    private int $maxDepth;
 
-    public function __construct(string $entityClassName, ?int $maxDepth)
+    public function __construct(string $entityClassName, int $maxDepth)
     {
         $this->entityClassName = $entityClassName;
         $this->maxDepth = $maxDepth;
     }
 
-    public function getMaxDepth(): ?int
+    public function getMaxDepth(): int
     {
         return $this->maxDepth;
     }
@@ -130,19 +130,13 @@ class MappingCollection
             $this->scalarJoinProperties[] = $propertyMapping;
         }
 
-        if ((
-                !$suppressFetch
-                && (!$propertyMapping->relationship->isDefined()
-                || ($propertyMapping->relationship->isEmbedded || $propertyMapping->relationship->isScalarJoin() || $this->maxDepth === null || count($propertyMapping->parents ?? []) < $this->maxDepth))
-            )
+        if ((!$suppressFetch && $propertyMapping->isWithinDepth())
             || $propertyMapping->isForeignKey
             || $propertyMapping->relationship->isEmbedded
         ) { //For now we will assume it is fetchable - if we have to late bind to avoid recursion, this can change
             $propertyMapping->isFetchable = true;
             $this->columns[$propertyMapping->getAlias()] ??= $propertyMapping;
             $this->fetchableProperties[$propertyMapping->getPropertyPath()] ??= $propertyMapping;
-        } else {
-            $stop = true;
         }
     }
 
@@ -525,7 +519,7 @@ class MappingCollection
     {
         foreach ($this->relationships ?? [] as $relationshipMapping) {
             $relationship = $relationshipMapping->relationship;
-            if ($relationship->isEmbedded || $relationship->isScalarJoin() || $this->maxDepth === null || count($relationshipMapping->parents ?? []) < $this->maxDepth) {
+            if ($relationshipMapping->isWithinDepth()) {
                 if (!$relationship->joinTable) {
                     $relationship->joinTable = $this->classes[$relationship->childClassName]->name ?? '';
                 }

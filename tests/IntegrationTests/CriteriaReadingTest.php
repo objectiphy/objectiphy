@@ -282,11 +282,17 @@ class CriteriaReadingTest extends IntegrationTestBase
         $this->assertEquals('GB', $parentLoadByCountry->getAddress()->getCountryCode());
 
         //Load using deeply nested property of value object as criteria
-        $nestedParentLoadedByAddress = $this->objectRepository->findOneBy(['child.parent.address.town' => 'London']);
-        $this->assertEquals('London', $nestedParentLoadedByAddress->getAddress()->getTown());
-        $nestedParentLoadedByCountry = $this->objectRepository->findOneBy(['child.parent.address.countryDescription' => 'Deepest Darkest Peru']);
-        $this->assertEquals('Eleanor Shellstrop', $nestedParentLoadedByCountry->getName());
-
+        $maxDepth = $this->objectRepository->getConfiguration()->maxDepth;
+        if ($maxDepth > 2) {
+            $nestedParentLoadedByAddress = $this->objectRepository->findOneBy(
+                ['child.parent.address.town' => 'London']
+            );
+            $this->assertEquals('London', $nestedParentLoadedByAddress->getAddress()->getTown());
+            $nestedParentLoadedByCountry = $this->objectRepository->findOneBy(
+                ['child.parent.address.countryDescription' => 'Deepest Darkest Peru']
+            );
+            $this->assertEquals('Eleanor Shellstrop', $nestedParentLoadedByCountry->getName());
+        }
         //Load using prefixed column of value object as criteria
         $prefixedColumnCriteriaParent = $this->objectRepository->findOneBy(['child.address.town'=>'Loughborough']);
         $this->assertEquals(2, $prefixedColumnCriteriaParent->getId());

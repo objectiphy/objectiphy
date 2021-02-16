@@ -273,7 +273,7 @@ class BasicReadingTest extends IntegrationTestBase
         $policy = $this->objectRepository->findOneBy(['contact' => 123]);
         $this->assertEquals(123, $policy['contact']);
         $maxDepth = $this->objectRepository->getConfiguration()->maxDepth;
-        if (strpos($this->testName, 'lazy') === false && ($maxDepth === null || $maxDepth > 1)) {
+        if (strpos($this->testName, 'lazy') === false && (!$maxDepth || $maxDepth > 1)) {
             $this->assertEquals('Skywalker', $policy['contact_lastName']);
             $this->assertEquals('Vauxhall', $policy['vehicle_makeDesc']);
         }

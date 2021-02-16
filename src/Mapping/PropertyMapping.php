@@ -268,12 +268,11 @@ class PropertyMapping
     public function isWithinDepth(): bool
     {
         $maxDepth = $this->parentCollection->getMaxDepth();
-
         return !$this->relationship->isDefined()
-        || $maxDepth === null
-        || $this->relationship->isEmbedded
-        || $this->relationship->isScalarJoin()
-        || count($this->parents ?? []) < $maxDepth;
+            || !$maxDepth
+            || $this->relationship->isEmbedded
+            || $this->relationship->isScalarJoin()
+            || count($this->parents ?? []) < $maxDepth;
     }
 
     /**

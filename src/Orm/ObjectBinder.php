@@ -11,6 +11,7 @@ use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Query\QB;
@@ -304,9 +305,14 @@ final class ObjectBinder
 
             //Work out what to search for
             $usePrimaryKey = false;
+            //Relationship used by mapping collection might differ from $propertyMapping
             $relationshipMapping = $mappingCollection->getRelationships()[$propertyMapping->getRelationshipKey()];
             if ($relationshipMapping->relationship->mappedBy) { //Child owns the relationship
                 $sourceJoinColumns = explode(',', $relationshipMapping->relationship->sourceJoinColumn) ?? [];
+                if (!array_filter($sourceJoinColumns)) {
+                    $message = sprintf('Could not determine source join column for relationship %1$s::%2$s', $relationshipMapping->className, $relationshipMapping->propertyName);
+                    //throw new MappingException($message);
+                }
                 foreach ($sourceJoinColumns as $index => $sourceJoinColumn) {
                     $sibling = $mappingCollection->getPropertyByColumn(
                         trim($sourceJoinColumn),

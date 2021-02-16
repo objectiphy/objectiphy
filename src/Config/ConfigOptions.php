@@ -177,11 +177,13 @@ class ConfigOptions extends ConfigBase
 
     /**
      * @var int|null Maximum depth of hierarchy to load. Anything beyond this level will be lazy loaded, even if it is
-     * set to eager load normally. If null, there is no limit to the depth - in that case, it will continue to load
+     * set to eager load normally. If zero, there is no limit to the depth - in that case, it will continue to load
      * the entire hierarchy until it hits recursion, a lazy load setting, runs out of memory, or hits the database
-     * join limit.
+     * join limit. That should be fine unless you have a very deep hierarchy, but you will probably find performance
+     * benefits from setting $maxDepth to a non-zero value (it depends what you do with the results).
+     * 0=1:26, 5=1:16, 4=1:09, 3=0:59, 2=0:51, 1=error
      */
-    protected ?int $maxDepth = 3;  //TODO: Does not work with 0, 1, or 2, or 4 - very slow otherwise
+    protected int $maxDepth = 2;
 
     /**
      * Initialise config options.
