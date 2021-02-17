@@ -183,7 +183,7 @@ class ConfigOptions extends ConfigBase
      * benefits from setting $maxDepth to a non-zero value (it depends what you do with the results).
      * 0=1:26, 5=1:16, 4=1:09, 3=0:59, 2=0:51, 1=error
      */
-    protected int $maxDepth = 2;
+    protected int $maxDepth = 1;
 
     /**
      * Initialise config options.
