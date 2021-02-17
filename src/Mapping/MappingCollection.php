@@ -519,7 +519,7 @@ class MappingCollection
     {
         foreach ($this->relationships ?? [] as $relationshipMapping) {
             $relationship = $relationshipMapping->relationship;
-            if ($relationshipMapping->isWithinDepth()) {
+            if ($relationshipMapping->isWithinDepth() || ($relationshipMapping->relationship->mappedBy && !$relationshipMapping->column->name)) {
                 if (!$relationship->joinTable) {
                     $relationship->joinTable = $this->classes[$relationship->childClassName]->name ?? '';
                 }

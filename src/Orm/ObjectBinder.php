@@ -311,7 +311,7 @@ final class ObjectBinder
                 $sourceJoinColumns = explode(',', $relationshipMapping->relationship->sourceJoinColumn) ?? [];
                 if (!array_filter($sourceJoinColumns)) {
                     $message = sprintf('Could not determine source join column for relationship %1$s::%2$s', $relationshipMapping->className, $relationshipMapping->propertyName);
-                    //throw new MappingException($message);
+                    throw new MappingException($message);
                 }
                 foreach ($sourceJoinColumns as $index => $sourceJoinColumn) {
                     $sibling = $mappingCollection->getPropertyByColumn(
