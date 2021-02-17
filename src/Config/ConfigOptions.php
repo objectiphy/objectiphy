@@ -182,7 +182,7 @@ class ConfigOptions extends ConfigBase
      * join limit. That should be fine unless you have a very deep hierarchy, but you might find performance benefits
      * from setting $maxDepth to a non-zero value (it depends what you do with the results).
      */
-    protected int $maxDepth = 0;
+    protected int $maxDepth = 3;
 
     /**
      * Initialise config options.
