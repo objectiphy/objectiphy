@@ -240,11 +240,11 @@ class BasicReadingTest extends IntegrationTestBase
         $result = $this->objectRepository->findOneValueBy($query);
         $this->assertEquals('PJ63LXR', $result);
 
-//        $regNo = $this->objectRepository->findOneValueBy(['contact' => 123], 'vehicle.regNo');
-//        $this->assertEquals('PJ63LXR', $regNo);
-//        //Make sure we still get bound results after calling that
-//        $policy = $this->objectRepository->findOneBy(['contact' => 123]);
-//        $this->assertInstanceOf(TestPolicy::class, $policy);
+        $regNo = $this->objectRepository->findOneValueBy(['contact' => 123], 'vehicle.regNo');
+        $this->assertEquals('PJ63LXR', $regNo);
+        //Make sure we still get bound results after calling that
+        $policy = $this->objectRepository->findOneBy(['contact' => 123]);
+        $this->assertInstanceOf(TestPolicy::class, $policy);
 
         //Get array of scalar values
         $query2 = QB::create()
@@ -252,21 +252,25 @@ class BasicReadingTest extends IntegrationTestBase
             ->from(TestPolicy::class)
             ->where('contact.lastName', QB::EQ, 'Skywalker')
             ->buildSelectQuery();
-        $policyNumbers = $this->objectRepository->findValuesBy($query2, ['policyNo']);
-//        $policyNumbers = $this->objectRepository->findValuesBy(['contact.lastName' => 'Skywalker'], 'policyNo',
-//            ['policyNo']);
+        $policyNumbers = $this->objectRepository->findValuesBy($query2, 'policyNo', ['policyNo']);
         $this->assertEquals(2, count($policyNumbers));
         $this->assertEquals('P123456', $policyNumbers[0]);
         $this->assertEquals('P123457', $policyNumbers[1]);
+
+        $policyNumbers2 = $this->objectRepository->findValuesBy(['contact.lastName' => 'Skywalker'], 'policyNo', ['policyNo'], false,);
+        $this->assertEquals(2, count($policyNumbers2));
+        $this->assertEquals('P123456', $policyNumbers2[0]);
+        $this->assertEquals('P123457', $policyNumbers2[1]);
+
         //Get iterable scalar values
-//        $iterablePolicyNumbers = $this->objectRepository->findOnDemandBy(['contact.lastName' => 'Skywalker'],
-//            'policyNo', ['policyNo']);
-//        $this->assertInstanceOf(IterableResult::class, $iterablePolicyNumbers);
-//        $iterablePolicyNumbers->next();
-//        $this->assertEquals('P123456', $iterablePolicyNumbers->current());
-//        $iterablePolicyNumbers->next();
-//        $this->assertEquals('P123457', $iterablePolicyNumbers->current());
-//        $iterablePolicyNumbers->closeConnection();
+        $iterablePolicyNumbers = $this->objectRepository->findValuesBy(['contact.lastName' => 'Skywalker'],
+            'policyNo', ['policyNo'], true);
+        $this->assertInstanceOf(IterableResult::class, $iterablePolicyNumbers);
+        $iterablePolicyNumbers->next();
+        $this->assertEquals('P123456', $iterablePolicyNumbers->current());
+        $iterablePolicyNumbers->next();
+        $this->assertEquals('P123457', $iterablePolicyNumbers->current());
+        $iterablePolicyNumbers->closeConnection();
 
         //Get some arrays
         $this->objectRepository->setConfigOption('bindToEntities', false);

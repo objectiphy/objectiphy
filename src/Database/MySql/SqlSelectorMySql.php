@@ -107,7 +107,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
             $sql = "SELECT \n";
             foreach ($this->query->getSelect() as $fieldExpression) {
                 $fieldSql = trim((string) $fieldExpression);
-                $sql .= "    " . $this->stringReplacer->replaceNames($fieldSql, true) . ", \n";
+                $sql .= "    " . $this->stringReplacer->replaceNames($fieldSql, $fieldExpression->isPropertyPath()) . ", \n";
             }
             $sql = rtrim($sql, ", \n") . "\n";
         }

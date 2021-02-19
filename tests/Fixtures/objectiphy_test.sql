@@ -452,6 +452,7 @@ CREATE TABLE `user` (
                         `id` int(11) NOT NULL AUTO_INCREMENT,
                         `type` varchar(255) DEFAULT NULL,
                         `email` varchar(100) DEFAULT NULL,
+                        `date_of_birth` date DEFAULT NULL,
                         PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
 
@@ -459,8 +460,11 @@ CREATE TABLE `user` (
 --  Records of `user`
 -- ----------------------------
 
-INSERT INTO `user` VALUES ('1', 'branch', 'danger.mouse@example.com'), ('2', 'staff', 'penfold.hamster@example.com'),
-                          ('3', 'broker', 'eleanor.shellstrop@example.com'), ('4', 'staff', 'chidi@example.com');
+INSERT INTO `user` VALUES
+                          ('1', 'branch', 'danger.mouse@example.com', '1974-07-19'),
+                          ('2', 'staff', 'penfold.hamster@example.com', '2007-02-26'),
+                          ('3', 'broker', 'eleanor.shellstrop@example.com', '2001-03-14'),
+                          ('4', 'staff', 'chidi@example.com', null);
 
 -- ----------------------------
 --  Table structure for `user_alternative`
@@ -470,6 +474,7 @@ CREATE TABLE `user_alternative` (
                                     `id` int(11) NOT NULL AUTO_INCREMENT,
                                     `type` varchar(255) DEFAULT NULL,
                                     `email` varchar(100) DEFAULT NULL,
+                                    `date_of_birth` date DEFAULT NULL,
                                     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
 
@@ -477,8 +482,10 @@ CREATE TABLE `user_alternative` (
 --  Records of `user_alternative`
 -- ----------------------------
 
-INSERT INTO `user_alternative` VALUES ('1', 'test1', 'alternative1@example.com'), ('2', 'test2', 'alternative2@example.com'),
-                                      ('3', 'test3', 'alternative3@example.com'), ('4', 'test4', 'alertnative4@example.com');
+INSERT INTO `user_alternative` VALUES ('1', 'test1', 'alternative1@example.com', null),
+                                      ('2', 'test2', 'alternative2@example.com', null),
+                                      ('3', 'test3', 'alternative3@example.com', null),
+                                      ('4', 'test4', 'alertnative4@example.com', null);
 
 -- ----------------------------
 --  Table structure for `vehicle`

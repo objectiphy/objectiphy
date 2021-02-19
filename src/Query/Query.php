@@ -237,7 +237,7 @@ abstract class Query implements QueryInterface
                 $propertyMapping->getChildClassName(),
                 'obj_alias_' . str_replace('.', '_', $propertyMapping->getPropertyPath())
             );
-            $target = "`$targetProperty`";
+            $target = "%$targetProperty%";
         }
 
 

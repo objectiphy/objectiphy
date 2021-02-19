@@ -12,6 +12,7 @@ use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Query\FieldExpression;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
@@ -110,6 +111,9 @@ final class ObjectFetcher
         if ($queryClass && strpos($queryClass, '`') === false) { //No explicit table specified
             $originalClass = $this->getClassName();
             $this->setClassName($query->getFrom());            
+        }
+        if ($this->options->scalarProperty) {
+            $query->setSelect(new FieldExpression($this->options->scalarProperty));
         }
         $this->objectMapper->addExtraMappings($this->getClassName(), $this->options);
         $this->objectMapper->addExtraMappings($this->getClassName(), $query);

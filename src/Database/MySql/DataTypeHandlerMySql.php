@@ -52,6 +52,9 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
             case 'integer':
                 $value = $value === null ? $value : intval($value);
                 break;
+            default:
+                $value = is_bool($value) ? intval($value) : $value;
+                break;
         }
 
         //Convert formatted Date/Time string back into a format accepted by MySQL

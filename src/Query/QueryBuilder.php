@@ -245,7 +245,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
     public function orderBy(array $propertyNames): QueryBuilder
     {
         foreach ($propertyNames as $key => $value) {
-            if (is_string($key) && in_array($value, 'ASC', 'DESC', 'asc', 'desc')) {
+            if (is_string($key) && in_array($value, ['ASC', 'DESC', 'asc', 'desc'])) {
                 $fieldExpression = new FieldExpression($key . ' ' . strtoupper($value), false);
             } elseif (is_int($key) && is_string($value)) {
                 $fieldExpression = new FieldExpression($value . ' ASC', false);

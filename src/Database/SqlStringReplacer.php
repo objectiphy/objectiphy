@@ -125,7 +125,7 @@ class SqlStringReplacer
     {
         $delimiter ??= $this->databaseDelimiter;
         $delimited = '';
-        if ($value) {
+        if (strlen($value) > 0) {
             $value = str_replace($delimiter, '', $value); //Don't double-up
             if ($separator) {
                 $delimited = $delimiter . implode($delimiter . $separator . $delimiter, explode($separator, $value)) . $delimiter;

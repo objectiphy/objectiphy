@@ -56,8 +56,13 @@ class EntityTracker
             }
         } elseif (is_object($entityOrClassName)) {
             $className = ObjectHelper::getObjectClassName($entityOrClassName);
-            $searchResult = array_search($entityOrClassName, $this->entities[$className] ?? [], true);
-            return $searchResult ? strval($searchResult) : null;
+            $pkIndex = $this->getIndexForPk($pkValues);
+            if (strlen($pkIndex) > 2) {
+                return isset($this->entities[$className][$pkIndex]) ? $pkIndex : null;
+            } else {
+                $searchResult = array_search($entityOrClassName, $this->entities[$className] ?? [], true);
+                return $searchResult ? strval($searchResult) : null;
+            }
         }
 
         return null;

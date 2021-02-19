@@ -148,18 +148,20 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     public function setClassName(string $className): void
     {
-        $oldClassName = $this->className;
-        $this->className = $className;
-        $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
-        if ($className != $oldClassName) {
-            $this->orderBy = [];
-            //In case of custom repository that does not pass along the find/save options, set defaults here
-            $findOptions = FindOptions::create($this->mappingCollection);
-            $this->objectFetcher->setFindOptions($findOptions);
-            $saveOptions = SaveOptions::create($this->mappingCollection);
-            $this->objectPersister->setSaveOptions($saveOptions);
-            $deleteOptions = DeleteOptions::create($this->mappingCollection);
-            $this->objectRemover->setDeleteOptions($deleteOptions);
+        if ($className) { //Query might not have one set, in which case, keep the one we've got
+            $oldClassName = $this->className;
+            $this->className = $className;
+            $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
+            if ($className != $oldClassName) {
+                $this->orderBy = [];
+                //In case of custom repository that does not pass along the find/save options, set defaults here
+                $findOptions = FindOptions::create($this->mappingCollection);
+                $this->objectFetcher->setFindOptions($findOptions);
+                $saveOptions = SaveOptions::create($this->mappingCollection);
+                $this->objectPersister->setSaveOptions($saveOptions);
+                $deleteOptions = DeleteOptions::create($this->mappingCollection);
+                $this->objectRemover->setDeleteOptions($deleteOptions);
+            }
         }
     }
 
@@ -206,6 +208,16 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     public function find($id)
     {
+        if ($id instanceof QueryInterface) {
+            throw new QueryException('The find method should only be used with a primary key value. To execute a query, use findBy instead.');
+        } elseif (is_object($id)) {
+            //Try to find primary key value, otherwise throw up
+            $id = $this->mappingCollection->getPrimaryKeyValues($id);
+            if (!$id) {
+                throw new QueryException('The find method should only be used with a primary key value. Cannot resolve the given object to a value.');
+            }
+        }
+
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $this->assertClassNameSet();
         $existingEntity = $this->objectFetcher->getExistingEntity($this->getClassName(), $id);
@@ -388,24 +400,30 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         return $this->findBy([], $orderBy, null, null, $keyProperty, $fetchOnDemand);
     }
 
-    public function findOneValueBy($criteria = [])
+    public function findOneValueBy($criteria = [], string $valueProperty = '')
     {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $this->assertClassNameSet();
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => false,
             'bindToEntities' => false,
+            'scalarProperty' => $valueProperty
         ]);
 
         $result = $this->doFindBy($findOptions, $criteria);
-        return $result ? reset($result) : null;
+        if (is_array($result)) {
+            $result = reset($result);
+        }
+
+        return $result;
     }
 
     public function findValuesBy(
         $criteria = [],
+        string $valueProperty = '',
         ?array $orderBy = null,
-        bool $fetchOnDemand = false)
-    {
+        bool $fetchOnDemand = false
+    ) {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $this->assertClassNameSet();
         $this->setOrderBy(array_filter($orderBy ?? $this->orderBy ?? []));
@@ -415,11 +433,16 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             'onDemand' => $fetchOnDemand,
             'pagination' => $this->pagination ?? null,
             'bindToEntities' => false,
+            'scalarProperty' => $valueProperty
         ]);
         $result = $this->doFindBy($findOptions, $criteria);
-        if ($result) {
-            $key = array_key_first(reset($result));
-            return array_column($result, $key);
+        if (is_iterable($result)) {
+            if (is_array($result) && is_array(reset($result))) {
+                $key = array_key_first(reset($result));
+                return array_column($result, $key);
+            } else {
+                return $result;
+            }
         }
 
         return [];
@@ -601,7 +624,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         int &$insertCount = 0,
         int &$updateCount = 0,
         int &$deleteCount = 0
-    ): ?int {
+    ) {
         //TODO: Use command bus pattern to send queries of different types to different handlers
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $this->setClassName($query->getClassName());
@@ -612,7 +635,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             return $this->objectPersister->executeSave($query, $saveOptions, $insertCount, $updateCount);
         } elseif ($query instanceof DeleteQueryInterface) {
             $deleteOptions = DeleteOptions::create($this->mappingCollection);
-            return $this->objectRemover->executeDelete($query, $deleteOptions);
+            $deleteCount = $this->objectRemover->executeDelete($query, $deleteOptions);
+            return $deleteCount;
         } else {
             throw new QueryException('Unrecognised query type: ' . ObjectHelper::getObjectClassName($query));
         }

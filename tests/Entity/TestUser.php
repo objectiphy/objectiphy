@@ -33,6 +33,12 @@ class TestUser
      */
     protected $email;
 
+    /**
+     * @var \DateTimeImmutable
+     * @ORM\Column(type="datetime_immutable")
+     */
+    protected \DateTimeImmutable $dateOfBirth;
+
     public function getId()
     {
         return $this->id;
@@ -51,5 +57,10 @@ class TestUser
     public function getEmail()
     {
         return $this->email;
+    }
+
+    public function getDateOfBirth(): \DateTimeImmutable
+    {
+        return $this->dateOfBirth;
     }
 }

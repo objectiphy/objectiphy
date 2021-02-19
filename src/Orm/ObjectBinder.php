@@ -238,7 +238,7 @@ final class ObjectBinder
                         $value = null;
                         $valueFound = true;
                     }
-                }  elseif (!$valueFound) {
+                } elseif (!$valueFound) {
                     $parents = array_merge($propertyMapping->parents, [$propertyMapping->propertyName]);
                     $childClass = $propertyMapping->getChildClassName();
                     $value = $this->bindRowToEntity($row, $childClass, $parents, $entity);

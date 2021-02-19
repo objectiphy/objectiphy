@@ -209,8 +209,13 @@ final class ObjectPersister implements TransactionInterface
         //Try to work out if we are inserting or updating
         $update = false;
         $pkValues = $this->options->mappingCollection->getPrimaryKeyValues($entity);
-        if ($this->entityTracker->hasEntity($this->getClassName(), $pkValues)) {
-            $update = true; //We are tracking it, so it is definitely an update
+        if ($this->entityTracker->hasEntity($entity, $pkValues)) {
+            //We are tracking it, so it is definitely an update, but if we don't have a hydrated pk, throw up
+            if (!$pkValues) {
+                throw new QueryException('Cannot save a partially hydrated object if there is no primary key.');
+            }
+            $update = true;
+
         } elseif ($pkValues) { //We have values for the primary key so probably an update
             $update = true;
             //Check if the primary key is a foreign key (if so, could be an insert so will need to replace)
