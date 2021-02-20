@@ -119,6 +119,35 @@ class SelectQuery extends Query implements SelectQueryInterface
     }
 
     /**
+     * Ensure we have all the primary keys for everything that's selected (so late binding will work if needed).
+     * This must be called before adding query mappings and therefore separately from finalise.
+     * @param MappingCollection $mappingCollection
+     */
+    public function selectPrimaryKeys(MappingCollection $mappingCollection)
+    {
+        $selects = [];
+        foreach ($this->getSelect() as $fieldExpression) {
+            if ($fieldExpression->isPropertyPath() && strpos($fieldExpression->getExpression(), '.') !== false) {
+                $propertyMapping = $mappingCollection->getPropertyMapping($fieldExpression->getExpression());
+                if ($propertyMapping) {
+                    $parentPropertyMapping = $mappingCollection->getPropertyMapping($propertyMapping->getParentPath());
+                    if ($parentPropertyMapping && $parentPropertyMapping->column->name) {
+                        $selects[] = new FieldExpression($parentPropertyMapping->getPropertyPath());
+                    } else {
+                        $pks = $mappingCollection->getPrimaryKeyProperties($propertyMapping->className);
+                        foreach ($pks as $pk) {
+                            $selects[] = new FieldExpression($propertyMapping->getParentPath() . '.' . $pk);
+                        }
+                    }
+                }
+            }
+        }
+        if ($selects) {
+            $this->setSelect(...array_merge($this->getSelect(), $selects));
+        }
+    }
+
+    /**
      * Ensure query is complete, filling in any missing bits as necessary
      * @param MappingCollection $mappingCollection
      * @param string|null $className

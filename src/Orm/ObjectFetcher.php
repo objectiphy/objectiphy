@@ -115,6 +115,7 @@ final class ObjectFetcher
         if ($this->options->scalarProperty) {
             $query->setSelect(new FieldExpression($this->options->scalarProperty));
         }
+        $query->selectPrimaryKeys($this->options->mappingCollection);
         $this->objectMapper->addExtraMappings($this->getClassName(), $this->options);
         $this->objectMapper->addExtraMappings($this->getClassName(), $query);
         $this->objectMapper->addExtraClassMappings($this->getClassName(), $query);

@@ -181,7 +181,7 @@ class QueryTest extends IntegrationTestBase
             ->limit(2)
             ->buildSelectQuery();
         $contacts6 = $this->objectRepository->executeQuery($query6);
-        //$this->assertEquals('Sales', $contacts6[0]->department->name);
+        $this->assertEquals('Sales', $contacts6[0]->department->name);
 
         $criteria = ['departments' => ['Sales', 'Finance']];
         $query = QueryBuilder::create()
