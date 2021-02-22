@@ -169,6 +169,8 @@ final class ObjectPersister implements TransactionInterface
         ?int &$updateCount = null
     ): int {
         $this->setSaveOptions($options);
+        $this->objectMapper->addExtraMappings($this->getClassName(), $query);
+        $this->objectMapper->addExtraClassMappings($this->getClassName(), $query);
         $query->finalise($this->options->mappingCollection);
         if ($query instanceof UpdateQueryInterface) {
             $sql = $this->sqlUpdater->getUpdateSql($query, $this->options->replaceExisting);

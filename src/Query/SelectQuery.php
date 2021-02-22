@@ -201,25 +201,4 @@ class SelectQuery extends Query implements SelectQueryInterface
         
         return $queryString;
     }
-
-    /**
-     * Override if required to only return the relationships actually needed for the query
-     * @return PropertyMapping[]
-     */
-    protected function getRelationshipsUsed(): array
-    {
-        $relationshipsUsed = [];
-        $propertyPathsUsed = $this->getPropertyPaths();
-        $relationships = $this->mappingCollection->getRelationships();
-        foreach ($relationships as $key => $relationship) {
-            foreach ($propertyPathsUsed as $propertyPath) {
-                if (in_array($relationship->propertyName, explode('.', $propertyPath))) {
-                    $relationshipsUsed[$key] = $relationship;
-                    break;
-                }
-            }
-        }
-
-        return $relationshipsUsed;
-    }
 }

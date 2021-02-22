@@ -53,9 +53,7 @@ class UpdateQuery extends Query implements UpdateQueryInterface
         array $assignments = []
     ): void {
         if (!$this->isFinalised) {
-            if (!$this->getUpdate()) {
-                $this->setUpdate($className);
-            }
+            parent::finalise($mappingCollection, $className);
             if (!$this->getAssignments() && $assignments) {
                 $assignmentExpressions = [];
                 foreach ($assignments as $key => $value) {

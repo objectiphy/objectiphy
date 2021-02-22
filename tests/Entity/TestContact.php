@@ -68,10 +68,28 @@ class TestContact
     protected bool $isPermanent;
 
     /**
+     * @var bool
+     * @ORM\Column(type="bool")
+     */
+    protected bool $earnsCommission;
+
+    /**
+     * @var float
+     * @ORM\Column(type="decimal")
+     */
+    protected float $commissionRate;
+
+    /**
+     * @var bool
+     * @ORM\Column(type="bool")
+     */
+    protected bool $higherRateEarner;
+
+    /**
      * This is a dirty bodge, just for unit test purposes - not recommended
      * for real entities in an application
      * @param $property
-     * @return
+     * @return mixed
      */
     public function __get($property)
     {

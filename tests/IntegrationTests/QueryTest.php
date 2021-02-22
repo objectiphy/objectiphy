@@ -216,7 +216,25 @@ class QueryTest extends IntegrationTestBase
 
     protected function doUpdateQueryTests()
     {
-        $this->assertEquals(true, true);
+        $query = QueryBuilder::create()
+            ->update(TestContact::class)
+            ->set([
+                      'earnsCommission' => true,
+                      'commissionRate' => 12.5
+                  ])
+            ->where('department.name', '=', 'Sales')
+            ->buildUpdateQuery();
+        $updateCount = $this->objectRepository->executeQuery($query);
+        $this->assertEquals(7, $updateCount);
+
+        $query2 = QueryBuilder::create()
+            ->update(TestContact::class)
+            ->set([
+                      'higherRateEarner' => '%commissionRate% > 14'
+                  ])
+            ->buildUpdateQuery();
+        $updateCount = $this->objectRepository->executeQuery($query2);
+        $this->assertEquals(1, $updateCount);
     }
 
     protected function doReplaceQueryTests()

@@ -203,7 +203,19 @@ abstract class Query implements QueryInterface
      */
     protected function getRelationshipsUsed(): array
     {
-        return $this->mappingCollection->getRelationships();
+        $relationshipsUsed = [];
+        $propertyPathsUsed = $this->getPropertyPaths();
+        $relationships = $this->mappingCollection->getRelationships();
+        foreach ($relationships as $key => $relationship) {
+            foreach ($propertyPathsUsed as $propertyPath) {
+                if (in_array($relationship->propertyName, explode('.', $propertyPath))) {
+                    $relationshipsUsed[$key] = $relationship;
+                    break;
+                }
+            }
+        }
+
+        return $relationshipsUsed;
     }
 
     /**
