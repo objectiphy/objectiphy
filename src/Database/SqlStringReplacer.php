@@ -96,7 +96,7 @@ class SqlStringReplacer
         foreach ($propertiesUsed as $propertyPath) {
             $alias = '';
             $this->objectNames[] = $this->delimit($propertyPath, $this->propertyPathDelimiter, '');
-            $persistenceValue = $this->getPersistenceValueForField($query, $propertyPath, $mappingCollection, $alias);
+            $persistenceValue = $this->getPersistenceValueForField($query, $propertyPath, $mappingCollection, '', '', $alias);
             $this->persistenceNames[] = $persistenceValue;
             $this->aliases[] = $alias ?: $persistenceValue;
         }
@@ -173,8 +173,10 @@ class SqlStringReplacer
      * exists, otherwise fall back to a literal value.
      * @param QueryInterface $query
      * @param mixed $fieldValue Literal value, property path, expression, or database table/column.
-     * @param ?string $alias If value relates to a property, returns the column alias
      * @param MappingCollection $mappingCollection
+     * @param ?string $alias If value relates to a property, returns the column alias
+     * @param string $valuePrefix
+     * @param string $valueSuffix
      * @return string
      * @throws ObjectiphyException
      * @throws \ReflectionException
@@ -183,6 +185,8 @@ class SqlStringReplacer
         QueryInterface $query,
         $fieldValue,
         MappingCollection $mappingCollection,
+        string $valuePrefix = '',
+        string $valueSuffix = '' ,
         ?string &$alias = null
     ): string {
         $persistenceValue = null;
@@ -197,6 +201,14 @@ class SqlStringReplacer
         }
         if ($persistenceValue === null) {
             $persistenceValue = $this->checkLiteralValue($fieldValue, $query);
+        }
+
+        //Apply prefix and suffix to literals, if required
+        if (($valuePrefix || $valueSuffix)
+            && substr($persistenceValue, 0, 1) == "'" && substr($persistenceValue, strlen($persistenceValue) - 1) == "'"
+        ) {
+            $persistenceValue = substr($persistenceValue, 1, strlen($persistenceValue) - 2);
+            $persistenceValue = "'" . $valuePrefix . $persistenceValue . $valueSuffix . "'";
         }
 
         return $this->replaceLiteralsWithParams($query, $persistenceValue);

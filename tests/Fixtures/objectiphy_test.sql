@@ -107,10 +107,10 @@ INSERT INTO `contact` VALUES
 ('123', '001', 'Master', 'Luke', 'Skywalker', null, 6, 'Ariadne', 1, 1, 1, 12.5, 0),
 ('124', '002', 'Dark Lord', 'Anakin', 'Skywalker', null, 5, 'Lambeth', 1, 1, 0, 0, 0),
 ('125', '003', 'Mr', 'Han', 'Solo', null, 4, 'Lambeth', 0, 1, 1, 12.5, 0),
-('126', '003', 'Mr', 'Boba', 'Fett', null, 3, 'Ariadne', 0, 2, 1, 12.5, 0),
+('126', '003', 'Mr', 'Boba', 'Fett', null, 3, 'Ariadne', 0, 2, 1, 15, 0),
 ('127', '004', 'Ms', 'Ellen', 'Ripley', null, 2, 'Ariadne',1, 3, 0, 0, 0),
 ('128', '005', 'Captain', 'Arthur', 'Dallas', null, 1, 'Lambeth', 1, 1, 0, 0, 0),
-('129', '003', 'Mr', 'Samuel', 'Brett', null, null, null, 1, 1, 1, 15, 0),
+('129', '003', 'Mr', 'Samuel', 'Brett', null, null, null, 1, 1, 1, 12, 0),
 ('130', '001', 'Master', 'Gilbert', 'Kane', null, null, null, 1, 2, 1, 15, 0),
 ('131', '007', 'Mrs', 'Joan', 'Lambert', null, null, null, 1, 2, 0, 0, 0),
 ('132', '003', 'Mr', 'Dennis', 'Parker', null, null, null, 1, 2, 0, 0, 0),
@@ -144,7 +144,7 @@ INSERT INTO `contact` VALUES
 ('160', '006', 'Miss', 'Michaela', 'Holloway', null, null, null, 0, 1, 0, 0, 0),
 ('161', '007', 'Mrs', 'Gabby', 'Fenchurch', null, null, null, 1, 2, 0, 0, 0),
 ('162', '003', 'Mr', 'Frank', 'Urquhart', null, null, null, 1, 2, 0, 0, 0),
-('163', '007', 'Mrs', 'Emma', 'Cartwright', null, null, null, 1, 1, 0, 0, 0),
+('163', '007', 'Mrs', 'Emma', 'Smithers', null, null, null, 1, 1, 0, 0, 0),
 ('164', '003', 'Mr', 'Mohammed', 'Patel', null, null, null, 1, 3, 0, 0, 0),
 ('165', '003', 'Mr', 'Felix', 'Dodgson', null, null, null, 1, 3, 0, 0, 0);
 
@@ -314,6 +314,33 @@ CREATE TABLE `parent_of_non_pk_child` (
 
 INSERT INTO `parent_of_non_pk_child` VALUES ('1', 'Angus', null);
 INSERT INTO `parent_of_non_pk_child` VALUES ('2', 'Eselbeth', null);
+
+-- ----------------------------
+--  Table structure for `person`
+-- ----------------------------
+DROP TABLE IF EXISTS `person`;
+CREATE TABLE `person` (
+                           `id` int(11) NOT NULL AUTO_INCREMENT,
+                           `first_name` varchar(255) DEFAULT NULL,
+                           `last_name` varchar(255) DEFAULT NULL,
+                           `car` varchar(100) DEFAULT NULL,
+                           `year` int(11) DEFAULT NULL,
+                           PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------
+--  Records of `person`
+-- ----------------------------
+
+INSERT INTO `person` VALUES
+                            (1, 'Marty', 'McFly', 'The Truck', 1984),
+                            (2, 'Jennifer', 'McFly', null, 1986),
+                            (3, 'Biff', 'Tannen', 'Mustang', 1980),
+                            (4, 'Emmet', 'Brown', 'DeLorean', 1955),
+                            (5, 'Clara', 'Clayton', 'Horse', 1885),
+                            (6, 'George', 'McFly', 'DeLorean', 1984),
+                            (7, 'Russell', 'Walker', 'DeLorean', 1985);
+
 
 -- ----------------------------
 --  Table structure for `pets`

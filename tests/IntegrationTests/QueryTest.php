@@ -5,8 +5,10 @@ namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
+use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Query\QueryBuilder;
 use Objectiphy\Objectiphy\Tests\Entity\TestContact;
+use Objectiphy\Objectiphy\Tests\Entity\TestPerson;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\Tests\Entity\TestUser;
 use Objectiphy\Objectiphy\Tests\Entity\TestVehicle;
@@ -183,6 +185,42 @@ class QueryTest extends IntegrationTestBase
         $contacts6 = $this->objectRepository->executeQuery($query6);
         $this->assertEquals('Sales', $contacts6[0]->department->name);
 
+        $this->objectRepository->setClassName(TestPerson::class);
+        $query7 = QueryBuilder::create()
+            ->orStart()
+                ->where('firstName', '=', 'Marty')
+                ->and('lastName', '=', 'McFly')
+            ->orEnd()
+            ->orStart()
+                ->where('firstName', '=', 'Emmet')
+                ->and('lastName', '=', 'Brown')
+            ->orEnd()
+            ->or('car', '=', 'DeLorean')
+            ->andStart()
+                ->where('year', '=', 1985)
+                ->or('year', '=', 1955)
+            ->andEnd()
+            ->buildSelectQuery();
+        $people = $this->objectRepository->executeQuery($query7);
+        $this->assertEquals(3, count($people));
+
+        $this->objectRepository->setClassName(TestPolicy::class);
+        $postedValues = [
+            'surname'   => 'smith', //Case insensitive
+            'postcode'  => 'PE389QP',
+            'email'     => 'peter@',
+            'random'    => 'This should be ignored!'
+        ];
+        $query8 = QueryBuilder::create()
+            ->where('contact.lastName', QB::BEGINS_WITH, ':surname')
+            ->orStart()
+                ->where('postcode', QB::EQUALS, ':postcode')
+                ->and('email', QB::CONTAINS, ':email')
+            ->orEnd()
+            ->buildSelectQuery($postedValues);
+        $result = $this->objectRepository->executeQuery($query8);
+        $this->assertEquals(2, count($result));
+
         $criteria = ['departments' => ['Sales', 'Finance']];
         $query = QueryBuilder::create()
             ->select('id', 'firstName', 'lastName')
@@ -207,6 +245,15 @@ class QueryTest extends IntegrationTestBase
         $this->assertEquals(0, $inserts);
         $this->assertEquals(1, $updates);
         $this->assertGreaterThan(0, $firstContact->id);
+
+        $this->objectRepository->clearCache();
+        $this->objectRepository->setClassName(TestContact::class);
+        $refreshedContact = $this->objectRepository->find($firstContact->id);
+        if ($this->getCacheSuffix()) {
+            $this->assertEmpty($refreshedContact->title);
+        } else {
+            $this->assertNotEmpty($refreshedContact->title);
+        }
     }
 
     protected function doInsertQueryTests()
@@ -216,28 +263,27 @@ class QueryTest extends IntegrationTestBase
 
     protected function doUpdateQueryTests()
     {
-        $this->assertEquals(true, true);
-//        $this->objectRepository->clearCache();
-//        $query = QueryBuilder::create()
-//            ->update(TestContact::class)
-//            ->set([
-//                      'earnsCommission' => true,
-//                      'commissionRate' => 12.5
-//                  ])
-//            ->where('department.name', '=', 'Sales')
-//            ->buildUpdateQuery();
-//        $updateCount = $this->objectRepository->executeQuery($query);
-//        $this->assertEquals(7, $updateCount);
-//
-//        $this->objectRepository->clearCache();
-//        $query2 = QueryBuilder::create()
-//            ->update(TestContact::class)
-//            ->set([
-//                      'higherRateEarner' => '%commissionRate% > 14'
-//                  ])
-//            ->buildUpdateQuery();
-//        $updateCount = $this->objectRepository->executeQuery($query2);
-//        $this->assertEquals(1, $updateCount);
+        $this->setUp(); //To ensure we update the same number of records each time
+
+        $query = QueryBuilder::create()
+            ->update(TestContact::class)
+            ->set([
+                      'earnsCommission' => true,
+                      'commissionRate' => 12.5
+                  ])
+            ->where('department.name', '=', 'Sales')
+            ->buildUpdateQuery();
+        $updateCount = $this->objectRepository->executeQuery($query);
+        $this->assertEquals(7, $updateCount);
+
+        $query2 = QueryBuilder::create()
+            ->update(TestContact::class)
+            ->set([
+                      'higherRateEarner' => '%commissionRate% > 14'
+                  ])
+            ->buildUpdateQuery();
+        $updateCount = $this->objectRepository->executeQuery($query2);
+        $this->assertEquals(2, $updateCount);
     }
 
     protected function doReplaceQueryTests()

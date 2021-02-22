@@ -10,6 +10,7 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\CriteriaGroup;
+use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Query\QueryBuilder;
 
 /**
@@ -58,6 +59,14 @@ class WhereProviderMySql
         return $sql;
     }
 
+    /**
+     * @param CriteriaExpression $criteriaExpression
+     * @param QueryInterface $query
+     * @param MappingCollection $mappingCollection
+     * @return string
+     * @throws ObjectiphyException
+     * @throws \ReflectionException
+     */
     private function addCriteriaSql(
         CriteriaExpression $criteriaExpression,
         QueryInterface $query,
@@ -68,23 +77,50 @@ class WhereProviderMySql
             $criteriaExpression->property->getExpression(),
             $mappingCollection
         );
-        $sql .= ' ' . $criteriaExpression->operator . ' ';
+        $operator = $valuePrefix = $valueSuffix = '';
+        $this->prepareExpression($criteriaExpression, $operator, $valuePrefix, $valueSuffix);
+        $sql .= ' ' . $operator . ' ';
         if (is_array($criteriaExpression->value)) {
             $sql .= '(';
         }
         $values = is_array($criteriaExpression->value) ? $criteriaExpression->value : [$criteriaExpression->value];
         $stringValues = [];
         foreach ($values as $value) {
-            $stringValues[] = $this->stringReplacer->getPersistenceValueForField($query, $value, $mappingCollection);
+            $stringValues[] = $this->stringReplacer->getPersistenceValueForField($query, $value, $mappingCollection, $valuePrefix, $valueSuffix);
         }
         $sql .= implode(',', $stringValues);
         if (is_array($criteriaExpression->value)) {
             $sql .= ')';
         }
         if ($criteriaExpression->operator == QueryBuilder::BETWEEN) {
-            $sql .= ' AND ' . $this->stringReplacer->getPersistenceValueForField($query, $criteriaExpression->value2, $mappingCollection);
+            $sql .= ' AND ' . $this->stringReplacer->getPersistenceValueForField($query, $criteriaExpression->value2, $mappingCollection, $valuePrefix, $valueSuffix);
         }
 
         return $sql;
+    }
+
+    private function prepareExpression(
+        CriteriaExpression $criteriaExpression,
+        string &$operator,
+        string &$valuePrefix,
+        string &$valueSuffix
+    ): void {
+        switch ($criteriaExpression->operator) {
+            case QB::BEGINS_WITH:
+                $operator = 'LIKE';
+                $valueSuffix = '%';
+                break;
+            case QB::ENDS_WITH:
+                $operator = 'LIKE';
+                $valuePrefix = '%';
+                break;
+            case QB::CONTAINS:
+                $operator = 'LIKE';
+                $valuePrefix = $valueSuffix = '%';
+                break;
+            default:
+                $operator = $criteriaExpression->operator;
+                break;
+        }
     }
 }
