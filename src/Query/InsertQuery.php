@@ -45,6 +45,7 @@ class InsertQuery extends Query implements InsertQueryInterface
      * @param string|null $className
      * @param array $assignments Keyed by property name (these will be the dirty properties passed in from the
      * entity tracker).
+     * @throws QueryException
      */
     public function finalise(
         MappingCollection $mappingCollection,

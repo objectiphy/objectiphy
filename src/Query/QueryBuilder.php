@@ -138,6 +138,13 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         return $this->and($propertyName, $operator, $value);
     }
 
+    /**
+     * @param FieldExpression $expression
+     * @param string $operator
+     * @param $value
+     * @return $this
+     * @throws QueryException
+     */
     public function onExpression(FieldExpression $expression, string $operator, $value): QueryBuilder
     {
         $this->currentCriteriaCollection =& $this->joins;
@@ -146,6 +153,11 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         return $this;
     }
 
+    /**
+     * @param array $propertyValues
+     * @return $this
+     * @throws QueryException
+     */
     public function set(array $propertyValues): QueryBuilder
     {
         $assignments = [];
@@ -200,7 +212,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
     public function groupBy(string ...$propertyNames): QueryBuilder
     {
         foreach ($propertyNames as $propertyName) {
-            $this->groupBy[] = new FieldExpression($propertyName, true);
+            $this->groupBy[] = new FieldExpression($propertyName);
         }
 
         return $this;
@@ -246,9 +258,9 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
     {
         foreach ($propertyNames as $key => $value) {
             if (is_string($key) && in_array($value, ['ASC', 'DESC', 'asc', 'desc'])) {
-                $fieldExpression = new FieldExpression($key . ' ' . strtoupper($value), false);
+                $fieldExpression = new FieldExpression($key . ' ' . strtoupper($value));
             } elseif (is_int($key) && is_string($value)) {
-                $fieldExpression = new FieldExpression($value . ' ASC', false);
+                $fieldExpression = new FieldExpression($value . ' ASC');
             } else {
                 throw new QueryException(
                     'Invalid orderBy properties. Please use property name as the key and direction as the value, or a numeric key and property name as the value (which defaults to ASC for direction)'
@@ -351,7 +363,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
      * @param string $type 'LEFT' or 'INNER'
      * @return QueryBuilder
      */
-    protected function addJoin($targetEntityClassName, $alias, $type = 'LEFT')
+    protected function addJoin($targetEntityClassName, $alias, $type = 'LEFT'): QueryBuilder
     {
         $this->joins[] = new JoinExpression($targetEntityClassName, $alias, $type);
         return $this;

@@ -211,7 +211,7 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
     {
         if ($this->$property === null && !$this->requireNull()) {
             if ($exceptionOnInvalidNull) {
-                throw new CriteriaException("Warning! Operator '" . $this->operator
+                throw new QueryException("Warning! Operator '" . $this->operator
                     . "' for criteria expression '" . strval($this) . "' does not support NULL values. "
                     . "This exception can be suppressed by passing false to the \$exceptionOnInvalidNull "
                     . "parameter when building the criteria. NOTE: If suppressing this exception, the "

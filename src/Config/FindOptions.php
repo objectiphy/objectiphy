@@ -8,6 +8,9 @@ use Objectiphy\Objectiphy\Contract\PaginationInterface;
 use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
+/**
+ * @author Russell Walker <rwalker.php@gmail.com>
+ */
 class FindOptions implements PropertyPathConsumerInterface
 {
     public MappingCollection $mappingCollection;

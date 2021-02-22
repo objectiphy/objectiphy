@@ -374,38 +374,6 @@ class PropertyMapping
         return $collection;
     }
 
-    /**
-     * @return string
-     * @throws MappingException
-     */
-    private function getTypeHacky(): string
-    {
-        //PHP ReflectionType seems buggy at times (on a Mac at least) - try a hacky way of checking the type
-        try {
-            $className = $this->className;
-            $property = $this->propertyName;
-            $hackyClass = new $className();
-            $hackyClass->$property = 1; //Should cause an exception containing the actual type in the message
-        } catch (\Throwable $ex) {
-            if (strpos($ex->getMessage(), 'must be array') !== false) {
-                return 'array';
-            }
-            $classStart = strpos($ex->getMessage(), 'must be an instance of ');
-            if ($classStart !== false) {
-                $classEnd = strpos($ex->getMessage(), ' or ') ?: (strpos($ex->getMessage(), ',') ?: strlen($ex->getMessage()));
-                $length = $classEnd - ($classStart + 23);
-                $className = substr($ex->getMessage(), $classStart + 23, $length);
-                if (class_exists($className) && is_a($className, '\Traversable', true)) {
-                    return $className;
-                }
-            }
-            $errorMessage = 'Could not determine collection class for %1$s. Please try adding a collectionClass attribute to the Relationship mapping for this property.';
-            throw new MappingException(sprintf($errorMessage, $this->className . '::' . $this->propertyName));
-        }
-
-        return '';
-    }
-    
     public function pointsToParent(): bool
     {
         $parentPropertyMapping = $this->parentCollection->getPropertyMapping($this->getParentPath());
@@ -437,7 +405,39 @@ class PropertyMapping
         }
         return $this->getJoinColumns($targetColumn, $table);
     }
-    
+
+    /**
+     * @return string
+     * @throws MappingException
+     */
+    private function getTypeHacky(): string
+    {
+        //PHP ReflectionType seems buggy at times (on a Mac at least) - try a hacky way of checking the type
+        try {
+            $className = $this->className;
+            $property = $this->propertyName;
+            $hackyClass = new $className();
+            $hackyClass->$property = 1; //Should cause an exception containing the actual type in the message
+        } catch (\Throwable $ex) {
+            if (strpos($ex->getMessage(), 'must be array') !== false) {
+                return 'array';
+            }
+            $classStart = strpos($ex->getMessage(), 'must be an instance of ');
+            if ($classStart !== false) {
+                $classEnd = strpos($ex->getMessage(), ' or ') ?: (strpos($ex->getMessage(), ',') ?: strlen($ex->getMessage()));
+                $length = $classEnd - ($classStart + 23);
+                $className = substr($ex->getMessage(), $classStart + 23, $length);
+                if (class_exists($className) && is_a($className, '\Traversable', true)) {
+                    return $className;
+                }
+            }
+            $errorMessage = 'Could not determine collection class for %1$s. Please try adding a collectionClass attribute to the Relationship mapping for this property.';
+            throw new MappingException(sprintf($errorMessage, $this->className . '::' . $this->propertyName));
+        }
+
+        return '';
+    }
+
     private function getJoinColumns(string $sourceOrTargetColumn, string $table): array
     {
         $joinColumns = [];

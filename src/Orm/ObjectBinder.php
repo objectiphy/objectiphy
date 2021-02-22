@@ -4,18 +4,15 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Orm;
 
-use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
-use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Query\QB;
-use Objectiphy\Objectiphy\Factory\EntityFactory;
 use Objectiphy\Objectiphy\Factory\RepositoryFactory;
 
 /**

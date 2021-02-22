@@ -9,7 +9,6 @@ use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
-use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
@@ -171,6 +170,10 @@ class SelectQuery extends Query implements SelectQueryInterface
         }
     }
 
+    /**
+     * @return string
+     * @throws QueryException
+     */
     public function __toString(): string
     {
         if (!$this->getSelect() || !$this->getFrom()) {

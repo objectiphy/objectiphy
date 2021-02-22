@@ -236,33 +236,6 @@ class EntityTracker
         return true;
     }
 
-    private function isPropertyDirty(object $entity, string $property, &$entityValue = null, ?object $clone = null): bool
-    {
-        if (!($entity instanceof EntityProxyInterface) || !$entity->isChildAsleep($property)) { //Shh. Don't wake up the kids.
-            $entityValue = ObjectHelper::getValueFromObject($entity, $property);
-            if ($clone instanceof EntityProxyInterface && $clone->isChildAsleep($property)) {
-                //Yah, it's dirty alright - but no need to wake it up just yet
-                return true;
-            } else {
-                $notFound = '**!VALUE_NOT_FOUND!**';
-                $cloneValue = $clone ? ObjectHelper::getValueFromObject(
-                    $clone,
-                    $property,
-                    $notFound,
-                    true,
-                    true
-                ) : $notFound;
-                if (is_scalar($entityValue) || $entityValue instanceof \DateTimeInterface) {
-                    return $entityValue != $cloneValue;
-                } else {
-                    return $entityValue !== $cloneValue;
-                }
-            }
-        }
-
-        return false;
-    }
-
     /**
      * Stop tracking entities - either just for the given class, or everything if omitted.
      * @param string|null $className
@@ -291,6 +264,33 @@ class EntityTracker
         if (property_exists($className, $propertyName)) {
             $this->trackedChanges[$className][$propertyName] = $newValue;
         }
+    }
+
+    private function isPropertyDirty(object $entity, string $property, &$entityValue = null, ?object $clone = null): bool
+    {
+        if (!($entity instanceof EntityProxyInterface) || !$entity->isChildAsleep($property)) { //Shh. Don't wake up the kids.
+            $entityValue = ObjectHelper::getValueFromObject($entity, $property);
+            if ($clone instanceof EntityProxyInterface && $clone->isChildAsleep($property)) {
+                //Yah, it's dirty alright - but no need to wake it up just yet
+                return true;
+            } else {
+                $notFound = '**!VALUE_NOT_FOUND!**';
+                $cloneValue = $clone ? ObjectHelper::getValueFromObject(
+                    $clone,
+                    $property,
+                    $notFound,
+                    true,
+                    true
+                ) : $notFound;
+                if (is_scalar($entityValue) || $entityValue instanceof \DateTimeInterface) {
+                    return $entityValue != $cloneValue;
+                } else {
+                    return $entityValue !== $cloneValue;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

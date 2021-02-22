@@ -353,7 +353,7 @@ final class ObjectRemover implements TransactionInterface
      * @param int $deleteCount
      * @throws ObjectiphyException|\ReflectionException
      */
-    public function sendOrphanedKidsAway(
+    private function sendOrphanedKidsAway(
         string $propertyName,
         iterable $removedChildren,
         int &$updateCount,

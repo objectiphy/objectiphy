@@ -35,6 +35,8 @@ class JoinProviderMySql
      * @param QueryInterface $query
      * @return string The join SQL for object relationships.
      * @throws MappingException
+     * @throws ObjectiphyException
+     * @throws \ReflectionException
      */
     public function getJoins(QueryInterface $query): string
     {

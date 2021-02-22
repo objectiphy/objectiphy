@@ -317,8 +317,6 @@ final class ObjectMapper
                 } elseif ((!isset($mappingCollection->getRelationships(false)[$propertyMapping->getRelationshipKey()])
                             || $propertyMapping->isLateBound())
                         && !$propertyMapping->relationship->mappedBy
-                        /*&& !$propertyMapping->relationship->isEmbedded
-                        && !$propertyMapping->relationship->isScalarJoin()*/
                 ) {
                     //For lazy loading, we must have the primary key so we can load the child
                     $childPks = $mappingCollection->getPrimaryKeyProperties($propertyMapping->getChildClassName());

@@ -156,6 +156,15 @@ class Relationship
         $this->setCollectionFactoryClass(CollectionFactory::class);
     }
 
+    /**
+     * Static method to get an array of all of the relationship types.
+     * @return string[]
+     */
+    public static function getRelationshipTypes(): array
+    {
+        return [self::ONE_TO_ONE, self::ONE_TO_MANY, self::MANY_TO_ONE, self::MANY_TO_MANY, self::SCALAR, self::UNDEFINED];
+    }
+
     public function setConfigOptions(?bool $eagerLoadToOne, bool $eagerLoadToMany): void
     {
         $this->eagerLoadToOne = $eagerLoadToOne;
@@ -167,16 +176,7 @@ class Relationship
         return $this->eagerLoadToOne;
     }
 
-    /**
-     * Static method to get an array of all of the relationship types.
-     * @return string[]
-     */
-    public static function getRelationshipTypes(): array
-    {
-        return [self::ONE_TO_ONE, self::ONE_TO_MANY, self::MANY_TO_ONE, self::MANY_TO_MANY, self::SCALAR, self::UNDEFINED];
-    }
-
-    public function isDefined(): bool 
+    public function isDefined(): bool
     {
         return $this->relationshipType != self::UNDEFINED;
     }

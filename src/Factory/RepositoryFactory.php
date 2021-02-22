@@ -1,8 +1,7 @@
 <?php
 
 /**
- * RSW: TODO: Make this better. Possibly create objects in a generic way (kinda like autowiring),
- * or split into smaller factories.
+ * RSW: TODO: Make this better. Possibly create objects in a generic way or split into smaller factories.
  */
 declare(strict_types=1);
 
@@ -489,7 +488,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
     private function getWhereProviderMySql(): WhereProviderMySql
     {
         if (!isset($this->whereProvider)) {
-            $this->whereProvider = new WhereProviderMySql($this->getSqlStringReplacer(), $this->getObjectMapper());
+            $this->whereProvider = new WhereProviderMySql($this->getSqlStringReplacer());
         }
 
         return $this->whereProvider;

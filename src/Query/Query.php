@@ -255,7 +255,7 @@ abstract class Query implements QueryInterface
 
         $join->propertyMapping = $propertyMapping;
         $on = new CriteriaExpression(
-            new FieldExpression($propertyMapping->getPropertyPath(), true),
+            new FieldExpression($propertyMapping->getPropertyPath()),
             $propertyMapping->getAlias(),
             QB::EQ,
             $target

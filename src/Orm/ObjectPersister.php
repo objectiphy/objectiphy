@@ -66,6 +66,7 @@ final class ObjectPersister implements TransactionInterface
 
     /**
      * @param ConfigOptions $config
+     * @throws ObjectiphyException
      */
     public function setConfigOptions(ConfigOptions $config): void 
     {
@@ -114,7 +115,7 @@ final class ObjectPersister implements TransactionInterface
      * @param int $updateCount Number of rows updated
      * @param int $deleteCount
      * @return int Total number of rows updated or inserted
-     * @throws QueryException|\ReflectionException
+     * @throws QueryException|\ReflectionException|ObjectiphyException
      */
     public function saveEntity(
         object $entity,
@@ -136,7 +137,7 @@ final class ObjectPersister implements TransactionInterface
      * @param int|null $updateCount Number of rows updated
      * @param int|null $deleteCount
      * @return int Total number of rows updated or inserted
-     * @throws QueryException|\ReflectionException
+     * @throws QueryException|\ReflectionException|ObjectiphyException
      */
     public function saveEntities(
         array $entities,
@@ -160,7 +161,7 @@ final class ObjectPersister implements TransactionInterface
      * @param int|null $insertCount Number of rows inserted
      * @param int|null $updateCount Number of rows updated
      * @return int Total number of rows updated or inserted
-     * @throws QueryException
+     * @throws ObjectiphyException|QueryException|\ReflectionException
      */
     public function executeSave(
         QueryInterface $query,

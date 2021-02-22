@@ -9,7 +9,6 @@ use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
-use Objectiphy\Objectiphy\Orm\ObjectHelper;
 use Objectiphy\Objectiphy\Orm\ObjectMapper;
 
 /**
@@ -119,6 +118,7 @@ class SqlStringReplacer
      * @param string $value Database/Table/Column separated by a dot, or field expression/value.
      * @param string|null $delimiter Character to wrap around the component parts of the string.
      * @param string $separator Character that separates components that need to be delimited
+     * @param bool $delimitEmptyString
      * @return string Delimited string.
      */
     public function delimit(string $value, ?string $delimiter = null, string $separator = '.', bool $delimitEmptyString = false): string
@@ -296,7 +296,7 @@ class SqlStringReplacer
         return false;
     }
 
-    private function checkLiteralValue($fieldValue, QueryInterface $query)
+    private function checkLiteralValue($fieldValue, QueryInterface $query): string
     {
         //If not, treat it as a value (and escape quotes if not already done)
         if (is_object($fieldValue) && !($fieldValue instanceof \DateTimeInterface)) {

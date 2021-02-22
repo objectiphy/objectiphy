@@ -11,7 +11,6 @@ use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Contract\UpdateQueryInterface;
 use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
-use Objectiphy\Objectiphy\Exception\QueryException;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
@@ -45,6 +44,7 @@ class SqlUpdaterMySql implements SqlUpdaterInterface
      * @param bool $replace Whether to update existing record if it already exists.
      * @return string A query to execute for inserting the record.
      * @throws ObjectiphyException
+     * @throws \ReflectionException
      */
     public function getInsertSql(InsertQueryInterface $query, bool $replace = false): string
     {

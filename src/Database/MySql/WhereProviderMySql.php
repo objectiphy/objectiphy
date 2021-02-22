@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Database\MySql;
 
-use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
-use Objectiphy\Objectiphy\Orm\ObjectMapper;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\CriteriaGroup;
 use Objectiphy\Objectiphy\Query\QueryBuilder;
@@ -30,9 +28,9 @@ class WhereProviderMySql
     /**
      * The WHERE part of the SQL query.
      * @param QueryInterface $query
+     * @param MappingCollection $mappingCollection
      * @return string
      * @throws ObjectiphyException
-     * @throws \ReflectionException
      */
     public function getWhere(QueryInterface $query, MappingCollection $mappingCollection): string
     {

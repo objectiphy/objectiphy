@@ -192,6 +192,7 @@ final class ProxyFactory
     }
 
     /**
+     * @param string $classDefinition
      * @param string $className
      * @param string $proxyClassName
      * @param \ReflectionMethod|null $getterMethod

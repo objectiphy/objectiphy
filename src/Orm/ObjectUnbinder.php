@@ -101,6 +101,7 @@ final class ObjectUnbinder
      * column is the foreign key, get the value of the property mapped to that column, otherwise just return the value
      * @param mixed $value
      * @param string $targetJoinColumn
+     * @param string|null $keyProperty
      * @return mixed
      */
     public function unbindValue($value, string $targetJoinColumn = '', ?string &$keyProperty = null)

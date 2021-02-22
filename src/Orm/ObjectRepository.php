@@ -302,6 +302,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
      * set(for streaming large amounts of data).
      * @return iterable
+     * @throws ObjectiphyException|\ReflectionException
      */
     public function findLatestBy(
         $criteria = [],
@@ -572,14 +573,14 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     /**
      * Hard delete multiple entities (and cascade to children, if applicable).
      * @param \Traversable $entities The entities to delete.
-     * @param boolean $disableCascade Whether or not to suppress cascading deletes (deletes will only normally be
+     * @param bool $disableCascade Whether or not to suppress cascading deletes (deletes will only normally be
      * cascaded if the mapping definition explicitly requires it, but you can use this flag to override that).
-     * @param int $updateCount Number of records updated (where child records lose their parents but do not get
-     * deleted themsselves, they may be updated with null values for the foreign key).
      * @param bool $exceptionIfDisabled Whether or not to throw an exception if an attempt is made to delete when
      * deletes are disabled (if false, it will just silently return zero).
+     * @param int $updateCount Number of records updated (where child records lose their parents but do not get
+     * deleted themselves, they may be updated with null values for the foreign key).
      * @return int Number of records deleted.
-     * @throws \Exception
+     * @throws ObjectiphyException|\ReflectionException|\Throwable
      */
     public function deleteEntities(
         iterable $entities,
@@ -617,7 +618,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param int $updateCount Number of rows updated.
      * @param int $deleteCount
      * @return int|object|array|null Query results, or total number of rows affected.
-     * @throws ObjectiphyException|QueryException
+     * @throws ObjectiphyException|QueryException|\ReflectionException|\Throwable
      */
     public function executeQuery(
         QueryInterface $query,

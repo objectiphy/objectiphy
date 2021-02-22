@@ -8,8 +8,8 @@ use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Orm\ObjectHelper;
 
 /**
- * Represents the full mapping information for the entire object hierarchy of a given parent class.
  * @author Russell Walker <rwalker.php@gmail.com>
+ * Represents the full mapping information for the entire object hierarchy of a given parent class.
  */
 class MappingCollection
 {

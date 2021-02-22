@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Query;
 
 use Objectiphy\Objectiphy\Contract\UpdateQueryInterface;
+use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
@@ -45,7 +46,7 @@ class UpdateQuery extends Query implements UpdateQueryInterface
      * @param string|null $className
      * @param array $assignments Keyed by property name (these will be the dirty properties passed in from the
      * entity tracker).
-     * @throws QueryException
+     * @throws QueryException|MappingException
      */
     public function finalise(
         MappingCollection $mappingCollection,

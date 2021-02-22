@@ -101,7 +101,6 @@ class CriteriaBuilder implements CriteriaBuilderInterface
      * @param string $operator
      * @param $value
      * @return CriteriaBuilderInterface
-     * @throws QueryException
      */
     public function orExpression(FieldExpression $expression, string $operator, $value): CriteriaBuilderInterface
     {
@@ -248,6 +247,7 @@ class CriteriaBuilder implements CriteriaBuilderInterface
      * @param string $operator
      * @param $values
      * @return CriteriaExpression
+     * @throws QueryException
      */
     private function buildExpression(
         string $joiner,

@@ -20,6 +20,11 @@ class CriteriaGroup implements CriteriaPartInterface
 
     public string $type;
 
+    /**
+     * CriteriaGroup constructor.
+     * @param string $type
+     * @throws QueryException
+     */
     public function __construct(string $type)
     {
         if (defined('self::GROUP_TYPE_' . $type)) {
