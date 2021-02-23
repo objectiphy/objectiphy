@@ -128,7 +128,7 @@ INSERT INTO `contact` VALUES
 ('144', '006', 'Miss', 'Katherine', "O'Neil", null, null, null, 1, 4, 0, 0, 0),
 ('145', '006', 'Miss', 'Rachael', 'Darlington', null, null, null, 1, 4, 0, 0, 0),
 ('146', '003', 'Mr', 'Ashley', 'Giles', null, null, null, 0, 4, 0, 0, 0),
-('147', '003', 'Mr', 'Mark', 'McMillan', null, null, null, 1, 4, 0, 0, 0),
+('147', '003', 'Mr', 'Mark', 'MacMillan', null, null, null, 1, 4, 0, 0, 0),
 ('148', '003', 'Mr', 'Jack', 'Butler', null, null, null, 1, 4, 0, 0, 0),
 ('149', '003', 'Mr', 'Francis', 'Smith', null, null, null, 1, 5, 0, 0, 0),
 ('150', '006', 'Miss', 'Katrina', 'Leaver', null, null, null, 1, 5, 0, 0, 0),
@@ -321,10 +321,13 @@ INSERT INTO `parent_of_non_pk_child` VALUES ('2', 'Eselbeth', null);
 DROP TABLE IF EXISTS `person`;
 CREATE TABLE `person` (
                            `id` int(11) NOT NULL AUTO_INCREMENT,
+                           `contact_id` int(11) DEFAULT NULL,
                            `first_name` varchar(255) DEFAULT NULL,
                            `last_name` varchar(255) DEFAULT NULL,
                            `car` varchar(100) DEFAULT NULL,
                            `year` int(11) DEFAULT NULL,
+                           `email` varchar(100) DEFAULT NULL,
+                           `postcode` varchar(20) DEFAULT NULL,
                            PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
 
@@ -333,13 +336,13 @@ CREATE TABLE `person` (
 -- ----------------------------
 
 INSERT INTO `person` VALUES
-                            (1, 'Marty', 'McFly', 'The Truck', 1984),
-                            (2, 'Jennifer', 'McFly', null, 1986),
-                            (3, 'Biff', 'Tannen', 'Mustang', 1980),
-                            (4, 'Emmet', 'Brown', 'DeLorean', 1955),
-                            (5, 'Clara', 'Clayton', 'Horse', 1885),
-                            (6, 'George', 'McFly', 'DeLorean', 1984),
-                            (7, 'Russell', 'Walker', 'DeLorean', 1985);
+                            (1, 2, 'Marty', 'McFly', 'The Truck', 1984, 'info@mcfly.com', 'WR2 6NJ'),
+                            (2, 3, 'Jennifer', 'McFly', null, 1986, 'enquiries@mcfly.com', 'PE3 8AF'),
+                            (3, null, 'Biff', 'Tannen', 'Mustang', 1980, 'info@tannen.net', null),
+                            (4, 147, 'Emmet', 'Brown', 'DeLorean', 1955, '', null),
+                            (5, null, 'Clara', 'Clayton', 'Horse', 1885, 'info@clayton.info', null),
+                            (6, null, 'George', 'McFly', 'DeLorean', 1984, 'info@daddeo.biz', 'PE3 8AF'),
+                            (7, 4, 'Russell', 'Walker', 'DeLorean', 1985, null, null);
 
 
 -- ----------------------------

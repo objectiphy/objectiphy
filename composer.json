@@ -2,6 +2,7 @@
     "name": "objectiphy/objectiphy",
     "description": "A light-weight data-mapper ORM for PHP",
     "type": "library",
+    "license": "MIT",
     "require": {
         "php": "^7.4",
         "ext-pdo": "*",

@@ -204,6 +204,16 @@ class QueryTest extends IntegrationTestBase
         $people = $this->objectRepository->executeQuery($query7);
         $this->assertEquals(3, count($people));
 
+        $query9 = QueryBuilder::create()
+            ->where('contact.lastName', QB::BEGINS_WITH, 'Mac')
+            ->orStart()
+            ->where('postcode', QB::EQUALS, 'PE3 8AF')
+            ->and('email', QB::CONTAINS, 'info')
+            ->orEnd()
+            ->buildSelectQuery();
+        $result9 = $this->objectRepository->executeQuery($query9);
+        $this->assertEquals(2, count($result9));
+
         $this->objectRepository->setClassName(TestPolicy::class);
         $postedValues = [
             'surname'   => 'smith', //Case insensitive
@@ -218,8 +228,8 @@ class QueryTest extends IntegrationTestBase
                 ->and('email', QB::CONTAINS, ':email')
             ->orEnd()
             ->buildSelectQuery($postedValues);
-        $result = $this->objectRepository->executeQuery($query8);
-        $this->assertEquals(2, count($result));
+        $result8 = $this->objectRepository->executeQuery($query8);
+        $this->assertEquals(2, count($result8));
 
         $criteria = ['departments' => ['Sales', 'Finance']];
         $query = QueryBuilder::create()
