@@ -14,6 +14,7 @@ use Objectiphy\Objectiphy\Contract\ExplanationInterface;
 use Objectiphy\Objectiphy\Contract\SqlDeleterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Contract\TransactionInterface;
+use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
@@ -33,6 +34,7 @@ final class ObjectRemover implements TransactionInterface
     private ObjectPersister $objectPersister;
     private ObjectFetcher $objectFetcher;
     private EntityTracker $entityTracker;
+    private SqlStringReplacer $stringReplacer;
     private DeleteOptions $options;
     private bool $disableDeleteRelationships = false;
     private bool $disableDeleteEntities = false;
@@ -45,6 +47,7 @@ final class ObjectRemover implements TransactionInterface
         StorageInterface $storage,
         ObjectFetcher $objectFetcher,
         EntityTracker $entityTracker,
+        SqlStringReplacer $stringReplacer,
         ExplanationInterface $explanation
     ) {
         $this->objectMapper = $objectMapper;
@@ -52,6 +55,7 @@ final class ObjectRemover implements TransactionInterface
         $this->storage = $storage;
         $this->objectFetcher = $objectFetcher;
         $this->entityTracker = $entityTracker;
+        $this->stringReplacer = $stringReplacer;
         $this->explanation = $explanation;
     }
 
@@ -194,7 +198,7 @@ final class ObjectRemover implements TransactionInterface
         $this->setDeleteOptions($options);
         $deleteCount = 0;
         $this->setClassName($deleteQuery->getDelete() ?: $this->getClassName());
-        $deleteQuery->finalise($this->options->mappingCollection, $this->getClassName());
+        $deleteQuery->finalise($this->options->mappingCollection, $this->stringReplacer, $this->getClassName());
         $sql = $this->sqlDeleter->getDeleteSql($deleteQuery);
         $this->explanation->addQuery($deleteQuery, $sql, $this->options->mappingCollection, $this->config);
         if ($sql && $this->storage->executeQuery($sql, $deleteQuery->getParams())) {

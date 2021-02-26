@@ -86,6 +86,12 @@ class TestContact
     protected bool $higherRateEarner;
 
     /**
+     * @var int
+     * @ORM\Column
+     */
+    protected int $loginId;
+
+    /**
      * This is a dirty bodge, just for unit test purposes - not recommended
      * for real entities in an application
      * @param $property

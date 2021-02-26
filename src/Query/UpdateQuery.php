@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Query;
 
 use Objectiphy\Objectiphy\Contract\UpdateQueryInterface;
+use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
@@ -43,18 +44,21 @@ class UpdateQuery extends Query implements UpdateQueryInterface
     /**
      * Ensure query is complete, filling in any missing bits as necessary
      * @param MappingCollection $mappingCollection
+     * @param SqlStringReplacer $stringReplacer
      * @param string|null $className
      * @param array $assignments Keyed by property name (these will be the dirty properties passed in from the
      * entity tracker).
-     * @throws QueryException|MappingException
+     * @throws MappingException
+     * @throws QueryException
      */
     public function finalise(
         MappingCollection $mappingCollection,
+        SqlStringReplacer $stringReplacer,
         ?string $className = null,
         array $assignments = []
     ): void {
         if (!$this->isFinalised) {
-            parent::finalise($mappingCollection, $className);
+            parent::finalise($mappingCollection, $stringReplacer, $className);
             if (!$this->getAssignments() && $assignments) {
                 $assignmentExpressions = [];
                 foreach ($assignments as $key => $value) {
@@ -66,7 +70,7 @@ class UpdateQuery extends Query implements UpdateQueryInterface
                         $assignmentExpressions[] = new AssignmentExpression($key, $value);
                         //If scalar join, ensure we have the join
                         if ($propertyMapping->relationship->isScalarJoin()) {
-                            $this->populateRelationshipJoin($mappingCollection, $propertyMapping);
+                            $this->populateRelationshipJoin($propertyMapping);
                         }
                     }
                 }
@@ -75,6 +79,10 @@ class UpdateQuery extends Query implements UpdateQueryInterface
         }
     }
 
+    /**
+     * @return string
+     * @throws QueryException
+     */
     public function __toString(): string
     {
         if (!$this->assignments || !$this->getUpdate()) {

@@ -16,6 +16,7 @@ use Objectiphy\Objectiphy\Contract\SqlUpdaterInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Contract\TransactionInterface;
 use Objectiphy\Objectiphy\Contract\UpdateQueryInterface;
+use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Query\QB;
@@ -34,6 +35,7 @@ final class ObjectPersister implements TransactionInterface
     private StorageInterface $storage;
     private EntityTracker $entityTracker;
     private ObjectRemover $objectRemover;
+    private SqlStringReplacer $stringReplacer;
     private ConfigOptions $config;
     private SaveOptions $options;
     private array $savedObjects = [];
@@ -45,6 +47,7 @@ final class ObjectPersister implements TransactionInterface
         ObjectUnbinder $objectUnbinder,
         StorageInterface $storage,
         EntityTracker $entityTracker,
+        SqlStringReplacer $stringReplacer,
         ExplanationInterface $explanation
     ) {
         $this->sqlUpdater = $sqlUpdater;
@@ -52,6 +55,7 @@ final class ObjectPersister implements TransactionInterface
         $this->objectUnbinder = $objectUnbinder;
         $this->storage = $storage;
         $this->entityTracker = $entityTracker;
+        $this->stringReplacer = $stringReplacer;
         $this->explanation = $explanation;
     }
 
@@ -172,7 +176,7 @@ final class ObjectPersister implements TransactionInterface
         $this->setSaveOptions($options);
         $this->objectMapper->addExtraMappings($this->getClassName(), $query);
         $this->objectMapper->addExtraClassMappings($this->getClassName(), $query);
-        $query->finalise($this->options->mappingCollection);
+        $query->finalise($this->options->mappingCollection, $this->stringReplacer);
         if ($query instanceof UpdateQueryInterface) {
             $sql = $this->sqlUpdater->getUpdateSql($query, $this->options->replaceExisting);
             $this->explanation->addQuery($query, $sql, $this->options->mappingCollection, $this->config);
@@ -279,7 +283,7 @@ final class ObjectPersister implements TransactionInterface
         $this->objectMapper->addExtraMappings($className, $updateQuery);
         $rows = $this->objectUnbinder->unbindEntityToRow($entity, $pkValues, $this->options->saveChildren);
         if ($rows) {
-            $updateQuery->finalise($this->options->mappingCollection, $className, $rows);
+            $updateQuery->finalise($this->options->mappingCollection, $this->stringReplacer, $className, $rows);
             $sql = $this->sqlUpdater->getUpdateSql($updateQuery, $this->options->replaceExisting);
             $this->explanation->addQuery($updateQuery, $sql, $this->options->mappingCollection, $this->config);
             if ($this->storage->executeQuery($sql, $updateQuery->getParams())) {
@@ -322,7 +326,7 @@ final class ObjectPersister implements TransactionInterface
         $insertQuery = $qb->buildInsertQuery();
         $row = $this->objectUnbinder->unbindEntityToRow($entity, [], $this->options->saveChildren);
         if ($row) {
-            $insertQuery->finalise($this->options->mappingCollection, $this->getClassName(), $row);
+            $insertQuery->finalise($this->options->mappingCollection, $this->stringReplacer, $this->getClassName(), $row);
             $sql = $this->sqlUpdater->getInsertSql($insertQuery, $this->options->replaceExisting);
             $this->explanation->addQuery($insertQuery, $sql, $this->options->mappingCollection, $this->config);
             if ($this->storage->executeQuery($sql, $insertQuery->getParams())) {

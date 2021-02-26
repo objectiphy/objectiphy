@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Query;
 
 use Objectiphy\Objectiphy\Contract\DeleteQueryInterface;
+use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
@@ -59,9 +60,10 @@ class DeleteQuery extends Query implements DeleteQueryInterface
      * Ensure query is complete, filling in any missing bits as necessary (don't add joins for delete queries - if they
      * are needed, the user should supply them).
      * @param MappingCollection $mappingCollection
+     * @param SqlStringReplacer $stringReplacer
      * @param string|null $className
      */
-    public function finalise(MappingCollection $mappingCollection, ?string $className = null): void
+    public function finalise(MappingCollection $mappingCollection, SqlStringReplacer $stringReplacer, ?string $className = null): void
     {
         if (!$this->isFinalised) {
             $this->mappingCollection = $mappingCollection;

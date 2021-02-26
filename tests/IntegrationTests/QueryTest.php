@@ -204,15 +204,26 @@ class QueryTest extends IntegrationTestBase
         $people = $this->objectRepository->executeQuery($query7);
         $this->assertEquals(3, count($people));
 
-        $query9 = QueryBuilder::create()
+        $query8 = QueryBuilder::create()
             ->where('contact.lastName', QB::BEGINS_WITH, 'Mac')
             ->orStart()
             ->where('postcode', QB::EQUALS, 'PE3 8AF')
             ->and('email', QB::CONTAINS, 'info')
             ->orEnd()
             ->buildSelectQuery();
+        $result8 = $this->objectRepository->executeQuery($query8);
+        $this->assertEquals(2, count($result8));
+
+        $query9 = QB::create()
+            ->where('contact.lastName', QB::BEGINS_WITH, 'Mac')
+            ->orStart()
+            ->where('postcode', QB::EQUALS, 'PE3 8AF')
+                ->and('email', QB::CONTAINS, 'info')
+            ->orEnd()
+            ->and('contact.loginId', QB::EQUALS, '%login.id%')
+            ->buildSelectQuery();
         $result9 = $this->objectRepository->executeQuery($query9);
-        $this->assertEquals(2, count($result9));
+        $this->assertEquals(1, count($result9));
 
         $this->objectRepository->setClassName(TestPolicy::class);
         $postedValues = [
@@ -221,15 +232,15 @@ class QueryTest extends IntegrationTestBase
             'email'     => 'peter@',
             'random'    => 'This should be ignored!'
         ];
-        $query8 = QueryBuilder::create()
+        $query10 = QueryBuilder::create()
             ->where('contact.lastName', QB::BEGINS_WITH, ':surname')
             ->orStart()
                 ->where('postcode', QB::EQUALS, ':postcode')
                 ->and('email', QB::CONTAINS, ':email')
             ->orEnd()
             ->buildSelectQuery($postedValues);
-        $result8 = $this->objectRepository->executeQuery($query8);
-        $this->assertEquals(2, count($result8));
+        $result10 = $this->objectRepository->executeQuery($query10);
+        $this->assertEquals(2, count($result10));
 
         $criteria = ['departments' => ['Sales', 'Finance']];
         $query = QueryBuilder::create()

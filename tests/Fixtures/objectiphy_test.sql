@@ -96,6 +96,7 @@ CREATE TABLE `contact` (
                            `earns_commission` tinyint DEFAULT 0,
                            `commission_rate` decimal(10, 2) DEFAULT 1,
                            `higher_rate_earner` tinyint DEFAULT 0,
+                           `login_id` int(11) DEFAULT NULL,
                            PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=170 DEFAULT CHARSET=utf8mb4;
 
@@ -104,49 +105,49 @@ CREATE TABLE `contact` (
 -- ----------------------------
 
 INSERT INTO `contact` VALUES
-('123', '001', 'Master', 'Luke', 'Skywalker', null, 6, 'Ariadne', 1, 1, 1, 12.5, 0),
-('124', '002', 'Dark Lord', 'Anakin', 'Skywalker', null, 5, 'Lambeth', 1, 1, 0, 0, 0),
-('125', '003', 'Mr', 'Han', 'Solo', null, 4, 'Lambeth', 0, 1, 1, 12.5, 0),
-('126', '003', 'Mr', 'Boba', 'Fett', null, 3, 'Ariadne', 0, 2, 1, 15, 0),
-('127', '004', 'Ms', 'Ellen', 'Ripley', null, 2, 'Ariadne',1, 3, 0, 0, 0),
-('128', '005', 'Captain', 'Arthur', 'Dallas', null, 1, 'Lambeth', 1, 1, 0, 0, 0),
-('129', '003', 'Mr', 'Samuel', 'Brett', null, null, null, 1, 1, 1, 12, 0),
-('130', '001', 'Master', 'Gilbert', 'Kane', null, null, null, 1, 2, 1, 15, 0),
-('131', '007', 'Mrs', 'Joan', 'Lambert', null, null, null, 1, 2, 0, 0, 0),
-('132', '003', 'Mr', 'Dennis', 'Parker', null, null, null, 1, 2, 0, 0, 0),
-('133', '001', 'Master', 'Marty', 'McFly', null, null, null, 1, 2, 0, 0, 0),
-('134', '008', 'Doctor', 'Emmet', 'Brown', null, null, null, 1, 2, 0, 12.5, 0),
-('135', '003', 'Mr', 'Biff', 'Tannen', null, null, null, 0, 3, 1, 12.5, 0),
-('136', '006', 'Miss', 'Lorraine', 'Baines', null, null, null, 1, 3, 0, 20, 1),
-('137', '003', 'Mr', 'George', 'McFly', null, null, null, 1, 3, 0, 0, 0),
-('138', '003', 'Mr', 'Ulysses', 'McGill', 'PO27AJ', null, null, 1, 3, 0, 0, 0),
-('139', '008', 'Doctor', 'Carla', 'Porter', null, null, null, 1, 3, 0, 0, 0),
-('140', '003', 'Mr', 'James', 'Walker', null, null, null, 1, 3, 0, 0, 0),
-('141', '007', 'Mrs', 'Famke', 'Elliot', null, null, null, 1, 3, 0, 0, 0),
-('142', '006', 'Miss', 'Selena', 'Johnson', null, null, null, 1, 4, 0, 0, 0),
-('143', '003', 'Mr', 'Adrian', 'Thorn', null, null, null, 1, 4, 0, 0, 0),
-('144', '006', 'Miss', 'Katherine', "O'Neil", null, null, null, 1, 4, 0, 0, 0),
-('145', '006', 'Miss', 'Rachael', 'Darlington', null, null, null, 1, 4, 0, 0, 0),
-('146', '003', 'Mr', 'Ashley', 'Giles', null, null, null, 0, 4, 0, 0, 0),
-('147', '003', 'Mr', 'Mark', 'MacMillan', null, null, null, 1, 4, 0, 0, 0),
-('148', '003', 'Mr', 'Jack', 'Butler', null, null, null, 1, 4, 0, 0, 0),
-('149', '003', 'Mr', 'Francis', 'Smith', null, null, null, 1, 5, 0, 0, 0),
-('150', '006', 'Miss', 'Katrina', 'Leaver', null, null, null, 1, 5, 0, 0, 0),
-('151', '003', 'Mr', 'Charles', 'Barnet', null, null, null, 1, 5, 0, 0, 0),
-('152', '007', 'Mrs', 'Sarah', 'Rumbelow', null, null, null, 1, 5, 0, 0, 0),
-('153', '006', 'Miss', 'Amelia', 'Dermot', null, null, null, 1, 5, 0, 0, 0),
-('154', '003', 'Mr', 'Graham', 'Christopher', null, null, null, 1, 1, 0, 0, 0),
-('155', '003', 'Mr', 'Axel', 'Robertson', null, null, null, 1, 2, 0, 0, 0),
-('156', '007', 'Mrs', 'Kate', 'Morgado', null, null, null, 1, 3, 0, 0, 0),
-('157', '008', 'Doctor', 'Jerry', 'Thatcham', null, null, null, 1, 4, 0, 0, 0),
-('158', '008', 'Doctor', 'Liz', 'Newman', null, null, null, 1, 5, 0, 0, 0),
-('159', '003', 'Mr', 'Andrew', 'Kent', null, null, null, 1, 1, 0, 0, 0),
-('160', '006', 'Miss', 'Michaela', 'Holloway', null, null, null, 0, 1, 0, 0, 0),
-('161', '007', 'Mrs', 'Gabby', 'Fenchurch', null, null, null, 1, 2, 0, 0, 0),
-('162', '003', 'Mr', 'Frank', 'Urquhart', null, null, null, 1, 2, 0, 0, 0),
-('163', '007', 'Mrs', 'Emma', 'Smithers', null, null, null, 1, 1, 0, 0, 0),
-('164', '003', 'Mr', 'Mohammed', 'Patel', null, null, null, 1, 3, 0, 0, 0),
-('165', '003', 'Mr', 'Felix', 'Dodgson', null, null, null, 1, 3, 0, 0, 0);
+('123', '001', 'Master', 'Luke', 'Skywalker', null, 6, 'Ariadne', 1, 1, 1, 12.5, 0, 1),
+('124', '002', 'Dark Lord', 'Anakin', 'Skywalker', null, 5, 'Lambeth', 1, 1, 0, 0, 0, 2),
+('125', '003', 'Mr', 'Han', 'Solo', null, 4, 'Lambeth', 0, 1, 1, 12.5, 0, 3),
+('126', '003', 'Mr', 'Boba', 'Fett', null, 3, 'Ariadne', 0, 2, 1, 15, 0, 4),
+('127', '004', 'Ms', 'Ellen', 'Ripley', null, 2, 'Ariadne',1, 3, 0, 0, 0, 5),
+('128', '005', 'Captain', 'Arthur', 'Dallas', null, 1, 'Lambeth', 1, 1, 0, 0, 0, 6),
+('129', '003', 'Mr', 'Samuel', 'Brett', null, null, null, 1, 1, 1, 12, 0, 7),
+('130', '001', 'Master', 'Gilbert', 'Kane', null, null, null, 1, 2, 1, 15, 0, 8),
+('131', '007', 'Mrs', 'Joan', 'Lambert', null, null, null, 1, 2, 0, 0, 0, null),
+('132', '003', 'Mr', 'Dennis', 'Parker', null, null, null, 1, 2, 0, 0, 0, null),
+('133', '001', 'Master', 'Marty', 'McFly', null, null, null, 1, 2, 0, 0, 0, null),
+('134', '008', 'Doctor', 'Emmet', 'Brown', null, null, null, 1, 2, 0, 12.5, 0, null),
+('135', '003', 'Mr', 'Biff', 'Tannen', null, null, null, 0, 3, 1, 12.5, 0, null),
+('136', '006', 'Miss', 'Lorraine', 'Baines', null, null, null, 1, 3, 0, 20, 1, null),
+('137', '003', 'Mr', 'George', 'McFly', null, null, null, 1, 3, 0, 0, 0, null),
+('138', '003', 'Mr', 'Ulysses', 'McGill', 'PO27AJ', null, null, 1, 3, 0, 0, 0, null),
+('139', '008', 'Doctor', 'Carla', 'Porter', null, null, null, 1, 3, 0, 0, 0, null),
+('140', '003', 'Mr', 'James', 'Walker', null, null, null, 1, 3, 0, 0, 0, null),
+('141', '007', 'Mrs', 'Famke', 'Elliot', null, null, null, 1, 3, 0, 0, 0, null),
+('142', '006', 'Miss', 'Selena', 'Johnson', null, null, null, 1, 4, 0, 0, 0, null),
+('143', '003', 'Mr', 'Adrian', 'Thorn', null, null, null, 1, 4, 0, 0, 0, null),
+('144', '006', 'Miss', 'Katherine', "O'Neil", null, null, null, 1, 4, 0, 0, 0, null),
+('145', '006', 'Miss', 'Rachael', 'Darlington', null, null, null, 1, 4, 0, 0, 0, null),
+('146', '003', 'Mr', 'Ashley', 'Giles', null, null, null, 0, 4, 0, 0, 0, null),
+('147', '003', 'Mr', 'Mark', 'MacMillan', null, null, null, 1, 4, 0, 0, 0, null),
+('148', '003', 'Mr', 'Jack', 'Butler', null, null, null, 1, 4, 0, 0, 0, null),
+('149', '003', 'Mr', 'Francis', 'Smith', null, null, null, 1, 5, 0, 0, 0, null),
+('150', '006', 'Miss', 'Katrina', 'Leaver', null, null, null, 1, 5, 0, 0, 0, null),
+('151', '003', 'Mr', 'Charles', 'Barnet', null, null, null, 1, 5, 0, 0, 0, null),
+('152', '007', 'Mrs', 'Sarah', 'Rumbelow', null, null, null, 1, 5, 0, 0, 0, null),
+('153', '006', 'Miss', 'Amelia', 'Dermot', null, null, null, 1, 5, 0, 0, 0, null),
+('154', '003', 'Mr', 'Graham', 'Christopher', null, null, null, 1, 1, 0, 0, 0, null),
+('155', '003', 'Mr', 'Axel', 'Robertson', null, null, null, 1, 2, 0, 0, 0, null),
+('156', '007', 'Mrs', 'Kate', 'Morgado', null, null, null, 1, 3, 0, 0, 0, null),
+('157', '008', 'Doctor', 'Jerry', 'Thatcham', null, null, null, 1, 4, 0, 0, 0, null),
+('158', '008', 'Doctor', 'Liz', 'Newman', null, null, null, 1, 5, 0, 0, 0, null),
+('159', '003', 'Mr', 'Andrew', 'Kent', null, null, null, 1, 1, 0, 0, 0, null),
+('160', '006', 'Miss', 'Michaela', 'Holloway', null, null, null, 0, 1, 0, 0, 0, null),
+('161', '007', 'Mrs', 'Gabby', 'Fenchurch', null, null, null, 1, 2, 0, 0, 0, null),
+('162', '003', 'Mr', 'Frank', 'Urquhart', null, null, null, 1, 2, 0, 0, 0, null),
+('163', '007', 'Mrs', 'Emma', 'Smithers', null, null, null, 1, 1, 0, 0, 0, null),
+('164', '003', 'Mr', 'Mohammed', 'Patel', null, null, null, 1, 3, 0, 0, 0, null),
+('165', '003', 'Mr', 'Felix', 'Dodgson', null, null, null, 1, 3, 0, 0, 0, null);
 
 -- ----------------------------
 --  Table structure for `country`
@@ -175,32 +176,10 @@ CREATE TABLE `department` (
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------
---  Records of `country`
+--  Records of `department`
 -- ----------------------------
 
 INSERT INTO `department` VALUES (1, 'Sales'), (2, 'Marketing'), (3, 'Development'), (4, 'Operations'), (5, 'Warehouse');
-
--- ----------------------------
---  Table structure for `security_pass`
--- ----------------------------
-DROP TABLE IF EXISTS `security_pass`;
-CREATE TABLE `security_pass` (
-                                 `id` int(11) NOT NULL AUTO_INCREMENT,
-                                 `serial_no` varchar(100),
-                                 `employee_id` int(11) DEFAULT NULL,
-                                 PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
-
--- ----------------------------
---  Records of `employee`
--- ----------------------------
-
-INSERT INTO `security_pass` VALUES (1, 'ABCDEFG', 5);
-INSERT INTO `security_pass` VALUES (2, 'GFEDCBA', 4);
-INSERT INTO `security_pass` VALUES (3, '1234567', 3);
-INSERT INTO `security_pass` VALUES (4, '7654321', 2);
-INSERT INTO `security_pass` VALUES (5, 'AABBCCD', 1);
-INSERT INTO `security_pass` VALUES (6, 'DDCCBBA', 6);
 
 -- ----------------------------
 --  Table structure for `employee` (self-referencing)
@@ -229,6 +208,33 @@ INSERT INTO `employee` VALUES (3, 'Becky', 2, 1, 3, 'SB');
 INSERT INTO `employee` VALUES (4, 'Jack', 5, 2, 3, 'DD');
 INSERT INTO `employee` VALUES (5, 'Tim', 1, 4, 2, 'VP');
 INSERT INTO `employee` VALUES (6, 'Ben', 5, 2, 3, 'MD');
+
+-- ----------------------------
+--  Table structure for `login`
+-- ----------------------------
+DROP TABLE IF EXISTS `login`;
+CREATE TABLE `login` (
+                         `id` int(11) NOT NULL AUTO_INCREMENT,
+                         `username` varchar(255) DEFAULT NULL,
+                         `password` varchar(255) DEFAULT NULL,
+                         PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------
+--  Records of `login`
+-- ----------------------------
+
+INSERT INTO `login` VALUES
+(1, 'testuser1', 'hash1'),
+(2, 'testuser2', 'hash2'),
+(3, 'testuser3', 'hash3'),
+(4, 'testuser4', 'hash4'),
+(5, 'testuser5', 'hash5'),
+(6, 'testuser6', 'hash6'),
+(7, 'testuser7', 'hash7'),
+(8, 'testuser8', 'hash8'),
+(9, 'testuser9', 'hash9'),
+(10, 'testuser10', 'hash10');
 
 -- ----------------------------
 --  Table structure for `position`
@@ -328,6 +334,7 @@ CREATE TABLE `person` (
                            `year` int(11) DEFAULT NULL,
                            `email` varchar(100) DEFAULT NULL,
                            `postcode` varchar(20) DEFAULT NULL,
+                           `login_id` int(11) DEFAULT NULL,
                            PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
 
@@ -336,13 +343,13 @@ CREATE TABLE `person` (
 -- ----------------------------
 
 INSERT INTO `person` VALUES
-                            (1, 2, 'Marty', 'McFly', 'The Truck', 1984, 'info@mcfly.com', 'WR2 6NJ'),
-                            (2, 3, 'Jennifer', 'McFly', null, 1986, 'enquiries@mcfly.com', 'PE3 8AF'),
-                            (3, null, 'Biff', 'Tannen', 'Mustang', 1980, 'info@tannen.net', null),
-                            (4, 147, 'Emmet', 'Brown', 'DeLorean', 1955, '', null),
-                            (5, null, 'Clara', 'Clayton', 'Horse', 1885, 'info@clayton.info', null),
-                            (6, null, 'George', 'McFly', 'DeLorean', 1984, 'info@daddeo.biz', 'PE3 8AF'),
-                            (7, 4, 'Russell', 'Walker', 'DeLorean', 1985, null, null);
+                            (1, 2, 'Marty', 'McFly', 'The Truck', 1984, 'info@mcfly.com', 'WR2 6NJ', 1),
+                            (2, 3, 'Jennifer', 'McFly', null, 1986, 'enquiries@mcfly.com', 'PE3 8AF', 2),
+                            (3, null, 'Biff', 'Tannen', 'Mustang', 1980, 'info@tannen.net', null, 3),
+                            (4, 147, 'Emmet', 'Brown', 'DeLorean', 1955, '', null, 4),
+                            (5, null, 'Clara', 'Clayton', 'Horse', 1885, 'info@clayton.info', null, null),
+                            (6, null, 'George', 'McFly', 'DeLorean', 1984, 'info@daddeo.biz', 'PE3 8AF', null),
+                            (7, 4, 'Russell', 'Walker', 'DeLorean', 1985, null, null, null);
 
 
 -- ----------------------------
@@ -391,7 +398,7 @@ CREATE TABLE `policy` (
                           `contact_id` int(11) DEFAULT NULL,
                           `login_id` int(11) DEFAULT NULL,
                           PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=19072016 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT 19072016 DEFAULT CHARSET=utf8mb4;
 
 ALTER TABLE `policy` ADD INDEX `policy_number` USING BTREE (`policy_number`) comment '', ADD INDEX `policy_status` USING BTREE (`policy_status`) comment '', ADD INDEX `modification` USING BTREE (`modification`) comment '', ADD INDEX `login_id` USING BTREE (`login_id`) comment '';
 
@@ -443,6 +450,29 @@ INSERT INTO `policy` VALUES ('19071973', '1', 'P123457', '2018-12-03 00:01:00', 
                             ('19072014', '2', 'P123597', '2018-12-30 00:01:00', '2019-12-29 23:59:59', 'UNPAID', null, '164', '42'),
                             ('19072015', '1', 'P123598', '2018-12-31 00:01:00', '2019-12-30 23:59:59', 'PAID', null, '165', '43'),
                             ('19072016', '1', 'P123595', '2018-12-30 00:01:00', '2019-12-29 23:59:59', 'INFORCE', 'MTA', '162', '40');
+
+
+-- ----------------------------
+--  Table structure for `security_pass`
+-- ----------------------------
+DROP TABLE IF EXISTS `security_pass`;
+CREATE TABLE `security_pass` (
+                                 `id` int(11) NOT NULL AUTO_INCREMENT,
+                                 `serial_no` varchar(100),
+                                 `employee_id` int(11) DEFAULT NULL,
+                                 PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------
+--  Records of `employee`
+-- ----------------------------
+
+INSERT INTO `security_pass` VALUES (1, 'ABCDEFG', 5);
+INSERT INTO `security_pass` VALUES (2, 'GFEDCBA', 4);
+INSERT INTO `security_pass` VALUES (3, '1234567', 3);
+INSERT INTO `security_pass` VALUES (4, '7654321', 2);
+INSERT INTO `security_pass` VALUES (5, 'AABBCCD', 1);
+INSERT INTO `security_pass` VALUES (6, 'DDCCBBA', 6);
 
 -- ----------------------------
 --  Table structure for `telematics_box`

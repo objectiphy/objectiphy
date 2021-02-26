@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Contract;
 
+use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Query\AssignmentExpression;
 
@@ -40,12 +41,14 @@ interface InsertQueryInterface extends QueryInterface
     /**
      * Ensure query is complete, filling in any missing bits as necessary
      * @param MappingCollection $mappingCollection
+     * @param SqlStringReplacer $stringReplacer
      * @param string|null $className
      * @param array $assignments Keyed by property name (these will be the dirty properties passed in from the
      * entity tracker).
      */
     public function finalise(
         MappingCollection $mappingCollection,
+        SqlStringReplacer $stringReplacer,
         ?string $className = null,
         array $assignments = []
     ): void;

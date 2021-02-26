@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Contract;
 
+use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 
@@ -55,5 +56,15 @@ interface QueryInterface extends PropertyPathConsumerInterface
      */
     public function getClassForAlias(string $alias): string;
 
-    public function finalise(MappingCollection $mappingCollection, ?string $className = null): void;
+    /**
+     * Ensure query is complete, filling in any missing bits as necessary
+     * @param MappingCollection $mappingCollection
+     * @param SqlStringReplacer $stringReplacer
+     * @param string|null $className
+     */
+    public function finalise(
+        MappingCollection $mappingCollection,
+        SqlStringReplacer $stringReplacer,
+        ?string $className = null
+    ): void;
 }

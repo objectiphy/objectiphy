@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Contract;
 
-use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 
@@ -41,6 +40,4 @@ interface SelectQueryInterface extends QueryInterface
     public function setOffset(int $offset): void;
 
     public function getOffset(): ?int;
-
-    public function finalise(MappingCollection $mappingCollection, ?string $className = null): void;
 }

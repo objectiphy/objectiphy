@@ -265,10 +265,11 @@ class RepositoryFactory implements RepositoryFactoryInterface
         $objectMapper = $this->getObjectMapper();
         $objectBinder = $this->createObjectBinder($configOptions);
         $entityTracker = $this->getEntityTracker();
+        $stringReplacer = $this->getSqlStringReplacer();
         $explanation = $this->getExplanation();
         $storage = $this->getStorage();
 
-        return new ObjectFetcher($sqlSelector, $objectMapper, $objectBinder, $storage, $entityTracker, $explanation);
+        return new ObjectFetcher($sqlSelector, $objectMapper, $objectBinder, $storage, $entityTracker, $stringReplacer, $explanation);
     }
 
     final protected function createNameResolver(): NameResolver
@@ -283,9 +284,10 @@ class RepositoryFactory implements RepositoryFactoryInterface
         $objectUnbinder = $this->createObjectUnbinder();
         $storage = $this->getStorage();
         $entityTracker = $this->getEntityTracker();
+        $stringReplacer = $this->getSqlStringReplacer();
         $explanation = $this->getExplanation();
 
-        return new ObjectPersister($sqlUpdater, $objectMapper, $objectUnbinder, $storage, $entityTracker, $explanation);
+        return new ObjectPersister($sqlUpdater, $objectMapper, $objectUnbinder, $storage, $entityTracker, $stringReplacer, $explanation);
     }
 
     final protected function createObjectRemover(): ObjectRemover
@@ -295,9 +297,10 @@ class RepositoryFactory implements RepositoryFactoryInterface
         $storage = $this->getStorage();
         $entityTracker = $this->getEntityTracker();
         $objectFetcher = $this->createObjectFetcher(); //New instance for different findOptions
+        $stringReplacer = $this->getSqlStringReplacer();
         $explanation = $this->getExplanation();
 
-        return new ObjectRemover($objectMapper, $sqlDeleter, $storage, $objectFetcher, $entityTracker, $explanation);
+        return new ObjectRemover($objectMapper, $sqlDeleter, $storage, $objectFetcher, $entityTracker, $stringReplacer, $explanation);
     }
 
     final protected function createEntityTracker(): EntityTracker

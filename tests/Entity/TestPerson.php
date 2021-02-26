@@ -48,4 +48,9 @@ class TestPerson
      * @Relationship(childClassName="TestContact",sourceJoinColumn="contact_id",relationshipType="one_to_one")
      */
     public TestContact $contact;
+
+    /**
+     * @Relationship(childClassName="TestLogin",sourceJoinColumn="login_id",relationshipType="one_to_one")
+     */
+    public TestContact $login;
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Query;
 
 use Objectiphy\Objectiphy\Contract\InsertQueryInterface;
+use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
@@ -42,6 +43,7 @@ class InsertQuery extends Query implements InsertQueryInterface
     /**
      * Ensure query is complete, filling in any missing bits as necessary
      * @param MappingCollection $mappingCollection
+     * @param SqlStringReplacer $stringReplacer
      * @param string|null $className
      * @param array $assignments Keyed by property name (these will be the dirty properties passed in from the
      * entity tracker).
@@ -49,6 +51,7 @@ class InsertQuery extends Query implements InsertQueryInterface
      */
     public function finalise(
         MappingCollection $mappingCollection,
+        SqlStringReplacer $stringReplacer,
         ?string $className = null,
         array $assignments = []
     ): void {

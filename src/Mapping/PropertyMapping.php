@@ -180,7 +180,7 @@ class PropertyMapping
         return $this->alias;
     }
 
-    public function getTableAlias(bool $forJoin = false, $populate = true): string
+    public function getTableAlias(bool $forJoin = false, $populate = true, $defaultToTableName = false): string
     {
         if (!$populate) {
             return $this->tableAlias;
@@ -209,6 +209,10 @@ class PropertyMapping
             } elseif (!$this->relationship->isScalarJoin()) {
                 $tableAlias = ltrim($tableAlias . '_' . $this->propertyName, '_');
             }
+        }
+
+        if (!$tableAlias && $defaultToTableName) {
+            $tableAlias = $this->table->name;
         }
 
         return $tableAlias;
@@ -285,6 +289,9 @@ class PropertyMapping
      */
     public function isLateBound(bool $forJoin = false, array $row = []): bool
     {
+        if ($this->relationship->joinType == 'INNER') {
+            return false; //Inner joins can filter records so cannot be late bound
+        }
         if (!$forJoin && !$this->isWithinDepth()) {
             return true;
         }

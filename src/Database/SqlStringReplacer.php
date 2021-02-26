@@ -52,6 +52,15 @@ class SqlStringReplacer
         $this->tokenSuffix = $tokenSuffix;
     }
 
+    public function getDelimiter(string $type): string
+    {
+        if (property_exists($this, $type . 'Delimiter')) {
+            return $this->{$type . 'Delimiter'};
+        }
+
+        return '';
+    }
+
     /**
      * Replace prepared statement parameters with actual values (for debugging output only, not for execution!)
      * @param string $queryString Parameterised SQL string.

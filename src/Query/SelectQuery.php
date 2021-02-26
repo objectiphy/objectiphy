@@ -6,6 +6,7 @@ namespace Objectiphy\Objectiphy\Query;
 
 use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
 use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
+use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
@@ -149,11 +150,12 @@ class SelectQuery extends Query implements SelectQueryInterface
     /**
      * Ensure query is complete, filling in any missing bits as necessary
      * @param MappingCollection $mappingCollection
+     * @param SqlStringReplacer $stringReplacer
      * @param string|null $className
-     * @throws QueryException
      * @throws MappingException
+     * @throws QueryException
      */
-    public function finalise(MappingCollection $mappingCollection, ?string $className = null): void
+    public function finalise(MappingCollection $mappingCollection, SqlStringReplacer $stringReplacer, ?string $className = null): void
     {
         if (!$this->isFinalised) {
             if (!$this->getSelect()) {
@@ -166,7 +168,7 @@ class SelectQuery extends Query implements SelectQueryInterface
                 }
                 $this->setSelect(...$selects);
             }
-            parent::finalise($mappingCollection, $className);
+            parent::finalise($mappingCollection, $stringReplacer, $className);
         }
     }
 

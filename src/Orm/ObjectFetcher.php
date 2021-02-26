@@ -10,6 +10,7 @@ use Objectiphy\Objectiphy\Contract\ExplanationInterface;
 use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
 use Objectiphy\Objectiphy\Contract\SqlSelectorInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
+use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Query\FieldExpression;
@@ -24,6 +25,7 @@ final class ObjectFetcher
     private ObjectMapper $objectMapper;
     private ObjectBinder $objectBinder;
     private EntityTracker $entityTracker;
+    private SqlStringReplacer $stringReplacer;
     private FindOptions $options;
     private ConfigOptions $configOptions;
     private ExplanationInterface $explanation;
@@ -34,6 +36,7 @@ final class ObjectFetcher
         ObjectBinder $objectBinder,
         StorageInterface $storage,
         EntityTracker $entityTracker,
+        SqlStringReplacer $stringReplacer,
         ExplanationInterface $explanation
     ) {
         $this->sqlSelector = $sqlSelector;
@@ -41,6 +44,7 @@ final class ObjectFetcher
         $this->objectMapper = $objectMapper;
         $this->objectBinder = $objectBinder;
         $this->entityTracker = $entityTracker;
+        $this->stringReplacer = $stringReplacer;
         $this->explanation = $explanation;
     }
 
@@ -122,7 +126,7 @@ final class ObjectFetcher
         if ($this->options->keyProperty) {
             $this->options->mappingCollection->forceFetch($this->options->keyProperty);
         }
-        $query->finalise($this->options->mappingCollection);
+        $query->finalise($this->options->mappingCollection, $this->stringReplacer);
         $this->doCount($query);
         $result = $this->doFetch($query);
         if (isset($originalClass)) {

@@ -73,6 +73,7 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
      * the corresponding expression can be removed (useful where optional filters are being applied).
      * @param bool $exceptionOnInvalidNull If value is null, and operator does not require null, whether to throw an
      * exception (if false, it will be converted to an empty string so as not to break the query).
+     * @throws QueryException
      */
     public function applyValues(
         ?array $values,
@@ -157,11 +158,21 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
     public function getPropertyPaths(): array
     {
         $paths = $this->property->getPropertyPaths();
-        if ($this->value instanceof FieldExpression) {
-            $paths = array_merge($paths, $this->value->getPropertyPaths());
-        }
-        if ($this->value2 instanceof FieldExpression) {
-            $paths = array_merge($paths, $this->value2->getPropertyPaths());
+        $paths = array_merge($paths, $this->getPropertyPathsFromValue($this->value));
+        $paths = array_merge($paths, $this->getPropertyPathsFromValue($this->value2));
+
+        return array_filter($paths);
+    }
+
+    private function getPropertyPathsFromValue($value): array
+    {
+        $paths = [];
+        if ($value instanceof FieldExpression) {
+            $paths = $value->getPropertyPaths();
+        } elseif (is_string($value) && strpos($value, '%') !== false) {
+            $match = [];
+            preg_match_all('/%(.*?)%/', $value, $match);
+            $paths = $match[1] ?? [];
         }
 
         return $paths;
