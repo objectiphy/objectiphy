@@ -176,11 +176,12 @@ class ConfigOptions extends ConfigBase
     protected bool $disableEntityCache = false;
 
     /**
-     * @var int|null Maximum depth of hierarchy to load. Anything beyond this level will be lazy loaded, even if it is
+     * @var int Maximum depth of hierarchy to load. Anything beyond this level will be lazy loaded, even if it is
      * set to eager load normally. If zero, there is no limit to the depth - in that case, it will continue to load
      * the entire hierarchy until it hits recursion, a lazy load setting, runs out of memory, or hits the database
      * join limit. That should be fine unless you have a very deep hierarchy, but you might find performance benefits
-     * from setting $maxDepth to a non-zero value (it depends what you do with the results).
+     * from setting $maxDepth to a non-zero value - it depends what you do with the results, ie. whether or not you
+     * intend to access every property in the entire hierarchy (for example by serializing the result).
      */
     protected int $maxDepth = 3;
 
