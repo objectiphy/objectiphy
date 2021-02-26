@@ -160,7 +160,7 @@ final class ObjectMapper
             $parts = explode('.', $propertyPath);
             $property = '';
             $parent = null;
-            foreach ($parts as $part) {
+            foreach ($parts as $index => $part) {
                 $property .= ((strlen($property) > 0) ? '.' : '') . $part;
                 $existingParent = $mappingCollection->getPropertyMapping($property);
                 if ($parent && $parent->getChildClassName() && !$existingParent) {
@@ -171,6 +171,11 @@ final class ObjectMapper
                     //Mark it as early bound...
                     $parent->forceEarlyBindingForJoin(); //We need to join even if it is to-many, so we can filter
                     $parent = $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents, $parent->relationship, true);
+                    if (!$parent->relationship->sourceJoinColumn && $parent->relationship->mappedBy) {
+                        //If mapping is on the other side, we have to get that too
+                        $additional = $parent->getPropertyPath() . '.' . $parent->relationship->mappedBy;
+                        $this->addMappingForProperty($className, $additional, $forceJoins);
+                    }
                 } else {
                     $parent = $existingParent;
                     if ($parent && $forceJoins) {

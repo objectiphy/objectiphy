@@ -7,7 +7,9 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Query\QueryBuilder;
+use Objectiphy\Objectiphy\Tests\Entity\TestChild;
 use Objectiphy\Objectiphy\Tests\Entity\TestContact;
+use Objectiphy\Objectiphy\Tests\Entity\TestParent;
 use Objectiphy\Objectiphy\Tests\Entity\TestPerson;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\Tests\Entity\TestUser;
@@ -241,6 +243,26 @@ class QueryTest extends IntegrationTestBase
             ->buildSelectQuery($postedValues);
         $result10 = $this->objectRepository->executeQuery($query10);
         $this->assertEquals(2, count($result10));
+
+        $this->objectRepository->setClassName(TestChild::class);
+        $query11 = QueryBuilder::create()
+            ->where('parent.pets.type', QB::EQUALS, 'dog')
+            ->buildSelectQuery();
+        $result11 = $this->objectRepository->executeQuery($query11);
+        $this->assertEquals(1, count($result11));
+
+        $this->objectRepository->setClassName(TestPolicy::class);
+        $query12 = QueryBuilder::create()
+            ->leftJoin(TestPolicy::class, 'p2')
+                ->on('p2.policyNo', '=', 'policyNo')
+                ->and('p2.id', '>', 'id')
+                ->and('p2.status', '=', 'INFORCE')
+                ->and('p2.modification', '=', 'CANCELLED')
+            ->where('modification', QB::NOT_EQ, 'CANCELLED')
+                ->and('p2.id', 'IS', null)
+            ->buildSelectQuery();
+        $result12 = $this->objectRepository->executeQuery($query12);
+        $this->assertEquals(1, count($result12));
 
         $criteria = ['departments' => ['Sales', 'Finance']];
         $query = QueryBuilder::create()
