@@ -17,7 +17,6 @@ use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
  */
 class ConfigEntity extends ConfigBase
 {
-    public const REPOSITORY_CLASS_NAME = 'repositoryClassName';
     public const TABLE_OVERRIDES = 'tableOverrides';
     public const COLUMN_OVERRIDES = 'columnOverrides';
     public const RELATIONSHIP_OVERRIDES = 'relationshipOverrides';
@@ -28,13 +27,6 @@ class ConfigEntity extends ConfigBase
      * @var string Class name of entity to which these settings relate
      */
     protected string $className;
-
-    /**
-     * @var string Custom repository class for this entity (degrades performance). Note that you can also use an
-     * annotation (or other mapping directive) for this if you always want a particular entity to use a particular
-     * repository class (repositoryClassName attribute on the Objectiphy\Table annotation).
-     */
-    protected string $repositoryClassName;
 
     /**
      * @var array Overridden table mapping information keyed on mapping key.
