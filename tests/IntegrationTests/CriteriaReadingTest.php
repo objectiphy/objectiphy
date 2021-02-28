@@ -119,49 +119,6 @@ class CriteriaReadingTest extends IntegrationTestBase
 //        $this->assertEquals(34, $latestCount);
         $this->assertEquals(7, count($policiesForDecember));
 //        $this->assertEquals(20, count($latestPoliciesForDecember));
-
-        //Load using criteria from a criteria builder.
-        $params = [
-            'lastname' => 'McG',
-            'postcode' => 'PO27AJ',
-            'some_random_value' => 'this_will_be_ignored'
-        ]; // these could be grabbed from request object
-//        $QueryBuilder = new QueryBuilder();
-//
-//        $QueryBuilder->addBeginsWith('contact.lastName', 'lastname');
-//        $QueryBuilder->addExpression('=', 'contact.postcode', 'postcode');
-
-//        //Alternative syntax:
-//        $QueryBuilder->addExpressions([
-//            ['beginsWith', 'contact.lastName', 'lastname'],
-//            ['=', 'contact.postcode', 'postcode'],
-//            ['contains', 'login.email', 'email'],
-//        ]);
-
-        //Use serialization groups, CriteriaExpressions with nested OR, and key by property.
-//        $this->objectRepository->clearSerializationGroups();
-//        $this->objectRepository->addSerializationGroups(['Default', 'PolicyDetails']);
-//        $criteria = $QueryBuilder->buildCriteria($params);
-//        $criteria['policyNo'] = ['operator' => 'LIKE', 'value' => 'P1234%'];
-//        $policies2 = $this->objectRepository->findBy($criteria);
-//        $this->assertEquals(1, count($policies2));
-//        $this->assertEquals(19071988, $policies2[0]->id);
-//        $this->assertNotEmpty($policies2[0]->underwriter->id);
-
-//        $expression = (new CriteriaExpression(new FieldExpression('contact.lastName'), null, '=', 'Skywalker'))
-//            ->or(
-//                (new CriteriaExpression(new FieldExpression('status'), null, '=', 'PAID'))
-//                    ->and(['effectiveStartDateTime', null, '>', new \DateTime('2018-12-15')])
-//            )
-//            ->or(['id', null, '=', 19072010]);
-
-        //Nicer syntax, same result...  (operators can be strings or you can use the class constants)
-//        $newCriteria = QB::create()
-//            ->where('contact.lastName', QB::EQUALS, ":lastname_alias")
-//            ->orWhere('status', QB::EQUALS, "PAID",
-//                QB::create()->andWhere('effectiveStartDateTime', QB::GREATER_THAN, new \DateTime('2018-12-15')))
-//            ->orWhere('id', '=', 19072010)
-//            ->build(['lastname_alias' => 'Skywalker']);
         
         $query = QB::create()
             ->where('contact.lastName', QB::EQUALS, ":lastname_alias")
@@ -172,11 +129,8 @@ class CriteriaReadingTest extends IntegrationTestBase
             ->or('id', '=', 19072010)
             ->orderBy(['id'])
             ->buildSelectQuery(['lastname_alias' => 'Skywalker']);
-        
-        //$this->assertEquals([$expression], $newCriteria);
 
-//        $this->assertEquals(6, $this->objectRepository->countBy([$expression]));
-        //$this->objectRepository->setOrderBy(['id']);
+//        $this->assertEquals(6, $this->objectRepository->countBy($query));
         $policies3 = $this->objectRepository->findBy($query, null, null, null, 'vehicle.id');
 
         $this->assertEquals(6, count($policies3));
@@ -233,6 +187,15 @@ class CriteriaReadingTest extends IntegrationTestBase
     protected function doSerializationGroupTests()
     {
 //        //Limit which properties are hydrated using serialization groups
+
+//        $this->objectRepository->clearSerializationGroups();
+//        $this->objectRepository->addSerializationGroups(['Default', 'PolicyDetails']);
+//        $criteria['policyNo'] = ['operator' => 'LIKE', 'value' => 'P1234%'];
+//        $policies2 = $this->objectRepository->findBy($criteria);
+//        $this->assertEquals(1, count($policies2));
+//        $this->assertEquals(19071988, $policies2[0]->id);
+//        $this->assertNotEmpty($policies2[0]->underwriter->id);
+
 //        $this->objectRepository->clearSerializationGroups();
 //        $this->objectRepository->addSerializationGroups(['Default']);
 //        $this->objectRepository->setEntityClassName(TestParent::class);
@@ -339,20 +302,6 @@ class CriteriaReadingTest extends IntegrationTestBase
         $customRepository = $repositoryFactory->createRepository(TestParent::class, CustomRepository::class);
         $parent = $customRepository->find(2);
         $this->assertEquals('Loaded with custom repo!', $parent->getName());
-
-        //Removed support for overrides for now... (hopefully not necessary any more)
-
-        //Override query parts (check count and main query) - use strings and closures
-//        $parents = $customRepository->findParentsUsingStringOverrides();
-//        $this->assertEquals(3, count($parents));
-//        $this->assertNull($parents[0]->getUser()); //User does not get loaded by custom SQL
-//        $this->assertEquals('Eleanor Shellstrop', $parents[0]->getName());
-//
-//        $customRepository->clearCache();
-//        $parents2 = $customRepository->findParentsUsingClosureOverrides();
-//        $this->assertEquals(3, count($parents2));
-//        $this->assertEquals('Eleanor Shellstrop', $parents2[0]->getName());
-//        $this->assertEquals('alternative3@example.com', $parents2[0]->getUser()->getEmail());
 
         try {
             $repositoryFactory->createRepository(TestParent::class, 'MadeupRepositoryClassName');

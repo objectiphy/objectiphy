@@ -205,43 +205,43 @@ class SelectQueryTest extends IntegrationTestBase
 
     protected function doSelectQueryTests()
     {
-        $query3 = QueryBuilder::create()
+        $query = QueryBuilder::create()
             ->select("CONCAT_WS(' ', %firstName%, %lastName%)")
             ->from(TestContact::class)
             ->where('lastName', '=', 'Skywalker')
             ->buildSelectQuery();
-        $contacts3 = $this->objectRepository->findValuesBy($query3);
-        $this->assertEquals(2, count($contacts3));
-        $this->assertEquals('Luke Skywalker', $contacts3[0]);
+        $contacts = $this->objectRepository->findValuesBy($query);
+        $this->assertEquals(2, count($contacts));
+        $this->assertEquals('Luke Skywalker', $contacts[0]);
 
-        $query4 = QueryBuilder::create()
+        $query2 = QueryBuilder::create()
             ->select('firstName', 'lastName')
             ->buildSelectQuery();
-        $contacts4 = $this->objectRepository->executeQuery($query4);
-        $this->assertGreaterThan(40, count($contacts4));
+        $contacts2 = $this->objectRepository->executeQuery($query2);
+        $this->assertGreaterThan(40, count($contacts2));
 
         $this->objectRepository->setClassName(TestVehicle::class);
-        $query5 = QueryBuilder::create()
+        $query3 = QueryBuilder::create()
             ->select('firstName', 'lastName')
             ->from(TestContact::class)
             ->buildSelectQuery();
-        $contacts5 = $this->objectRepository->executeQuery($query5);
-        $this->assertGreaterThan(40, $contacts5);
+        $contacts3 = $this->objectRepository->executeQuery($query3);
+        $this->assertGreaterThan(40, $contacts3);
 
         $this->objectRepository->setConfigOption(ConfigOptions::BIND_TO_ENTITIES, true);
-        $query6 = QueryBuilder::create()
+        $query4 = QueryBuilder::create()
             ->select('firstName', 'lastName', 'department.name')
             ->from(TestContact::class)
             ->limit(2)
             ->buildSelectQuery();
-        $contacts6 = $this->objectRepository->executeQuery($query6);
-        $this->assertEquals('Sales', $contacts6[0]->department->name);
+        $contacts4 = $this->objectRepository->executeQuery($query4);
+        $this->assertEquals('Sales', $contacts4[0]->department->name);
     }
 
     protected function doCriteriaTests()
     {
         $this->objectRepository->setClassName(TestPerson::class);
-        $query7 = QueryBuilder::create()
+        $query = QueryBuilder::create()
             ->orStart()
                 ->where('firstName', '=', 'Marty')
                 ->and('lastName', '=', 'McFly')
@@ -256,20 +256,20 @@ class SelectQueryTest extends IntegrationTestBase
                 ->or('year', '=', 1955)
             ->andEnd()
             ->buildSelectQuery();
-        $people = $this->objectRepository->executeQuery($query7);
+        $people = $this->objectRepository->executeQuery($query);
         $this->assertEquals(3, count($people));
 
-        $query8 = QueryBuilder::create()
+        $query2 = QueryBuilder::create()
             ->where('contact.lastName', QB::BEGINS_WITH, 'Mac')
             ->orStart()
                 ->where('postcode', QB::EQUALS, 'PE3 8AF')
                 ->and('email', QB::CONTAINS, 'info')
             ->orEnd()
             ->buildSelectQuery();
-        $result8 = $this->objectRepository->executeQuery($query8);
-        $this->assertEquals(2, count($result8));
+        $result2 = $this->objectRepository->executeQuery($query2);
+        $this->assertEquals(2, count($result2));
 
-        $query9 = QB::create()
+        $query3 = QB::create()
             ->where('contact.lastName', QB::BEGINS_WITH, 'Mac')
             ->orStart()
                 ->where('postcode', QB::EQUALS, 'PE3 8AF')
@@ -277,8 +277,8 @@ class SelectQueryTest extends IntegrationTestBase
             ->orEnd()
             ->and('contact.loginId', QB::EQUALS, '%login.id%')
             ->buildSelectQuery();
-        $result9 = $this->objectRepository->executeQuery($query9);
-        $this->assertEquals(1, count($result9));
+        $result3 = $this->objectRepository->executeQuery($query3);
+        $this->assertEquals(1, count($result3));
 
         $this->objectRepository->setClassName(TestPolicy::class);
         $postedValues = [
@@ -287,28 +287,28 @@ class SelectQueryTest extends IntegrationTestBase
             'email' => 'peter@',
             'random' => 'This should be ignored!'
         ];
-        $query10 = QueryBuilder::create()
+        $query4 = QueryBuilder::create()
             ->where('contact.lastName', QB::BEGINS_WITH, ':surname')
             ->orStart()
             ->where('postcode', QB::EQUALS, ':postcode')
             ->and('email', QB::CONTAINS, ':email')
             ->orEnd()
             ->buildSelectQuery($postedValues);
-        $result10 = $this->objectRepository->executeQuery($query10);
-        $this->assertEquals(2, count($result10));
+        $result4 = $this->objectRepository->executeQuery($query4);
+        $this->assertEquals(2, count($result4));
 
         $this->objectRepository->setClassName(TestChild::class);
-        $query11 = QueryBuilder::create()
+        $query5 = QueryBuilder::create()
             ->where('parent.pets.type', QB::EQUALS, 'dog')
             ->buildSelectQuery();
-        $result11 = $this->objectRepository->executeQuery($query11);
-        $this->assertEquals(1, count($result11));
+        $result5 = $this->objectRepository->executeQuery($query5);
+        $this->assertEquals(1, count($result5));
     }
 
     protected function doJoinTests()
     {
         $this->objectRepository->setClassName(TestPolicy::class);
-        $query12 = QueryBuilder::create()
+        $query = QueryBuilder::create()
             ->leftJoin(TestPolicy::class, 'p2')
             ->on('p2.policyNo', '=', 'policyNo')
             ->and('p2.id', '>', 'id')
@@ -317,7 +317,7 @@ class SelectQueryTest extends IntegrationTestBase
             ->where('modification', QB::NOT_EQ, 'CANCELLED')
             ->and('p2.id', 'IS', null)
             ->buildSelectQuery();
-        $result12 = $this->objectRepository->executeQuery($query12);
-        $this->assertEquals(1, count($result12));
+        $result = $this->objectRepository->executeQuery($query);
+        $this->assertEquals(1, count($result));
     }
 }
