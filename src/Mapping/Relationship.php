@@ -140,11 +140,14 @@ class Relationship extends ObjectiphyAnnotation
 
     /**
      * Relationship constructor.
-     * @param string $relationshipType
+     * @param array $values We have to use an array to stop Doctrine's annotation reader from complaining if it comes
+     * across this (eg. when serializing using Symfony serialization groups). But we are only interested in the
+     * relationshipType property at this point.
      * @throws ObjectiphyException
      */
-    public function __construct(string $relationshipType)
+    public function __construct(array $values = [])
     {
+        $relationshipType = $values['relationshipType'] ?? self::UNDEFINED;
         if (!in_array($relationshipType, self::getRelationshipTypes())) {
             $errorMessage = sprintf(
                 'Invalid relationship type: %1$s. Valid types are: %2$s',

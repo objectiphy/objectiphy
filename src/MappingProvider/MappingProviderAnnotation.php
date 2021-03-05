@@ -104,7 +104,7 @@ class MappingProviderAnnotation implements MappingProviderInterface
             return $this->decorate($hostClassName, $hostProperty, $relationship, $objectiphyRelationship);
         } catch (\Throwable $ex) {
             $this->handleException($ex);
-            return new Relationship(Relationship::UNDEFINED);
+            return new Relationship();
         }
     }
 

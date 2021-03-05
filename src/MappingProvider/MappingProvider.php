@@ -61,6 +61,6 @@ class MappingProvider implements MappingProviderInterface
     public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Relationship
     {
         $wasMapped = false;
-        return new Relationship(Relationship::UNDEFINED);
+        return new Relationship();
     }
 }
