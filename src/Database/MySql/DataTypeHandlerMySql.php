@@ -14,6 +14,37 @@ use Objectiphy\Objectiphy\Orm\ObjectHelper;
  */
 class DataTypeHandlerMySql implements DataTypeHandlerInterface
 {
+    public const FUNCTION_IDENTIFIERS = [
+        'COUNT(',
+        'CURDATE(',
+        'CURRENT_TIMESTAMP(',
+        'CURRENT_USER(',
+        'CURTIME(',
+        'DATABASE(',
+        'FOUND_ROWS(',
+        'LAST_INSERT_ID(',
+        'LOCALTIMESTAMP(',
+        'LOCALTIME(',
+        'NOW(',
+        'PI(',
+        'PS_CURRENT_THREAD_ID(',
+        'RAND(',
+        'RELEASE_ALL_LOCKS(',
+        'ROLES_GRAPHML(',
+        'ROW_COUNT(',
+        'ROW_NUMBER(',
+        'SCHEMA(',
+        'SESSION_USER(',
+        'SYSTEM_USER(',
+        'USER(',
+        'UTC_DATE(',
+        'UTC_TIME(',
+        'UTC_TIMESTAMP(',
+        'UUID(',
+        'UUID_SHORT(',
+        'VERSION(',
+    ];
+
     /**
      * Convert the given value to a format acceptable to the persistence layer (eg. MySql).
      * @param mixed &$value The value to convert.
@@ -128,5 +159,10 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
         }
         
         return false;
+    }
+
+    public function getFunctionIdentifiers(): array
+    {
+        return static::FUNCTION_IDENTIFIERS;
     }
 }

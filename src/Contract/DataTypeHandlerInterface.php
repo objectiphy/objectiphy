@@ -38,4 +38,11 @@ interface DataTypeHandlerInterface
      * @return bool Whether or not the value was successfully converted.
      */
     public function toObjectValue(&$value, ?string $dataType = null, ?string $format = null): bool;
+
+    /**
+     * @return array Indexed array of strings strings to search for that will indicate this is not a literal value or
+     * field. In practice, that means any functions that don't take arguments (or can take a single asterisk as the only
+     * argument), with their opening bracket.
+     */
+    public function getFunctionIdentifiers(): array;
 }

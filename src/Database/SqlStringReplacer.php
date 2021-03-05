@@ -200,11 +200,11 @@ class SqlStringReplacer
     ): string {
         $persistenceValue = null;
         if (is_string($fieldValue)) {
-            //Check if already delimited - if so, use as is
-            if ($this->checkDelimited($fieldValue)) {
-                $persistenceValue = strval($fieldValue);
-            } elseif ($this->checkPropertyPath($fieldValue, $alias, $query, $mappingCollection)) {
-                //Check if is is a property path
+            //If already delimited, matches a property, or is recognised as a function or expression, use as is
+            if ($this->checkDelimited($fieldValue)
+                || $this->checkPropertyPath($fieldValue, $alias, $query, $mappingCollection)
+                || $this->checkFunction($fieldValue)
+            ) {
                 $persistenceValue = strval($fieldValue);
             }
         }
@@ -312,6 +312,15 @@ class SqlStringReplacer
                 $fieldValue = $this->delimit($propertyMapping->getFullColumnName($explicitTable));
                 return true;
             }
+        }
+
+        return false;
+    }
+
+    private function checkFunction($fieldValue): bool
+    {
+        foreach ($this->dataTypeHandler::FUNCTION_IDENTIFIERS ?? [] as $function) {
+            return stripos($fieldValue, $function) !== false;
         }
 
         return false;

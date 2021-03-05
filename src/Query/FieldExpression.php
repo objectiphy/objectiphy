@@ -49,7 +49,7 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
 
     public function getPropertyPath(): ?string
     {
-        return $this->isPropertyPath ? $this->expression : null;
+        return $this->isPropertyPath ? $this->expression : '';
     }
 
     public function getExpression()
@@ -59,8 +59,9 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
 
     /**
      * Set the value of the expression - if anything is wrapped in percent signs, it will be treated as a property path.
-     * Anything outside of the percent signs will be treated as a string literal. If there are no percent signs, the
-     * whole thing will be treated as a property path (as this is the most common use case).
+     * Anything outside of the percent signs will be treated as a string literal. If there are no percent signs, spaces,
+     * quotes, backticks, or brackets, the whole thing will be treated as a property path (as this is the most common
+     * use case).
      * @param $value 
      */
     public function setExpression($value): void
@@ -68,11 +69,12 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
         $this->isPropertyPath = false;
         $this->expression = $value;
         if (is_string($value)) {
-            $this->isPropertyPath = !(preg_match("/(\s|\%|\')/", $value));
+            $this->isPropertyPath = !(preg_match("/(\s|\%|\'|`|\()/", $value));
+            //$this->isPropertyPath = !(preg_match("/(\s|\%|\')/", $value));
             //If the whole thing is wrapped in % though, it could still be a property path...
             $count = substr_count($value, '%');
             if ($count == 2 && strpos($value, '%') === 0 && strrpos($value, '%') === strlen($value) - 1) {
-                $this->isPropertyPath = !(preg_match("/(\s|\')/", $value));
+                $this->isPropertyPath = !(preg_match("/(\s|\'|`|\()/", $value));
             }
         }
     }

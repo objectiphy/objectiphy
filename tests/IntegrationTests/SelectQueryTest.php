@@ -2,6 +2,7 @@
 
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
+use App\Entity\Policy;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
@@ -236,6 +237,11 @@ class SelectQueryTest extends IntegrationTestBase
             ->buildSelectQuery();
         $contacts4 = $this->objectRepository->executeQuery($query4);
         $this->assertEquals('Sales', $contacts4[0]->department->name);
+
+        $this->objectRepository->setConfigOption(ConfigOptions::BIND_TO_ENTITIES, false);
+        $query5 = QB::create()->select('COUNT(*)')->from(Policy::class)->buildSelectQuery();
+        $count = $this->objectRepository->findOneValueBy($query5);
+        $this->assertEquals(44, $count);
     }
 
     protected function doCriteriaTests()
