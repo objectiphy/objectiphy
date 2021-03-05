@@ -13,6 +13,8 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
  * @author Russell Walker <rwalker.php@gmail.com>
  * Mapping information to describe how a property relates to a property on another class, or a value from a table other
  * than the one associated with the class it belongs to.
+ * The following annotation is just to stop the Doctrine annotation reader complaining if it comes across this.
+ * @Annotation
  */
 class Relationship extends ObjectiphyAnnotation
 {
