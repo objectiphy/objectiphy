@@ -14,7 +14,7 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
  * Mapping information to describe how a property relates to a property on another class, or a value from a table other
  * than the one associated with the class it belongs to.
  */
-class Relationship
+class Relationship extends ObjectiphyAnnotation
 {
     public const UNDEFINED = 'undefined';
     public const SCALAR = 'scalar';

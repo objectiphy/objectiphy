@@ -95,7 +95,7 @@ class JoinProviderMySql
 
         $propertyPath = $joinPart->property->getPropertyPath();
         $propertyAlias = strtok($propertyPath, '.');
-        $propertyUsesAlias = $query->getClassForAlias($propertyAlias) ? true : false;
+        $propertyUsesAlias = $propertyAlias && $query->getClassForAlias($propertyAlias) ? true : false;
         $valueAlias = strtok($joinPart->value, '.');
         $valueUsesAlias = $query->getClassForAlias($valueAlias) ? true : false;
 

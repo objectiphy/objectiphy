@@ -8,7 +8,7 @@ namespace Objectiphy\Objectiphy\Mapping;
  * @author Russell Walker <rwalker.php@gmail.com>
  * Mapping information to describe how the value of a property is stored and retrieved from a database column.
  */
-class Column
+class Column extends ObjectiphyAnnotation
 {
     /** @var string Name of column. */
     public string $name = '';

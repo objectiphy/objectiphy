@@ -9,7 +9,7 @@ namespace Objectiphy\Objectiphy\Mapping;
  * Mapping information to describe which database table and/or custom repository class to use for storage of the data
  * relating to the properties of the class.
  */
-class Table
+class Table extends ObjectiphyAnnotation
 {
     /** @var string Name of database table */
     public string $name = '';
