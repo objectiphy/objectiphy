@@ -69,13 +69,13 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
         $this->isPropertyPath = false;
         $this->expression = $value;
         if (is_string($value)) {
-            //$this->isPropertyPath = !(preg_match("/(\s|\%|\'|`|\()/", $value));
-            $this->isPropertyPath = !(preg_match("/(\s|\%|\')/", $value));
+            $this->isPropertyPath = !(preg_match("/(\s|\%|\'|`|\()/", $value));
+            //$this->isPropertyPath = !(preg_match("/(\s|\%|\')/", $value));
             //If the whole thing is wrapped in % though, it could still be a property path...
             $count = substr_count($value, '%');
             if ($count == 2 && strpos($value, '%') === 0 && strrpos($value, '%') === strlen($value) - 1) {
-                //$this->isPropertyPath = !(preg_match("/(\s|\'|`|\()/", $value));
-                $this->isPropertyPath = !(preg_match("/(\s|\%|\')/", $value));
+                $this->isPropertyPath = !(preg_match("/(\s|\'|`|\()/", $value));
+                //$this->isPropertyPath = !(preg_match("/(\s|\%|\')/", $value));
             }
         }
     }

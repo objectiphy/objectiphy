@@ -121,7 +121,7 @@ class JoinProviderMySql
         }
 
         if (empty($sourceJoinColumns)) {
-            $sourceJoinColumns[] = $this->stringReplacer->getPersistenceValueForField($query, $propertyPath, $mappingCollection);
+            $sourceJoinColumns[] = $this->stringReplacer->getPersistenceValueForField($query, $propertyPath ?: $joinPart->property->getExpression(), $mappingCollection);
         }
         if (empty($targetJoinColumns)) {
             $targetJoinColumns[] = $this->stringReplacer->getPersistenceValueForField($query, $joinPart->value, $mappingCollection);
