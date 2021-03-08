@@ -45,14 +45,14 @@ class TestPolicy
     
     /**
      * @var \DateTime
-     * @Groups({"Default"})
+     * @Groups({"Default","PolicyDetails"})
      * @ORM\Column(type="datetime")
      */
     protected $effectiveStartDateTime;
     
     /**
      * @var \DateTime
-     * @Groups({"Default"})
+     * @Groups({"PolicyDetails"})
      * @ORM\Column(type="datetime")
      */
     protected $effectiveEndDateTime;

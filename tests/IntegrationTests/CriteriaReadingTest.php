@@ -2,6 +2,7 @@
 
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Tests\Entity\TestCollection;
 use Objectiphy\Objectiphy\Tests\Entity\TestEmployee;
@@ -186,33 +187,38 @@ class CriteriaReadingTest extends IntegrationTestBase
 
     protected function doSerializationGroupTests()
     {
-//        //Limit which properties are hydrated using serialization groups
+        $this->objectRepository->setPagination(null);
+        $this->objectRepository->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, ['Default', 'PolicyDetails']);
 
-//        $this->objectRepository->clearSerializationGroups();
-//        $this->objectRepository->addSerializationGroups(['Default', 'PolicyDetails']);
-//        $criteria['policyNo'] = ['operator' => 'LIKE', 'value' => 'P1234%'];
-//        $policies2 = $this->objectRepository->findBy($criteria);
-//        $this->assertEquals(1, count($policies2));
-//        $this->assertEquals(19071988, $policies2[0]->id);
-//        $this->assertNotEmpty($policies2[0]->underwriter->id);
+        $criteria['policyNo'] = ['operator' => 'LIKE', 'value' => 'P1234%'];
+        $policies = $this->objectRepository->findBy($criteria);
+        $this->assertEquals(38, count($policies));
+        $this->assertNotEmpty($policies[0]->id);
+        $this->assertNotEmpty($policies[0]->underwriter->id);
+        $this->assertEmpty($policies[0]->contact);
+        $this->assertEmpty($policies[0]->status);
 
-//        $this->objectRepository->clearSerializationGroups();
-//        $this->objectRepository->addSerializationGroups(['Default']);
-//        $this->objectRepository->setEntityClassName(TestParent::class);
-//        $parent = $this->objectRepository->find(1);
-//        $this->assertEquals(null, $parent->getChild());
-//
-//        $this->objectRepository->setEntityClassName(TestPolicy::class);
+        $this->objectRepository->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, ['Default']);
+        $this->objectRepository->setClassName(TestParent::class);
+        $parent = $this->objectRepository->find(1);
+        $this->assertEquals(null, $parent->getChild());
+
+        $this->objectRepository->setEntityClassName(TestPolicy::class);
+        $query = QB::create()->where('contact.lasName', '=', 'Skywalker')
+            ->orStart()
+                ->where('status', '=', 'PAID')
+                ->and('effectiveStartDateTime', '>', new \DateTime('2018-12-15'))
+            ->orEnd()
+            ->or('id', '=', 19072010)
+            ->buildSelectQuery();
 //        $expression = (new CriteriaExpression('contact.lastName', 'lastname_alias', '=', 'Skywalker'))
 //            ->orWhere(
 //                (new CriteriaExpression('status', null, '=', 'PAID'))
 //                    ->andWhere(['effectiveStartDateTime', null, '>', new \DateTime('2018-12-15')])
 //            )
 //            ->orWhere(['id', null, '=', 19072010]);
-//        $this->objectRepository->clearSerializationGroups();
-//        $this->objectRepository->addSerializationGroups(['Default']);
-//        $policies3a = $this->objectRepository->findBy([$expression], null, null, null, 'vehicle.id');
-//        $this->assertSame(null, $policies3a[20]->contact->postcode);
+        $policies3a = $this->objectRepository->findBy($query, null, null, null, 'vehicle.id');
+        $this->assertSame(null, $policies3a[20]->contact->postcode);
     }
 
     protected function doAdvancedReadingTests()

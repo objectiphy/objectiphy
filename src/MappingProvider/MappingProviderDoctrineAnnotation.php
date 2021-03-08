@@ -115,6 +115,14 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
     }
 
     /**
+     * Get any serialization groups that the property belongs to, if applicable.
+     */
+    public function getSerializationGroups(\ReflectionProperty $reflectionProperty): array
+    {
+        return [];
+    }
+
+    /**
      * Read a Doctrine Column annotation.
      * @param \ReflectionProperty $reflectionProperty
      * @param Column $column

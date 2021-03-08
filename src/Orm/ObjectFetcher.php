@@ -111,6 +111,7 @@ final class ObjectFetcher
     public function executeFind(SelectQueryInterface $query) 
     {
         $this->validate();
+        $this->options->mappingCollection->setGroups(...$this->configOptions->serializationGroups);
         $queryClass = $query->getFrom();
         if ($queryClass && strpos($queryClass, '`') === false) { //No explicit table specified
             $originalClass = $this->getClassName();

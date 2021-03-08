@@ -63,4 +63,12 @@ class MappingProvider implements MappingProviderInterface
         $wasMapped = false;
         return new Relationship();
     }
+
+    /**
+     * Get any serialization groups that the property belongs to, if applicable.
+     */
+    public function getSerializationGroups(\ReflectionProperty $reflectionProperty): array
+    {
+        return [];
+    }
 }

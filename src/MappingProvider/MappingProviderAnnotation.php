@@ -109,6 +109,27 @@ class MappingProviderAnnotation implements MappingProviderInterface
     }
 
     /**
+     * Get any serialization groups that the property belongs to, if applicable.
+     */
+    public function getSerializationGroups(\ReflectionProperty $reflectionProperty): array
+    {
+        $groups = [];
+        $baseGroups = $this->mappingProvider->getSerializationGroups($reflectionProperty);
+        $annotations = $this->annotationReader->getPropertyAnnotations($reflectionProperty);
+        foreach ($annotations as $annotation) {
+            if (method_exists($annotation, 'getGroups')) {
+                $groups = $annotation->getGroups();
+                break;
+            } elseif (property_exists($annotation, 'groups')) {
+                $groups = $annotation->groups;
+                break;
+            }
+        }
+
+        return array_unique(array_merge($baseGroups, $groups));
+    }
+
+    /**
      * Takes a mapping object (Table, Column, Relationship), and replaces property values with the properties of an
      * equivalent object, overriding the base implementation. If the decorator's annotation did not specify a value for
      * a property, the original value of the component is preserved.

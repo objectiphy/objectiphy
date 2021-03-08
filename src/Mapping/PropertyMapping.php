@@ -92,6 +92,11 @@ class PropertyMapping
      */
     private bool $forcedEarlyBindingForJoin = false;
 
+    /**
+     * @var array Any serialization groups specified for this property (can affect whether they get hydrated or not).
+     */
+    private array $serializationGroups = [];
+
     public function __construct(
         string $className,
         \ReflectionProperty $reflectionProperty,
@@ -99,7 +104,8 @@ class PropertyMapping
         ?Table $childTable,
         Column $column,
         Relationship $relationship,
-        array $parents = []
+        array $parents = [],
+        array $serializationGroups = []
     ) {
         $this->className = $className;
         $this->reflectionProperty = $reflectionProperty;
@@ -109,6 +115,7 @@ class PropertyMapping
         $this->column = $column;
         $this->relationship = $relationship;
         $this->parents = $parents;
+        $this->serializationGroups = $serializationGroups;
         if ($this->relationship->sourceJoinColumn) {
             $this->isForeignKey = true;
         }
@@ -144,6 +151,11 @@ class PropertyMapping
     public function getChildClassName(): string
     {
         return $this->relationship->childClassName;
+    }
+
+    public function getGroups(): array
+    {
+        return $this->serializationGroups;
     }
 
     public function getRelationshipKey(): string

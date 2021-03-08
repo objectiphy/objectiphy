@@ -87,6 +87,12 @@ class MappingCollection
     private bool $columnMappingDone = false;
 
     /**
+     * @var array Serialization groups that are currently in effect (hydration will be limited to properties that
+     * belong to these).
+     */
+    private array $groups = [];
+
+    /**
      * @var int Maximum number of children that can be early bound
      */
     private int $maxDepth;
@@ -143,6 +149,11 @@ class MappingCollection
     public function addExtraTableMapping(string $className, Table $table)
     {
         $this->classes[$className] = $table;
+    }
+
+    public function setGroups(string ...$groups)
+    {
+        $this->groups = $groups;
     }
 
     public function usesClass(string $className): bool
@@ -205,7 +216,7 @@ class MappingCollection
      */
     public function isPropertyFetchable(PropertyMapping $propertyMapping): bool
     {
-        $value = $this->fetchableProperties[$propertyMapping->getPropertyPath()] ?? false;
+        $value = $this->getFetchableProperties()[$propertyMapping->getPropertyPath()] ?? false;
         return $value ? true : false; //$value could be an object
     }
     
@@ -214,6 +225,17 @@ class MappingCollection
         if (!$this->columnMappingDone) {
             $this->finaliseColumnMappings();
         }
+
+//        if ($this->groups) {
+//            $fetchables = [];
+//            foreach ($this->fetchableProperties as $propertyMapping) {
+//                if (array_intersect($this->groups, $propertyMapping->getGroups())) {
+//                    $fetchables[] = $propertyMapping;
+//                }
+//            }
+//
+//            return $fetchables;
+//        }
 
         return $this->fetchableProperties;
     }

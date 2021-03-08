@@ -10,6 +10,7 @@ use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
+use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>

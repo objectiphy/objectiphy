@@ -365,6 +365,7 @@ final class ObjectMapper
         $relationshipIsMapped = false;
         $relationship = $this->getRelationshipMapping($reflectionProperty, $relationshipIsMapped);
         $column = $this->getColumnMapping($reflectionProperty, $columnIsMapped);
+        $groups = $this->mappingProvider->getSerializationGroups($reflectionProperty);
         if ($parentRelationship && $parentRelationship->isEmbedded) {
             $column = clone($column);
             $column->name = $parentRelationship->embeddedColumnPrefix . $column->name;
@@ -391,7 +392,8 @@ final class ObjectMapper
                 $childTable,
                 $column,
                 $relationship,
-                $parents
+                $parents,
+                $groups
             );
             $mappingCollection->addMapping($propertyMapping, $suppressFetch);
             //Resolve name *after* adding to collection so that naming strategies have access to the collection.
@@ -471,6 +473,7 @@ final class ObjectMapper
                 $childReflectionClass = new \ReflectionClass($relationship->childClassName);
                 $childReflectionProperty = $childReflectionClass->getProperty($relationship->mappedBy);
                 $childRelationship = $this->getRelationshipMapping($childReflectionProperty);
+                $childGroups = $this->mappingProvider->getSerializationGroups($childReflectionProperty);
                 $this->initialiseRelationship($childRelationship);
                 $childTable = $this->getTableMapping($childReflectionClass, true);
                 $propertyMapping = new PropertyMapping(
@@ -480,7 +483,8 @@ final class ObjectMapper
                     null,
                     new Column(),
                     $childRelationship,
-                    array_merge($parents, [$propertyName])
+                    array_merge($parents, [$propertyName]),
+                    $childGroups
                 );
                 $mappingCollection->addMapping($propertyMapping);
             }

@@ -50,4 +50,9 @@ interface MappingProviderInterface
      * @return Relationship
      */
     public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Relationship;
+    
+    /**
+     * Get any serialization groups that the property belongs to, if applicable.
+     */
+    public function getSerializationGroups(\ReflectionProperty $reflectionProperty): array;
 }
