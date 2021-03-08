@@ -15,6 +15,7 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
  * than the one associated with the class it belongs to.
  * The following annotation is just to stop the Doctrine annotation reader complaining if it comes across this.
  * @Annotation
+ * @Target("PROPERTY")
  */
 class Relationship extends ObjectiphyAnnotation
 {

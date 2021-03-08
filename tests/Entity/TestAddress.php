@@ -8,37 +8,37 @@ class TestAddress
 {
     /**
      * @var string
-     * @Objectiphy\Groups(groups={"Default"})
+     * @Objectiphy\Objectiphy\Mapping\Groups(groups={"Default"})
      * @Mapping\Column(name="address_line1")
      */
     protected $line1;
     /**
      * @var string
-     * @Objectiphy\Groups(groups={"Default"})
+     * @Objectiphy\Objectiphy\Mapping\Groups(groups={"Default"})
      * @Mapping\Column(name="address_line2")
      */
     protected $line2;
     /**
      * @var string
-     * @Objectiphy\Groups(groups={"Default"})
+     * @Objectiphy\Objectiphy\Mapping\Groups(groups={"Default"})
      * @Mapping\Column(name="address_town")
      */
     protected $town;
     /**
      * @var string
-     * @Objectiphy\Groups(groups={"Default"})
+     * @Objectiphy\Objectiphy\Mapping\Groups(groups={"Default"})
      * @Mapping\Column(name="address_postcode")
      */
     protected $postcode;
     /**
      * @var string
      * @Mapping\Column(name="address_country_code",type="string")
-     * @Objectiphy\Groups(groups={"Default"})
+     * @Objectiphy\Objectiphy\Mapping\Groups(groups={"Default"})
      */
     protected $countryCode;
     /**
      * @var string Scalar join based on a code stored with the address fields
-     * @Objectiphy\Groups(groups={"Default"})
+     * @Objectiphy\Objectiphy\Mapping\Groups(groups={"Default"})
      * @Mapping\Relationship(
      *     relationshipType="scalar",
      *     targetScalarValueColumn="objectiphy_test.country.description",

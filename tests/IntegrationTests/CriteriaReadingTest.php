@@ -187,6 +187,7 @@ class CriteriaReadingTest extends IntegrationTestBase
 
     protected function doSerializationGroupTests()
     {
+        $this->objectRepository->clearCache();
         $this->objectRepository->setPagination(null);
         $this->objectRepository->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, ['Default', 'PolicyDetails']);
 
@@ -198,27 +199,27 @@ class CriteriaReadingTest extends IntegrationTestBase
         $this->assertEmpty($policies[0]->contact);
         $this->assertEmpty($policies[0]->status);
 
-        $this->objectRepository->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, ['Default']);
-        $this->objectRepository->setClassName(TestParent::class);
-        $parent = $this->objectRepository->find(1);
-        $this->assertEquals(null, $parent->getChild());
-
-        $this->objectRepository->setEntityClassName(TestPolicy::class);
-        $query = QB::create()->where('contact.lasName', '=', 'Skywalker')
-            ->orStart()
-                ->where('status', '=', 'PAID')
-                ->and('effectiveStartDateTime', '>', new \DateTime('2018-12-15'))
-            ->orEnd()
-            ->or('id', '=', 19072010)
-            ->buildSelectQuery();
-//        $expression = (new CriteriaExpression('contact.lastName', 'lastname_alias', '=', 'Skywalker'))
-//            ->orWhere(
-//                (new CriteriaExpression('status', null, '=', 'PAID'))
-//                    ->andWhere(['effectiveStartDateTime', null, '>', new \DateTime('2018-12-15')])
-//            )
-//            ->orWhere(['id', null, '=', 19072010]);
-        $policies3a = $this->objectRepository->findBy($query, null, null, null, 'vehicle.id');
-        $this->assertSame(null, $policies3a[20]->contact->postcode);
+//        $this->objectRepository->setClassName(TestParent::class);
+//        $this->objectRepository->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, ['Default']);
+//        $parent = $this->objectRepository->find(1);
+//        $this->assertEquals(null, $parent->getChild());
+//
+//        $this->objectRepository->setEntityClassName(TestPolicy::class);
+//        $query = QB::create()->where('contact.lasName', '=', 'Skywalker')
+//            ->orStart()
+//                ->where('status', '=', 'PAID')
+//                ->and('effectiveStartDateTime', '>', new \DateTime('2018-12-15'))
+//            ->orEnd()
+//            ->or('id', '=', 19072010)
+//            ->buildSelectQuery();
+////        $expression = (new CriteriaExpression('contact.lastName', 'lastname_alias', '=', 'Skywalker'))
+////            ->orWhere(
+////                (new CriteriaExpression('status', null, '=', 'PAID'))
+////                    ->andWhere(['effectiveStartDateTime', null, '>', new \DateTime('2018-12-15')])
+////            )
+////            ->orWhere(['id', null, '=', 19072010]);
+//        $policies3a = $this->objectRepository->findBy($query, null, null, null, 'vehicle.id');
+//        $this->assertSame(null, $policies3a[20]->contact->postcode);
     }
 
     protected function doAdvancedReadingTests()

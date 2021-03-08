@@ -152,6 +152,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $oldClassName = $this->className;
             $this->className = $className;
             $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
+            $this->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, []);
             if ($className != $oldClassName) {
                 $this->orderBy = [];
                 //In case of custom repository that does not pass along the find/save options, set defaults here
@@ -629,7 +630,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         //TODO: Use command bus pattern to send queries of different types to different handlers
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $this->setClassName($query->getClassName());
-        $this->mappingCollection->setGroups($this->configOptions->serializationGroups);
+        $this->mappingCollection->setGroups(...$this->configOptions->serializationGroups);
         if ($query instanceof SelectQueryInterface) {
             return $this->findBy($query);
         } elseif ($query instanceof InsertQueryInterface || $query instanceof UpdateQueryInterface) {

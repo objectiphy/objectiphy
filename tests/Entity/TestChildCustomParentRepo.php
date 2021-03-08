@@ -24,13 +24,13 @@ class TestChildCustomParentRepo
     protected $user;
     /**
      * @var string
-     * @Objectiphy\Groups({"Special"})
+     * @Objectiphy\Objectiphy\Mapping\Groups({"Special"})
      * @Mapping\Column(type="string", name="name")
      */
     protected $name;
     /**
      * @var string
-     * @Objectiphy\Groups({"Special"})
+     * @Objectiphy\Objectiphy\Mapping\Groups({"Special"})
      * @Mapping\Column(type="int", name="height_in_cm")
      */
     protected $height;

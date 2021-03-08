@@ -12,25 +12,25 @@ class TestParentCustomRepo
 {
     /**
      * @var int
-     * @Objectiphy\Groups({"Default"})
+     * @Objectiphy\Objectiphy\Mapping\Groups({"Default"})
      * @Mapping\Column(isPrimaryKey=true)
      */
     protected $id;
     /**
      * @var TestUser
-     * @Objectiphy\Groups({"Default"})
+     * @Objectiphy\Objectiphy\Mapping\Groups({"Default"})
      * @Mapping\Relationship(childClassName="TestUser", sourceJoinColumn="user_id", relationshipType="one_to_one", cascadeDeletes=true)
      */
     protected $user;
     /**
      * @var string
-     * @Objectiphy\Groups({"Default"})
+     * @Objectiphy\Objectiphy\Mapping\Groups({"Default"})
      * @Mapping\Column(type="string", name="name")
      */
     protected $name;
     /**
      * @var TestChild
-     * @Objectiphy\Groups({"Full"})
+     * @Objectiphy\Objectiphy\Mapping\Groups({"Full"})
      * @Mapping\Relationship(childClassName="TestChild", mappedBy="parent", relationshipType="one_to_one")
      */
     protected $child;

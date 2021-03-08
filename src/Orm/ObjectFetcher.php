@@ -13,6 +13,7 @@ use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 
 /**
@@ -304,6 +305,9 @@ final class ObjectFetcher
      */
     private function doFetch(SelectQueryInterface $query)
     {
+        if (empty($query->getFields())) {
+            throw new QueryException('There are no fields to select! Did you use the wrong Serialization Group name?');
+        }
         $sql = $this->sqlSelector->getSelectSql($query);
         $this->explanation->addQuery($query, $sql, $this->options->mappingCollection, $this->configOptions);
         if ($this->options->multiple && $this->options->onDemand && $this->options->scalarProperty) {

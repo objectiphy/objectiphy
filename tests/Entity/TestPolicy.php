@@ -33,6 +33,7 @@ class TestPolicy
     /**
      * @var TestUnderwriter
      * @Mapping\Relationship(sourceJoinColumn="underwriter_id",childClassName="TestUnderwriter",relationshipType="one_to_one")
+     * @Groups({"Default"})
      */
     protected $underwriter;
     

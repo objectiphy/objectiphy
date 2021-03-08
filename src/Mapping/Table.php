@@ -10,6 +10,7 @@ namespace Objectiphy\Objectiphy\Mapping;
  * relating to the properties of the class.
  * The following annotation is just to stop the Doctrine annotation reader complaining if it comes across this.
  * @Annotation
+ * @Target("CLASS")
  */
 class Table extends ObjectiphyAnnotation
 {

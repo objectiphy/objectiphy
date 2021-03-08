@@ -212,7 +212,7 @@ final class ObjectPersister implements TransactionInterface
     ): int {
         $originalClassName = $this->getClassName();
         $this->setClassName(ObjectHelper::getObjectClassName($entity));
-        $this->options->mappingCollection->setGroups($this->configOptions->serializationGroups);
+        $this->options->mappingCollection->setGroups(...$this->config->serializationGroups);
         
         //Try to work out if we are inserting or updating
         $update = false;

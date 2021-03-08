@@ -216,26 +216,26 @@ class MappingCollection
      */
     public function isPropertyFetchable(PropertyMapping $propertyMapping): bool
     {
-        $value = $this->getFetchableProperties()[$propertyMapping->getPropertyPath()] ?? false;
+        $value = $this->getFetchableProperties(false)[$propertyMapping->getPropertyPath()] ?? false;
         return $value ? true : false; //$value could be an object
     }
     
-    public function getFetchableProperties(): array 
+    public function getFetchableProperties(bool $finalise = true): array
     {
-        if (!$this->columnMappingDone) {
+        if ($finalise && !$this->columnMappingDone) {
             $this->finaliseColumnMappings();
         }
 
-//        if ($this->groups) {
-//            $fetchables = [];
-//            foreach ($this->fetchableProperties as $propertyMapping) {
-//                if (array_intersect($this->groups, $propertyMapping->getGroups())) {
-//                    $fetchables[] = $propertyMapping;
-//                }
-//            }
-//
-//            return $fetchables;
-//        }
+        if ($this->groups) {
+            $fetchables = [];
+            foreach ($this->fetchableProperties as $propertyMapping) {
+                if (array_intersect($this->groups, $propertyMapping->getGroups())) {
+                    $fetchables[] = $propertyMapping;
+                }
+            }
+
+            return $fetchables;
+        }
 
         return $this->fetchableProperties;
     }

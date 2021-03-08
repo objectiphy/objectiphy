@@ -15,7 +15,7 @@ class TestUnderwriter
 {
     /**
      * @var int
-     * @Objectiphy\Groups({"Default"})
+     * @Objectiphy\Objectiphy\Mapping\Groups({"Default"})
      * @Mapping\Column(isPrimaryKey=true)
      */
     protected $id;
