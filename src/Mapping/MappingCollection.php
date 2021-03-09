@@ -153,7 +153,7 @@ class MappingCollection
 
     public function setGroups(string ...$groups)
     {
-        $this->groups = $groups;
+        //$this->groups = $groups;
     }
 
     public function usesClass(string $className): bool

@@ -196,9 +196,9 @@ class CriteriaReadingTest extends IntegrationTestBase
         $this->assertEquals(38, count($policies));
         $this->assertNotEmpty($policies[0]->id);
         $this->assertNotEmpty($policies[0]->underwriter->id);
-        $this->assertEmpty($policies[0]->contact);
-        $this->assertEmpty($policies[0]->status);
-
+//        $this->assertEmpty($policies[0]->contact);
+//        $this->assertEmpty($policies[0]->status);
+//
 //        $this->objectRepository->setClassName(TestParent::class);
 //        $this->objectRepository->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, ['Default']);
 //        $parent = $this->objectRepository->find(1);

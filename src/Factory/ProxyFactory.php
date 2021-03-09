@@ -54,10 +54,6 @@ final class ProxyFactory
         } else {
             $this->cacheDirectory = sys_get_temp_dir();
         }
-
-        if ($this->devMode) {
-            $this->clearProxyCache();
-        }
     }
 
     /**
@@ -70,8 +66,8 @@ final class ProxyFactory
      * @throws \ReflectionException
      */
     public function createObjectReferenceProxy(
-        string $className, 
-        array $pkValues, 
+        string $className,
+        array $pkValues,
         array $constructorArgs = []
     ): ?ObjectReferenceInterface {
         $proxyClassName = str_replace('\\', '_', 'ObjReference_' . $className);
@@ -94,7 +90,7 @@ final class ProxyFactory
                                                $classDefinition);
                 $classDefinition = str_replace("public function __toString(): string\n    {",
                                                "public function __toString(): string\n    {if (is_callable('parent::__toString')) {return parent::__toString();}",
-                                                $classDefinition);
+                                               $classDefinition);
 
                 //Remove the constructor (we don't want to override the real object's constructor)
                 $constructorStart = strpos($classDefinition, 'public function __construct(');
@@ -161,21 +157,6 @@ final class ProxyFactory
             foreach ($proxies as $proxy) {
                 if (substr($proxy, 0, 11) == 'Objectiphy_') {
                     unlink($this->cacheDirectory . DIRECTORY_SEPARATOR . $proxy);
-                }
-            }
-            clearstatcache();
-        }
-    }
-
-    /**
-     * If in debug mode, delete proxy class files after use.
-     */
-    public function __destruct()
-    {
-        if ($this->devMode && $this->proxyClasses) {
-            foreach ($this->proxyClasses as $proxyClass) {
-                if (file_exists($this->cacheDirectory . DIRECTORY_SEPARATOR . $proxyClass . '.php')) {
-                    unlink ($this->cacheDirectory . DIRECTORY_SEPARATOR . $proxyClass . '.php');
                 }
             }
             clearstatcache();
@@ -301,15 +282,21 @@ final class ProxyFactory
      */
     private function proxyExists($className): bool
     {
-        $fileName = $this->cacheDirectory . DIRECTORY_SEPARATOR . str_replace('\\', '/', $className) . '.php';
-        if (file_exists($fileName)) {
-            try {
-                include_once($fileName);
-                $this->proxyClasses[] = $className;
+        if (in_array($className, $this->proxyClasses)) {
+            return true;
+        }
+        if (!$this->devMode) {
+            clearstatcache();
+            $fileName = $this->cacheDirectory . DIRECTORY_SEPARATOR . str_replace('\\', '/', $className) . '.php';
+            if (file_exists($fileName)) {
+                try {
+                    include_once($fileName);
+                    $this->proxyClasses[] = $className;
 
-                return true;
-            } catch (\Throwable $ex) {
-                //Class definition has probably changed - create a new proxy
+                    return true;
+                } catch (\Throwable $ex) {
+                    //Class definition has probably changed - create a new proxy
+                }
             }
         }
 

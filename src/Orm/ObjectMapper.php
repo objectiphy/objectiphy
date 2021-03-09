@@ -237,7 +237,11 @@ final class ObjectMapper
                 $relationship->$overrideKey = $overrideValue;
             }
         }
-
+        if ($relationship->isDefined() && !$relationship->childClassName && !$relationship->isEmbedded && !$relationship->isScalarJoin()) {
+            $errorMessage = sprintf('Relationship defined without a child class name for property \'%1$s\' on class \'%2$s\'. Please specify a value for the childClassName attribute.', $reflectionProperty->getName(), $reflectionProperty->getDeclaringClass()->getName());
+            throw new MappingException($errorMessage);
+        }
+        
         return $relationship;
     }
 
@@ -470,6 +474,10 @@ final class ObjectMapper
             || $mappingCollection->isRelationshipAlreadyMapped($parents, $propertyName, $reflectionClass->getName())
         ) {
             if ($relationship->mappedBy) { //Go this far, but no further
+                if (!class_exists($relationship->childClassName)) {
+                    $errorMessage = 'Specified child class (\'%1$s\') does not exist on relationship for property \'%2$s\' of class \'%3$s\'';
+                    throw new MappingException(sprintf($errorMessage, $relationship->childClassName, $propertyName, $reflectionClass->getName()));
+                }
                 $childReflectionClass = new \ReflectionClass($relationship->childClassName);
                 $childReflectionProperty = $childReflectionClass->getProperty($relationship->mappedBy);
                 $childRelationship = $this->getRelationshipMapping($childReflectionProperty);

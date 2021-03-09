@@ -373,7 +373,7 @@ class PropertyMapping
         if (!$collectionClass || $collectionClass == 'array') {
             if ($this->reflectionProperty->hasType()) {
                 $collectionClass = ObjectHelper::getTypeName($this->reflectionProperty->getType()); //Sometimes returns gibberish
-                if ($collectionClass && (
+                if ($collectionClass && $collectionClass != 'array' && (
                         !is_string($collectionClass)
                         || strlen($collectionClass) > 1000
                         || !class_exists($collectionClass)
