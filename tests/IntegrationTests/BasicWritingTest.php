@@ -573,12 +573,13 @@ class BasicWritingTest extends IntegrationTestBase
             TestChild::class,
             ConfigEntity::RELATIONSHIP_OVERRIDES,
             [
-            'user' => [
-                'joinTable' => 'objectiphy_test.user_alternative',
-                'sourceJoinColumn' => 'user_id',
-                'targetJoinColumn' => 'id'
+                'user' => [
+                    'joinTable' => 'objectiphy_test.user_alternative',
+                    'sourceJoinColumn' => 'user_id',
+                    'targetJoinColumn' => 'id'
+                ]
             ]
-        ]);
+        );
         $altParent = $this->objectRepository->find(1);
         $this->assertEquals('alternative2@example.com', $altParent->getChild()->getUser()->getEmail());
     }

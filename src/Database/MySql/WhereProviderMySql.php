@@ -7,6 +7,7 @@ namespace Objectiphy\Objectiphy\Database\MySql;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\CriteriaGroup;
@@ -77,6 +78,9 @@ class WhereProviderMySql
             $criteriaExpression->property->getExpression(),
             $mappingCollection
         );
+        if (!trim($sql)) {
+            throw new QueryException(sprintf('Could not convert criteria expression \'%1$s\' into SQL - please check for syntax and typos.', $criteriaExpression->property->getExpression()));
+        }
         $operator = $valuePrefix = $valueSuffix = '';
         $this->prepareExpression($criteriaExpression, $operator, $valuePrefix, $valueSuffix);
         $sql .= ' ' . $operator . ' ';

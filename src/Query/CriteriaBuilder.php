@@ -188,14 +188,16 @@ class CriteriaBuilder implements CriteriaBuilderInterface
         } else {
             foreach ($criteria as $propertyName => $expression) {
                 if (!($expression instanceof CriteriaExpression) && !($expression instanceof JoinExpression)) {
-                    $value = is_array($expression) && array_key_exists('value', $expression) ? $expression['value'] : $expression;
+                    $isArray = is_array($expression);
+                    $value = $isArray && array_key_exists('value', $expression) ? $expression['value'] : $expression;
+                    $defaultOperator = $value === null ? 'IS' : '=';
                     $expression = new CriteriaExpression(
                         new FieldExpression($propertyName),
-                        !empty($expression['alias']) ? $expression['alias'] : null,
-                        !empty($expression['operator']) ? $expression['operator'] : ($value === null ? 'IS' : '='),
+                        $isArray ? ($expression['alias'] ?? null) : null,
+                        $isArray ? ($expression['operator'] ?? $defaultOperator) : $defaultOperator,
                         $value,
-                        !empty($expression['alias2']) ? $expression['alias2'] : null,
-                        isset($expression['value2']) ? $expression['value2'] : null
+                        $isArray ? ($expression['alias2'] ?? null) : null,
+                        $isArray ? ($expression['value2'] ?? null) : null
                     );
                 }
                 $normalizedCriteria[] = $expression;

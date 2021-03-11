@@ -44,11 +44,6 @@ class TestChildCustomParentRepo
      */
     public $address;
 
-    public function getId()
-    {
-        return $this->id;
-    }
-
     public function getUser()
     {
         return $this->user;
