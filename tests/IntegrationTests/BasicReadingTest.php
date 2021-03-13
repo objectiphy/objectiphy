@@ -307,8 +307,8 @@ class BasicReadingTest extends IntegrationTestBase
         $this->assertEquals('United Kingdom', $parent->address->getCountryDescription());
 
         //Load child again using an object with a protected pk instead of the pk value directly
-//        $childByObject = $parentRepository->findBy(['child' => $child]);
-//        $this->assertEquals($child->getName(), $childByObject->getName());
+        $parentByChild = $parentRepository->findOneBy(['child' => $child]);
+        $this->assertEquals($child->getName(), $parentByChild->child->getName());
 
         //Check error message when trying to load an entity with no table definition
         try {

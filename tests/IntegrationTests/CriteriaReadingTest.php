@@ -138,6 +138,12 @@ class CriteriaReadingTest extends IntegrationTestBase
         $this->assertEquals(1, array_keys($policies3)[1]);
         $this->assertEquals(34, array_keys($policies3)[3]);
         $this->assertNotSame(null, $policies3[37]->vehicle->abiCode); //37 is the vehicle ID
+
+        //Index by a column name
+        $policies4 = $this->objectRepository->findBy($query, null, null, null, '`obj_alias_vehicle`.`policy_id`');
+        $this->assertEquals(6, count($policies4));
+        $this->assertEquals(19071974, array_keys($policies4)[1]);
+        $this->assertEquals(19072007, array_keys($policies4)[3]);
     }
 
     protected function doOperatorTests()

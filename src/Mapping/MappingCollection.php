@@ -161,25 +161,6 @@ class MappingCollection
         return isset($this->classes[$className]);
     }
 
-    public function forceJoin(PropertyMapping $propertyMapping)
-    {
-        if ($propertyMapping->relationship->isDefined() && !$propertyMapping->relationship->isEmbedded) {
-            $relationshipKey = $propertyMapping->getRelationshipKey();
-            $this->relationships[$relationshipKey] ??= $propertyMapping;
-        }
-    }
-
-    public function forceFetch(string $propertyPath): void
-    {
-        $propertyMapping = $this->getPropertyMapping($propertyPath);
-        if ($propertyMapping->parents) { //Ensure parent is joined
-            $parentPropertyMapping = $this->getPropertyMapping($propertyMapping->getParentPath());
-            $parentPropertyMapping->forceEarlyBindingForJoin();
-        }
-        $this->columns[$propertyMapping->getAlias()] = $propertyMapping;
-        $this->fetchableProperties[$propertyMapping->getPropertyPath()] = $propertyMapping;
-    }
-
     public function addPrimaryKeyMapping(string $className, string $propertyName): void
     {
         $this->primaryKeyProperties[$className][$propertyName] ??= 1;

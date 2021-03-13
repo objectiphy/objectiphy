@@ -29,6 +29,7 @@ use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 use Objectiphy\Objectiphy\Query\Pagination;
 use Objectiphy\Objectiphy\Query\QB;
+use Objectiphy\Objectiphy\Query\QueryBuilder;
 use Objectiphy\Objectiphy\Query\SelectQuery;
 use Objectiphy\Objectiphy\Traits\TransactionTrait;
 
@@ -295,7 +296,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * setCommonProperty method).
      * @param string|null $recordAgeIndicator Fully qualified database column or expression that determines record age
      * (see also the setCommonProperty method).
-     * @param string|null $keyProperty If you want the resulting array to be associative, based on a value in the
+     * @param string|null $indexBy If you want the resulting array to be associative, based on a value in the
      * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
      * child object, but make sure the property you use has a unique value in the result set, otherwise some records
      * will be lost).
@@ -309,7 +310,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $criteria = [],
         ?string $commonProperty = null,
         ?string $recordAgeIndicator = null,
-        ?string $keyProperty = null,
+        ?string $indexBy = null,
         bool $multiple = true,
         bool $fetchOnDemand = false
     ): ?iterable {
@@ -327,7 +328,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * 'date']).
      * @param int|null $limit Only here to provide compatibility with Doctrine - normally we would use setPagination.
      * @param int|null $offset Only here to provide compatibility with Doctrine - normally we would use setPagination.
-     * @param string|null $keyProperty If you want the resulting array to be associative, based on a value in the
+     * @param string|null $indexBy If you want the resulting array to be associative, based on a value in the
      * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
      * child object, but make sure the property you use has a unique value in the result set, otherwise some records
      * will be lost).
@@ -341,7 +342,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         ?array $orderBy = null,
         $limit = null,
         $offset = null,
-        ?string $keyProperty = null,
+        ?string $indexBy = null,
         bool $fetchOnDemand = false
     ): ?iterable {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
@@ -357,7 +358,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => true,
             'orderBy' => $this->orderBy,
-            'keyProperty' => $keyProperty ?? '',
+            'indexBy' => $indexBy ?? '',
             'onDemand' => $fetchOnDemand,
             'pagination' => $this->pagination ?? null,
             'bindToEntities' => $this->configOptions->bindToEntities,
@@ -388,7 +389,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     /**
      * Find all records. Compatible with the equivalent method in Doctrine.
      * @param array|null $orderBy
-     * @param string|null $keyProperty If you want the resulting array to be associative, based on a value in the
+     * @param string|null $indexBy If you want the resulting array to be associative, based on a value in the
      * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
      * child object, but make sure the property you use has a unique value in the result set, otherwise some records
      * will be lost).
@@ -397,9 +398,9 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @return array|null
      * @throws ObjectiphyException|\ReflectionException|\Throwable
      */
-    public function findAll(?array $orderBy = null, ?string $keyProperty = null, bool $fetchOnDemand = false): ?iterable
+    public function findAll(?array $orderBy = null, ?string $indexBy = null, bool $fetchOnDemand = false): ?iterable
     {
-        return $this->findBy([], $orderBy, null, null, $keyProperty, $fetchOnDemand);
+        return $this->findBy([], $orderBy, null, null, $indexBy, $fetchOnDemand);
     }
 
     public function findOneValueBy($criteria = [], string $valueProperty = '')
@@ -777,7 +778,11 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $query = new $queryType();
             $query->setWhere(...$normalizedCriteria);
         } else {
-            throw new QueryException('Invalid criteria specified for ' . $queryType);
+            $message = sprintf('Invalid criteria specified for %1$s.', $queryType);
+            if ($queryType instanceof QueryBuilder) {
+                $message .= ' You have passed in an instance of QueryBuilder instead of an actual Query. Please call the appropriate build method (eg. buildSelectQuery), and pass in the resulting query (note, if you want to build the query and assign it to a variable, make sure you do actually assign it - just calling the method will not work if you don\'t use the response!';
+            }
+            throw new QueryException($message);
         }
 
         return $query;

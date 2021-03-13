@@ -107,7 +107,7 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * setCommonProperty method).
      * @param string|null $recordAgeIndicator Fully qualified database column or expression that determines record age
      * (see also the setCommonProperty method).
-     * @param string|null $keyProperty If you want the resulting array to be associative, based on a value in the
+     * @param string|null $indexBy If you want the resulting array to be associative, based on a value in the
      * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
      * child object, but make sure the property you use has a unique value in the result set, otherwise some records
      * will be lost).
@@ -120,7 +120,7 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
         $criteria,
         ?string $commonProperty = null, 
         ?string $recordAgeIndicator = null, 
-        ?string $keyProperty = null, 
+        ?string $indexBy = null,
         bool $multiple = true, 
         bool $fetchOnDemand = false
     );
@@ -134,7 +134,7 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * 'date']).
      * @param int|null $limit Only here to provide compatibility with Doctrine - normally we would use setPagination.
      * @param int|null $offset Only here to provide compatibility with Doctrine - normally we would use setPagination.
-     * @param string|null $keyProperty If you want the resulting array to be associative, based on a value in the
+     * @param string|null $indexBy If you want the resulting array to be associative, based on a value in the
      * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
      * child object, but make sure the property you use has a unique value in the result set, otherwise some records
      * will be lost).
@@ -147,7 +147,7 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
         ?array $orderBy = null, 
         $limit = null,
         $offset = null,
-        ?string $keyProperty = null, 
+        ?string $indexBy = null,
         bool $fetchOnDemand = false
     );
 
@@ -166,7 +166,7 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
     /**
      * Find all records. Compatible with the equivalent method in Doctrine.
      * @param array|null $orderBy
-     * @param string|null $keyProperty If you want the resulting array to be associative, based on a value in the
+     * @param string|null $indexBy If you want the resulting array to be associative, based on a value in the
      * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
      * child object, but make sure the property you use has a unique value in the result set, otherwise some records
      * will be lost).
@@ -174,7 +174,7 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * set(for streaming large amounts of data).
      * @return mixed
      */
-    public function findAll(?array $orderBy = null, ?string $keyProperty = null, bool $fetchOnDemand = false);
+    public function findAll(?array $orderBy = null, ?string $indexBy = null, bool $fetchOnDemand = false);
 
     /**
      * Insert or update the supplied entity.

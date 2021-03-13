@@ -125,10 +125,12 @@ final class ObjectFetcher
         $this->objectMapper->addExtraMappings($this->getClassName(), $this->options);
         $this->objectMapper->addExtraMappings($this->getClassName(), $query);
         $this->objectMapper->addExtraClassMappings($this->getClassName(), $query);
-        if ($this->options->keyProperty) {
-            $this->options->mappingCollection->forceFetch($this->options->keyProperty);
-        }
         $query->finalise($this->options->mappingCollection, $this->stringReplacer);
+        if ($this->options->indexBy) {
+            $indexByField = new FieldExpression($this->options->indexBy);
+            $indexByField->setAlias('objectiphy_index_by');
+            $query->setSelect(...array_merge($query->getSelect(), [$indexByField]));
+        }
         $this->doCount($query);
         $result = $this->doFetch($query);
         if (isset($originalClass)) {
@@ -212,7 +214,7 @@ final class ObjectFetcher
         $this->storage->executeQuery($sql, $params ?: []);
         $rows = $this->storage->fetchResults();
         if ($rows && $this->options->bindToEntities) {
-            $result = $this->objectBinder->bindRowsToEntities($rows, $this->getClassName(), $this->options->keyProperty);
+            $result = $this->objectBinder->bindRowsToEntities($rows, $this->getClassName(), $this->options->indexBy);
         } else {
             $result = $rows;
         }

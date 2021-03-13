@@ -28,6 +28,11 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
      */
     private bool $isPropertyPath;
 
+    /**
+     * @var string Alias to use in the results when selecting this field.
+     */
+    private string $alias = '';
+
     public function __construct($expression = null)
     {
         $this->setExpression($expression);
@@ -78,6 +83,16 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
                 //$this->isPropertyPath = !(preg_match("/(\s|\%|\')/", $value));
             }
         }
+    }
+
+    public function setAlias(string $alias)
+    {
+        $this->alias = $alias;
+    }
+
+    public function getAlias(): string
+    {
+        return $this->alias;
     }
 
     /**

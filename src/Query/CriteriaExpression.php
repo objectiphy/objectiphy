@@ -160,7 +160,7 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
         $paths = $this->property->getPropertyPaths();
         $paths = array_merge($paths, $this->getPropertyPathsFromValue($this->value));
         $paths = array_merge($paths, $this->getPropertyPathsFromValue($this->value2));
-
+        
         return array_filter($paths);
     }
 

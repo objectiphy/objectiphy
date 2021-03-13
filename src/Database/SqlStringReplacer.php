@@ -310,6 +310,17 @@ class SqlStringReplacer
                 }
                 $alias = $this->delimit($propertyMapping->getAlias());
                 $fieldValue = $this->delimit($propertyMapping->getFullColumnName($explicitTable));
+
+                //If we are being asked for a column that is owned by the other side, check the other side
+                if (!$fieldValue && $propertyMapping->relationship->mappedBy && $propertyMapping->childTable) {
+                    $pkProperties = $mappingCollection->getPrimaryKeyProperties($propertyMapping->relationship->childClassName) ?? [];
+                    $pkProperty = reset($pkProperties);
+                    if ($pkProperty) {
+                        $pkPropertyMapping = $mappingCollection->getPropertyMapping($propertyMapping->getPropertyPath() . '.' . $pkProperty);
+                        $fieldValue = $this->delimit($pkPropertyMapping->getFullColumnName($explicitTable));
+                    }
+                }
+                
                 return true;
             }
         }

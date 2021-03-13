@@ -20,7 +20,7 @@ class FindOptions implements PropertyPathConsumerInterface
     public bool $count = false;
     public bool $bindToEntities = true;
     public bool $onDemand = false;
-    public string $keyProperty = '';
+    public string $indexBy = '';
     public string $scalarProperty = '';
     
     /**
@@ -63,8 +63,8 @@ class FindOptions implements PropertyPathConsumerInterface
     public function getPropertyPaths(): array
     {
         $paths = [];
-        if ($this->keyProperty) {
-            $paths[] = $this->keyProperty;
+        if ($this->indexBy) {
+            $paths[] = $this->indexBy;
         }
         if ($this->scalarProperty) {
             $paths[] = $this->scalarProperty;

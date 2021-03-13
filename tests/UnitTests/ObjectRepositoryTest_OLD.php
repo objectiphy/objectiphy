@@ -154,7 +154,7 @@ class ObjectRepositoryTest extends \PHPUnit_Framework_TestCase
             'parentRowHash' => null,
             'parentForeignKeyColumn' => null,
             'keyColumn' => 'id',
-            'keyProperty' => 'id',
+            'indexBy' => 'id',
             'data' => []
         ];
         $rows = [spl_object_hash($entity)=>$row];

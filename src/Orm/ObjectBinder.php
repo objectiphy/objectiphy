@@ -114,19 +114,20 @@ final class ObjectBinder
      * Loop through the records, creating an array of objects.
      * @param array $rows
      * @param string $entityClassName
-     * @param string $keyProperty
+     * @param string $indexBy
      * @return array
      * @throws MappingException
      * @throws \Throwable
      */
-    public function bindRowsToEntities(array $rows, string $entityClassName, string $keyProperty): array
+    public function bindRowsToEntities(array $rows, string $entityClassName, string $indexBy): array
     {
         $entities = [];
         foreach ($rows as $row) {
             $entity = $this->bindRowToEntity($row, $entityClassName);
             $key = count($entities);
-            if ($keyProperty) {
-                $keyValueColumn = $this->mappingCollection->getColumnForPropertyPath($keyProperty);
+            if ($indexBy) {
+                //$keyValueColumn = $this->mappingCollection->getColumnForPropertyPath($indexBy);
+                $keyValueColumn = 'objectiphy_index_by';
                 $key = $row[$keyValueColumn] ?? $key;
             }
             $entities[$key] = $entity;
