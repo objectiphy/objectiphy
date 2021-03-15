@@ -11,6 +11,7 @@ use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Tests\Entity\TestAddress;
 use Objectiphy\Objectiphy\Tests\Entity\TestChild;
 use Objectiphy\Objectiphy\Tests\Entity\TestPet;
+use Objectiphy\Objectiphy\Tests\Entity\TestSuppliedPk;
 use Objectiphy\Objectiphy\Tests\Entity\TestUnderwriter;
 use Objectiphy\Objectiphy\Tests\Entity\TestParent;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
@@ -104,6 +105,7 @@ class BasicWritingTest extends IntegrationTestBase
         $this->doUpdateTests();
         $this->doParentOnlyTests();
         $this->doPrivatePropertyTests();
+        $this->doReplacementTests();
         $this->doInsertTestsOneToOne();
         $this->doInsertTestsOneToMany();
         $this->doMultipleInsertTests();
@@ -244,7 +246,58 @@ class BasicWritingTest extends IntegrationTestBase
         $parent2 = $this->objectRepository->find(1);
         $this->assertEquals('2021-01-01', ($parent2->hasModifiedDateTimeBeenSet())->format('Y-m-d'));
     }
-    
+
+    protected function doReplacementTests()
+    {
+        $this->objectRepository->setClassName(TestSuppliedPk::class);
+
+        $suppliedPk = new TestSuppliedPk();
+        $suppliedPk->keyReference = 'C54321';
+        $suppliedPk->someValue = 'New value';
+        $insertCount = 0;
+        $updateCount = 0;
+        $insertCount = $this->objectRepository->saveEntity($suppliedPk, null, null, $insertCount, $updateCount);
+        $this->assertEquals(1, $insertCount);
+        $this->assertEquals(0, $updateCount);
+
+        $this->objectRepository->clearCache();
+        $loadedPk = $this->objectRepository->findOneBy(['keyReference' => 'C54321']);
+        $this->assertEquals('New value', $loadedPk->someValue);
+
+        //Make sure it does not attempt to replace if autoIncrement is true
+        $this->objectRepository->setEntityConfigOption(
+            TestSuppliedPk::class,
+            ConfigEntity::COLUMN_OVERRIDES,
+            ['keyReference' => ['autoIncrement' => true]]
+        );
+        $suppliedPk = new TestSuppliedPk();
+        $suppliedPk->keyReference = 'D54321';
+        $suppliedPk->someValue = 'New value 2';
+        $insertCount = 0;
+        $updateCount = 0;
+        $insertCount = $this->objectRepository->saveEntity($suppliedPk, null, null, $insertCount, $updateCount);
+        $this->assertEquals(0, $insertCount);
+        $this->assertEquals(0, $updateCount);
+
+        $this->objectRepository->clearCache();
+        $loadedPk = $this->objectRepository->findOneBy(['keyReference' => 'D54321']);
+        $this->assertNull($loadedPk);
+
+        //Make sure it does attempt to replace if autoIncrement is true AND we tell it to replace
+        $suppliedPk = new TestSuppliedPk();
+        $suppliedPk->keyReference = 'E54321';
+        $suppliedPk->someValue = 'New value 3';
+        $insertCount = 0;
+        $updateCount = 0;
+        $insertCount = $this->objectRepository->saveEntity($suppliedPk, null, true, $insertCount, $updateCount);
+        $this->assertEquals(1, $insertCount);
+        $this->assertEquals(0, $updateCount);
+
+        $this->objectRepository->clearCache();
+        $loadedPk = $this->objectRepository->findOneBy(['keyReference' => 'E54321']);
+        $this->assertEquals('New value 3', $loadedPk->someValue);
+    }
+
     protected function doInsertTestsOneToOne()
     {
         $this->objectRepository->setClassName(TestPolicy::class);

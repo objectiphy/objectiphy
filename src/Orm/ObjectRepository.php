@@ -456,6 +456,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param object $entity The entity to insert or update.
      * @param bool $saveChildren Whether or not to also update any child objects. You can set a default value as a
      * config option (defaults to true).
+     * @param bool $replace Whether or not to attempt to insert, and if the record already exists, update it (for
+     * cases where you are generating a primary key value yourself)
      * @param int $insertCount Number of rows inserted.
      * @param int $updateCount Number of rows updated.
      * @param int $deleteCount Number of rows deleted.
@@ -465,6 +467,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     public function saveEntity(
         object $entity,
         ?bool $saveChildren = null,
+        ?bool $replace = false,
         int &$insertCount = 0,
         int &$updateCount = 0,
         int &$deleteCount = 0
@@ -476,7 +479,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $updateCount = 0;
             $this->setClassName(ObjectHelper::getObjectClassName($entity));
             $saveChildren = $saveChildren ?? $this->configOptions->saveChildrenByDefault;
-            $saveOptions = SaveOptions::create($this->mappingCollection, ['saveChildren' => $saveChildren]);
+            $saveOptions = SaveOptions::create($this->mappingCollection, [
+                'saveChildren' => $saveChildren,
+                'replaceExisting' => boolval($replace)
+            ]);
             $this->beginTransaction();
             $return = $this->objectPersister->saveEntity($entity, $saveOptions, $insertCount, $updateCount, $deleteCount);
             $this->commit();
@@ -505,6 +511,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     public function saveEntities(
         iterable $entities,
         bool $saveChildren = null,
+        ?bool $replace = false,
         int &$insertCount = 0,
         int &$updateCount = 0,
         int &$deleteCount = 0
@@ -517,7 +524,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         try {
             $saveChildren = $saveChildren ?? $this->configOptions->saveChildrenByDefault;
             $this->setClassName(ObjectHelper::getObjectClassName(reset($entities)));
-            $saveOptions = SaveOptions::create($this->mappingCollection, ['saveChildren' => $saveChildren]);
+            $saveOptions = SaveOptions::create($this->mappingCollection, [
+                'saveChildren' => $saveChildren,
+                'replaceExisting' => $replace
+            ]);
             $this->beginTransaction();
             $return = $this->objectPersister->saveEntities(
                 $entities, $saveOptions,

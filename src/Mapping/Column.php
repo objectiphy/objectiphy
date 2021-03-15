@@ -28,6 +28,9 @@ class Column extends ObjectiphyAnnotation
     /** @var bool Whether this column is part of the primary key. */
     public bool $isPrimaryKey = false;
     
+    /** @var bool For primary keys, whether or not they auto-increment. Set to false to supply your own PK value. */
+    public bool $autoIncrement = true;
+    
     /**
      * @var bool | null Whether or not to prevent this field being persisted. If null, the default behaviour is
      * to evaluate to false for everything EXCEPT scalar joins (it is safer to assume scalar joins are read-only

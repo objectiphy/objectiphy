@@ -223,15 +223,17 @@ final class ObjectPersister implements TransactionInterface
                 throw new QueryException('Cannot save a partially hydrated object if there is no primary key.');
             }
             $update = true;
-
         } elseif ($pkValues) { //We have values for the primary key so probably an update
-            $update = true;
+            $update = !$this->options->replaceExisting;
             //Check if the primary key is a foreign key (if so, could be an insert so will need to replace)
-            foreach (array_keys($pkValues) as $pkKey) {
-                if ($this->options->mappingCollection->getPropertyMapping($pkKey)->isForeignKey) {
-                    $this->options->replaceExisting = true;
-                    $update = false;
-                    break;
+            if ($update) {
+                foreach (array_keys($pkValues) as $pkKey) {
+                    $pkPropertyMapping = $this->options->mappingCollection->getPropertyMapping($pkKey);
+                    if ($pkPropertyMapping->column->autoIncrement === false || $pkPropertyMapping->isForeignKey) {
+                        $this->options->replaceExisting = true;
+                        $update = false;
+                        break;
+                    }
                 }
             }
         }

@@ -203,9 +203,17 @@ final class ObjectMapper
         $entityConfig = $this->entityConfig[$reflectionClass->getName()] ?? null;
         if ($entityConfig) {
             $overrides = $entityConfig->getConfigOption(ConfigEntity::TABLE_OVERRIDES);
-            foreach ($overrides ?? [] as $overrideKey => $overrideValue) {
-                if (property_exists($table, $overrideKey)) {
-                    $table->$overrideKey = $overrideValue;
+            if (!empty($overrides)) {
+                if (!is_array($overrides)) {
+                    throw new ObjectiphyException(
+                        'You have attempted to override a table mapping but have not supplied all of the necessary information. Format is [$attribute => $value].'
+                    );
+                }
+
+                foreach ($overrides ?? [] as $overrideKey => $overrideValue) {
+                    if (property_exists($table, $overrideKey)) {
+                        $table->$overrideKey = $overrideValue;
+                    }
                 }
             }
         }
@@ -232,9 +240,16 @@ final class ObjectMapper
         if ($entityConfig) {
             $overrides = $entityConfig->getConfigOption(ConfigEntity::RELATIONSHIP_OVERRIDES);
         }
-        foreach ($overrides[$reflectionProperty->getName()] ?? [] as $overrideKey => $overrideValue) {
-            if (property_exists($relationship, $overrideKey)) {
-                $relationship->$overrideKey = $overrideValue;
+        if (!empty($overrides)) {
+            if (!is_array($overrides) || !is_array(reset($overrides))) {
+                throw new ObjectiphyException(
+                    'You have attempted to override a relationship mapping but have not supplied all of the necessary information. Format is [$propertyName => [$attribute => $value]].'
+                );
+            }
+            foreach ($overrides[$reflectionProperty->getName()] ?? [] as $overrideKey => $overrideValue) {
+                if (property_exists($relationship, $overrideKey)) {
+                    $relationship->$overrideKey = $overrideValue;
+                }
             }
         }
         if ($relationship->isDefined() && !$relationship->childClassName && !$relationship->isEmbedded && !$relationship->isScalarJoin()) {
@@ -259,12 +274,19 @@ final class ObjectMapper
         if ($entityConfig) {
             $overrides = $entityConfig->getConfigOption(ConfigEntity::COLUMN_OVERRIDES);
         }
-        foreach ($overrides[$reflectionProperty->getName()] ?? [] as $overrideKey => $overrideValue) {
-            if (property_exists($column, $overrideKey)) {
-                $column->$overrideKey = $overrideValue;
+        if (!empty($overrides)) {
+            if (!is_array($overrides) || !is_array(reset($overrides))) {
+                throw new ObjectiphyException(
+                    'You have attempted to override a column mapping but have not supplied all of the necessary information. Format is [$propertyName => [$attribute => $value]].'
+                );
+            }
+            foreach ($overrides[$reflectionProperty->getName()] ?? [] as $overrideKey => $overrideValue) {
+                if (property_exists($column, $overrideKey)) {
+                    $column->$overrideKey = $overrideValue;
+                }
             }
         }
-
+        
         return $column;
     }
 

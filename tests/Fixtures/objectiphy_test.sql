@@ -475,6 +475,22 @@ INSERT INTO `security_pass` VALUES (5, 'AABBCCD', 1);
 INSERT INTO `security_pass` VALUES (6, 'DDCCBBA', 6);
 
 -- ----------------------------
+--  Table structure for `supplied_pk`
+-- ----------------------------
+DROP TABLE IF EXISTS `supplied_pk`;
+CREATE TABLE `supplied_pk` (
+                                  `key_reference` varchar(255) NOT NULL,
+                                  `some_value` varchar(255) DEFAULT NULL,
+                                  PRIMARY KEY (`key_reference`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------
+--  Records of `supplied_pk`
+-- ----------------------------
+
+INSERT INTO `supplied_pk` VALUES ('A12345', 'Value 1'), ('B12345', 'Value2');
+
+-- ----------------------------
 --  Table structure for `telematics_box`
 -- ----------------------------
 DROP TABLE IF EXISTS `telematics_box`;

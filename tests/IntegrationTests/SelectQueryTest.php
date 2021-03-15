@@ -147,7 +147,7 @@ class SelectQueryTest extends IntegrationTestBase
         $firstContact->lastName = 'NewSurname';
         $inserts = 0;
         $updates = 0;
-        $this->objectRepository->saveEntity($firstContact, null, $inserts, $updates);
+        $this->objectRepository->saveEntity($firstContact, null, false, $inserts, $updates);
         $this->assertEquals(0, $inserts);
         $this->assertEquals(1, $updates);
         $this->assertGreaterThan(0, $firstContact->id);

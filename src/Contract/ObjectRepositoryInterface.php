@@ -180,6 +180,8 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * Insert or update the supplied entity.
      * @param object $entity The entity to insert or update.
      * @param bool $saveChildren Whether or not to also update any child objects.
+     * @param bool $replace Whether or not to attempt to insert, and if the record already exists, update it (for
+     * cases where you are generating a primary key value yourself)
      * @param int $insertCount Number of rows inserted.
      * @param int $updateCount Number of rows updated.
      * @return int Number of rows affected.
@@ -188,6 +190,7 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
     public function saveEntity(
         object $entity,
         ?bool $saveChildren = null,
+        ?bool $replace = false,
         int &$insertCount = 0,
         int &$updateCount = 0
     ): int;
@@ -196,6 +199,8 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * Insert or update the supplied entities.
      * @param array $entities Array of entities to insert or update.
      * @param bool $saveChildren Whether or not to also insert any new child objects.
+     * @param bool $replace Whether or not to attempt to insert, and if the record already exists, update it (for
+     * cases where you are generating a primary key value yourself)
      * @param int $insertCount Number of rows inserted.
      * @param int $updateCount Number of rows updated.
      * @return int Number of rows affected.
@@ -204,6 +209,7 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
     public function saveEntities(
         array $entities,
         ?bool $saveChildren = null,
+        ?bool $replace = false,
         int &$insertCount = 0,
         int &$updateCount = 0
     ): int;
