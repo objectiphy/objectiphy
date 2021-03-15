@@ -112,14 +112,16 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
      */
     public function toObjectValue(&$value, ?string $dataType = null, ?string $format = null): bool
     {
-        switch (strtolower($dataType)) {
+        switch (strtolower(str_replace('\\', '', $dataType))) {
             case 'datetime':
-            case '\datetime':
-            case 'datetimeimmutable':
-            case '\datetimeimmutable':
             case 'date':
             case 'date_time':
                 $valueToSet = $value === null ? null : ($value instanceof \DateTimeInterface ? $value : new \DateTime($value));
+                break;
+            case 'datetimeimmutable':
+            case 'datetime_immutable':
+            case 'date_time_immutable':
+                $valueToSet = $value === null ? null : ($value instanceof \DateTimeInterface ? $value : new \DateTimeImmutable($value));
                 break;
             case 'datetimestring':
             case 'date_time_string':

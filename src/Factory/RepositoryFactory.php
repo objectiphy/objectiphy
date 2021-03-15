@@ -82,6 +82,11 @@ class RepositoryFactory implements RepositoryFactoryInterface
             'devMode' => $devMode,
         ]);
         $this->configOptions = $configOptions;
+        if ($devMode) {
+            //Delete all proxy classes
+            $proxyFactory = $this->createProxyFactory();
+            $proxyFactory->clearProxyCache();
+        }
     }
 
     /**

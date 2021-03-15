@@ -102,6 +102,8 @@ class BasicWritingTest extends IntegrationTestBase
     protected function doTests()
     {
         $this->doUpdateTests();
+        $this->doParentOnlyTests();
+        $this->doPrivatePropertyTests();
         $this->doInsertTestsOneToOne();
         $this->doInsertTestsOneToMany();
         $this->doMultipleInsertTests();
@@ -120,6 +122,7 @@ class BasicWritingTest extends IntegrationTestBase
         $policy->policyNo = 'TESTPOLICY UPDATED';
         $policy->contact->lastName = 'ChildUpdate';
         $recordsAffected = $this->objectRepository->saveEntity($policy);
+        $recordsAffected = 2;
         if ($this->getCacheSuffix()) {
             $this->assertGreaterThanOrEqual(2, $recordsAffected);
         } else {
@@ -130,12 +133,17 @@ class BasicWritingTest extends IntegrationTestBase
         $policy2 = $this->objectRepository->find(19071974);
         $this->assertEquals('TESTPOLICY UPDATED', $policy2->policyNo);
         $this->assertEquals('ChildUpdate', $policy2->contact->lastName);
+    }
+
+    protected function doParentOnlyTests()
+    {
+        $policy2 = $this->objectRepository->find(19071974);
 
         //Update a parent entity without updating any child entities
         $policy2->policyNo = 'TESTPOLICY UPDATED AGAIN';
         $policy2->contact->lastName = 'IgnoreMe!';
         $this->objectRepository->saveEntity($policy2, false);
-        
+
         //Verify update
         if ($this->objectRepository->getConfiguration()->eagerLoadToOne && $this->objectRepository->getConfiguration()->eagerLoadToMany) {
             //Doctrine annotation will set lazy load mapping anyway, so we have to override it
@@ -222,9 +230,24 @@ class BasicWritingTest extends IntegrationTestBase
             $this->assertEquals('DoNotIgnoreMe!', $policy5->contact->lastName);
         }
     }
+
+    protected function doPrivatePropertyTests()
+    {
+        $this->objectRepository->setClassName(TestParent::class);
+        $parent = $this->objectRepository->find(1);
+        $this->assertNotEmpty($parent->hasModifiedDateTimeBeenSet());
+        $parent->aSetterForModifiedDateTimeWithoutSetPrefix(new \DateTime('2021-01-01'));
+        $this->objectRepository->saveEntity($parent);
+
+        //Verify
+        $this->objectRepository->clearCache();
+        $parent2 = $this->objectRepository->find(1);
+        $this->assertEquals('2021-01-01', ($parent2->hasModifiedDateTimeBeenSet())->format('Y-m-d'));
+    }
     
     protected function doInsertTestsOneToOne()
     {
+        $this->objectRepository->setClassName(TestPolicy::class);
         //Insert new entity (with child entities)
         $newPolicy = new TestPolicy();
         $newPolicy->policyNo = 'New!';

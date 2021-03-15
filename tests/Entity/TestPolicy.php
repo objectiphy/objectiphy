@@ -28,7 +28,7 @@ class TestPolicy
      * @ORM\GeneratedValue(strategy="AUTO")
      * @Groups({"Default"})
      */
-    protected $id;
+    private $id;
     
     /**
      * @var TestUnderwriter
@@ -42,7 +42,7 @@ class TestPolicy
      * @Groups({"Default"})
      * @ORM\Column(type="string", name="policy_number")
      */
-    protected $policyNo;
+    private $policyNo;
     
     /**
      * @var \DateTime
@@ -74,7 +74,7 @@ class TestPolicy
      * @var TestContact
      * @Mapping\Relationship(sourceJoinColumn="contact_id",childClassName="TestContact",relationshipType="one_to_one")
      */
-    protected $contact;
+    private $contact;
     
     /**
      * @var TestVehicle

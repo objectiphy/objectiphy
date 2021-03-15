@@ -371,26 +371,39 @@ class PropertyMapping
         $collection = $entities;
         $collectionClass = $this->relationship->collectionClass;
         if (!$collectionClass || $collectionClass == 'array') {
-            if ($this->reflectionProperty->hasType()) {
-                $collectionClass = ObjectHelper::getTypeName($this->reflectionProperty->getType()); //Sometimes returns gibberish
-                if ($collectionClass && $collectionClass != 'array' && (
-                        !is_string($collectionClass)
-                        || strlen($collectionClass) > 1000
-                        || !class_exists($collectionClass)
-                        || !is_a($collectionClass, '\Traversable', true
-                    ))) {
-                    $collectionClass = $this->getTypeHacky();
-                }
-            }
+            $collectionClass = $this->getDataType(true);
         }
 
-        if ($collectionClass && $collectionClass != 'array') {
+        if ($collectionClass && $collectionClass != 'array' && class_exists($collectionClass)) {
             $collectionFactoryClassName = $this->relationship->getCollectionFactoryClass();
             $collectionFactory = new $collectionFactoryClassName();
             $collection = $collectionFactory->createCollection($collectionClass, $entities);
+        } elseif ($collectionClass && !class_exists($collectionClass)) {
+            throw new MappingException('Collection class ' . $collectionClass . ' on ' . $this->className . '::' . $this->propertyName . ' does not exist.');
         }
 
         return $collection;
+    }
+    
+    public function getDataType(bool $mustBeTraversable = false): string
+    {
+//        try {
+            $dataType = '';
+            if ($this->column->type) {
+                $dataType = $this->column->type;
+            }
+
+            if (!$dataType && $this->reflectionProperty->hasType() && $mustBeTraversable) {
+                throw new MappingException('Please specify the collectionClass attribute on the Relationship mapping definition for ' . $this->propertyName . ' on class ' . $this->className . ' (this cannot be inferred from the property\'s data type due to bugs in some versions of PHP, so must be set explicitly.)');
+                //$dataType = ObjectHelper::getTypeName($this->reflectionProperty->getType(), $this->reflectionProperty->getDeclaringClass()->getName(), $this->reflectionProperty->getName());
+            }
+
+//        } catch (\Throwable $ex) {
+//            $dataType = '';
+//        }
+        $dataType = ($mustBeTraversable && !is_a($dataType, '\Traversable', true)) ? '' : $dataType;
+
+        return $dataType;
     }
 
     public function pointsToParent(): bool
@@ -423,38 +436,6 @@ class PropertyMapping
             $targetColumn = $this->getShortColumnName(false, $targetColumn);
         }
         return $this->getJoinColumns($targetColumn, $table);
-    }
-
-    /**
-     * @return string
-     * @throws MappingException
-     */
-    private function getTypeHacky(): string
-    {
-        //PHP ReflectionType seems buggy at times (on a Mac at least) - try a hacky way of checking the type
-        try {
-            $className = $this->className;
-            $property = $this->propertyName;
-            $hackyClass = new $className();
-            $hackyClass->$property = 1; //Should cause an exception containing the actual type in the message
-        } catch (\Throwable $ex) {
-            if (strpos($ex->getMessage(), 'must be array') !== false) {
-                return 'array';
-            }
-            $classStart = strpos($ex->getMessage(), 'must be an instance of ');
-            if ($classStart !== false) {
-                $classEnd = strpos($ex->getMessage(), ' or ') ?: (strpos($ex->getMessage(), ',') ?: strlen($ex->getMessage()));
-                $length = $classEnd - ($classStart + 23);
-                $className = substr($ex->getMessage(), $classStart + 23, $length);
-                if (class_exists($className) && is_a($className, '\Traversable', true)) {
-                    return $className;
-                }
-            }
-            $errorMessage = 'Could not determine collection class for %1$s. Please try adding a collectionClass attribute to the Relationship mapping for this property.';
-            throw new MappingException(sprintf($errorMessage, $this->className . '::' . $this->propertyName));
-        }
-
-        return '';
     }
 
     private function getJoinColumns(string $sourceOrTargetColumn, string $table): array

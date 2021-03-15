@@ -105,7 +105,7 @@ class SqlStringReplacer
         foreach ($propertiesUsed as $propertyPath) {
             $alias = '';
             $this->objectNames[] = $this->delimit($propertyPath, $this->propertyPathDelimiter, '');
-            $persistenceValue = $this->getPersistenceValueForField($query, $propertyPath, $mappingCollection, '', '', $alias);
+            $persistenceValue = $this->getPersistenceValueForField($query, $propertyPath, $mappingCollection, '', '', '', '', $alias);
             $this->persistenceNames[] = $persistenceValue;
             $this->aliases[] = $alias ?: $persistenceValue;
         }
@@ -194,6 +194,8 @@ class SqlStringReplacer
         QueryInterface $query,
         $fieldValue,
         MappingCollection $mappingCollection,
+        string $dataType = '',
+        string $format = '',
         string $valuePrefix = '',
         string $valueSuffix = '' ,
         ?string &$alias = null

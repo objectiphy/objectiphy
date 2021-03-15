@@ -148,10 +148,10 @@ class BasicReadingTest extends IntegrationTestBase
 
         //Load with LIKE (or any other) operator
         $this->objectRepository->setOrderBy(['id' => 'ASC']);
-        $criteria = ['policyNo' => ['operator' => 'LIKE', 'value' => 'P1234%']];
+        $criteria = ['policyNo' => ['operator' => 'LIKE', 'value' => 'P12346%']];
         $policies = $this->objectRepository->findBy($criteria);
-        $this->assertEquals(38, count($policies));
-        $this->assertEquals(19071973, $policies[0]->id);
+        $this->assertEquals(9, count($policies));
+        $this->assertEquals(19071978, $policies[0]->id);
         
         //Iterable result
         $iterable = $this->objectRepository->findOnDemandBy($criteria);

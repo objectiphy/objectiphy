@@ -56,7 +56,7 @@ class EntityFactory implements EntityFactoryInterface
                     foreach ($constructorArgs as $arg) {
                         if (!$arg->isOptional() && method_exists($arg->getType(), 'getName')) {
                             $reflectionType = $arg->getType();
-                            $type = ObjectHelper::getTypeName($reflectionType);
+                            $type = ObjectHelper::getTypeName($reflectionType, '', '', true);
                             $args[$arg->getName()] = $this->createEntity($type);
                         }
                     }

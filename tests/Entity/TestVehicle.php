@@ -5,6 +5,7 @@ namespace Objectiphy\Objectiphy\Tests\Entity;
 use Doctrine\ORM\Mapping AS ORM;
 use Objectiphy\Objectiphy\Mapping\Column;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Objectiphy\Objectiphy\Mapping\Relationship;
 
 /**
  * @ORM\Entity
@@ -67,6 +68,7 @@ class TestVehicle
     
     /**
      * @var TestCollection $wheels
+     * @Relationship(collectionClass="TestCollection")
      * @ORM\OneToMany(targetEntity="TestWheel",mappedBy="vehicle")
      */
     protected TestCollection $wheels;

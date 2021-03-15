@@ -35,7 +35,7 @@ class TestParent
     protected $child;
     /**
      * @var TestCollection
-     * @Mapping\Relationship(childClassName="TestPet", mappedBy="parent", relationshipType="one_to_many", orderBy={"name"="ASC","type"="DESC"}, cascadeDeletes=true, orphanRemoval=true)
+     * @Mapping\Relationship(collectionClass="TestCollection",childClassName="TestPet", mappedBy="parent", relationshipType="one_to_many", orderBy={"name"="ASC","type"="DESC"}, cascadeDeletes=true, orphanRemoval=true)
      */
     public ?TestCollection $pets;
     /**
@@ -50,9 +50,9 @@ class TestParent
     public $totalWeightOfPets;
     /**
      * @var \DateTime
-     * @Mapping\Column(name="modified_date_time")
+     * @Mapping\Column(name="modified_date_time",type="datetime")
      */
-    public $modifiedDateTime;
+    private \DateTime $modifiedDateTime;
     /**
      * @Mapping\Relationship(childClassName="TestAddress", relationshipType="one_to_one", isEmbedded=true)
      */
@@ -182,5 +182,15 @@ class TestParent
     public function wasAltNameSetterAccessed()
     {
         return $this->altNameSetterAccessed;
+    }
+    
+    public function hasModifiedDateTimeBeenSet(): \DateTime
+    {
+        return $this->modifiedDateTime;
+    }
+    
+    public function aSetterForModifiedDateTimeWithoutSetPrefix(\DateTime $value)
+    {
+        $this->modifiedDateTime = $value;
     }
 }

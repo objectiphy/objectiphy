@@ -100,7 +100,10 @@ class SqlUpdaterMySql implements SqlUpdaterInterface
         foreach ($query->getAssignments() as $assignment) {
             $assignmentString = $this->stringReplacer->getPersistenceValueForField($query, $assignment->getPropertyPath(), $this->options->mappingCollection);
             $assignmentString .= ' = ';
-            $assignmentString .= $this->stringReplacer->getPersistenceValueForField($query, $assignment->getValue(), $this->options->mappingCollection);
+            $propertyMapping = $this->options->mappingCollection->getPropertyMapping($assignment->getPropertyPath());
+            $dataType = $propertyMapping ? $propertyMapping->getDataType() : '';
+            $format = $propertyMapping ? $propertyMapping->column->format : '';
+            $assignmentString .= $this->stringReplacer->getPersistenceValueForField($query, $assignment->getValue(), $this->options->mappingCollection, $dataType, $format);
             $assignments[] = $assignmentString;
         }
 

@@ -5,6 +5,7 @@ namespace Objectiphy\Objectiphy\Orm;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
+use Objectiphy\Objectiphy\Exception\MappingException;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
@@ -54,14 +55,19 @@ class ObjectHelper
                         }
                     }
                     if (!$valueFound) { //Try to get from protected or private property
-                        $reflectionProperty = new \ReflectionProperty($object, $propertyName);
-                        $reflectionProperty->setAccessible(true);
-                        if ($reflectionProperty->isInitialized($object) === false) {
-                            $value = null;
-                        } else {
-                            $value = $reflectionProperty->getValue($object);
+                        if ($object instanceof EntityProxyInterface) {
+                            $value = $object->getPrivatePropertyValue($propertyName, $valueFound);
                         }
-                        $valueFound = true;
+                        if (!$valueFound) {
+                            $reflectionProperty = new \ReflectionProperty($object, $propertyName);
+                            $reflectionProperty->setAccessible(true);
+                            if ($reflectionProperty->isInitialized($object) === false) {
+                                $value = null;
+                            } else {
+                                $value = $reflectionProperty->getValue($object);
+                            }
+                            $valueFound = true;
+                        }
                     }
                 }
             }
@@ -110,6 +116,14 @@ class ObjectHelper
                 if ($lookForSetter) {
                     $isValueSet = self::setValueWithSetter($object, $propertyName, $valueToSet);
                 }
+                if (!$isValueSet && $object instanceof EntityProxyInterface) {
+                    //See if we can set private property on base class
+                    $isValueSet = $object->setPrivatePropertyValue($propertyName, $valueToSet);
+                }
+                if (!$isValueSet && $ex instanceof \TypeError) {
+                    $typeError = sprintf('Please specify the type attribute in the mapping definition for property %1$s of class %2$s. %3$s', $propertyName, self::getObjectClassName($object), $ex->getMessage());
+                    throw new MappingException($typeError);
+                }
             }
         }
         
@@ -154,18 +168,99 @@ class ObjectHelper
         return $className;
     }
 
-    public static function getTypeName(\ReflectionType $reflectionType, $defaultToStdClass = true)
+    public static function getTypeName(\ReflectionType $reflectionType, string $className, string $propertyName, $defaultToStdClass = false)
     {
         $type = '';
-        if (\PHP_MAJOR_VERSION < 8) {
-            $type = $reflectionType->getName();
-        } elseif ($reflectionType instanceof \ReflectionNamedType) {
-            $type = $reflectionType->getName();
-        } elseif ($reflectionType instanceof \ReflectionUnionType) {
-            $type = reset($reflectionType->getTypes());
-        }
+        
+        //PHP seems to be very buggy here - either returning gibberish, or causing segfaults
+        //As such, it is safer to just set data types in the mapping annotations
+        
+//        if ($reflectionType instanceof \ReflectionNamedType) {
+//            $type = $reflectionType->getName();
+//        } elseif ($reflectionType instanceof \ReflectionUnionType) {
+//            $types = $reflectionType->getTypes();
+//            $type = reset($types);
+//        }
+//        $type = self::sanitizeType($type);
+//        
+//        if (!$type && $className && $propertyName) { 
+//            $type = self::getTypeHacky($className, $propertyName);
+//        }
 
         return $type ?: ($defaultToStdClass ? 'stdClass' : '');
+    }
+
+    private static function getTypeHacky($className, $propertyName): string
+    {
+        //PHP ReflectionType seems buggy at times - try a hacky way of checking the type
+        try {
+            $hackyClass = new $className();
+            $value = new \stdClass();
+            self::setValueOnObject($hackyClass, $propertyName, $value);
+        } catch (\Throwable $ex) {
+            $messageType = self::extractPrimitiveTypeFromError($ex->getMessage());
+            if ($messageType) {
+                return $messageType;
+            }
+            $classStart = strpos($ex->getMessage(), 'must be an instance of ');
+            if ($classStart !== false) {
+                $classEnd = strpos($ex->getMessage(), ' or ') ?: (strpos($ex->getMessage(), ',') ?: strlen($ex->getMessage()));
+                $length = $classEnd - ($classStart + 23);
+                $className = substr($ex->getMessage(), $classStart + 23, $length);
+                if (class_exists($className)) {
+                    return $className;
+                } elseif (class_exists('\\' . $className)) {
+                    return '\\' . $className;
+                }
+            }
+            $errorMessage = 'Could not determine data type for %1$s. If this is a collection of child entities, please try adding a collectionClass attribute to the Relationship mapping for this property. Otherwise, please try specifying a the dataType attribute for the column.';
+            throw new MappingException(sprintf($errorMessage, $className . '::' . $propertyName));
+        }
+
+        return '';
+    }
+
+    private static function extractPrimitiveTypeFromError(string $errorMessage)
+    {
+        $needles = ['string', 'int', 'bool', 'float', 'array', 'object', 'callable', 'iterable'];
+        foreach ($needles as $needle) {
+            if (strpos($errorMessage, 'must be ' . $needle) !== false) {
+                return $needle;
+            }
+        }
+    }
+
+    private static function sanitizeType(string $type): string
+    {
+        $lowerType = strtolower(str_replace('\\', '', $type));
+        switch ($lowerType) {
+            case 'datetime':
+            case 'datetimeimmutable':
+            case 'date':
+            case 'date_time':
+            case 'datetimestring':
+            case 'date_time_string':
+            case 'datestring':
+            case 'date_string':
+            case 'int':
+            case 'integer':
+            case 'bool':
+            case 'boolean':
+            case 'float':
+            case 'decimal':
+            case 'real':
+            case 'string':
+            case 'null':
+            case 'array':
+                return $type;
+            default:
+                if (class_exists($type)) {
+                    return $type;
+                }
+                break;
+        }
+
+        return '';
     }
 
     /**

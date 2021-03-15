@@ -90,14 +90,20 @@ class WhereProviderMySql
         $values = is_array($criteriaExpression->value) ? $criteriaExpression->value : [$criteriaExpression->value];
         $stringValues = [];
         foreach ($values as $value) {
-            $stringValues[] = $this->stringReplacer->getPersistenceValueForField($query, $value, $mappingCollection, $valuePrefix, $valueSuffix);
+            $propertyMapping = $mappingCollection->getPropertyMapping($criteriaExpression->property->getPropertyPath());
+            $dataType = $propertyMapping ? $propertyMapping->getDataType() : '';
+            $format = $propertyMapping ? $propertyMapping->column->format : '';
+            $stringValues[] = $this->stringReplacer->getPersistenceValueForField($query, $value, $mappingCollection, $dataType, $format, $valuePrefix, $valueSuffix);
         }
         $sql .= implode(',', $stringValues);
         if (is_array($criteriaExpression->value)) {
             $sql .= ')';
         }
         if ($criteriaExpression->operator == QueryBuilder::BETWEEN) {
-            $sql .= ' AND ' . $this->stringReplacer->getPersistenceValueForField($query, $criteriaExpression->value2, $mappingCollection, $valuePrefix, $valueSuffix);
+            $propertyMapping = $mappingCollection->getPropertyMapping($criteriaExpression->property->getPropertyPath());
+            $dataType = $propertyMapping ? $propertyMapping->getDataType() : '';
+            $format = $propertyMapping ? $propertyMapping->column->format : '';
+            $sql .= ' AND ' . $this->stringReplacer->getPersistenceValueForField($query, $criteriaExpression->value2, $mappingCollection, $dataType, $format, $valuePrefix, $valueSuffix);
         }
 
         return $sql;

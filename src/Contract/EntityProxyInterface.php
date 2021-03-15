@@ -14,4 +14,6 @@ interface EntityProxyInterface
     public function isChildAsleep(string $propertyName): bool;
     public function triggerLazyLoad(string $propertyName): void;
     public function getClassName(): string;
+    public function setPrivatePropertyValue(string $propertyName, $value): bool;
+    public function getPrivatePropertyValue(string $propertyName, bool &$wasFound);
 }

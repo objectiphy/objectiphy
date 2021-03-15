@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
+use Objectiphy\Objectiphy\Exception\MappingException;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
@@ -133,6 +134,48 @@ class EntityProxy implements EntityProxyInterface
                     unset($this->lazyLoaders[$propertyName]);
                 }
             }
+        }
+    }
+
+    public function setPrivatePropertyValue(string $propertyName, $value): bool
+    {
+        try {
+            $reflectionClass = new \ReflectionClass($this);
+            $parentReflectionClass = $reflectionClass->getParentClass();
+            $reflectionProperty = $parentReflectionClass->getProperty($propertyName);
+            $reflectionProperty->setAccessible(true);
+            $reflectionProperty->setValue($this, $value);
+            
+            return true;
+        } catch (\Throwable $ex) {
+            if ($ex instanceof \TypeError) {
+                $typeError = sprintf('Please specify the type attribute in the mapping definition for property %1$s of class %2$s. %3$s', $propertyName, ObjectHelper::getObjectClassName($this), $ex->getMessage());
+                throw new MappingException($typeError);
+            }
+
+            return false;
+        }
+    }
+    
+    public function getPrivatePropertyValue(string $propertyName, bool &$wasFound)
+    {
+        try {
+            $reflectionClass = new \ReflectionClass($this);
+            $parentReflectionClass = $reflectionClass->getParentClass();
+            $reflectionProperty = $parentReflectionClass->getProperty($propertyName);
+            $reflectionProperty->setAccessible(true);
+            $value = $reflectionProperty->getValue($this);
+            $wasFound = true;
+
+            return $value;
+        } catch (\Throwable $ex) {
+            if ($ex instanceof \TypeError) {
+                $typeError = sprintf('Please specify the type attribute in the mapping definition for property %1$s of class %2$s: %3$s', $propertyName, ObjectHelper::getObjectClassName($this), $ex->getMessage());
+                throw new MappingException($typeError);
+            }
+            $wasFound = false;
+
+            return null;
         }
     }
 

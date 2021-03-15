@@ -126,7 +126,6 @@ final class ObjectBinder
             $entity = $this->bindRowToEntity($row, $entityClassName);
             $key = count($entities);
             if ($indexBy) {
-                //$keyValueColumn = $this->mappingCollection->getColumnForPropertyPath($indexBy);
                 $keyValueColumn = 'objectiphy_index_by';
                 $key = $row[$keyValueColumn] ?? $key;
             }
@@ -150,12 +149,11 @@ final class ObjectBinder
     private function getEntityFromLocalCache(string $entityClassName, object &$entity): bool
     {
         $pkValues = $this->mappingCollection->getPrimaryKeyValues($entity);
-        if ($pkValues) {
-            if ($this->entityTracker->hasEntity($pkValues ? $entityClassName : $entity, $pkValues)) {
-                $entity = $this->entityTracker->getEntity($entityClassName, $pkValues);
-                return true;
-            }
+        if ($this->entityTracker->hasEntity($pkValues ? $entityClassName : $entity, $pkValues)) {
+            $entity = $this->entityTracker->getEntity($entityClassName, $pkValues);
+            return true;
         }
+        
         //We store it now to prevent recursion, then update when fully hydrated.
         $this->entityTracker->storeEntity($entity, $pkValues);
 
@@ -265,6 +263,9 @@ final class ObjectBinder
         } else {
             $type = $propertyMapping->column->type;
             $format = $propertyMapping->column->format;
+            if (!$type) {
+                $type = $propertyMapping->getDataType();
+            }
         }
 
         if ($entity instanceof EntityProxyInterface && $value instanceof \Closure) {

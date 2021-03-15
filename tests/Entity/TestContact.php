@@ -87,7 +87,7 @@ class TestContact
 
     /**
      * @var int
-     * @ORM\Column
+     * @ORM\Column(type="int")
      */
     protected int $loginId;
 
