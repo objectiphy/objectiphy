@@ -26,7 +26,7 @@ interface InsertQueryInterface extends QueryInterface
     public function getInsert(): string;
 
     /**
-     * Assignment expressions for values to insert.
+     * Assignment expressions for values to insert. Can be called multiple times to insert multiple rows.
      * @param AssignmentExpression ...$assignments
      * @return void
      */
@@ -34,7 +34,7 @@ interface InsertQueryInterface extends QueryInterface
 
     /**
      * Get the assignment expressions for values to insert.
-     * @return array
+     * @return array Array of assignment expression arrays (one for each row to be inserted)
      */
     public function getAssignments(): array;
 

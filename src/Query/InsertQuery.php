@@ -16,9 +16,9 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 class InsertQuery extends Query implements InsertQueryInterface
 {
     /**
-     * @var AssignmentExpression[]
+     * @var array Array of assignment arrays (one assignment array for each entity to be inserted)
      */
-    private array $assignments;
+    private array $assignments = [];
 
     public function setInsert(string $className): void
     {
@@ -32,7 +32,9 @@ class InsertQuery extends Query implements InsertQueryInterface
 
     public function setAssignments(AssignmentExpression ...$assignments): void
     {
-        $this->assignments = $assignments;
+        if ($assignments) {
+            $this->assignments[] = $assignments;
+        }
     }
 
     public function getAssignments(): array
@@ -59,7 +61,7 @@ class InsertQuery extends Query implements InsertQueryInterface
             if (!$this->getInsert()) {
                 $this->setInsert($className);
             }
-            if (!$this->getAssignments() && $assignments) {
+            if (!($this->getAssignments()[0] ?? false) && $assignments) {
                 $assignmentExpressions = [];
                 foreach ($assignments as $key => $value) {
                     $propertyMapping = $mappingCollection->getPropertyMapping($key);
@@ -98,8 +100,10 @@ class InsertQuery extends Query implements InsertQueryInterface
     public function getPropertyPaths(): array
     {
         $paths = parent::getPropertyPaths();
-        foreach ($this->assignments ?? [] as $assignment) {
-            $paths = array_merge($paths, $assignment->getPropertyPaths());
+        foreach ($this->assignments ?? [] as $assignments) {
+            if ($assignments) {
+                $paths = array_merge($paths, $assignments[0]->getPropertyPaths());
+            }
         }
 
         return array_unique($paths);

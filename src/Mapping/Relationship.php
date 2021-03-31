@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Mapping;
 
-use Objectiphy\Objectiphy\Factory\CollectionFactory;
-use Objectiphy\Objectiphy\Contract\CollectionFactoryInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 
@@ -112,23 +110,16 @@ class Relationship extends ObjectiphyAnnotation
 
     /** 
      * @var string Optionally specify a class to use to hold collections for toMany associations (defaults to a plain
-     * old PHP array).
+     * old PHP array). If you need to use a custom factory to create your collection instances, pass your factory to 
+     * RepositoryFactory before you create any repositories.
      */
-    public string $collectionClass = 'array';
+    public string $collectionClass = '';
 
     /**
      * @var string 
      */
     private string $targetPropertyName = '';
     
-    /**
-     * @var string Name of a factory class that can be used to create custom collection classes for collections of
-     * entities (for properties with a to-many relationship only). If supplied, this must be the fully qualified class
-     * name of a class that implements CollectionFactoryInterface. Defaults to a collection factory that passes an
-     * array to the constructor of the collection class named in the mapping information.
-     */
-    private string $collectionFactoryClass = '';
-
     /**
      * @var bool Global config setting (ie. the default value if not defined on this relationship)
      */
@@ -159,7 +150,6 @@ class Relationship extends ObjectiphyAnnotation
         }
         
         $this->relationshipType = $relationshipType;
-        $this->setCollectionFactoryClass(CollectionFactory::class);
     }
 
     /**
@@ -185,33 +175,6 @@ class Relationship extends ObjectiphyAnnotation
     public function isDefined(): bool
     {
         return $this->relationshipType != self::UNDEFINED;
-    }
-    
-    /**
-     * Setter for custom collection class factory (ensures the value supplied implements the correct interface).
-     * @param string $factoryClassName
-     * @throws ObjectiphyException
-     */
-    public function setCollectionFactoryClass(string $factoryClassName): void
-    {
-        if ($factoryClassName
-            && $factoryClassName != 'array' 
-            && !is_a($factoryClassName, CollectionFactoryInterface::class, true)
-        ) {
-            $message = 'Value of collectionFactoryClass (%1$s) is not valid - it must be the fully qualified class name of a class that implements %2$s.';
-            throw new ObjectiphyException(sprintf($message, $factoryClassName, CollectionFactoryInterface::class));
-        }
-        
-        $this->collectionFactoryClass = $factoryClassName;
-    }
-
-    /**
-     * Getter for custom collection class factory.
-     * @return string
-     */
-    public function getCollectionFactoryClass(): string
-    {
-        return $this->collectionFactoryClass;
     }
 
     /**

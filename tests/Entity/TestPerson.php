@@ -52,5 +52,5 @@ class TestPerson
     /**
      * @Relationship(childClassName="TestLogin",sourceJoinColumn="login_id",relationshipType="one_to_one")
      */
-    public TestContact $login;
+    public TestLogin $login;
 }

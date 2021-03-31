@@ -35,7 +35,7 @@ interface UpdateQueryInterface extends QueryInterface
 
     /**
      * Get the assignment expressions for values to update.
-     * @return array
+     * @return AssignmentExpression[]
      */
     public function getAssignments(): array;
 

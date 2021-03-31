@@ -42,7 +42,8 @@ final class ObjectMapper
     private NameResolver $nameResolver;
     private int $maxDepth;
     private int $currentDepth = 0;
-
+    private string $defaultCollectionClass = '';
+    
     public function __construct(MappingProviderInterface $mappingProvider, NameResolver $nameResolver)
     {
         $this->mappingProvider = $mappingProvider;
@@ -60,6 +61,7 @@ final class ObjectMapper
         $this->eagerLoadToOne = $config->eagerLoadToOne;
         $this->eagerLoadToMany = $config->eagerLoadToMany;
         $this->maxDepth = $config->maxDepth;
+        $this->defaultCollectionClass = $config->defaultCollectionClass;
         $this->nameResolver->setConfigOptions($config);
         $this->entityConfig = $config->getConfigOption(ConfigOptions::ENTITY_CONFIG);
     }
@@ -542,6 +544,11 @@ final class ObjectMapper
         if ($relationship->childClassName && $relationship->targetJoinColumn) {
             $targetProperty = $this->findTargetProperty($relationship);
             $relationship->setTargetProperty($targetProperty);
+        }
+        if ($relationship->isToMany()) {
+            $entityCollectionClass = $this->entityConfig[$relationship->childClassName]->collectionClass ?? '';
+            $globalCollectionClass = $this->defaultCollectionClass;
+            $relationship->collectionClass = $relationship->collectionClass ?: ($entityCollectionClass ?: $globalCollectionClass);
         }
         if ($this->guessMappings
             && $relationship->isDefined()

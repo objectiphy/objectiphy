@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Orm;
 
 use Objectiphy\Objectiphy\Config\ConfigOptions;
+use Objectiphy\Objectiphy\Contract\CollectionFactoryInterface;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
@@ -26,18 +27,21 @@ final class ObjectBinder
     private ConfigOptions $configOptions;
     private EntityTracker $entityTracker;
     private DataTypeHandlerInterface $dataTypeHandler;
+    private CollectionFactoryInterface $collectionFactory;
     private array $knownValues = [];
 
     public function __construct(
         RepositoryFactory $repositoryFactory, 
         EntityFactoryInterface $entityFactory,
         EntityTracker $entityTracker,
-        DataTypeHandlerInterface $dataTypeHandler
+        DataTypeHandlerInterface $dataTypeHandler,
+        CollectionFactoryInterface $collectionFactory
     ) {
         $this->repositoryFactory = $repositoryFactory;
         $this->entityFactory = $entityFactory;
         $this->entityTracker = $entityTracker;
         $this->dataTypeHandler = $dataTypeHandler;
+        $this->collectionFactory = $collectionFactory;
     }
 
     /**
@@ -379,8 +383,14 @@ final class ObjectBinder
                     }
                 } else {
                     $orderBy = $propertyMapping->relationship->orderBy;
-                    $result = $repository->findBy($query, $orderBy);
-                    $result = $propertyMapping->getCollection($result);                    
+                    $resultArray = $repository->findBy($query, $orderBy);
+                    $collectionClass = $propertyMapping->getCollectionClassName();
+                    $result = $this->collectionFactory->createCollection(
+                        $collectionClass,
+                        $resultArray,
+                        $propertyMapping->className,
+                        $propertyMapping->propertyName
+                    );
                 }
             }
 

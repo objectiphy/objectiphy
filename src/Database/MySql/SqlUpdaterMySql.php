@@ -53,14 +53,22 @@ class SqlUpdaterMySql implements SqlUpdaterInterface
         }
 
         $this->stringReplacer->prepareReplacements($query, $this->options->mappingCollection);
-
         $sql = "INSERT INTO \n";
         $sql .= $this->stringReplacer->replaceNames($query->getInsert());
-        $sql .= "SET \n";
-        $assignments = $this->constructAssignmentSql($query);
-        $sql .= $assignments;
+        $columns = $this->extractColumns($query->getAssignments()[0], $query);
+        $sql .= " \n(" . implode(',', $columns) . ") \nVALUES \n";
+        foreach ($query->getAssignments() as $index => $assignments) {
+            $sql .= $index > 0 ? ", \n" : '';
+            $sql .= "(" . implode(',', $this->extractValues($assignments, $query)) . ")";
+        }
         if ($replace) {
-            $sql .= "ON DUPLICATE KEY UPDATE $assignments\n";
+            //Deprecated in MySQL 8, but the alternative syntax is not supported in earlier versions...
+            $sql .= " ON DUPLICATE KEY UPDATE \n";
+            $updates = [];
+            foreach ($columns as $column) {
+                $updates[] = "$column = VALUES($column)";
+            }
+            $sql .= implode(', ', $updates);
         }
 
         return $this->stringReplacer->replaceNames($sql);
@@ -94,7 +102,7 @@ class SqlUpdaterMySql implements SqlUpdaterInterface
      * @throws ObjectiphyException
      * @throws \ReflectionException
      */
-    private function constructAssignmentSql(QueryInterface $query)
+    private function constructAssignmentSql(UpdateQueryInterface $query)
     {
         $assignments = [];
         foreach ($query->getAssignments() as $assignment) {
@@ -108,5 +116,39 @@ class SqlUpdaterMySql implements SqlUpdaterInterface
         }
 
         return "    " . $this->stringReplacer->replaceNames(implode(",\n    ", $assignments)) . "\n";
+    }
+
+    private function extractColumns(array $assignments, InsertQueryInterface $query)
+    {
+        $columns = [];
+        foreach ($assignments as $assignment) {
+            $columns[] = $this->stringReplacer->getPersistenceValueForField(
+                $query,
+                $assignment->getPropertyPath(),
+                $this->options->mappingCollection
+            );
+        }
+
+        return $columns;
+    }
+
+    private function extractValues(array $assignments, InsertQueryInterface $query)
+    {
+        $values = [];
+        foreach ($assignments as $assignment) {
+            $propertyMapping = $this->options->mappingCollection->getPropertyMapping($assignment->getPropertyPath());
+            $dataType = $propertyMapping ? $propertyMapping->getDataType() : '';
+            $format = $propertyMapping ? $propertyMapping->column->format : '';
+            $assignmentString = $this->stringReplacer->getPersistenceValueForField(
+                $query,
+                $assignment->getValue(),
+                $this->options->mappingCollection,
+                $dataType,
+                $format
+            );
+            $values[] = $assignmentString;
+        }
+
+        return $values;
     }
 }

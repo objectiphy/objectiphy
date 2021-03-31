@@ -40,6 +40,11 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
     private array $assignments = [];
 
     /**
+     * @var array Array of assignment arrays for inserting multiple records in one query
+     */
+    private array $additionalAssignments = [];
+
+    /**
      * @var CriteriaPartInterface[]
      */
     private array $where = [];
@@ -170,7 +175,13 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
             $assignments[] = new AssignmentExpression($propertyPath, $value);
         }
 
-        return $this->setExpressions(...$assignments);
+        if ($this->assignments) {
+            $this->additionalAssignments[] = $assignments;
+        } else {
+            $this->setExpressions(...$assignments);
+        }
+
+        return $this;
     }
 
     public function setExpressions(AssignmentExpression ...$assignments): QueryBuilder
@@ -322,6 +333,9 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         $query = new InsertQuery();
         $query->setInsert($this->insert);
         $query->setAssignments(...$this->assignments);
+        foreach ($this->additionalAssignments as $additionalAssignments) {
+            $query->setAssignments(...$additionalAssignments);
+        }
 
         return $query;
     }

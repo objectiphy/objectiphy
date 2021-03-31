@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Config;
 
+use Objectiphy\Objectiphy\Contract\CollectionFactoryInterface;
 use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 
 /**
@@ -12,7 +13,7 @@ use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
  * @property string $repositoryClassName
  * @property string $tableOverride
  * @property string[] $columnOverrides
- * @property string $collectionType
+ * @property string $collectionClass
  * @property EntityFactoryInterface $entityFactory
  */
 class ConfigEntity extends ConfigBase
@@ -20,7 +21,7 @@ class ConfigEntity extends ConfigBase
     public const TABLE_OVERRIDES = 'tableOverrides';
     public const COLUMN_OVERRIDES = 'columnOverrides';
     public const RELATIONSHIP_OVERRIDES = 'relationshipOverrides';
-    public const COLLECTION_TYPE = 'collectionType';
+    public const COLLECTION_CLASS = 'collectionClass';
     public const ENTITY_FACTORY = 'entityFactory';
 
     /**
@@ -48,12 +49,10 @@ class ConfigEntity extends ConfigBase
 
     /**
      * @var string Name of class to use for collections where one-to-many relationships require a custom collection
-     * class rather than a simple array. All -to-many collections for the class will use the specified class. Typically,
-     * you should use the collectionType attribute on the relationship mapping information to specify a custom
-     * collection class rather than setting it here programmatically.
+     * class rather than a simple array. All -to-many collections for the class will use the specified class.
      */
-    protected string $collectionType;
-
+    protected string $collectionClass;
+    
     /**
      * @var EntityFactoryInterface Factory to use for creating entities. If no factory is supplied, entities will be
      * created directly using the new keyword with no arguments passed to the constructor.

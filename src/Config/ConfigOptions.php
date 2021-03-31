@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Config;
 
+use Objectiphy\Objectiphy\Contract\CollectionFactoryInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
@@ -17,7 +18,7 @@ use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
  * @property bool $guessMappings
  * @property NamingStrategyInterface $tableNamingStrategy
  * @property NamingStrategyInterface $columnNamingStrategy
- * @property string $defaultCollectionType
+ * @property string $defaultCollectionClass
  * @property bool $allowDuplicates
  * @property bool $eagerLoadToOne
  * @property bool $eagerLoadToMany
@@ -32,14 +33,14 @@ use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
  */
 class ConfigOptions extends ConfigBase
 {
-    public const DEBUG_MODE = 'devMode';
+    public const DEV_MODE = 'devMode';
     public const CACHE_DIRECTORY = 'cacheDirectory';
     public const SERIALIZATION_GROUPS = 'serializationGroups';
     public const HYDRATE_UNGROUPED_PROPERTIES = 'hydrateUngroupedProperties';
     public const GUESS_MAPPINGS = 'guessMappings';
     public const TABLE_NAMING_STRATEGY = 'tableNamingStrategy';
     public const COLUMN_NAMING_STRATEGY = 'columnNamingStrategy';
-    public const DEFAULT_COLLECTION_TYPE = 'defaultCollectionType';
+    public const DEFAULT_COLLECTION_CLASS = 'defaultCollectionClass';
     public const ALLOW_DUPLICATES = 'allowDuplicates';
     public const EAGER_LOAD_TO_ONE = 'eagerLoadToOne';
     public const EAGER_LOAD_TO_MANY = 'eagerLoadToMany';
@@ -100,11 +101,12 @@ class ConfigOptions extends ConfigBase
     /**
      * @var string Name of class to use by default for collections in one-to-many or many-to-many relationships. You 
      * would only use this if you want all of your collections to use the same collection class by default. You can 
-     * override the value for specific parent classes using the collectionTypes config option, or for indiviual 
-     * properties by using the collectionType mapping attribute (typically via an annotation). If not specified (or 
-     * specified as 'array'), a simple PHP array will be used.
+     * override the value for specific parent classes using the collectionClass entity config option, or for indiviual
+     * properties by using the collectionClass mapping attribute (typically via an annotation). If not specified (or
+     * specified as 'array'), a simple PHP array will be used. If you need to use a custom factory to create your 
+     * collection instances, pass your factory to RepositoryFactory before you create any repositories.
      */
-    protected string $defaultCollectionType = 'array';
+    protected string $defaultCollectionClass = 'array';
     
     /**
      * @var bool Whether or not to allow duplicate entities to be returned.

@@ -14,7 +14,11 @@ use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
+use Objectiphy\Objectiphy\Mapping\MappingCollection;
+use Objectiphy\Objectiphy\Query\CriteriaExpression;
+use Objectiphy\Objectiphy\Query\CriteriaGroup;
 use Objectiphy\Objectiphy\Query\FieldExpression;
+use Objectiphy\Objectiphy\Query\QB;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
@@ -257,6 +261,53 @@ final class ObjectFetcher
         return new IterableResult($storage, null, null, true);
     }
 
+    /**
+     * @param SelectQueryInterface $query
+     */
+    public function inferFindOptionsFromQuery(SelectQueryInterface $query, MappingCollection $mappingCollection)
+    {
+        //If criteria includes primary key with = operator and has no ORs, or limit = 1 there can only be one record
+        if ($query->getLimit() != 1) {
+            $pkWithEquals = false;
+            $orsPresent = false;
+            $pkProperties = $mappingCollection->getPrimaryKeyProperties();
+            foreach ($query->getWhere() as $criteria) {
+                if ($criteria instanceof CriteriaGroup) {
+                    $orsPresent = $criteria->type == CriteriaGroup::GROUP_TYPE_START_OR;
+                } elseif ($criteria instanceof CriteriaExpression) {
+                    $orsPresent = $orsPresent || $criteria->joiner == CriteriaExpression::JOINER_OR;
+                    $propertyName = str_replace('%', '', $criteria->property);
+                    $pkWithEquals = in_array($propertyName, $pkProperties) && $criteria->operator == QB::EQ;
+                }
+            }
+        }
+        
+        //If select part is populated and has no pure property paths, we cannot bind to entities
+        $selectCount = count($query->getSelect());
+        $hasPureProperties = false;
+        if ($selectCount) {
+            foreach ($query->getSelect() as $fieldExpression) {
+                if ($fieldExpression->isPropertyPath()) {
+                    $hasPureProperties = true;
+                }
+            }
+        }
+
+        //If select part is populated and there is only one item in it, which is not a pure property, return values
+        $scalarProperty = '';
+        if ($selectCount == 1 && !$hasPureProperties) {
+            $scalarProperty = $fieldExpression->getExpression();
+        }
+
+        $findOptions = FindOptions::create($mappingCollection, [
+            'multiple' => !($query->getLimit() == 1 || ($pkWithEquals && !$orsPresent)),
+            'bindToEntities' => !$selectCount || $hasPureProperties,
+            'scalarProperty' => $scalarProperty,
+        ]);
+        
+        return $findOptions;
+    }
+    
     private function getClassName(): string
     {
         if (isset($this->options) && isset($this->options->mappingCollection)) {

@@ -40,6 +40,7 @@ final class ObjectPersister implements TransactionInterface
     private SaveOptions $options;
     private array $savedObjects = [];
     private ExplanationInterface $explanation;
+    private ?int $lastInsertId = null;
 
     public function __construct(
         SqlUpdaterInterface $sqlUpdater,
@@ -110,6 +111,14 @@ final class ObjectPersister implements TransactionInterface
     {
         $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
         $this->setSaveOptions($this->options);
+    }
+
+    /**
+     * @return int|null
+     */
+    public function getLastInsertId(): ?int
+    {
+        return $this->lastInsertId;
     }
 
     /**
@@ -188,6 +197,7 @@ final class ObjectPersister implements TransactionInterface
             $this->explanation->addQuery($query, $sql, $this->options->mappingCollection, $this->config);
             if ($this->storage->executeQuery($sql, $query->getParams())) {
                 $insertCount += $this->storage->getAffectedRecordCount();
+                $this->lastInsertId = $this->storage->getLastInsertId();
             }
         } else {
             throw new QueryException('Only update or insert queries can be executed by ObjectPersister');
@@ -333,14 +343,14 @@ final class ObjectPersister implements TransactionInterface
             $sql = $this->sqlUpdater->getInsertSql($insertQuery, $this->options->replaceExisting);
             $this->explanation->addQuery($insertQuery, $sql, $this->options->mappingCollection, $this->config);
             if ($this->storage->executeQuery($sql, $insertQuery->getParams())) {
-                $insertId = $this->storage->getLastInsertId();
+                $this->lastInsertId = $this->storage->getLastInsertId();
                 $insertCount += $this->storage->getAffectedRecordCount();
                 $pkProperties = $this->options->mappingCollection->getPrimaryKeyProperties($this->getClassName());
                 $pkValues = [];
-                if ($insertId && count($pkProperties) == 1) {
+                if ($this->lastInsertId && count($pkProperties) == 1) {
                     $pkProperty = reset($pkProperties);
-                    $pkValues[$pkProperty] = $insertId;
-                    ObjectHelper::setValueOnObject($entity, $pkProperty, $insertId);
+                    $pkValues[$pkProperty] = $this->lastInsertId;
+                    ObjectHelper::setValueOnObject($entity, $pkProperty, $this->lastInsertId);
                 }
                 $this->entityTracker->storeEntity($entity, $pkValues);
             }

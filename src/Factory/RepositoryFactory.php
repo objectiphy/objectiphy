@@ -9,6 +9,7 @@ namespace Objectiphy\Objectiphy\Factory;
 
 use Objectiphy\Annotations\AnnotationReader;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
+use Objectiphy\Objectiphy\Contract\CollectionFactoryInterface;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 use Objectiphy\Objectiphy\Contract\ExplanationInterface;
@@ -67,6 +68,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
      * @var ObjectRepositoryInterface[]
      */
     private array $repositories = [];
+    private CollectionFactoryInterface $collectionFactory;
 
     /**
      * @param \PDO $pdo A PDO database connection
@@ -74,13 +76,20 @@ class RepositoryFactory implements RepositoryFactoryInterface
      * @param bool $devMode Whether to rebuild the proxies on each call or not (performance penalty)
      * @throws ObjectiphyException
      */
-    public function __construct(\PDO $pdo, string $cacheDirectory = '', bool $devMode = true)
-    {
+    public function __construct(
+        \PDO $pdo, 
+        string $cacheDirectory = '', 
+        bool $devMode = true, 
+        string $configIniFile = ''
+    ) {
         $this->pdo = $pdo;
+        if ($configIniFile !== null) {
+            $configIniFile = file_exists($configIniFile) ? $configIniFile : '';
+        }
         $configOptions = new ConfigOptions([
             'cacheDirectory' => $cacheDirectory,
             'devMode' => $devMode,
-        ]);
+        ], $configIniFile);
         $this->configOptions = $configOptions;
         if ($devMode) {
             //Delete all proxy classes
@@ -114,7 +123,12 @@ class RepositoryFactory implements RepositoryFactoryInterface
         unset($this->whereProvider);
         unset($this->objectRemover);
     }
-    
+
+    public function setCollectionFactoryClass(CollectionFactoryInterface $collectionFactory): void
+    {
+        $this->collectionFactoryClass = $factoryClassName;
+    }
+
     public function setSqlBuilder(SqlSelectorInterface $sqlSelector, DataTypeHandlerInterface $dataTypeHandler): void
     {
         $this->sqlSelector = $sqlSelector;
@@ -140,7 +154,6 @@ class RepositoryFactory implements RepositoryFactoryInterface
                 'childClassName',
                 'targetEntity',
                 'collectionClass',
-                'collectionFactoryClass',
                 'repositoryClassName'
             ]);
             $baseMappingProvider = new MappingProvider();
@@ -323,8 +336,9 @@ class RepositoryFactory implements RepositoryFactoryInterface
         $entityFactory = $this->createEntityFactory($configOptions);
         $entityTracker = $this->getEntityTracker();
         $dataTypeHandler = $this->getDataTypeHandlerMySql();
+        $collectionFactory = $this->getCollectionFactory();
 
-        return new ObjectBinder($this, $entityFactory, $entityTracker, $dataTypeHandler);
+        return new ObjectBinder($this, $entityFactory, $entityTracker, $dataTypeHandler, $collectionFactory);
     }
 
     final protected function createObjectUnbinder(): ObjectUnbinder
@@ -518,5 +532,14 @@ class RepositoryFactory implements RepositoryFactoryInterface
         }
 
         return $this->dataTypeHandler;
+    }
+
+    private function getCollectionFactory(): CollectionFactoryInterface
+    {
+        if (!isset($this->collectionFactory)) {
+            $this->collectionFactory = new CollectionFactory();
+        }
+
+        return $this->collectionFactory;
     }
 }

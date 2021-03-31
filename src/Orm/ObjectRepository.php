@@ -628,7 +628,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param QueryInterface $query
      * @param int $insertCount Number of rows inserted.
      * @param int $updateCount Number of rows updated.
-     * @param int $deleteCount
+     * @param int $deleteCount Number of rows deleted.
+     * @param int $lastInsertId Auto-incremented id of inserted record, if applicable.
      * @return int|object|array|null Query results, or total number of rows affected.
      * @throws ObjectiphyException|QueryException|\ReflectionException|\Throwable
      */
@@ -636,17 +637,21 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         QueryInterface $query,
         int &$insertCount = 0,
         int &$updateCount = 0,
-        int &$deleteCount = 0
+        int &$deleteCount = 0,
+        ?int &$lastInsertId = null
     ) {
         //TODO: Use command bus pattern to send queries of different types to different handlers
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $this->setClassName($query->getClassName());
         $this->mappingCollection->setGroups(...$this->configOptions->serializationGroups);
         if ($query instanceof SelectQueryInterface) {
-            return $this->findBy($query);
+            $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
+            $this->assertClassNameSet();
+            $findOptions = $this->objectFetcher->inferFindOptionsFromQuery($query, $this->mappingCollection);
+            return $this->doFindBy($findOptions, $query);
         } elseif ($query instanceof InsertQueryInterface || $query instanceof UpdateQueryInterface) {
             $saveOptions = SaveOptions::create($this->mappingCollection);
-            return $this->objectPersister->executeSave($query, $saveOptions, $insertCount, $updateCount);
+            return $this->objectPersister->executeSave($query, $saveOptions, $insertCount, $updateCount, $lastInsertId);
         } elseif ($query instanceof DeleteQueryInterface) {
             $deleteOptions = DeleteOptions::create($this->mappingCollection);
             $deleteCount = $this->objectRemover->executeDelete($query, $deleteOptions);
@@ -656,6 +661,11 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         }
     }
 
+    public function getLastInsertId(): ?int
+    {
+        return $this->objectPersister->getLastInsertId();
+    }
+    
     /**
      * Create an object that does not have to be fully hydrated just to save it as a child of another entity.
      * @param string $className Name of the class.

@@ -362,27 +362,20 @@ class PropertyMapping
     }
 
     /**
-     * @param array $entities
-     * @return iterable
+     * @return string
      * @throws MappingException
      */
-    public function getCollection(array $entities): iterable
+    public function getCollectionClassName(): string
     {
-        $collection = $entities;
         $collectionClass = $this->relationship->collectionClass;
         if (!$collectionClass || $collectionClass == 'array') {
             $collectionClass = $this->getDataType(true);
         }
-
-        if ($collectionClass && $collectionClass != 'array' && class_exists($collectionClass)) {
-            $collectionFactoryClassName = $this->relationship->getCollectionFactoryClass();
-            $collectionFactory = new $collectionFactoryClassName();
-            $collection = $collectionFactory->createCollection($collectionClass, $entities);
-        } elseif ($collectionClass && !class_exists($collectionClass)) {
+        if ($collectionClass && $collectionClass != 'array' && !class_exists($collectionClass)) {
             throw new MappingException('Collection class ' . $collectionClass . ' on ' . $this->className . '::' . $this->propertyName . ' does not exist.');
         }
 
-        return $collection;
+        return $collectionClass;
     }
     
     public function getDataType(bool $mustBeTraversable = false): string
