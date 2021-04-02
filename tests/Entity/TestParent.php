@@ -17,7 +17,6 @@ class TestParent
     protected $id;
     /**
      * @var TestUser
-     * @Objectiphy\Objectiphy\Mapping\Groups({"Default"})
      * @Mapping\Relationship(childClassName="TestUser", sourceJoinColumn="user_id", relationshipType="one_to_one", cascadeDeletes=true)
      */
     protected $user;
@@ -77,6 +76,10 @@ class TestParent
         return $this->id;
     }
 
+    /**
+     * @return TestUser
+     * @Objectiphy\Objectiphy\Mapping\Groups({"Default"})
+     */
     public function getUser()
     {
         return $this->user;
@@ -131,6 +134,10 @@ class TestParent
         }
     }
 
+    /**
+     * @return TestCollection|null
+     * @Objectiphy\Objectiphy\Mapping\Groups({"Full"})
+     */
     public function &getPets()
     {
         $pets = $this->pets ?? null;

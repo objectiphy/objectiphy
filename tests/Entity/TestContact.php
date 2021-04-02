@@ -32,6 +32,7 @@ class TestContact
     protected $lastName;
     /**
      * @ORM\Column(type="string", name="postcode")
+     * @Groups({"SomethingDifferent"})
      */
     protected $postcode;
     /**

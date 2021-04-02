@@ -116,6 +116,12 @@ class MappingProviderAnnotation implements MappingProviderInterface
         $groups = [];
         $baseGroups = $this->mappingProvider->getSerializationGroups($reflectionProperty);
         $annotations = $this->annotationReader->getPropertyAnnotations($reflectionProperty);
+        $getterName = 'get' . ucfirst($reflectionProperty->getName());
+        if (method_exists($reflectionProperty->getDeclaringClass()->getName(), $getterName)) {
+            $reflectionMethod = new \ReflectionMethod($reflectionProperty->getDeclaringClass()->getName(), $getterName);
+            $methodAnnotations = $this->annotationReader->getMethodAnnotations($reflectionMethod);
+            $annotations = array_merge($annotations, $methodAnnotations);
+        }
         foreach ($annotations as $annotation) {
             if (method_exists($annotation, 'getGroups')) {
                 $groups = $annotation->getGroups();

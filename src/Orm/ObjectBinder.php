@@ -228,6 +228,11 @@ final class ObjectBinder
                             }
                         }
                     }
+                    if ($this->configOptions->serializationGroups
+                        && !$this->mappingCollection->isPropertyFetchable($propertyMapping)
+                    ) {
+                        $useLateBinding = false; //No point lazy loading something that we don't want to serialize
+                    }
                     if ($useLateBinding) {
                         $closure = $this->createLateBoundClosure($propertyMapping, $row, $knownValues);
                         $valueFound = $closure instanceof \Closure;
@@ -274,7 +279,7 @@ final class ObjectBinder
 
         if ($entity instanceof EntityProxyInterface && $value instanceof \Closure) {
             $entity->setLazyLoader($propertyMapping->propertyName, $value);
-        } elseif ($this->dataTypeHandler->toObjectValue($value, $type, $format)) {
+        } elseif ($this->dataTypeHandler->toObjectValue($value, $type, $format, $propertyMapping->isNullable())) {
             ObjectHelper::setValueOnObject($entity, $propertyMapping->propertyName, $value);
         }
     }

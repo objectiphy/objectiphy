@@ -60,6 +60,12 @@ class MappingCollection
     private array $fetchableProperties = [];
 
     /**
+     * @var bool[] Key = property path, value = whether we can fetch children of the given property when
+     * filtered according to serialization groups
+     */
+    private array $filteredFetchableProperties = [];
+
+    /**
      * @var PropertyMapping[] Property mappings for scalar joins.
      */
     private array $scalarJoinProperties = [];
@@ -91,6 +97,11 @@ class MappingCollection
      * belong to these).
      */
     private array $groups = [];
+
+    /**
+     * @var bool Whether or not ungrouped properties should be fetched
+     */
+    private bool $hydrateUngrouped = true;
 
     /**
      * @var int Maximum number of children that can be early bound
@@ -151,9 +162,11 @@ class MappingCollection
         $this->classes[$className] = $table;
     }
 
-    public function setGroups(string ...$groups)
+    public function setGroups(bool $hydrateUngrouped = true, string ...$groups)
     {
-        //$this->groups = $groups;
+        $this->hydrateUngrouped = $hydrateUngrouped;
+        $this->groups = $groups;
+        $this->filteredFetchableProperties = [];
     }
 
     public function usesClass(string $className): bool
@@ -207,18 +220,33 @@ class MappingCollection
             $this->finaliseColumnMappings();
         }
 
-        if ($this->groups) {
-            $fetchables = [];
+        if ($this->groups && !$this->filteredFetchableProperties) {
+            $unfetchables = [];
             foreach ($this->fetchableProperties as $propertyMapping) {
-                if (array_intersect($this->groups, $propertyMapping->getGroups())) {
-                    $fetchables[] = $propertyMapping;
+                $propertyGroups = $propertyMapping->getGroups();
+                if (!$propertyGroups && $this->hydrateUngrouped) {
+                    continue;
+                }
+                if (!array_intersect($this->groups, $propertyGroups)) {
+                    $unfetchables[] = $propertyMapping;
+                }
+            }
+            $fetchables = array_diff($this->fetchableProperties, $unfetchables);
+
+            //Any children of unfetchable properties become unfetchable themselves
+            foreach ($fetchables ?? [] as $index => $fetchable) {
+                foreach ($unfetchables as $unfetchable) {
+                    if (substr($fetchable->getPropertyPath(), 0, strlen($unfetchable->getPropertyPath()) + 1) == $unfetchable->getPropertyPath() . '.') {
+                        $fetchables[$index] = null;
+                        break;
+                    }
                 }
             }
 
-            return $fetchables;
+            $this->filteredFetchableProperties = array_filter($fetchables);
         }
 
-        return $this->fetchableProperties;
+        return $this->groups ? $this->filteredFetchableProperties : $this->fetchableProperties;
     }
 
     /**

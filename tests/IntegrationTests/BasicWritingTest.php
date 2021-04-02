@@ -3,6 +3,7 @@
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
 use Objectiphy\Objectiphy\Config\ConfigEntity;
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Factory\EntityFactory;
 use Objectiphy\Objectiphy\Factory\ProxyFactory;
@@ -681,21 +682,21 @@ class BasicWritingTest extends IntegrationTestBase
     
     protected function doSerializationGroupTests()
     {
-//        $this->objectRepository->setEntityClassName(TestParent::class);
-//        //When saving an entity that was only partially loaded (due to serialization groups), do not try to save the unhydrated properties
-//        $this->objectRepository->clearSerializationGroups();
-//        $this->objectRepository->addSerializationGroups(['Default', 'Full']); //Not 'Special', which is used on the child name property
-//        /** @var $parent TestParent */
-//        $parent = $this->objectRepository->find(1);
-//        $this->assertEquals(null, $parent->getChild()->getName()); //We did not hydrate the child name
-//        $parent->setName('Updated Parent Name!');
-//        $this->objectRepository->saveEntity($parent);
-//
-//        $this->objectRepository->clearSerializationGroups();
-//        /** @var $updatedParent TestParent */
-//        $updatedParent = $this->objectRepository->find(1);
-//        $this->assertEquals('Updated Parent Name!', $updatedParent->getName()); //Parent name update successful
-//        $this->assertNotEquals(null, $updatedParent->getChild()); //Child was not lost
-//        $this->assertEquals('Penfold', $updatedParent->getChild()->getName()); //Child name was not lost
+        $this->objectRepository->setClassName(TestParent::class);
+        //When saving an entity that was only partially loaded (due to serialization groups), do not try to save the unhydrated properties
+        $this->objectRepository->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, ['Default', 'Full']); //Not 'Special', which is used on the child name property
+
+        /** @var $parent TestParent */
+        $parent = $this->objectRepository->find(1);
+        $this->assertEquals(null, $parent->getChild()->getName()); //We did not hydrate the child name
+        $parent->setName('Updated Parent Name!');
+        $this->objectRepository->saveEntity($parent);
+
+        $this->objectRepository->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, []);
+        /** @var $updatedParent TestParent */
+        $updatedParent = $this->objectRepository->find(1);
+        $this->assertEquals('Updated Parent Name!', $updatedParent->getName()); //Parent name update successful
+        $this->assertNotEquals(null, $updatedParent->getChild()); //Child was not lost
+        $this->assertEquals('Penfold', $updatedParent->getChild()->getName()); //Child name was not lost
     }
 }

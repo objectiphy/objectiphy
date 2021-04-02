@@ -18,8 +18,8 @@ class Groups
     /** @var string[] Names of groups */
     public $groups = [];
 
-    public function __construct(array $groups = [])
+    public function __construct(array $groups)
     {
-        $this->groups = isset($groups['value']) ? $groups['value'] : [];
+        $this->groups = isset($groups['value']) ? $groups['value'] : $groups;
     }
 }

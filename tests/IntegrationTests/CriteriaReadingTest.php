@@ -91,8 +91,8 @@ class CriteriaReadingTest extends IntegrationTestBase
     protected function doTests()
     {
         $this->doReadingTests();
-        $this->doSerializationGroupTests();
         $this->doOperatorTests();
+        $this->doSerializationGroupTests();
         $this->doAdvancedReadingTests();
         $this->doNestedObjectTests();
         $this->doCustomQueryTests();
@@ -194,45 +194,47 @@ class CriteriaReadingTest extends IntegrationTestBase
     protected function doSerializationGroupTests()
     {
         $this->objectRepository->clearCache();
+        $this->objectRepository->setClassName(TestPolicy::class);
         $this->objectRepository->setPagination(null);
         $this->objectRepository->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, ['Default', 'PolicyDetails']);
+        $this->objectRepository->setConfigOption(ConfigOptions::HYDRATE_UNGROUPED_PROPERTIES, false);
 
         $criteria['policyNo'] = ['operator' => 'LIKE', 'value' => 'P1234%'];
         $policies = $this->objectRepository->findBy($criteria);
         $this->assertEquals(38, count($policies));
         $this->assertNotEmpty($policies[0]->id);
         $this->assertNotEmpty($policies[0]->underwriter->id);
-//        $this->assertEmpty($policies[0]->contact);
-//        $this->assertEmpty($policies[0]->status);
-//
-//        $this->objectRepository->setClassName(TestParent::class);
-//        $this->objectRepository->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, ['Default']);
-//        $parent = $this->objectRepository->find(1);
-//        $this->assertEquals(null, $parent->getChild());
-//
-//        $this->objectRepository->setEntityClassName(TestPolicy::class);
-//        $query = QB::create()->where('contact.lasName', '=', 'Skywalker')
-//            ->orStart()
-//                ->where('status', '=', 'PAID')
-//                ->and('effectiveStartDateTime', '>', new \DateTime('2018-12-15'))
-//            ->orEnd()
-//            ->or('id', '=', 19072010)
-//            ->buildSelectQuery();
-////        $expression = (new CriteriaExpression('contact.lastName', 'lastname_alias', '=', 'Skywalker'))
-////            ->orWhere(
-////                (new CriteriaExpression('status', null, '=', 'PAID'))
-////                    ->andWhere(['effectiveStartDateTime', null, '>', new \DateTime('2018-12-15')])
-////            )
-////            ->orWhere(['id', null, '=', 19072010]);
-//        $policies3a = $this->objectRepository->findBy($query, null, null, null, 'vehicle.id');
-//        $this->assertSame(null, $policies3a[20]->contact->postcode);
+        $this->assertEmpty($policies[0]->contact);
+        $this->assertEmpty($policies[0]->status);
+
+        $this->objectRepository->setClassName(TestParent::class);
+        $this->objectRepository->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, ['Default']);
+        $parent = $this->objectRepository->find(1);
+        //Only things populated: id, name, user
+        $this->assertNotNull($parent->getId());
+        $this->assertNotNull($parent->getName());
+        $this->assertNotNull($parent->getUser());
+        $this->assertNull($parent->getChild());
+        $this->assertNull($parent->getAddress());
+        $this->assertNull($parent->getPets());
+
+        $this->objectRepository->setConfigOption(ConfigOptions::HYDRATE_UNGROUPED_PROPERTIES, true);
+        $this->objectRepository->setClassName(TestPolicy::class);
+        $query = QB::create()->where('contact.lastName', '=', 'Skywalker')
+            ->orStart()
+                ->where('status', '=', 'PAID')
+                ->and('effectiveStartDateTime', '>', new \DateTime('2018-12-15'))
+            ->orEnd()
+            ->or('id', '=', 19072010)
+            ->buildSelectQuery();
+        $policies3a = $this->objectRepository->findBy($query, null, null, null, 'vehicle.id');
+        $this->assertEquals('', $policies3a[20]->contact->postcode);
+        $this->objectRepository->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, []);
     }
 
     protected function doAdvancedReadingTests()
     {
         //Load an object that contains two different instances of the same class
-//        $this->objectRepository->clearSerializationGroups();
-//        $this->objectRepository->addSerializationGroups(['Default', 'Full']);
         $this->objectRepository->setClassName(TestParent::class);
         $parent = $this->objectRepository->find(1);
         $this->assertEquals(TestCollection::class, get_class($parent->pets));

@@ -35,9 +35,10 @@ interface DataTypeHandlerInterface
      * @param mixed &$value The value to convert.
      * @param string|null $dataType Optionally specify one of the data type constants or a class name.
      * @param string|null $format If the data type requires a format (eg. datetimestring), specify it here.
+     * @param bool $nullable Whether or not to allow null values.
      * @return bool Whether or not the value was successfully converted.
      */
-    public function toObjectValue(&$value, ?string $dataType = null, ?string $format = null): bool;
+    public function toObjectValue(&$value, ?string $dataType = null, ?string $format = null, $nullable = true): bool;
 
     /**
      * @return array Indexed array of strings strings to search for that will indicate this is not a literal value or

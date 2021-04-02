@@ -116,6 +116,13 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     {
         $previousValue = $this->configOptions->setConfigOption($optionName, $value);
         $this->updateConfig();
+        if (in_array($optionName, [
+            ConfigOptions::SERIALIZATION_GROUPS,
+            ConfigOptions::HYDRATE_UNGROUPED_PROPERTIES
+        ]) && $value !== $previousValue) {
+            //We cannot return a cached entity as the property hydration might be wrong
+            $this->clearCache();
+        }
         
         return $previousValue;
     }
@@ -153,7 +160,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $oldClassName = $this->className;
             $this->className = $className;
             $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
-            $this->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, []);
+            //$this->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, []);
             if ($className != $oldClassName) {
                 $this->orderBy = [];
                 //In case of custom repository that does not pass along the find/save options, set defaults here

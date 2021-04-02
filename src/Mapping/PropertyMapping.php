@@ -97,6 +97,11 @@ class PropertyMapping
      */
     private array $serializationGroups = [];
 
+    /**
+     * @var bool Whether or not the property can accept a null value.
+     */
+    private bool $isNullable;
+
     public function __construct(
         string $className,
         \ReflectionProperty $reflectionProperty,
@@ -109,6 +114,7 @@ class PropertyMapping
     ) {
         $this->className = $className;
         $this->reflectionProperty = $reflectionProperty;
+        $this->isNullable = !$reflectionProperty->hasType() || $reflectionProperty->getType()->allowsNull();
         $this->propertyName = $reflectionProperty->getName();
         $this->table = $table;
         $this->childTable = $childTable;
@@ -119,6 +125,11 @@ class PropertyMapping
         if ($this->relationship->sourceJoinColumn) {
             $this->isForeignKey = true;
         }
+    }
+
+    public function __toString(): string
+    {
+        return $this->getPropertyPath();
     }
 
     /**
@@ -136,6 +147,11 @@ class PropertyMapping
         $result .= $includingPropertyName ? $separator . $this->propertyName : '';
 
         return ltrim($result, $separator);
+    }
+
+    public function isNullable(): bool
+    {
+        return $this->isNullable;
     }
 
     public function getParentPath($separator = '.'): string

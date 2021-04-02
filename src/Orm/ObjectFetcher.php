@@ -116,7 +116,10 @@ final class ObjectFetcher
     public function executeFind(SelectQueryInterface $query) 
     {
         $this->validate();
-        $this->options->mappingCollection->setGroups(...$this->configOptions->serializationGroups);
+        $this->options->mappingCollection->setGroups(
+            $this->configOptions->hydrateUngroupedProperties,
+            ...$this->configOptions->serializationGroups
+        );
         $queryClass = $query->getFrom();
         if ($queryClass && strpos($queryClass, '`') === false) { //No explicit table specified
             $originalClass = $this->getClassName();
@@ -129,7 +132,7 @@ final class ObjectFetcher
         $this->objectMapper->addExtraMappings($this->getClassName(), $this->options);
         $this->objectMapper->addExtraMappings($this->getClassName(), $query);
         $this->objectMapper->addExtraClassMappings($this->getClassName(), $query);
-        $query->finalise($this->options->mappingCollection, $this->stringReplacer);
+        $query->finalise($this->options->mappingCollection, $this->stringReplacer, null);
         if ($this->options->indexBy) {
             $indexByField = new FieldExpression($this->options->indexBy);
             $indexByField->setAlias('objectiphy_index_by');
@@ -359,6 +362,12 @@ final class ObjectFetcher
     private function doFetch(SelectQueryInterface $query)
     {
         if (empty($query->getFields())) {
+            //If we are lazy loading, just return null (or empty array) - otherwise throw up
+            $backtrace = debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS, 10);
+            $functions = array_column($backtrace, 'function');
+            if (in_array('triggerLazyLoad', $functions)) {
+                return $this->options->multiple ? [] : null;
+            }
             throw new QueryException('There are no fields to select! Did you use the wrong Serialization Group name?');
         }
         $sql = $this->sqlSelector->getSelectSql($query);

@@ -30,6 +30,7 @@ class TestUser
     /**
      * @var string
      * @ORM\Column(type="string")
+     * @Objectiphy\Objectiphy\Mapping\Groups({"Default"})
      */
     protected $email;
 
