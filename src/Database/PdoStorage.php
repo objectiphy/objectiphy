@@ -56,7 +56,9 @@ class PdoStorage implements StorageInterface, TransactionInterface
     public function rollback(): bool
     {
         if ($this->transactionNestingLevel >= 1) {
-            $this->pdo->rollBack();
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             $this->transactionStarted = false;
             $this->transactionNestingLevel = 0;
         } else {
@@ -72,7 +74,9 @@ class PdoStorage implements StorageInterface, TransactionInterface
     public function commit(): bool
     {
         if ($this->transactionNestingLevel == 1) {
-            $this->pdo->commit();
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->commit();
+            }
             $this->transactionStarted = false;
         }
         $this->transactionNestingLevel--;

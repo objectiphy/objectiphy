@@ -52,7 +52,9 @@ class IntegrationTestBase extends TestCase
         do {
             $queryCount++;
             if ($stm->errorCode() && $stm->errorCode() != '0') {
-                $this->pdo->rollBack();
+                if ($pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
                 throw new \RuntimeException('Could not create database fixture: ' . print_r($stm->errorInfo(), true));
             }
         } while ($stm->nextRowset());
@@ -61,7 +63,9 @@ class IntegrationTestBase extends TestCase
         if ($semiColonCount > $queryCount) {
             throw new \RuntimeException(sprintf('There are more semi-colons in the SQL file (%1$d) than there were queries executed (%2$d). This probably means not all queries were executed. Please check the fixture SQL.', $semiColonCount, $queryCount));
         }
-        $this->pdo->commit();
+        if ($this->pdo->inTransaction()) {
+            $this->pdo->commit();
+        }
     }
 
     protected function disableCache()

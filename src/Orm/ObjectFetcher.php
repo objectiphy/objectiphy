@@ -279,7 +279,7 @@ final class ObjectFetcher
                     $orsPresent = $criteria->type == CriteriaGroup::GROUP_TYPE_START_OR;
                 } elseif ($criteria instanceof CriteriaExpression) {
                     $orsPresent = $orsPresent || $criteria->joiner == CriteriaExpression::JOINER_OR;
-                    $propertyName = str_replace('%', '', $criteria->property);
+                    $propertyName = str_replace('%', '', $criteria->property->getExpression());
                     $pkWithEquals = in_array($propertyName, $pkProperties) && $criteria->operator == QB::EQ;
                 }
             }

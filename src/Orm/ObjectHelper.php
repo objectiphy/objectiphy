@@ -305,8 +305,10 @@ class ObjectHelper
                     && $reflectionMethod->getNumberOfRequiredParameters() <= 1
                 ) {
                     //Check whether type hint compatible with value, if applicable
-                    $typeHint = $reflectionMethod->getParameters()[0]->getClass();
-                    $typeHintString = $typeHint ? $typeHint->getName() : '';
+                    $reflectionParam = $reflectionMethod->getParameters()[0];
+                    $typeHintString = $reflectionParam->getType() && !$reflectionParam->getType()->isBuiltin()
+                       ? new ReflectionClass($param->getType()->getName())
+                       : null;
                     if (!$typeHintString
                         || ($reflectionMethod->getParameters()[0]->isOptional() && $valueToSet === null)
                         || (!$typeHintString && $valueToSet)
