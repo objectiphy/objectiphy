@@ -78,6 +78,7 @@ abstract class Query implements QueryInterface
 
     public function getJoinAliases(): array
     {
+        $aliases = [];
         $joins = $this->getJoins();
         foreach ($joins as $joinExpression) {
             if ($joinExpression instanceof JoinExpression
@@ -85,6 +86,8 @@ abstract class Query implements QueryInterface
                 $aliases[$joinExpression->joinAlias] = $joinExpression->targetEntityClassName;
             }
         }
+
+        return $aliases;
     }
 
     public function setWhere(CriteriaPartInterface ...$criteria): void
@@ -103,9 +106,10 @@ abstract class Query implements QueryInterface
         foreach ($this->fields ?? [] as $field) {
             $paths = array_merge($paths, $field->getPropertyPaths());
         }
+        $joinAliases = $this->getJoinAliases();
         foreach ($this->joins ?? [] as $join) {
             if ($join instanceof PropertyPathConsumerInterface) {
-                $paths = array_merge($paths, $join->getPropertyPaths());
+                $paths = array_merge($paths, $join->getPropertyPaths($joinAliases));
             }
         }
         foreach ($this->where ?? [] as $where) {
