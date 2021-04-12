@@ -14,6 +14,7 @@ use Objectiphy\Objectiphy\Tests\Entity\TestPerson;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\Tests\Entity\TestUser;
 use Objectiphy\Objectiphy\Tests\Entity\TestVehicle;
+use Objectiphy\Objectiphy\Tests\Entity\TestVehicleGroupRate;
 
 class SelectQueryTest extends IntegrationTestBase
 {
@@ -100,6 +101,7 @@ class SelectQueryTest extends IntegrationTestBase
         $this->doRunningQueryTests();
         $this->doSelectQueryTests();
         $this->doCriteriaTests();
+        $this->doJoinTests();
     }
 
     /**
@@ -325,5 +327,20 @@ class SelectQueryTest extends IntegrationTestBase
             ->buildSelectQuery();
         $result = $this->objectRepository->executeQuery($query);
         $this->assertEquals(1, count($result));
+
+        //Join to a class whose name starts with the parent class - ensure replacement does not get confused
+        $query = QB::create()
+            ->select('group50', 'r.rate')
+            ->from(TestVehicle::class)
+            ->leftJoin(TestVehicleGroupRate::class,'r')
+            ->on('group50',QB::EQ,'r.group50')
+            ->where('abiCode', QB::EQ, '12345678')
+            ->andStart()
+                ->where('r.businessType',QB::EQ, 'NEW')
+                ->or('r.businessType', QB::EQ, 'ALL')
+            ->andEnd()
+            ->buildSelectQuery();
+        $values = $this->objectRepository->findValuesBy($query);
+        
     }
 }

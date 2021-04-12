@@ -12,6 +12,7 @@ use Objectiphy\Objectiphy\Mapping\Relationship;
  * @ORM\Table(name="objectiphy_test.vehicle")
  * @property int $id
  * @property string $abiCode
+ * @property int $abiGroup50
  * @property string $regNo
  * @property string $makeDesc
  * @property string $modelDesc
@@ -34,7 +35,13 @@ class TestVehicle
      * @ORM\Column(type="string",name="abi_code")
      */
     protected $abiCode;
-    
+
+    /**
+     * @Groups({"Default"})
+     * @ORM\Column(type="int",name="abi_group50")
+     */
+    protected $group50;
+
     /**
      * @Groups({"Default"})
      * @ORM\Column(type="string",name="reg_no")
