@@ -31,4 +31,11 @@ interface NamingStrategyInterface
         int $type,
         ?PropertyMapping $propertyMapping = null
     ): string;
+
+    /**
+     * Convert the plural form of a to-many relationship property into its singular equivalent (eg. policies to policy)
+     * @param string $name
+     * @return string
+     */
+    public function dePluralise(string $name): string;
 }

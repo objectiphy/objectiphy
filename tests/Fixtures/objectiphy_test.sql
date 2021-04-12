@@ -659,4 +659,63 @@ INSERT INTO `wheel` VALUES
 ('8', '2', '1', 'rear offside'),
 ('9', '2', '0', 'steering');
 
+-- ----------------------------
+--  Table structure for `course`
+-- ----------------------------
+DROP TABLE IF EXISTS `course`;
+CREATE TABLE `course` (
+                          `id` int(11) NOT NULL AUTO_INCREMENT,
+                          `name` varchar(100) DEFAULT NULL,
+                          `description` text,
+                          `cost` decimal(10,2) DEFAULT NULL,
+                          PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------
+--  Records of `course`
+-- ----------------------------
+BEGIN;
+INSERT INTO `course` VALUES ('1', 'PHP Ninja', 'Advanced OOP course for PHP', '8500.00'), ('2', 'Javascript for Dummies', 'For those who can\'t cope with a real programming language', '0.50'), ('3', 'C# and Beyond', 'If you are married to Microsoft', '4250.00');
+COMMIT;
+
+-- ----------------------------
+--  Table structure for `student`
+-- ----------------------------
+DROP TABLE IF EXISTS `student`;
+CREATE TABLE `student` (
+                           `id` int(11) NOT NULL AUTO_INCREMENT,
+                           `first_name` varchar(100) DEFAULT NULL,
+                           `last_name` varchar(100) DEFAULT NULL,
+                           `intelligent_quotient` int(11) DEFAULT NULL,
+                           PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------
+--  Records of `student`
+-- ----------------------------
+BEGIN;
+INSERT INTO `student` VALUES ('1', 'Russell', 'Walker', '160'), ('2', 'Olivia', 'Farquad', '210'), ('3', 'James', 'Fluffy', '73'), ('4', 'Katrina', 'Beaver', '101'), ('5', 'Jake', 'McVitie', '124'), ('6', 'Jemma', 'Thomas', '152'), ('7', 'Obadiah', 'Sputnik', '141'), ('8', 'Elizabeth', 'Shard', '99');
+COMMIT;
+
+-- ----------------------------
+--  Table structure for `student_course`
+-- ----------------------------
+DROP TABLE IF EXISTS `student_course`;
+CREATE TABLE `student_course` (
+                                  `student_id` int(11) NOT NULL,
+                                  `course_id` int(11) NOT NULL,
+                                  `term` int(11) DEFAULT NULL,
+                                  PRIMARY KEY (`student_id`,`course_id`),
+                                  KEY `course_id` (`course_id`),
+                                  CONSTRAINT `course` FOREIGN KEY (`course_id`) REFERENCES `course` (`id`),
+                                  CONSTRAINT `student` FOREIGN KEY (`student_id`) REFERENCES `student` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------
+--  Records of `student_course`
+-- ----------------------------
+BEGIN;
+INSERT INTO `student_course` VALUES ('1', '1', '2'), ('1', '3', '1'), ('2', '2', '1'), ('2', '3', '1'), ('3', '1', '2'), ('3', '2', '2'), ('3', '3', '2'), ('4', '1', '1'), ('4', '2', '1'), ('5', '2', '1'), ('5', '3', '3'), ('6', '1', '3'), ('6', '2', '2'), ('6', '3', '1');
+COMMIT;
+
 SET FOREIGN_KEY_CHECKS = 1;

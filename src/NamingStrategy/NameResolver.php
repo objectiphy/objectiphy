@@ -7,6 +7,7 @@ namespace Objectiphy\Objectiphy\NamingStrategy;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
+use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Mapping\Table;
 
 /**
@@ -66,11 +67,11 @@ class NameResolver
                 );
             } elseif ($relationship->isDefined() && (!$relationship->sourceJoinColumn && !$relationship->mappedBy)) {
                 if ($relationship->isEmbedded) {
-                    return; //Temporary measure until we support embedables.
+                    return; //There is no join
                 }
                 //Resolve source join column name (foreign key) for relationship property
                 $relationship->sourceJoinColumn = $strategy->convertName(
-                    $propertyName,
+                    $relationship->isToMany() ? $strategy->dePluralise($propertyName) : $propertyName,
                     NamingStrategyInterface::TYPE_RELATIONSHIP_PROPERTY,
                     $propertyMapping
                 );

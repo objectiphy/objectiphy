@@ -10,9 +10,9 @@ use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
  * Converts PascalCase or camelCase to snake_case. For foreign keys, the target join column name is used as a suffix if 
- * known, otherwise, '_id' is assumed.
+ * known, otherwise, '_id' is assumed. Extends ExactMatch so it can inherit the dePluralise method.
  */
-class PascalCamelToSnake implements NamingStrategyInterface
+class PascalCamelToSnake extends ExactMatch implements NamingStrategyInterface
 {
     /**
      * Convert value of $name from property name to column name or class name to table name. This will only be used if 

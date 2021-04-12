@@ -72,6 +72,21 @@ class Relationship extends ObjectiphyAnnotation
      * @var string Name of column to join with on the target table (child entity). 
      */
     public string $targetJoinColumn = '';
+
+    /**
+     * @var string For many-to-many associations, the bridging table that links both entities.
+     */
+    public string $bridgeJoinTable = '';
+
+    /**
+     * @var string For many-to-many associations, the source column on the bridge table.
+     */
+    public string $bridgeSourceJoinColumn = '';
+
+    /**
+     * @var string For many-to-many associations, the target column on the bridge table.
+     */
+    public string $bridgeTargetJoinColumn = '';
     
     /** 
      * @var string Name of column that holds the value for a scalar join. 

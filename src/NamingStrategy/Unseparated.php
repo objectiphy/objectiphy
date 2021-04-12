@@ -10,9 +10,10 @@ use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
  * Converts any case to all lower case with no separators (eg. camelCase to camelcase, snake_case to snakecase). For 
- * foreign keys, the target join column name is used as a suffix if known, otherwise, 'id' is assumed.
+ * foreign keys, the target join column name is used as a suffix if known, otherwise, 'id' is assumed.  Extends 
+ * ExactMatch so it can inherit the dePluralise method.
  */
-class Unseparated implements NamingStrategyInterface
+class Unseparated extends ExactMatch implements NamingStrategyInterface
 {
     public function convertName(
         string $name,

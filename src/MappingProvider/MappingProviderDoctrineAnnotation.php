@@ -6,6 +6,7 @@ namespace Objectiphy\Objectiphy\MappingProvider;
 
 use Doctrine\ORM\Mapping\Embedded;
 use Doctrine\ORM\Mapping\JoinColumn;
+use Doctrine\ORM\Mapping\JoinTable;
 use Objectiphy\Annotations\AnnotationReaderInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
@@ -106,6 +107,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
             $this->populateFromDoctrineOrderBy($reflectionProperty, $relationship, $wasMapped);
             $this->populateFromDoctrineEmbedded($reflectionProperty, $relationship, $wasMapped);
             $this->populateFromDoctrineId($reflectionProperty, $relationship, $wasMapped);
+            $this->populateFromDoctrineJoinTable($reflectionProperty, $relationship, $wasMapped);
 
             return $relationship;
         } catch (\Throwable $ex) {
@@ -201,6 +203,10 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
     ): void {
         $doctrineClass = 'Doctrine\ORM\Mapping\\' .  str_replace('_', '', ucwords($relationshipType, '_'));
         if (class_exists($doctrineClass)) {
+            if ($reflectionProperty->getName() == 'students') {
+                $stop = true;
+            }
+
             $doctrineRelationship = $this->annotationReader->getPropertyAnnotation($reflectionProperty, $doctrineClass);
             $wasMapped = $wasMapped || $doctrineRelationship;
             $relationship->relationshipType = $doctrineRelationship ? $relationshipType : $relationship->relationshipType;
@@ -208,6 +214,24 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
             $relationship->lazyLoad = isset($doctrineRelationship->fetch) ? $doctrineRelationship->fetch == 'LAZY' : $relationship->lazyLoad;
             $relationship->orphanRemoval = $doctrineRelationship->orphanRemoval ?? $relationship->orphanRemoval;
             $relationship->childClassName = $doctrineRelationship->targetEntity ?? $relationship->childClassName;
+        }
+    }
+
+    /**
+     * Read a Doctrine JoinTable annotation.
+     * @param \ReflectionProperty $reflectionProperty
+     * @param Relationship $relationship
+     * @param bool $wasMapped Output parameter to indicate whether or not some mapping information was specified.
+     */
+    private function populateFromDoctrineJoinTable(
+        \ReflectionProperty $reflectionProperty,
+        Relationship &$relationship,
+        bool &$wasMapped
+    ): void {
+        if (class_exists('Doctrine\ORM\Mapping\JoinTable')) {
+            $doctrineJoinTable = $this->annotationReader->getPropertyAnnotation($reflectionProperty, JoinTable::class);
+            $wasMapped = $wasMapped || $doctrineJoinTable;
+            $relationship->joinTable = $doctrineJoinTable->name ?? $relationship->joinTable;
         }
     }
 
