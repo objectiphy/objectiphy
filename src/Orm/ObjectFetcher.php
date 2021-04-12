@@ -185,7 +185,7 @@ final class ObjectFetcher
         $this->storage->executeQuery($sql, $params ?: []);
         $values = $this->storage->fetchValues();
 
-        return $values;
+        return $this->indexValues($values);
     }
 
     /**
@@ -223,10 +223,27 @@ final class ObjectFetcher
         if ($rows && $this->options->bindToEntities) {
             $result = $this->objectBinder->bindRowsToEntities($rows, $this->getClassName(), $this->options->indexBy);
         } else {
-            $result = $rows;
+            $result = $this->indexValues($rows);
         }
 
         return $result;
+    }
+
+    private function indexValues(array $rows)
+    {
+        if ($this->options->indexBy) {
+            $resulst = [];
+            foreach ($rows ?? [] as $index => $row) {
+                $key = $row['objectiphy_index_by'] ?? $row[$this->options->indexBy] ?? $index;
+                if (is_array($row) && isset($row['objectiphy_index_by'])) {
+                    unset($row['objectiphy_index_by']); //Internal use only, and we've finished with it now
+                }
+                $results[$key] = $row;
+            }
+            return $results;
+        } else {
+            return $rows;
+        }
     }
 
     /**
@@ -310,7 +327,7 @@ final class ObjectFetcher
         
         return $findOptions;
     }
-    
+
     private function getClassName(): string
     {
         if (isset($this->options) && isset($this->options->mappingCollection)) {

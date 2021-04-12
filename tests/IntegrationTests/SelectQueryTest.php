@@ -342,5 +342,21 @@ class SelectQueryTest extends IntegrationTestBase
             ->buildSelectQuery();
         $values = $this->objectRepository->findValuesBy($query);
         $this->assertEquals(26, count($values));
+
+        //Use grouped criteria in a join condition
+        $query = QB::create()
+            ->select('group50', 'r.rate')
+            ->from(TestVehicle::class)
+            ->leftJoin(TestVehicleGroupRate::class, 'r')
+                ->on('r.group50', QB::EQ, 'group50')
+                ->andStart()
+                    ->where('r.businessType', QB::EQ, 'NEW')
+                    ->or('r.businessType', QB::EQ, 'ALL')
+                ->andEnd()
+                ->and('r.ratingScheme', QB::EQ, 1)
+            ->where('abiCode', QB::EQ, 12345678)
+            ->buildSelectQuery();
+        $values2 = $this->objectRepository->findValuesBy($query, '', null, 'group50', false);
+        $this->assertEquals(2, count($values2));
     }
 }

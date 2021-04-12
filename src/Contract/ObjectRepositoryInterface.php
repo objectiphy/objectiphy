@@ -111,9 +111,9 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
      * child object, but make sure the property you use has a unique value in the result set, otherwise some records
      * will be lost).
-     * @param bool $multiple For internal use (when this method is called by the findLatestOneBy method).
      * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
      * set(for streaming large amounts of data).
+     * @param bool $multiple For internal use (when this method is called by the findLatestOneBy method).
      * @return mixed
      */
     public function findLatestBy(
@@ -121,8 +121,8 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
         ?string $commonProperty = null, 
         ?string $recordAgeIndicator = null, 
         ?string $indexBy = null,
-        bool $multiple = true, 
-        bool $fetchOnDemand = false
+        bool $fetchOnDemand = false,
+        bool $multiple = true
     );
 
     /**
@@ -156,12 +156,37 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * for the arguments that are not applicable (findBy thus remains compatible with Doctrine).
      * @param array|SelectQueryInterface $criteria
      * @param array|null $orderBy
-     * @return iterable
+     * @return iterable|null
      */
     public function findOnDemandBy(
         $criteria,
         ?array $orderBy = null
     ): ?iterable;
+
+    /**
+     * Find the value of a single property of a single entity
+     * @param array $criteria
+     * @param string $valueProperty
+     * @return mixed
+     */
+    public function findOneValueBy($criteria = [], string $valueProperty = '');
+
+    /**
+     * Find the value of a single property on multiple entities
+     * @param array $criteria
+     * @param string $valueProperty
+     * @param array|null $orderBy
+     * @param string|null $indexBy
+     * @param bool $fetchOnDemand
+     * @return mixed
+     */
+    public function findValuesBy(
+        $criteria = [],
+        string $valueProperty = '',
+        ?array $orderBy = null,
+        ?string $indexBy = null,
+        bool $fetchOnDemand = false
+    );
 
     /**
      * Find all records. Compatible with the equivalent method in Doctrine.

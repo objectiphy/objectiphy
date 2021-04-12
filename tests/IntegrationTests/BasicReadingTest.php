@@ -261,7 +261,7 @@ class BasicReadingTest extends IntegrationTestBase
 
         //Get iterable scalar values
         $iterablePolicyNumbers = $this->objectRepository->findValuesBy(['contact.lastName' => 'Skywalker'],
-            'policyNo', ['policyNo'], true);
+            'policyNo', ['policyNo'], null, true);
         $this->assertInstanceOf(IterableResult::class, $iterablePolicyNumbers);
         $iterablePolicyNumbers->next();
         $this->assertEquals('P123456', $iterablePolicyNumbers->current());

@@ -200,7 +200,10 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
      */
     public function where(string $propertyName, string $operator, $value): QueryBuilder
     {
-        $this->currentCriteriaCollection =& $this->where;
+        if ($this->groupNestingLevel == 0) {
+            $this->currentCriteriaCollection =& $this->where;
+        }
+
         return $this->and($propertyName, $operator, $value);
     }
 

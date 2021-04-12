@@ -91,12 +91,14 @@ class JoinProviderMySql
         $this->joiner = $this->joiner ? $joinPart->joiner : "    ON ";
         if (!$this->removeJoiner) {
             $this->sql .= $this->joiner . ' ';
+        } else {
+            $this->removeJoiner = false; //Once removed, any further items will need joining
         }
 
         $propertyPath = $joinPart->property->getPropertyPath();
         $propertyAlias = strtok($propertyPath, '.');
         $propertyUsesAlias = $propertyAlias && $query->getClassForAlias($propertyAlias) ? true : false;
-        $valueAlias = strtok($joinPart->value, '.');
+        $valueAlias = strtok(strval($joinPart->value), '.');
         $valueUsesAlias = $query->getClassForAlias($valueAlias) ? true : false;
 
         $mappingCollection = $this->objectMapper->getMappingCollectionForClass($query->getClassName());
