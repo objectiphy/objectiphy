@@ -155,16 +155,16 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
     /**
      * @return array
      */
-    public function getPropertyPaths(): array
+    public function getPropertyPaths(array $joinAliases = []): array
     {
         $paths = $this->property->getPropertyPaths();
-        $paths = array_merge($paths, $this->getPropertyPathsFromValue($this->value));
-        $paths = array_merge($paths, $this->getPropertyPathsFromValue($this->value2));
+        $paths = array_merge($paths, $this->getPropertyPathsFromValue($this->value, $joinAliases));
+        $paths = array_merge($paths, $this->getPropertyPathsFromValue($this->value2, $joinAliases));
         
         return array_filter($paths);
     }
 
-    private function getPropertyPathsFromValue($value): array
+    private function getPropertyPathsFromValue($value, array $joinAliases): array
     {
         $paths = [];
         if ($value instanceof FieldExpression) {
@@ -173,6 +173,12 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
             $match = [];
             preg_match_all('/%(.*?)%/', $value, $match);
             $paths = $match[1] ?? [];
+        } elseif (is_string($value) && strpos($value, '.') !== false) {
+            foreach (array_keys($joinAliases) as $joinAlias) {
+                if (substr($value, 0, strlen($joinAlias) + 1) == $joinAlias . '.') {
+                    $paths[] = $value;
+                }
+            }
         }
 
         return $paths;

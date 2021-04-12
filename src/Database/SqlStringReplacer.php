@@ -114,11 +114,14 @@ class SqlStringReplacer
             $tables = $mappingCollection->getTables();
             //Order by class name length descending to avoid replacing things that are contained within larger things
             foreach ($tables as $class => $table) {
-                $tableObjectNames[strlen($class)] = $class;
-                $tablePersistenceNames[strlen($class)] = $this->delimit($table->name);
+                $tableObjectNames[$class] = $class;
+                $tablePersistenceNames[$class] = $this->delimit($table->name);
             }
-            krsort($tableObjectNames, \SORT_NUMERIC);
-            krsort($tablePersistenceNames, \SORT_NUMERIC);
+            $keyLengthDesc = function($key1, $key2) {
+                return (strlen($key1) === strlen($key2) ? 0 : (strlen($key1) < strlen($key2) ? 1 : 0));
+            };
+            uksort($tableObjectNames, $keyLengthDesc);
+            uksort($tablePersistenceNames, $keyLengthDesc);
             $this->objectNames = array_merge($this->objectNames, array_values($tableObjectNames));
             $this->persistenceNames = array_merge($this->persistenceNames, array_values($tablePersistenceNames));
         }

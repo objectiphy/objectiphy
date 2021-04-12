@@ -25,7 +25,7 @@ class TestVehicleGroupRate
     protected $id;
     
     /**
-     * @Column(type="int")
+     * @Column(type="int", name="group_50")
      */
     protected $group50;
     

@@ -333,7 +333,7 @@ class SelectQueryTest extends IntegrationTestBase
             ->select('group50', 'r.rate')
             ->from(TestVehicle::class)
             ->leftJoin(TestVehicleGroupRate::class,'r')
-            ->on('group50',QB::EQ,'r.group50')
+                ->on('group50',QB::EQ,'r.group50')
             ->where('abiCode', QB::EQ, '12345678')
             ->andStart()
                 ->where('r.businessType',QB::EQ, 'NEW')
@@ -341,6 +341,6 @@ class SelectQueryTest extends IntegrationTestBase
             ->andEnd()
             ->buildSelectQuery();
         $values = $this->objectRepository->findValuesBy($query);
-        
+        $this->assertEquals(26, count($values));
     }
 }
