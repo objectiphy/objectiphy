@@ -10,6 +10,7 @@ use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Query\QueryBuilder;
 use Objectiphy\Objectiphy\Tests\Entity\TestChild;
 use Objectiphy\Objectiphy\Tests\Entity\TestContact;
+use Objectiphy\Objectiphy\Tests\Entity\TestParent;
 use Objectiphy\Objectiphy\Tests\Entity\TestPerson;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\Tests\Entity\TestUser;
