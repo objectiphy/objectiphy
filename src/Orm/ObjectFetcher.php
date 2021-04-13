@@ -183,9 +183,12 @@ final class ObjectFetcher
     public function fetchValues(string $sql, array $params = null): array
     {
         $this->storage->executeQuery($sql, $params ?: []);
-        $values = $this->storage->fetchValues();
-
-        return $this->indexValues($values);
+        if ($this->options->indexBy) {
+            $values = $this->storage->fetchResults();
+            return $values ? $this->indexValues($values, array_key_first($values[0])) : $values;
+        } else {
+            return $this->storage->fetchValues(0);
+        }
     }
 
     /**
@@ -229,7 +232,7 @@ final class ObjectFetcher
         return $result;
     }
 
-    private function indexValues(array $rows)
+    private function indexValues(array $rows, string $valueKey = '')
     {
         if ($this->options->indexBy) {
             $resulst = [];
@@ -238,7 +241,7 @@ final class ObjectFetcher
                 if (is_array($row) && isset($row['objectiphy_index_by'])) {
                     unset($row['objectiphy_index_by']); //Internal use only, and we've finished with it now
                 }
-                $results[$key] = $row;
+                $results[$key] = $valueKey ? $row[$valueKey] : $row;
             }
             return $results;
         } else {

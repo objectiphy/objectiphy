@@ -358,5 +358,25 @@ class SelectQueryTest extends IntegrationTestBase
             ->buildSelectQuery();
         $values2 = $this->objectRepository->findValuesBy($query, '', null, 'group50', false);
         $this->assertEquals(2, count($values2));
+
+        //Index values
+        $query = QB::create()
+            ->select('group50', 'r.rate')
+            ->from(TestVehicle::class)
+            ->leftJoin(TestVehicleGroupRate::class, 'r')
+                ->on('r.group50', QB::EQ, 'group50')
+            ->where('abiCode', QB::EQ, 12345678)
+                ->andStart()
+                    ->where('r.businessType', QB::EQ, 'NEW')
+                    ->or('r.businessType', QB::EQ, 'ALL')
+                    ->or('r.businessType', QB::IS, null)
+                ->andEnd()
+                ->andStart()
+                    ->where('r.ratingScheme', QB::EQ, 1)
+                    ->or('r.ratingScheme', QB::IS, null)
+                ->andEnd();
+        $values3 = $this->objectRepository->findValuesBy($query->buildSelectQuery(), 'r.rate', null, 'group50');
+        $this->assertEquals(2, count($values3));
+        $this->assertEquals(1, array_key_first($values3));
     }
 }
