@@ -171,6 +171,9 @@ class BasicReadingTest extends IntegrationTestBase
         $children2 = $this->objectRepository->findBy($criteria2);
         $this->assertEquals(1, count($children2));
 
+        $allChildren = $this->objectRepository->findAll();
+        $this->assertGreaterThan(2, count($allChildren));
+
         //Weird property and column names
         $this->objectRepository->setClassName(TestWeirdPropertyNames::class);
         $weirdo = $this->objectRepository->find(1);
