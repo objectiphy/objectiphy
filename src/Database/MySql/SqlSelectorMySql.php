@@ -141,7 +141,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $sql = '';
         $groupBy = $this->query->getGroupBy();
         if ($groupBy) {
-            $sql = $this->stringReplacer->replaceNames(implode(', ', $groupBy)) . "\n";
+            $sql = " GROUP BY " . $this->stringReplacer->replaceNames(implode(', ', $groupBy)) . "\n";
         }
 
         return $sql;
@@ -154,12 +154,17 @@ class SqlSelectorMySql implements SqlSelectorInterface
      */
     public function getHaving(): string
     {
+        $having = '';
         $criteria = [];
         foreach ($this->query->getHaving() as $criteriaExpression) {
             $criteria[] = $this->stringReplacer->replaceNames((string) $criteriaExpression);
         }
 
-        return implode("\nAND ", $criteria) . "\n";
+        if ($criteria) {
+            $having = " HAVING " . implode("\nAND ", $criteria) . "\n";
+        }
+
+        return $having;
     }
 
     /**
@@ -173,7 +178,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
         if (!$this->options->count) {
             $orderBy = $this->query->getOrderBy();
             if (!empty($orderBy)) {
-                $orderByString = 'ORDER BY ' . implode(', ', $orderBy);
+                $orderByString = ' ORDER BY ' . implode(', ', $orderBy);
                 $sql = $this->stringReplacer->replaceNames($orderByString) . "\n";
             }
         }
@@ -189,11 +194,11 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $sql = '';
 
         if (!$this->options->multiple) {
-            $sql = "LIMIT 1 \n";
+            $sql = " LIMIT 1 \n";
         } elseif (!$this->options->count && !empty($this->options->pagination)) {
-            $sql = "LIMIT " . $this->options->pagination->getRecordsPerPage() . " \n";
+            $sql = " LIMIT " . $this->options->pagination->getRecordsPerPage() . " \n";
         } elseif ($this->query->getLimit() ?? false) {
-            $sql = "LIMIT " . $this->query->getLimit() . "\n";
+            $sql = " LIMIT " . $this->query->getLimit() . "\n";
         }
 
         return $sql;
