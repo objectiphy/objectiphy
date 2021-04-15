@@ -772,10 +772,9 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $this->objectFetcher->setFindOptions($findOptions);
         $query = $this->normalizeCriteria($criteria);
         if (!$query->getOrderBy() && $findOptions->orderBy) {
-            $orderBy = $this->normalizeOrderBy($findOptions->orderBy);
-            if ($orderBy) {
-                $query->setOrderBy(...$orderBy);
-            }
+            $tempQuery = QB::create()->orderBy($findOptions->orderBy)->buildSelectQuery();
+            $query->setOrderBy(...$tempQuery->getOrderBy());
+            $query->setOrderByDirections(...$tempQuery->getOrderByDirections());
         }
         if (!$this->getClassName() && $query) {
             $this->setClassName($query->getClassName());
@@ -808,8 +807,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $query->setWhere(...$normalizedCriteria);
         } else {
             $message = sprintf('Invalid criteria specified for %1$s.', $queryType);
-            if ($queryType instanceof QueryBuilder) {
-                $message .= ' You have passed in an instance of QueryBuilder instead of an actual Query. Please call the appropriate build method (eg. buildSelectQuery), and pass in the resulting query (note, if you want to build the query and assign it to a variable, make sure you do actually assign it - just calling the method will not work if you don\'t use the response!';
+            if ($criteria instanceof QueryBuilder) {
+                $message .= ' You have passed in an instance of QueryBuilder instead of an actual Query. Please call the appropriate build method (eg. buildSelectQuery), and pass in the resulting query (note, if you want to build the query and assign it to a variable, make sure you do actually assign it - just calling the method will not work if you don\'t use the response!)';
             }
             throw new QueryException($message);
         }

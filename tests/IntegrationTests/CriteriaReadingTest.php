@@ -119,6 +119,8 @@ class CriteriaReadingTest extends IntegrationTestBase
 //        $this->assertEquals(37, $policyCount);
 //        $this->assertEquals(34, $latestCount);
         $this->assertEquals(7, count($policiesForDecember));
+        $this->assertEquals(18, $policiesForDecember[0]->loginId);
+        $this->assertEquals(2, $policiesForDecember[6]->loginId);
 //        $this->assertEquals(20, count($latestPoliciesForDecember));
         
         $query = QB::create()

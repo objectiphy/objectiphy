@@ -33,6 +33,11 @@ class SelectQuery extends Query implements SelectQueryInterface
      */
     private array $orderBy = [];
 
+    /**
+     * @var string[]
+     */
+    private array $orderByDirections = [];
+
     private ?int $limit = null;
     private ?int $offset = null;
 
@@ -84,6 +89,16 @@ class SelectQuery extends Query implements SelectQueryInterface
     public function getOrderBy(): array
     {
         return $this->orderBy;
+    }
+
+    public function setOrderByDirections(string ...$directions): void
+    {
+        $this->orderByDirections = $directions;
+    }
+
+    public function getOrderByDirections(): array
+    {
+        return $this->orderByDirections;
     }
     
     public function setLimit(?int $limit): void

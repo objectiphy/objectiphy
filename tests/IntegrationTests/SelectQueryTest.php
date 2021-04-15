@@ -168,10 +168,10 @@ class SelectQueryTest extends IntegrationTestBase
     protected function doQueryBuilderTests()
     {
         $query = QueryBuilder::create()
-            ->select('id', 'name', 'email')
+            ->select('id', 'type', 'email')
             ->from(TestUser::class)
             ->where('dateOfBirth', '>', '2000-01-01')
-            ->orderBy(['name' => 'DESC'])
+            ->orderBy(['email' => 'DESC'])
             ->buildSelectQuery();
         $users = $this->objectRepository->findBy($query);
         $this->assertEquals(2, count($users));
@@ -306,12 +306,22 @@ class SelectQueryTest extends IntegrationTestBase
         $result4 = $this->objectRepository->executeQuery($query4);
         $this->assertEquals(2, count($result4));
 
-        $this->objectRepository->setClassName(TestChild::class);
+        //Order by child property
         $query5 = QueryBuilder::create()
-            ->where('parent.pets.type', QB::EQUALS, 'dog')
+            ->orderBy(['contact.lastName' => 'DESC'])
+            ->limit(5)
             ->buildSelectQuery();
         $result5 = $this->objectRepository->executeQuery($query5);
-        $this->assertEquals(1, count($result5));
+        $this->assertEquals(5, count($result5));
+        $this->assertEquals('Walker', $result5[0]->contact->lastName);
+        $this->assertEquals('Urquhart', $result5[1]->contact->lastName);
+
+        $this->objectRepository->setClassName(TestChild::class);
+        $query6 = QueryBuilder::create()
+            ->where('parent.pets.type', QB::EQUALS, 'dog')
+            ->buildSelectQuery();
+        $result6 = $this->objectRepository->executeQuery($query6);
+        $this->assertEquals(1, count($result6));
     }
 
     protected function doJoinTests()

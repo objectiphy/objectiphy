@@ -112,7 +112,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
                 $sql .= $fieldExpression->getAlias() ? ' AS ' . $fieldExpression->getAlias() : '';
                 $sql .= ", \n";
             }
-            $sql = rtrim($sql, ", \n") . "\n";
+            $sql = rtrim($sql, ", \n");
         }
 
         //We cannot count using a subquery if there are duplicate column names, and only need one column for the count to work
@@ -129,7 +129,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
      */
     public function getFrom(): string
     {
-        return "FROM " . $this->stringReplacer->replaceNames($this->query->getFrom()) . "\n";
+        return "\nFROM " . $this->stringReplacer->replaceNames($this->query->getFrom());
     }
 
     /**
@@ -141,7 +141,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $sql = '';
         $groupBy = $this->query->getGroupBy();
         if ($groupBy) {
-            $sql = " GROUP BY " . $this->stringReplacer->replaceNames(implode(', ', $groupBy)) . "\n";
+            $sql = "\nGROUP BY " . $this->stringReplacer->replaceNames(implode(', ', $groupBy));
         }
 
         return $sql;
@@ -161,7 +161,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
         }
 
         if ($criteria) {
-            $having = " HAVING " . implode("\nAND ", $criteria) . "\n";
+            $having = "\nHAVING " . implode("\nAND ", $criteria) . "\n";
         }
 
         return $having;
@@ -176,11 +176,20 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $sql = '';
 
         if (!$this->options->count) {
-            $orderBy = $this->query->getOrderBy();
-            if (!empty($orderBy)) {
-                $orderByString = ' ORDER BY ' . implode(', ', $orderBy);
-                $sql = $this->stringReplacer->replaceNames($orderByString) . "\n";
+            if (!empty($orderBy = $this->query->getOrderBy())) {
+                $sql .= "\nORDER BY ";
+                foreach ($this->query->getOrderBy() as $index => $orderByField) {
+                    $sql .= $index > 0 ? ', ' : '';
+                    $direction = $this->query->getOrderByDirections()[$index] ?? 'ASC';
+                    $sql .= $this->stringReplacer->replaceNames(strval($orderByField)) . " $direction\n";
+                }
             }
+
+//            $orderBy = $this->query->getOrderBy();
+//            if (!empty($orderBy)) {
+//                $orderByString = ' ORDER BY ' . implode(', ', $orderBy);
+//                $sql = $this->stringReplacer->replaceNames($orderByString) . "\n";
+//            }
         }
 
         return $sql;
@@ -194,11 +203,11 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $sql = '';
 
         if (!$this->options->multiple) {
-            $sql = " LIMIT 1 \n";
+            $sql = "\nLIMIT 1";
         } elseif (!$this->options->count && !empty($this->options->pagination)) {
-            $sql = " LIMIT " . $this->options->pagination->getRecordsPerPage() . " \n";
+            $sql = "\nLIMIT " . $this->options->pagination->getRecordsPerPage();
         } elseif ($this->query->getLimit() ?? false) {
-            $sql = " LIMIT " . $this->query->getLimit() . "\n";
+            $sql = "\nLIMIT " . $this->query->getLimit();
         }
 
         return $sql;
@@ -212,9 +221,9 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $sql = '';
         if ($this->options->multiple && !$this->options->count) {
             if ($this->query->getOffset() ?? false) {
-                $sql = '    OFFSET ' . $this->query->getOffset() . "\n";
+                $sql = "\n    OFFSET " . $this->query->getOffset();
             } elseif (!empty($this->options->pagination) && $this->options->pagination->getOffset()) {
-                $sql = '    OFFSET ' . $this->options->pagination->getOffset() . "\n";
+                $sql = "\n    OFFSET " . $this->options->pagination->getOffset();
             }
         }
 
