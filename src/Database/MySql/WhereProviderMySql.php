@@ -36,20 +36,20 @@ class WhereProviderMySql
      */
     public function getWhere(QueryInterface $query, MappingCollection $mappingCollection): string
     {
-        $sql = "WHERE 1\n";
+        $sql = "\nWHERE 1";
         $removeJoiner = false;
         foreach ($query->getWhere() as $index => $criteriaExpression) {
             if ($criteriaExpression instanceof CriteriaGroup) {
                 $removeJoiner = $criteriaExpression->type != CriteriaGroup::GROUP_TYPE_END;
                 if ($index == 0 && $criteriaExpression->type == CriteriaGroup::GROUP_TYPE_START_OR) {
                     //If first item is an OR group, change it to AND, otherwise it ORs with 1 and matches every record!
-                    $sql .= "    AND " . substr((string) $criteriaExpression, 2) . "\n";
+                    $sql .= "\n    AND " . substr((string) $criteriaExpression, 2);
                 } else {
-                    $sql .= "    " . (string) $criteriaExpression . "\n";
+                    $sql .= "\n    " . (string) $criteriaExpression;
                 }
             } else {
                 if (!$removeJoiner) {
-                    $sql .= "    " . $criteriaExpression->joiner;
+                    $sql .= "\n    " . $criteriaExpression->joiner;
                 }
                 $sql .= " " . $this->addCriteriaSql($criteriaExpression, $query, $mappingCollection);
                 $removeJoiner = false;

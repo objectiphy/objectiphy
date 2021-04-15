@@ -63,6 +63,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
      * @var FieldExpression[]
      */
     private array $orderBy = [];
+    private array $orderByDirections = []; //Separate from $orderBy so the thing to order by can be resolved to a column
 
     private ?int $limit = null;
     private ?int $offset = null;
@@ -272,15 +273,18 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
     {
         foreach ($propertyNames as $key => $value) {
             if (is_string($key) && in_array($value, ['ASC', 'DESC', 'asc', 'desc'])) {
-                $fieldExpression = new FieldExpression($key . ' ' . strtoupper($value));
+                $fieldExpression = new FieldExpression($key);
+                $direction = strtoupper($value);
             } elseif (is_int($key) && is_string($value)) {
-                $fieldExpression = new FieldExpression($value . ' ASC');
+                $fieldExpression = new FieldExpression($value);
+                $direction = 'ASC';
             } else {
                 throw new QueryException(
                     'Invalid orderBy properties. Please use property name as the key and direction as the value, or a numeric key and property name as the value (which defaults to ASC for direction)'
                 );
             }
             $this->orderBy[] = $fieldExpression;
+            $this->orderByDirections[] = $direction;
         }
 
         return $this;
@@ -314,6 +318,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         $query->setGroupBy(...$this->groupBy);
         $query->setHaving(...$this->having);
         $query->setOrderBy(...$this->orderBy);
+        $query->setOrderByDirections(...$this->orderByDirections);
         $query->setLimit($this->limit);
         $query->setOffset($this->offset);
 

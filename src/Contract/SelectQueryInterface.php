@@ -33,6 +33,10 @@ interface SelectQueryInterface extends QueryInterface
 
     public function getOrderBy(): array;
 
+    public function setOrderByDirections(string ...$directions): void;
+
+    public function getOrderByDirections(): array;
+
     public function setLimit(int $limit): void;
 
     public function getLimit(): ?int;
