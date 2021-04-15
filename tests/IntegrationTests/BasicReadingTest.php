@@ -171,6 +171,9 @@ class BasicReadingTest extends IntegrationTestBase
         $children2 = $this->objectRepository->findBy($criteria2);
         $this->assertEquals(1, count($children2));
 
+        $allChildren = $this->objectRepository->findAll();
+        $this->assertGreaterThan(2, count($allChildren));
+
         //Weird property and column names
         $this->objectRepository->setClassName(TestWeirdPropertyNames::class);
         $weirdo = $this->objectRepository->find(1);
@@ -261,7 +264,7 @@ class BasicReadingTest extends IntegrationTestBase
 
         //Get iterable scalar values
         $iterablePolicyNumbers = $this->objectRepository->findValuesBy(['contact.lastName' => 'Skywalker'],
-            'policyNo', ['policyNo'], true);
+            'policyNo', ['policyNo'], null, true);
         $this->assertInstanceOf(IterableResult::class, $iterablePolicyNumbers);
         $iterablePolicyNumbers->next();
         $this->assertEquals('P123456', $iterablePolicyNumbers->current());

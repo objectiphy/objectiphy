@@ -10,6 +10,7 @@ use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Query\QueryBuilder;
 use Objectiphy\Objectiphy\Tests\Entity\TestChild;
 use Objectiphy\Objectiphy\Tests\Entity\TestContact;
+use Objectiphy\Objectiphy\Tests\Entity\TestParent;
 use Objectiphy\Objectiphy\Tests\Entity\TestPerson;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\Tests\Entity\TestUser;
@@ -342,5 +343,41 @@ class SelectQueryTest extends IntegrationTestBase
             ->buildSelectQuery();
         $values = $this->objectRepository->findValuesBy($query);
         $this->assertEquals(26, count($values));
+
+        //Use grouped criteria in a join condition
+        $query = QB::create()
+            ->select('group50', 'r.rate')
+            ->from(TestVehicle::class)
+            ->leftJoin(TestVehicleGroupRate::class, 'r')
+                ->on('r.group50', QB::EQ, 'group50')
+                ->andStart()
+                    ->where('r.businessType', QB::EQ, 'NEW')
+                    ->or('r.businessType', QB::EQ, 'ALL')
+                ->andEnd()
+                ->and('r.ratingScheme', QB::EQ, 1)
+            ->where('abiCode', QB::EQ, 12345678)
+            ->buildSelectQuery();
+        $values2 = $this->objectRepository->findValuesBy($query, '', null, 'group50', false);
+        $this->assertEquals(2, count($values2));
+
+        //Index values
+        $query = QB::create()
+            ->select('group50', 'r.rate')
+            ->from(TestVehicle::class)
+            ->leftJoin(TestVehicleGroupRate::class, 'r')
+                ->on('r.group50', QB::EQ, 'group50')
+            ->where('abiCode', QB::EQ, 12345678)
+                ->andStart()
+                    ->where('r.businessType', QB::EQ, 'NEW')
+                    ->or('r.businessType', QB::EQ, 'ALL')
+                    ->or('r.businessType', QB::IS, null)
+                ->andEnd()
+                ->andStart()
+                    ->where('r.ratingScheme', QB::EQ, 1)
+                    ->or('r.ratingScheme', QB::IS, null)
+                ->andEnd();
+        $values3 = $this->objectRepository->findValuesBy($query->buildSelectQuery(), 'r.rate', null, 'group50');
+        $this->assertEquals(2, count($values3));
+        $this->assertEquals(1, array_key_first($values3));
     }
 }

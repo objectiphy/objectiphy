@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Query;
 
 use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
+use Objectiphy\Objectiphy\Contract\JoinPartInterface;
 use Objectiphy\Objectiphy\Exception\QueryException;
 
 /**
@@ -12,7 +13,7 @@ use Objectiphy\Objectiphy\Exception\QueryException;
  * Represents an opening or closing parenthesis in a group of criteria, starting with either AND or OR.
  * ie. "AND (", "OR (", or ")".
  */
-class CriteriaGroup implements CriteriaPartInterface
+class CriteriaGroup implements CriteriaPartInterface, JoinPartInterface
 {
     public const GROUP_TYPE_START_AND = 'START_AND';
     public const GROUP_TYPE_START_OR = 'START_OR';

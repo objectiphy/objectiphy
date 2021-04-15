@@ -46,6 +46,11 @@ class CriteriaBuilder implements CriteriaBuilderInterface
     protected array $currentCriteriaCollection;
 
     /**
+     * @var int Keeps track of how deep we are when using nested criteria
+     */
+    protected int $groupNestingLevel = 0;
+
+    /**
      * Specify a line of criteria to join to the previous line with AND
      * @param string $propertyName Name of property on entity whose value is to be compared
      * @param string $operator Operator to compare with
@@ -117,6 +122,8 @@ class CriteriaBuilder implements CriteriaBuilderInterface
     public function andStart(): CriteriaBuilderInterface
     {
         $this->currentCriteriaCollection[] = new CriteriaGroup(CriteriaGroup::GROUP_TYPE_START_AND);
+        $this->groupNestingLevel++;
+
         return $this;
     }
 
@@ -127,6 +134,8 @@ class CriteriaBuilder implements CriteriaBuilderInterface
     public function orStart(): CriteriaBuilderInterface
     {
         $this->currentCriteriaCollection[] = new CriteriaGroup(CriteriaGroup::GROUP_TYPE_START_OR);
+        $this->groupNestingLevel++;
+
         return $this;
     }
 
@@ -157,6 +166,8 @@ class CriteriaBuilder implements CriteriaBuilderInterface
     public function end(): CriteriaBuilderInterface
     {
         $this->currentCriteriaCollection[] = new CriteriaGroup(CriteriaGroup::GROUP_TYPE_END);
+        $this->groupNestingLevel--;
+
         return $this;
     }
 

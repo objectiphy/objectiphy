@@ -402,7 +402,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * will be lost).
      * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
      * set(for streaming large amounts of data).
-     * @return array|null
+     * @return iterable|null
      * @throws ObjectiphyException|\ReflectionException|\Throwable
      */
     public function findAll(?array $orderBy = null, ?string $indexBy = null, bool $fetchOnDemand = false): ?iterable
@@ -432,6 +432,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $criteria = [],
         string $valueProperty = '',
         ?array $orderBy = null,
+        ?string $indexBy = null,
         bool $fetchOnDemand = false
     ) {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
@@ -440,6 +441,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => true,
             'orderBy' => $this->orderBy,
+            'indexBy' => $indexBy ?? '',
             'onDemand' => $fetchOnDemand,
             'pagination' => $this->pagination ?? null,
             'bindToEntities' => false,
@@ -840,7 +842,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             }
         }
 
-        if (!$propertyFound) {
+        if ($normalizedCriteria && !$propertyFound) {
             $message = sprintf('Criteria specified does not relate to a known property on %1$s. Please specify a property path, or use the Query Builder to create a custom query.', $this->getClassName());
             throw new QueryException($message);
         }

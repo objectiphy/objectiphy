@@ -55,9 +55,9 @@ class TestVehicleGroupRate
     protected $product;
 
     /**
-     * @Column(type="int")
+     * @Column(type="int", name="rating_scheme_id")
      */
-    protected $ratingSchemeId;
+    protected $ratingScheme;
     
     /**
      * This is a dirty bodge, just for unit test purposes - not recommended

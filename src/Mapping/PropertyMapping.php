@@ -393,19 +393,28 @@ class PropertyMapping
 
         return $collectionClass;
     }
-    
+
     public function getDataType(bool $mustBeTraversable = false): string
     {
 //        try {
-            $dataType = '';
-            if ($this->column->type) {
-                $dataType = $this->column->type;
-            }
+        $dataType = '';
+        if ($this->column->type) {
+            $dataType = $this->column->type;
+        }
 
-            if (!$dataType && $this->reflectionProperty->hasType() && $mustBeTraversable) {
-                throw new MappingException('Please specify the collectionClass attribute on the Relationship mapping definition for ' . $this->propertyName . ' on class ' . $this->className . ' (this cannot be inferred from the property\'s data type due to bugs in some versions of PHP, so must be set explicitly.)');
-                //$dataType = ObjectHelper::getTypeName($this->reflectionProperty->getType(), $this->reflectionProperty->getDeclaringClass()->getName(), $this->reflectionProperty->getName());
+        if (!$dataType && $this->reflectionProperty->hasType() && $mustBeTraversable) {
+            $defaultValue = $this->reflectionProperty->getDeclaringClass()->getDefaultProperties()[$this->propertyName] ?? null; //Works with PHP7 and 8
+            if (!is_null($defaultValue) && is_array($defaultValue)) {
+                $dataType = 'array';
+            } elseif ($defaultValue && is_object($defaultValue)) {
+                $dataType = ObjectHelper::getObjectClassName($defaultValue);
+            } else {
+                throw new MappingException(
+                    'Please either supply a default value for ' . $this->propertyName . ' on class ' . $this->className . ', or specify the collectionClass attribute on the Relationship mapping definition (this cannot be inferred from the property\'s data type due to bugs in some versions of PHP, so must be set explicitly.)'
+                );
             }
+            //$dataType = ObjectHelper::getTypeName($this->reflectionProperty->getType(), $this->reflectionProperty->getDeclaringClass()->getName(), $this->reflectionProperty->getName());
+        }
 
 //        } catch (\Throwable $ex) {
 //            $dataType = '';
