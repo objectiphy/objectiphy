@@ -8,10 +8,12 @@ use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Orm\ObjectMapper;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\CriteriaGroup;
 use Objectiphy\Objectiphy\Query\JoinExpression;
+use Objectiphy\Objectiphy\Query\QB;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
@@ -98,8 +100,14 @@ class JoinProviderMySql
         $propertyPath = $joinPart->property->getPropertyPath();
         $propertyAlias = strtok($propertyPath, '.');
         $propertyUsesAlias = $propertyAlias && $query->getClassForAlias($propertyAlias) ? true : false;
-        $valueAlias = strtok(strval($joinPart->value), '.');
-        $valueUsesAlias = $query->getClassForAlias($valueAlias) ? true : false;
+        $joinPartValues = is_array($joinPart->value) ? $joinPart->value : [$joinPart->value];
+        foreach ($joinPartValues as $joinPartValue) {
+            $valueAlias = strtok(strval($joinPartValue), '.');
+            $valueUsesAlias = $query->getClassForAlias($valueAlias) ? true : false;
+            if ($valueUsesAlias) {
+                break;
+            }
+        }
 
         $mappingCollection = $this->objectMapper->getMappingCollectionForClass($query->getClassName());
         $joinPartPropertyMapping = $mappingCollection->getPropertyMapping($propertyPath);
@@ -141,7 +149,14 @@ class JoinProviderMySql
 
         $joinSql = [];
         foreach ($sourceJoinColumns as $index => $sourceJoinColumn) {
-            $joinSql[] = $sourceJoinColumn . ' ' . $joinPart->operator . ' ' . $targetJoinColumns[$index];
+            $joinSqlString = $sourceJoinColumn . ' ' . $joinPart->operator . ' ';
+            if (strpos($joinPart->operator, QB::IN) !== false && is_array($targetJoinColumns[$index])) {
+                $joinSql[] = $joinSqlString . '(' . implode(',', $targetJoinColumns[$index]) . ')';
+            } elseif (is_string($targetJoinColumns[$index])) {
+                $joinSql[] = $joinSqlString . $targetJoinColumns[$index];
+            } else {
+                throw new QueryException('Could not resolve join SQL for ' . strval($joinPart));
+            }
         }
         $this->sql .= implode("\n AND ", $joinSql) . "\n";
     }
