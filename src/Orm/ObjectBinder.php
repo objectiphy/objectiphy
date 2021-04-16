@@ -388,7 +388,8 @@ final class ObjectBinder
                     }
                 } else {
                     $orderBy = $propertyMapping->relationship->orderBy;
-                    $resultArray = $repository->findBy($query, $orderBy);
+                    $indexBy = $propertyMapping->relationship->indexBy;
+                    $resultArray = $repository->findBy($query, $orderBy, null, null, $indexBy);
                     $collectionClass = $propertyMapping->getCollectionClassName();
                     $result = $this->collectionFactory->createCollection(
                         $collectionClass,

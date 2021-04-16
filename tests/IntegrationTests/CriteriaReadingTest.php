@@ -7,6 +7,8 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Tests\Entity\TestCollection;
 use Objectiphy\Objectiphy\Tests\Entity\TestContact;
 use Objectiphy\Objectiphy\Tests\Entity\TestEmployee;
+use Objectiphy\Objectiphy\Tests\Entity\TestParentCustomRepo;
+use Objectiphy\Objectiphy\Tests\Entity\TestPet;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\Tests\Entity\TestSecurityPass;
 use Objectiphy\Objectiphy\Tests\Entity\TestParent;
@@ -202,6 +204,15 @@ class CriteriaReadingTest extends IntegrationTestBase
         $parentsWithADog = $this->objectRepository->findBy(['pets.type' => 'dog']);
         $this->assertEquals(1, count($parentsWithADog));
         $this->assertEquals(1, $parentsWithADog[0]->getId());
+
+        //Use indexBy on a one-to-many association
+        $this->objectRepository->setClassName(TestParentCustomRepo::class);
+        $parent = $this->objectRepository->find(2);
+        foreach ($parent->getPets() as $name => $pet) {
+            $this->assertIsString($name);
+            $this->assertInstanceOf(TestPet::class, $pet);
+        }
+        $child = $parent->child;
     }
 
     protected function doSerializationGroupTests()
