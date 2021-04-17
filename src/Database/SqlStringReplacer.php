@@ -195,7 +195,7 @@ class SqlStringReplacer
      * @param ?string $alias If value relates to a property, returns the column alias
      * @param string $valuePrefix
      * @param string $valueSuffix
-     * @return string
+     * @return string|array
      * @throws ObjectiphyException
      * @throws \ReflectionException
      */
@@ -208,30 +208,40 @@ class SqlStringReplacer
         string $valuePrefix = '',
         string $valueSuffix = '' ,
         ?string &$alias = null
-    ): string {
-        $persistenceValue = null;
-        if (is_string($fieldValue)) {
-            //If already delimited, matches a property, or is recognised as a function or expression, use as is
-            if ($this->checkDelimited($fieldValue)
-                || $this->checkPropertyPath($fieldValue, $alias, $query, $mappingCollection)
-                || $this->checkFunction($fieldValue)
-            ) {
-                $persistenceValue = strval($fieldValue);
+    ) {
+        $replaced = [];
+        $isArray = is_array($fieldValue);
+        $fieldValueArray = $isArray ? $fieldValue : [$fieldValue];
+        foreach ($fieldValueArray as $index => $fieldValueItem) {
+            $persistenceValue = null;
+            if (is_string($fieldValueItem)) {
+                //If already delimited, matches a property, or is recognised as a function or expression, use as is
+                if ($this->checkDelimited($fieldValueItem)
+                    || $this->checkPropertyPath($fieldValueItem, $alias, $query, $mappingCollection)
+                    || $this->checkFunction($fieldValueItem)
+                ) {
+                    $persistenceValue = strval($fieldValueItem);
+                }
             }
-        }
-        if ($persistenceValue === null) {
-            $persistenceValue = $this->checkLiteralValue($fieldValue, $query);
+            if ($persistenceValue === null) {
+                $persistenceValue = $this->checkLiteralValue($fieldValueItem, $query);
+            }
+
+            //Apply prefix and suffix to literals, if required
+            if (($valuePrefix || $valueSuffix)
+                && substr($persistenceValue, 0, 1) == "'" && substr(
+                    $persistenceValue,
+                    strlen($persistenceValue) - 1
+                ) == "'"
+            ) {
+                $persistenceValue = substr($persistenceValue, 1, strlen($persistenceValue) - 2);
+                $persistenceValue = "'" . $valuePrefix . $persistenceValue . $valueSuffix . "'";
+            }
+
+            $replaced[$index] = $this->replaceLiteralsWithParams($query, $persistenceValue);
         }
 
-        //Apply prefix and suffix to literals, if required
-        if (($valuePrefix || $valueSuffix)
-            && substr($persistenceValue, 0, 1) == "'" && substr($persistenceValue, strlen($persistenceValue) - 1) == "'"
-        ) {
-            $persistenceValue = substr($persistenceValue, 1, strlen($persistenceValue) - 2);
-            $persistenceValue = "'" . $valuePrefix . $persistenceValue . $valueSuffix . "'";
-        }
-
-        return $this->replaceLiteralsWithParams($query, $persistenceValue);
+        return $isArray ? $replaced : reset($replaced);
     }
 
     /**

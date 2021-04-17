@@ -5,7 +5,10 @@ namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Tests\Entity\TestCollection;
+use Objectiphy\Objectiphy\Tests\Entity\TestContact;
 use Objectiphy\Objectiphy\Tests\Entity\TestEmployee;
+use Objectiphy\Objectiphy\Tests\Entity\TestParentCustomRepo;
+use Objectiphy\Objectiphy\Tests\Entity\TestPet;
 use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\Tests\Entity\TestSecurityPass;
 use Objectiphy\Objectiphy\Tests\Entity\TestParent;
@@ -186,11 +189,30 @@ class CriteriaReadingTest extends IntegrationTestBase
         $policiesNotIsNull = $this->objectRepository->findBy(['modification' => ['operator' => 'IS NOT', 'value' => null]]);
         $this->assertEquals(1, count($policiesNotIsNull));
 
+        //Use IN operator for ON criteria
+        $query = QB::create()->innerJoin(TestContact::class, 'c')
+            ->on('c.lastName', QB::IN, ['Skywalker', 'Smith'])
+            ->where('contact.lastName', '=', 'c.lastName')
+            ->buildSelectQuery();
+        $policies = $this->objectRepository->executeQuery($query);
+        foreach ($policies as $policy) {
+            $this->assertTrue(in_array($policy->contact->lastName, ['Skywalker', 'Smith']));
+        }
+
         //Filter based on properties of one-to-many child object
         $this->objectRepository->setClassName(TestParent::class);
         $parentsWithADog = $this->objectRepository->findBy(['pets.type' => 'dog']);
         $this->assertEquals(1, count($parentsWithADog));
         $this->assertEquals(1, $parentsWithADog[0]->getId());
+
+        //Use indexBy on a one-to-many association
+        $this->objectRepository->setClassName(TestParentCustomRepo::class);
+        $parent = $this->objectRepository->find(2);
+        foreach ($parent->getPets() as $name => $pet) {
+            $this->assertIsString($name);
+            $this->assertInstanceOf(TestPet::class, $pet);
+        }
+        $child = $parent->child;
     }
 
     protected function doSerializationGroupTests()

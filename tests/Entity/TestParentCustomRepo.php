@@ -35,10 +35,18 @@ class TestParentCustomRepo
      */
     protected $child;
     /**
-     * @var TestCollection
-     * @Mapping\Relationship(childClassName="TestPet", mappedBy="parent", relationshipType="one_to_many", orderBy={"name"="ASC","type"="DESC"}, cascadeDeletes=true, orphanRemoval=true)
+     * @var array
+     * @Mapping\Relationship(
+     *     childClassName="TestPet",
+     *     mappedBy="parent",
+     *     relationshipType="one_to_many",
+     *     orderBy={"name"="ASC","type"="DESC"},
+     *     indexBy="name",
+     *     cascadeDeletes=true,
+     *     orphanRemoval=true
+     * )
      */
-    public ?TestCollection $pets;
+    public array $pets = [];
     /**
      * var int
      * @Mapping\Column(aggregateFunctionName="COUNT", aggregateCollection="pets")
@@ -67,11 +75,6 @@ class TestParentCustomRepo
     private $nameSetterAccessed = false;
     /** @var boolean */
     private $altNameSetterAccessed = false;
-
-    public function __construct()
-    {
-        $this->pets = new TestCollection();
-    }
 
     public function getId()
     {
@@ -138,7 +141,7 @@ class TestParentCustomRepo
         return $pets;
     }
 
-    public function setPets(?TestCollection $value = null)
+    public function setPets(array $value = null)
     {
         $this->pets = $value;
     }

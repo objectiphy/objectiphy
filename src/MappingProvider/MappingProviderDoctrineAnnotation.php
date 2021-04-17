@@ -214,6 +214,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
             $relationship->lazyLoad = isset($doctrineRelationship->fetch) ? $doctrineRelationship->fetch == 'LAZY' : $relationship->lazyLoad;
             $relationship->orphanRemoval = $doctrineRelationship->orphanRemoval ?? $relationship->orphanRemoval;
             $relationship->childClassName = $doctrineRelationship->targetEntity ?? $relationship->childClassName;
+            $relationship->indexBy = $doctrineRelationship->indexBy ?? $relationship->indexBy;
         }
     }
 

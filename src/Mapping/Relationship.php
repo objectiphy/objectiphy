@@ -113,6 +113,13 @@ class Relationship extends ObjectiphyAnnotation
      */
     public array $orderBy = [];
 
+    /**
+     * @var string Property (or column, or expression) to index children by (must be unique, or data will be lost).
+     * If using a custom collection class, it is up to your collection what it does with array keys, but the array
+     * passed to it will be associative if a value is set for this attribute.
+     */
+    public string $indexBy = '';
+
     /** 
      * @var bool Cascade deletes (if parent object is deleted, delete any children also) 
      */
@@ -272,7 +279,7 @@ class Relationship extends ObjectiphyAnnotation
      */
     public function validate(PropertyMapping $propertyMapping): void
     {
-        if ($this->isEmbedded) {
+        if ($this->isEmbedded || $this->isLateBound()) {
             return; //No join involved
         }
         $errorMessage = '';
