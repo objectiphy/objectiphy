@@ -203,10 +203,6 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
     ): void {
         $doctrineClass = 'Doctrine\ORM\Mapping\\' .  str_replace('_', '', ucwords($relationshipType, '_'));
         if (class_exists($doctrineClass)) {
-            if ($reflectionProperty->getName() == 'students') {
-                $stop = true;
-            }
-
             $doctrineRelationship = $this->annotationReader->getPropertyAnnotation($reflectionProperty, $doctrineClass);
             $wasMapped = $wasMapped || $doctrineRelationship;
             $relationship->relationshipType = $doctrineRelationship ? $relationshipType : $relationship->relationshipType;
@@ -233,6 +229,9 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
             $doctrineJoinTable = $this->annotationReader->getPropertyAnnotation($reflectionProperty, JoinTable::class);
             $wasMapped = $wasMapped || $doctrineJoinTable;
             $relationship->joinTable = $doctrineJoinTable->name ?? $relationship->joinTable;
+            if ($doctrineJoinTable && $doctrineJoinTable->joinColumns) {
+                $cry = false;
+            }
         }
     }
 
