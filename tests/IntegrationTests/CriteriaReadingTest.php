@@ -138,7 +138,6 @@ class CriteriaReadingTest extends IntegrationTestBase
 
 //        $this->assertEquals(6, $this->objectRepository->countBy($query));
         $policies3 = $this->objectRepository->findBy($query, null, null, null, 'vehicle.id');
-
         $this->assertEquals(6, count($policies3));
         $this->assertEquals(1, array_keys($policies3)[1]);
         $this->assertEquals(34, array_keys($policies3)[3]);
@@ -149,6 +148,10 @@ class CriteriaReadingTest extends IntegrationTestBase
         $this->assertEquals(6, count($policies4));
         $this->assertEquals(19071974, array_keys($policies4)[1]);
         $this->assertEquals(19072007, array_keys($policies4)[3]);
+
+        //Index by with no results (do not error!)
+        $policies5 = $this->objectRepository->findBy(['id' => 'non-existent'], null, null, null, 'vehicle.id');
+        $this->assertEquals(0, count($policies5));
     }
 
     protected function doOperatorTests()

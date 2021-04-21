@@ -235,7 +235,7 @@ final class ObjectFetcher
     private function indexValues(array $rows, string $valueKey = '')
     {
         if ($this->options->indexBy) {
-            $resulst = [];
+            $results = [];
             foreach ($rows ?? [] as $index => $row) {
                 $key = $row['objectiphy_index_by'] ?? $row[$this->options->indexBy] ?? $index;
                 if (is_array($row) && isset($row['objectiphy_index_by'])) {
