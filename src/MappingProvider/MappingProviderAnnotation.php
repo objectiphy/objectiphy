@@ -24,6 +24,11 @@ class MappingProviderAnnotation implements MappingProviderInterface
     protected MappingProviderInterface $mappingProvider;
     protected AnnotationReaderInterface $annotationReader;
 
+    protected array $tables = [];
+    protected array $columns = [];
+    protected array $relationships = [];
+    protected array $groups = [];
+
     public function __construct(MappingProviderInterface $mappingProvider, AnnotationReaderInterface $annotationReader)
     {
         $this->mappingProvider = $mappingProvider;
@@ -41,14 +46,19 @@ class MappingProviderAnnotation implements MappingProviderInterface
     public function getTableMapping(\ReflectionClass $reflectionClass, bool &$wasMapped = null): Table
     {
         try {
-            $this->annotationReader->setThrowExceptions($this->throwExceptions);
-            $table = $this->mappingProvider->getTableMapping($reflectionClass, $wasMapped);
-            $objectiphyTable = $this->annotationReader->getClassAnnotation($reflectionClass, Table::class);
-            $wasMapped = $wasMapped || $objectiphyTable;
-            $hostClassName = $reflectionClass->getName();
-            $hostProperty = '';
+            if (!isset($this->tables[$reflectionClass->getName()])) {
+                $this->annotationReader->setThrowExceptions($this->throwExceptions);
+                $table = $this->mappingProvider->getTableMapping($reflectionClass, $wasMapped);
+                $objectiphyTable = $this->annotationReader->getClassAnnotation($reflectionClass, Table::class);
+                $wasMapped = $wasMapped || $objectiphyTable;
+                $hostClassName = $reflectionClass->getName();
+                $hostProperty = '';
+                $table = $this->decorate($hostClassName, $hostProperty, $table, $objectiphyTable);
+                $this->tables[$reflectionClass->getName()] = ['table' => $table, 'wasMapped' => $wasMapped];
+            }
+            $wasMapped = $this->tables[$reflectionClass->getName()]['wasMapped'];
 
-            return $this->decorate($hostClassName, $hostProperty, $table, $objectiphyTable);
+            return $this->tables[$reflectionClass->getName()]['table'];
         } catch (\Throwable $ex) {
             $this->handleException($ex);
             return new Table();
@@ -66,14 +76,22 @@ class MappingProviderAnnotation implements MappingProviderInterface
     public function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Column
     {
         try {
-            $this->annotationReader->setThrowExceptions($this->throwExceptions);
-            $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $wasMapped);
-            $objectiphyColumn = $this->annotationReader->getPropertyAnnotation($reflectionProperty, Column::class);
-            $wasMapped = $wasMapped || $objectiphyColumn;
-            $hostClassName = $reflectionProperty->getDeclaringClass()->getName();
-            $hostProperty = $reflectionProperty->getName();
+            $columnKey = $reflectionProperty->getDeclaringClass()->getName() . ':' . $reflectionProperty->getName();
+            if (!isset($this->columns[$columnKey])) {
+                $this->annotationReader->setThrowExceptions($this->throwExceptions);
+                $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $wasMapped);
+                $objectiphyColumn = $this->annotationReader->getPropertyAnnotation($reflectionProperty, Column::class);
+                $wasMapped = $wasMapped || $objectiphyColumn;
+                $hostClassName = $reflectionProperty->getDeclaringClass()->getName();
+                $hostProperty = $reflectionProperty->getName();
+                $this->columns[$columnKey] = [
+                    'column' => $this->decorate($hostClassName, $hostProperty, $column, $objectiphyColumn),
+                    'wasMapped' => $wasMapped
+                ];
+            }
+            $wasMapped = $this->columns[$columnKey]['wasMapped'];
 
-            return $this->decorate($hostClassName, $hostProperty, $column, $objectiphyColumn);
+            return $this->columns[$columnKey]['column'];
         } catch (\Throwable $ex) {
             $this->handleException($ex);
             return new Column();
@@ -91,17 +109,25 @@ class MappingProviderAnnotation implements MappingProviderInterface
     public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Relationship
     {
         try {
-            $this->annotationReader->setThrowExceptions($this->throwExceptions);
-            $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $wasMapped);
-            $objectiphyRelationship = $this->annotationReader->getPropertyAnnotation(
-                $reflectionProperty,
-                Relationship::class
-            );
-            $wasMapped = $wasMapped || $objectiphyRelationship;
-            $hostClassName = $reflectionProperty->getDeclaringClass()->getName();
-            $hostProperty = $reflectionProperty->getName();
+            $relationshipKey = $reflectionProperty->getDeclaringClass()->getName() . ':' . $reflectionProperty->getName();
+            if (!isset($this->relationships[$relationshipKey])) {
+                $this->annotationReader->setThrowExceptions($this->throwExceptions);
+                $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $wasMapped);
+                $objectiphyRelationship = $this->annotationReader->getPropertyAnnotation(
+                    $reflectionProperty,
+                    Relationship::class
+                );
+                $wasMapped = $wasMapped || $objectiphyRelationship;
+                $hostClassName = $reflectionProperty->getDeclaringClass()->getName();
+                $hostProperty = $reflectionProperty->getName();
+                $this->relationships[$relationshipKey] = [
+                    'relationship' => $this->decorate($hostClassName, $hostProperty, $relationship, $objectiphyRelationship),
+                    'wasMapped' => $wasMapped
+                ];
+            }
+            $wasMapped = $this->relationships[$relationshipKey]['wasMapped'];
 
-            return $this->decorate($hostClassName, $hostProperty, $relationship, $objectiphyRelationship);
+            return $this->relationships[$relationshipKey]['relationship'];
         } catch (\Throwable $ex) {
             $this->handleException($ex);
             return new Relationship();
@@ -113,26 +139,37 @@ class MappingProviderAnnotation implements MappingProviderInterface
      */
     public function getSerializationGroups(\ReflectionProperty $reflectionProperty): array
     {
-        $groups = [];
-        $baseGroups = $this->mappingProvider->getSerializationGroups($reflectionProperty);
-        $annotations = $this->annotationReader->getPropertyAnnotations($reflectionProperty);
-        $getterName = 'get' . ucfirst($reflectionProperty->getName());
-        if (method_exists($reflectionProperty->getDeclaringClass()->getName(), $getterName)) {
-            $reflectionMethod = new \ReflectionMethod($reflectionProperty->getDeclaringClass()->getName(), $getterName);
-            $methodAnnotations = $this->annotationReader->getMethodAnnotations($reflectionMethod);
-            $annotations = array_merge($annotations, $methodAnnotations);
-        }
-        foreach ($annotations as $annotation) {
-            if (method_exists($annotation, 'getGroups')) {
-                $groups = $annotation->getGroups();
-                break;
-            } elseif (property_exists($annotation, 'groups')) {
-                $groups = $annotation->groups;
-                break;
+        try {
+            $groupKey = $reflectionProperty->class . ':' . $reflectionProperty->getName();
+            if (!isset($this->groups[$groupKey])) {
+                $groups = [];
+                $baseGroups = $this->mappingProvider->getSerializationGroups($reflectionProperty);
+                $annotations = $this->annotationReader->getPropertyAnnotations($reflectionProperty);
+                $getterName = 'get' . ucfirst($reflectionProperty->getName());
+                if (method_exists($reflectionProperty->getDeclaringClass()->getName(), $getterName)) {
+                    $reflectionMethod = new \ReflectionMethod(
+                        $reflectionProperty->getDeclaringClass()->getName(),
+                        $getterName
+                    );
+                    $methodAnnotations = $this->annotationReader->getMethodAnnotations($reflectionMethod);
+                    $annotations = array_merge($annotations, $methodAnnotations);
+                }
+                foreach ($annotations as $annotation) {
+                    if (method_exists($annotation, 'getGroups')) {
+                        $groups = $annotation->getGroups();
+                        break;
+                    } elseif (property_exists($annotation, 'groups')) {
+                        $groups = $annotation->groups;
+                        break;
+                    }
+                }
+                $this->groups[$groupKey] = array_unique(array_merge($baseGroups, $groups));
             }
-        }
 
-        return array_unique(array_merge($baseGroups, $groups));
+            return $this->groups[$groupKey];
+        } catch (\Throwable $ex) {
+            return [];
+        }
     }
 
     /**

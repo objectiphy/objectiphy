@@ -132,7 +132,9 @@ class ObjectReference implements ObjectReferenceInterface
      */
     public function getObjectHash(): string
     {
-        return spl_object_hash($this->getObject() ?? new stdClass());
+        return $object = $this->getObject() 
+            ? spl_object_hash($object) 
+            : crc32($this->getClassName() . ':' . implode(',', $this->getPkValues()));
     }
 
     /**

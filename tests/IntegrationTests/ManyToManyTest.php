@@ -72,6 +72,7 @@ class ManyToManyTest extends IntegrationTestBase
         $this->objectRepository->setClassName(TestCourse::class);
         //$course = $this->objectRepository->find(1);
 
+
         $this->assertEquals(true, true);
     }
 
