@@ -48,7 +48,7 @@ class Explanation implements ExplanationInterface
     }
 
     /**
-     * Used internally to record query activity - not part of the interface
+     * Used internally to record query activity
      * @param QueryInterface $query
      * @param string $sql
      * @param MappingCollection|null $mappingCollection
@@ -60,12 +60,23 @@ class Explanation implements ExplanationInterface
         MappingCollection $mappingCollection = null,
         ConfigOptions $config = null
     ): void {
-        $index = count($this->queryHistory);
-        $this->queryHistory[$index] = $query;
-        $this->sqlHistory[$index] = $sql;
-        $this->paramHistory[$index] = $query->getParams();
-        $this->mapping[$index] = $mappingCollection;
-        $this->config[$index] = $config;
+        $this->queryHistory[] = $query;
+        $this->sqlHistory[] = $sql;
+        $this->paramHistory[] = $query->getParams();
+        $this->mapping[] = $mappingCollection;
+        $this->config[] = $config;
+    }
+
+    /**
+     * Delete all collected data (to free up memory for large and/or multiple queries).
+     */
+    public function clear(): void
+    {
+        $this->queryHistory = [];
+        $this->sqlHistory = [];
+        $this->paramHistory = [];
+        $this->mapping = [];
+        $this->config = [];
     }
 
     /**
