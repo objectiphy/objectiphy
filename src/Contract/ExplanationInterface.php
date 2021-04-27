@@ -28,6 +28,11 @@ interface ExplanationInterface
     ): void;
 
     /**
+     * Delete all collected data (to free up memory for large and/or multiple queries).
+     */
+    public function clear(): void;
+    
+    /**
      * Get the last query that was executed.
      * @return QueryInterface|null
      */

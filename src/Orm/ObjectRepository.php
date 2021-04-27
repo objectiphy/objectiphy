@@ -25,6 +25,7 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Factory\ProxyFactory;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
+use Objectiphy\Objectiphy\Meta\Explanation;
 use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 use Objectiphy\Objectiphy\Query\Pagination;
@@ -735,6 +736,14 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         if (!$className || $this->mappingCollection->usesClass($className)) {
             unset($this->mappingCollection);
         }
+    }
+
+    /**
+     * Delete all collected data (to free up memory for large and/or multiple queries).
+     */
+    public function clearQueryHistory(): void
+    {
+        $this->explanation->clear();
     }
 
     /**

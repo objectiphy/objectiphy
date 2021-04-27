@@ -304,4 +304,9 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
      * @param string|null $className If supplied, only the cache for the given class will be cleared, otherwise all.
      */
     public function clearCache(?string $className = null): void;
+
+    /**
+     * Delete all collected data (to free up memory for large and/or multiple queries).
+     */
+    public function clearQueryHistory(): void;
 }
