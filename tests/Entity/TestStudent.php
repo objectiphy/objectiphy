@@ -32,7 +32,7 @@ class TestStudent
     private $iq;
 
     /**
-     * @ManyToMany(targetEntity="Course", mappedBy="students")
+     * @ManyToMany(targetEntity="TestCourse", mappedBy="students")
      */
     private array $courses;
 }

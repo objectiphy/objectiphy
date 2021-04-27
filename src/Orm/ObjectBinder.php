@@ -13,6 +13,7 @@ use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
+use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Factory\RepositoryFactory;
 
@@ -315,8 +316,17 @@ final class ObjectBinder
             $usePrimaryKey = false;
             //Relationship used by mapping collection might differ from $propertyMapping
             $relationshipMapping = $mappingCollection->getRelationships()[$propertyMapping->getRelationshipKey()];
-            if ($relationshipMapping->relationship->mappedBy) { //Child owns the relationship
-                $sourceJoinColumns = explode(',', $relationshipMapping->relationship->sourceJoinColumn) ?? [];
+            $relationship = $relationshipMapping->relationship;
+
+            if ($relationship->relationshipType == Relationship::MANY_TO_MANY) {
+//                $qb->innerJoin('`' . $relationship->bridgeJoinTable . '`')
+//                    ->on('`' . $relationship->bridgeJoinTable . '`.`' . $relationship->bridgeTargetJoinColumn . '`',
+//                         '=',
+//                         '`' . $relationship->joinTable . '`.`' . $relationship->targetJoinColumn . '`');
+            }
+
+            if ($relationship->mappedBy) { //Child owns the relationship
+                $sourceJoinColumns = explode(',', $relationship->sourceJoinColumn) ?? [];
                 if (!array_filter($sourceJoinColumns)) {
                     $message = sprintf('Could not determine source join column for relationship %1$s::%2$s', $relationshipMapping->className, $relationshipMapping->propertyName);
                     throw new MappingException($message);
@@ -326,16 +336,16 @@ final class ObjectBinder
                         trim($sourceJoinColumn),
                         $propertyMapping
                     );
-                    $whereProperty[$index] = $relationshipMapping->relationship->mappedBy;
+                    $whereProperty[$index] = $relationship->mappedBy;
                     if (count($sourceJoinColumns) > 1) {
                         $whereProperty[$index] .= '.' . $sibling->propertyName;
                     }
                     $valueKey[$index] = $sibling->getAlias();
                 }
             } else {
-                if ($relationshipMapping->relationship->getTargetProperty()) { //Not joining to single primary key
-                    $sourceJoinColumns = explode(',', $relationshipMapping->relationship->sourceJoinColumn) ?? [];
-                    $targetProperties = explode(',', $relationshipMapping->relationship->getTargetProperty()) ?? [];
+                if ($relationship->getTargetProperty()) { //Not joining to single primary key
+                    $sourceJoinColumns = explode(',', $relationship->sourceJoinColumn) ?? [];
+                    $targetProperties = explode(',', $relationship->getTargetProperty()) ?? [];
                     foreach ($targetProperties as $index => $targetProperty) {
                         $sourceProperty = $mappingCollection->getPropertyByColumn(
                             $sourceJoinColumns[$index],

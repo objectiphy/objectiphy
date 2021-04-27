@@ -235,11 +235,11 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
                 $bridgeTargetJoinColumns = [];
                 $targetJoinColumns = [];
                 //Use ['calculated'] as a placeholder for any undefined items and we will guess the values later
-                foreach ($doctrineJoinTable->joinColumns as $joinColumn) {
+                foreach ($doctrineJoinTable->joinColumns ?? [] as $joinColumn) {
                     $sourceJoinColumns[] = $joinColumn->referencedColumnName ?? '[calculated]';
                     $bridgeSourceJoinColumns[] = $joinColumn->name ?? '[calculated]';
                 }
-                foreach ($doctrineJoinTable->inverseJoinColumns as $targetJoinColumn) {
+                foreach ($doctrineJoinTable->inverseJoinColumns ?? [] as $targetJoinColumn) {
                     $bridgeTargetJoinColumns[] = $targetJoinColumn->name ?? '[calculated]';
                     $targetJoinColumns[] = $targetJoinColumn->referencedColumnName ?? '[calculated]';
                 }

@@ -70,8 +70,8 @@ class ManyToManyTest extends IntegrationTestBase
     protected function doReadingTestsDoctrine()
     {
         $this->objectRepository->setClassName(TestCourse::class);
-        //$course = $this->objectRepository->find(1);
-
+        $course = $this->objectRepository->find(1);
+//        $students = $course->students;
 
         $this->assertEquals(true, true);
     }

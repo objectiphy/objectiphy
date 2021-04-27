@@ -91,17 +91,17 @@ class MappingProviderAnnotation implements MappingProviderInterface
     public function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$wasMapped = null): Relationship
     {
         try {
-                $this->annotationReader->setThrowExceptions($this->throwExceptions);
-                $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $wasMapped);
-                $objectiphyRelationship = $this->annotationReader->getPropertyAnnotation(
-                    $reflectionProperty,
-                    Relationship::class
-                );
-                $wasMapped = $wasMapped || $objectiphyRelationship;
-                $hostClassName = $reflectionProperty->getDeclaringClass()->getName();
-                $hostProperty = $reflectionProperty->getName();
+            $this->annotationReader->setThrowExceptions($this->throwExceptions);
+            $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $wasMapped);
+            $objectiphyRelationship = $this->annotationReader->getPropertyAnnotation(
+                $reflectionProperty,
+                Relationship::class
+            );
+            $wasMapped = $wasMapped || $objectiphyRelationship;
+            $hostClassName = $reflectionProperty->getDeclaringClass()->getName();
+            $hostProperty = $reflectionProperty->getName();
 
-                return $this->decorate($hostClassName, $hostProperty, $relationship, $objectiphyRelationship);
+            return $this->decorate($hostClassName, $hostProperty, $relationship, $objectiphyRelationship);
         } catch (\Throwable $ex) {
             $this->handleException($ex);
             return new Relationship();
