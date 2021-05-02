@@ -82,4 +82,9 @@ class NameResolver
             $column->name = $relationship->sourceJoinColumn; //Also retrieve the value in case of late binding
         }
     }
+
+    public function convertName(string $name, $type = NamingStrategyInterface::TYPE_STRING)
+    {
+        return $this->columnNamingStrategy ? $this->columnNamingStrategy->convertName($name, $type) : '';
+    }
 }

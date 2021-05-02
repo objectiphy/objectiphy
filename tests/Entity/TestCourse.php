@@ -39,5 +39,5 @@ class TestCourse
      *      inverseJoinColumns={@ORM\JoinColumn(name="student_id", referencedColumnName="id")}
      * )
      */
-    public array $students;
+    public array $students = [];
 }

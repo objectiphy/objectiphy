@@ -337,8 +337,9 @@ class RepositoryFactory implements RepositoryFactoryInterface
         $entityTracker = $this->getEntityTracker();
         $dataTypeHandler = $this->getDataTypeHandlerMySql();
         $collectionFactory = $this->getCollectionFactory();
+        $sqlStringReplacer = $this->getSqlStringReplacer();
 
-        return new ObjectBinder($this, $entityFactory, $entityTracker, $dataTypeHandler, $collectionFactory);
+        return new ObjectBinder($this, $entityFactory, $entityTracker, $dataTypeHandler, $collectionFactory, $sqlStringReplacer);
     }
 
     final protected function createObjectUnbinder(): ObjectUnbinder

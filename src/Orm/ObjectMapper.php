@@ -8,6 +8,7 @@ use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\MappingProviderInterface;
+use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\PropertyPathConsumerInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
@@ -574,6 +575,8 @@ final class ObjectMapper
         $targetColumns = explode(',', $relationship->targetJoinColumn);
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
             $columnMapping = $this->getColumnMapping($reflectionProperty);
+            //If name not specified, guess mapping if applicable...
+            $columnMapping->name = $columnMapping->name ?: $this->nameResolver->convertName($reflectionProperty->getName(), NamingStrategyInterface::TYPE_SCALAR_PROPERTY);
             foreach ($targetColumns as $targetColumn) {
                 if ($columnMapping->name == trim($targetColumn)) {
                     $properties[] = $reflectionProperty->getName();

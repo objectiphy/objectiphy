@@ -22,7 +22,8 @@ class ExactMatch implements NamingStrategyInterface
     }
 
     /**
-     * Convert the plural form of a to-many relationship property into its singular equivalent (eg. policies to policy)
+     * Convert the plural form of a to-many relationship property into its singular equivalent (eg. policies to policy).
+     * If this fails, you will just have to define it explicitly in the mapping instead of letting us guess.
      * @param string $name
      * @return string
      */
@@ -36,16 +37,14 @@ class ExactMatch implements NamingStrategyInterface
             return substr($name, 0, strlen($name) - 3) . 'f';
         } elseif (substr($name, -3) == 'ies') {
             return substr($name, 0, strlen($name) - 3) . 'y';
+        } elseif (strtolower($name) == 'indices') {
+            return substr($name, 0, 3) . 'ex'; //maintain capitalisation
         } elseif (substr($name, -2) == 'es') {
             return substr($name, 0, strlen($name) - 2);
         } elseif (substr($name, -1) == 's') {
             return substr($name, 0, strlen($name) - 1);
-        } elseif (substr($name, -1) == 'i') {
-            return substr($name, 0, strlen($name) - 1) . 'us';
-        } elseif (substr($name, -1) == 'a') {
-            return substr($name, 0, strlen($name) - 1) . 'on';
         } elseif (strtolower($name) == 'children') {
-            return substr($name, 0, 5);
+            return substr($name, 0, 5); //maintain capitalisation
         } elseif (strtolower($name) == 'people') {
             return substr($name, 0, 2) . 'rson'; //maintain capitalisation
         } elseif (substr($name, -4) == 'eaux') {

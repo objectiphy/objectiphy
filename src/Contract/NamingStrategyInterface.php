@@ -23,7 +23,8 @@ interface NamingStrategyInterface
      * @param string $name Value to convert.
      * @param int $type Type of thing the value represents (based on NamingStrategyInterface constants).
      * @param PropertyMapping|null $propertyMapping If $type is TYPE_SCALAR_PROPERTY or TYPE_RELATIONSHIP_PROPERTY,
-     * the mapping details are provided here which can be used for making decisions about the conversion. 
+     * the mapping details may be provided here (if available) which can be used for making decisions about the
+     * conversion.
      * @return string The converted value.
      */
     public function convertName(

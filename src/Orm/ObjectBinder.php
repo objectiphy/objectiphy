@@ -9,6 +9,7 @@ use Objectiphy\Objectiphy\Contract\CollectionFactoryInterface;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
+use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
@@ -36,13 +37,15 @@ final class ObjectBinder
         EntityFactoryInterface $entityFactory,
         EntityTracker $entityTracker,
         DataTypeHandlerInterface $dataTypeHandler,
-        CollectionFactoryInterface $collectionFactory
+        CollectionFactoryInterface $collectionFactory,
+        SqlStringReplacer $sqlStringReplacer
     ) {
         $this->repositoryFactory = $repositoryFactory;
         $this->entityFactory = $entityFactory;
         $this->entityTracker = $entityTracker;
         $this->dataTypeHandler = $dataTypeHandler;
         $this->collectionFactory = $collectionFactory;
+        $this->sqlStringReplacer = $sqlStringReplacer;
     }
 
     /**
@@ -218,7 +221,7 @@ final class ObjectBinder
                     $valueFound = true;
                 } elseif (!$valueFound && $propertyMapping->isLateBound(false, $row)) {
                     $knownValues = [];
-                    if ($propertyMapping->relationship->mappedBy) {
+                    if ($propertyMapping->relationship->mappedBy && $propertyMapping->relationship->isToOne()) {
                         $knownValues[$propertyMapping->relationship->mappedBy] = $entity;
                     } elseif (!$propertyMapping->relationship->mappedBy) {
                         $childProperties = $this->mappingCollection->getPropertyExamplesForClass($propertyMapping->getChildClassName());
@@ -314,18 +317,31 @@ final class ObjectBinder
 
             //Work out what to search for
             $usePrimaryKey = false;
+            $whereProperty = [];
+            $qb = QB::create();
+
             //Relationship used by mapping collection might differ from $propertyMapping
             $relationshipMapping = $mappingCollection->getRelationships()[$propertyMapping->getRelationshipKey()];
             $relationship = $relationshipMapping->relationship;
 
             if ($relationship->relationshipType == Relationship::MANY_TO_MANY) {
-//                $qb->innerJoin('`' . $relationship->bridgeJoinTable . '`')
-//                    ->on('`' . $relationship->bridgeJoinTable . '`.`' . $relationship->bridgeTargetJoinColumn . '`',
-//                         '=',
-//                         '`' . $relationship->joinTable . '`.`' . $relationship->targetJoinColumn . '`');
-            }
-
-            if ($relationship->mappedBy) { //Child owns the relationship
+                $joinAlias = uniqid('obj_many_');
+                $qb->innerJoin($this->sqlStringReplacer->delimit($relationship->bridgeJoinTable), $joinAlias)
+                    ->on($this->sqlStringReplacer->delimit($joinAlias . '.' . $relationship->bridgeTargetJoinColumn),
+                         '=',
+                         $this->sqlStringReplacer->delimit($relationship->joinTable . '.' . $relationship->targetJoinColumn));
+                $whereProperty[0] = $this->sqlStringReplacer->delimit($joinAlias . '.' . $relationship->bridgeSourceJoinColumn);
+                $valueKey[0] = $relationshipMapping->getAlias();
+                if (!isset($row[$valueKey[0]])) { //Use primary key
+                    $pkProperties = $mappingCollection->getPrimaryKeyProperties($propertyMapping->getChildClassName());
+                    $firstPk = reset($pkProperties);
+                    if ($firstPk) {
+                        $firstPkPropertyMapping = $mappingCollection->getPropertyMapping($firstPk);
+                        $valueKey[0] = $firstPkPropertyMapping->getAlias();
+                        $usePrimaryKey = true;
+                    }
+                }
+            } elseif ($relationship->mappedBy) { //Child owns the relationship
                 $sourceJoinColumns = explode(',', $relationship->sourceJoinColumn) ?? [];
                 if (!array_filter($sourceJoinColumns)) {
                     $message = sprintf('Could not determine source join column for relationship %1$s::%2$s', $relationshipMapping->className, $relationshipMapping->propertyName);
@@ -368,11 +384,10 @@ final class ObjectBinder
 
             //Build the criteria to search for
             if (!empty($whereProperty) && !empty($valueKey)) {
-                $qb = QB::create();
                 foreach ($valueKey as $index => $alias) {
                     $value = $row[$alias] ?? null;
                     if ($value !== null) {
-                        $qb->and($whereProperty[$index], '=', $value);
+                        $qb->where($whereProperty[$index], '=', $value);
                     }
                 }
                 $query = $qb->buildSelectQuery();
@@ -385,7 +400,7 @@ final class ObjectBinder
                 // name (so it works in the same as a join would have)
                 $joinTable = $propertyMapping->relationship->joinTable ?? '';
                 if ($joinTable && ($mappingCollection->getTableForClass($className)->name ?? '') != $joinTable) {
-                    $joinTable = '`' . str_replace('.', '`.`', $propertyMapping->relationship->joinTable) . '`';
+                    $joinTable = $this->sqlStringReplacer->delimit($propertyMapping->relationship->joinTable);
                     $query->setClassName($joinTable);
                     $usePrimaryKey = false;
                 }
@@ -400,14 +415,17 @@ final class ObjectBinder
                     $orderBy = $propertyMapping->relationship->orderBy;
                     $indexBy = $propertyMapping->relationship->indexBy;
                     $resultArray = $repository->findBy($query, $orderBy, null, null, $indexBy);
-                    $collectionClass = $propertyMapping->getCollectionClassName();
-                    $result = $this->collectionFactory->createCollection(
-                        $collectionClass,
-                        $resultArray,
-                        $propertyMapping->className,
-                        $propertyMapping->propertyName
-                    );
                 }
+            }
+
+            if ($propertyMapping->relationship->isToMany()) {
+                $collectionClass = $propertyMapping->getCollectionClassName();
+                $result = $this->collectionFactory->createCollection(
+                    $collectionClass,
+                    $resultArray ?? [],
+                    $propertyMapping->className,
+                    $propertyMapping->propertyName
+                );
             }
 
             return $result;
