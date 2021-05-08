@@ -221,7 +221,7 @@ final class ObjectBinder
                     $valueFound = true;
                 } elseif (!$valueFound && $propertyMapping->isLateBound(false, $row)) {
                     $knownValues = [];
-                    if ($propertyMapping->relationship->mappedBy && $propertyMapping->relationship->isToOne()) {
+                    if ($propertyMapping->relationship->mappedBy && !$propertyMapping->relationship->isManyToMany()) {
                         $knownValues[$propertyMapping->relationship->mappedBy] = $entity;
                     } elseif (!$propertyMapping->relationship->mappedBy) {
                         $childProperties = $this->mappingCollection->getPropertyExamplesForClass($propertyMapping->getChildClassName());

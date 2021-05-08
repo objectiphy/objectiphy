@@ -218,6 +218,15 @@ class Relationship extends ObjectiphyAnnotation
     }
 
     /**
+     * Convenience method for checking relationship type.
+     * @return bool
+     */
+    public function isManyToMany(): bool
+    {
+        return $this->relationshipType == self::MANY_TO_MANY;
+    }
+
+    /**
      * Determines whether or not to eager load the child.
      * @param bool $isLateBound
      * @return bool
