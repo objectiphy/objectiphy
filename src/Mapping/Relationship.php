@@ -288,11 +288,12 @@ class Relationship extends ObjectiphyAnnotation
      */
     public function validate(PropertyMapping $propertyMapping): void
     {
-        if ($this->isEmbedded || $this->isLateBound()) {
-            return; //No join involved
-        }
         $errorMessage = '';
-        if (!$this->joinTable) {
+        if ($this->isManyToMany() && !$this->bridgeJoinTable) {
+            $errorMessage = 'Bridge join table has not been specified on many-to-many relationship for %1$s';
+        } elseif ($this->isEmbedded || $this->isLateBound()) {
+            return; //No join involved
+        } elseif (!$this->joinTable) {
             $errorMessage = 'Could not determine join table for relationship from %1$s to %2$s';
         } elseif (!$this->sourceJoinColumn) {
             $errorMessage = 'Could not determine source join column for relationship from %1$s to %2$s';

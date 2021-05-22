@@ -25,6 +25,8 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
     protected MappingProviderInterface $mappingProvider;
     protected AnnotationReaderInterface $annotationReader;
 
+    private $doctrineRelationship;
+
     public function __construct(MappingProviderInterface $mappingProvider, AnnotationReaderInterface $annotationReader)
     {
         $this->mappingProvider = $mappingProvider;
@@ -204,7 +206,10 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         $doctrineClass = 'Doctrine\ORM\Mapping\\' .  str_replace('_', '', ucwords($relationshipType, '_'));
         if (class_exists($doctrineClass)) {
             $doctrineRelationship = $this->annotationReader->getPropertyAnnotation($reflectionProperty, $doctrineClass);
-            $wasMapped = $wasMapped || $doctrineRelationship;
+            if ($doctrineRelationship) {
+                $wasMapped = true;
+                $this->doctrineRelationship = $doctrineRelationship;
+            }
             $relationship->relationshipType = $doctrineRelationship ? $relationshipType : $relationship->relationshipType;
             $relationship->mappedBy = $doctrineRelationship->mappedBy ?? $relationship->mappedBy;
             $relationship->lazyLoad = isset($doctrineRelationship->fetch) ? $doctrineRelationship->fetch == 'LAZY' : $relationship->lazyLoad;
@@ -228,25 +233,30 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         if (class_exists('Doctrine\ORM\Mapping\JoinTable')) {
             $doctrineJoinTable = $this->annotationReader->getPropertyAnnotation($reflectionProperty, JoinTable::class);
             $wasMapped = $wasMapped || $doctrineJoinTable;
-            if ($relationship->relationshipType == Relationship::MANY_TO_MANY) {
+            if ($relationship->relationshipType == Relationship::MANY_TO_MANY && !$relationship->mappedBy) {
                 $relationship->bridgeJoinTable = $doctrineJoinTable->name ?? $relationship->joinTable;
+                if (!$relationship->bridgeJoinTable && $this->doctrineRelationship->inversedBy ?? false) {
+                    //We need to make a note of $this->doctrineRelationship->inversedBy
+                    //so we can use it to build bridgeJoinTable in the name resolver
+                    $relationship->bridgeJoinTable = '[calculated]_' . $this->doctrineRelationship->inversedBy;
+                }
                 $sourceJoinColumns = [];
                 $bridgeSourceJoinColumns = [];
                 $bridgeTargetJoinColumns = [];
                 $targetJoinColumns = [];
                 //Use ['calculated'] as a placeholder for any undefined items and we will guess the values later
                 foreach ($doctrineJoinTable->joinColumns ?? [] as $joinColumn) {
-                    $sourceJoinColumns[] = $joinColumn->referencedColumnName ?? '[calculated]';
-                    $bridgeSourceJoinColumns[] = $joinColumn->name ?? '[calculated]';
+                    $sourceJoinColumns[] = $joinColumn->referencedColumnName ?: '[calculated]';
+                    $bridgeSourceJoinColumns[] = $joinColumn->name ?: '[calculated]';
                 }
                 foreach ($doctrineJoinTable->inverseJoinColumns ?? [] as $targetJoinColumn) {
-                    $bridgeTargetJoinColumns[] = $targetJoinColumn->name ?? '[calculated]';
-                    $targetJoinColumns[] = $targetJoinColumn->referencedColumnName ?? '[calculated]';
+                    $bridgeTargetJoinColumns[] = $targetJoinColumn->name ?: '[calculated]';
+                    $targetJoinColumns[] = $targetJoinColumn->referencedColumnName ?: '[calculated]';
                 }
-                $relationship->sourceJoinColumn = implode(',', $sourceJoinColumns ?? ['[calculated]']);
-                $relationship->bridgeSourceJoinColumn = implode(',', $bridgeSourceJoinColumns ?? ['[calculated]']);
-                $relationship->bridgeTargetJoinColumn = implode(',', $bridgeTargetJoinColumns ?? ['[calculated]']);
-                $relationship->targetJoinColumn = implode(',', $targetJoinColumns ?? ['[calculated]']);
+                $relationship->sourceJoinColumn = implode(',', $sourceJoinColumns ?: ['[calculated]']);
+                $relationship->bridgeSourceJoinColumn = implode(',', $bridgeSourceJoinColumns ?: ['[calculated]']);
+                $relationship->bridgeTargetJoinColumn = implode(',', $bridgeTargetJoinColumns ?: ['[calculated]']);
+                $relationship->targetJoinColumn = implode(',', $targetJoinColumns ?: ['[calculated]']);
             } else {
                 $relationship->joinTable = $doctrineJoinTable->name ?? $relationship->joinTable;
             }

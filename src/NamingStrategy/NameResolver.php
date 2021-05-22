@@ -6,6 +6,7 @@ namespace Objectiphy\Objectiphy\NamingStrategy;
 
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\NamingStrategyInterface;
+use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Mapping\Table;
@@ -65,16 +66,21 @@ class NameResolver
                     NamingStrategyInterface::TYPE_SCALAR_PROPERTY,
                     $propertyMapping
                 );
-            } elseif ($relationship->isDefined() && (!$relationship->sourceJoinColumn && !$relationship->mappedBy)) {
-                if ($relationship->isEmbedded) {
-                    return; //There is no join
+            } elseif ($relationship->isDefined()) {
+                if ($relationship->isManyToMany()) {
+                    //Resolve any undefined parts of the join info
+                    $this->resolveManyToManyColumns($propertyMapping);
+                } elseif (!$relationship->sourceJoinColumn && !$relationship->mappedBy) {
+                    if ($relationship->isEmbedded) {
+                        return; //There is no join
+                    }
+                    //Resolve source join column name (foreign key) for relationship property
+                    $relationship->sourceJoinColumn = $strategy->convertName(
+                        $relationship->isToMany() ? $strategy->dePluralise($propertyName) : $propertyName,
+                        NamingStrategyInterface::TYPE_RELATIONSHIP_PROPERTY,
+                        $propertyMapping
+                    );
                 }
-                //Resolve source join column name (foreign key) for relationship property
-                $relationship->sourceJoinColumn = $strategy->convertName(
-                    $relationship->isToMany() ? $strategy->dePluralise($propertyName) : $propertyName,
-                    NamingStrategyInterface::TYPE_RELATIONSHIP_PROPERTY,
-                    $propertyMapping
-                );
             }
         }
 
@@ -86,5 +92,48 @@ class NameResolver
     public function convertName(string $name, $type = NamingStrategyInterface::TYPE_STRING)
     {
         return $this->columnNamingStrategy ? $this->columnNamingStrategy->convertName($name, $type) : '';
+    }
+
+    private function resolveManyToManyColumns(PropertyMapping $propertyMapping)
+    {
+        $propertyName = $propertyMapping->propertyName;
+        $relationship = $propertyMapping->relationship;
+        $mappingCollection = $propertyMapping->parentCollection;
+        if (!$relationship->mappedBy) {
+            if (!$relationship->sourceJoinColumn || $relationship->sourceJoinColumn == '[calculated]') {
+                //PK of $propertyMapping->className
+                $pkProperty = $mappingCollection->getPrimaryKeyProperties($propertyMapping->className)[0] ?? '';
+                $relationship->sourceJoinColumn = $mappingCollection->getColumnForPropertyPath($pkProperty);
+            }
+            if (!$relationship->targetJoinColumn || $relationship->targetJoinColumn == '[calculated]') {
+                //PK of $relationship->childClassName
+                $pkProperty = $mappingCollection->getPrimaryKeyProperties($relationship->childClassName)[0] ?? '';
+                $relationship->targetJoinColumn = $mappingCollection->getColumnForPropertyPath($pkProperty);
+            }
+            if (substr($relationship->bridgeJoinTable, 0, 13) == '[calculated]_') {
+                //Converted, de-pluralised $propertyName + '_' + substr($relationship->bridgeJoinTable, 13)
+                $partOne = $this->convertName($this->columnNamingStrategy->dePluralise($propertyName));
+                $partTwo = substr($relationship->bridgeJoinTable, 13);
+                $relationship->bridgeJoinTable = $this->convertName(implode('_', [$partOne, $partTwo]));
+            } 
+            if (!$relationship->bridgeSourceJoinColumn || $relationship->bridgeSourceJoinColumn == '[calculated]') {
+                //Second part of $relationship->bridgeJoinTable, plus $relationship->targetJoinColumn
+                $targetTable = $this->columnNamingStrategy->splitIntoWords($relationship->bridgeJoinTable)[1] ?? '';
+                if ($targetTable) {
+                    $relationship->bridgeSourceJoinColumn = $this->convertName(
+                        $targetTable . '_' . $relationship->targetJoinColumn
+                    );
+                }
+            }
+            if (!$relationship->bridgeTargetJoinColumn || $relationship->bridgeTargetJoinColumn == '[calculated]') {
+                //First part of $relationship->bridgeJoinTable, plus $relationship->sourceJoinColumn
+                $sourceTable = $this->columnNamingStrategy->splitIntoWords($relationship->bridgeJoinTable)[0] ?? '';
+                if ($sourceTable) {
+                    $relationship->bridgeTargetJoinColumn = $this->convertName(
+                        $sourceTable . '_' . $relationship->sourceJoinColumn
+                    );
+                }
+            }
+        }
     }
 }

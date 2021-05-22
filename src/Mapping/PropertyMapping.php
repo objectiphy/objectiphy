@@ -323,8 +323,9 @@ class PropertyMapping
         if (!$forJoin && !$this->isWithinDepth()) {
             return true;
         }
-        if ($this->parents &&
-            $this->parentCollection->getPropertyMapping($this->getParentPath())->isLateBound($forJoin)) {
+        if ($this->parents
+            && $this->parentCollection->getPropertyMapping($this->getParentPath())
+            && $this->parentCollection->getPropertyMapping($this->getParentPath())->isLateBound($forJoin)) {
             return true;
         }
         if ($forJoin && $this->forcedEarlyBindingForJoin) {

@@ -34,6 +34,13 @@ interface NamingStrategyInterface
     ): string;
 
     /**
+     * Split the given name into words (eg. 'policy_id' or 'policyId' to ['policy', 'id']).
+     * @param string $name
+     * @return array
+     */
+    public function splitIntoWords(string $name): array;
+    
+    /**
      * Convert the plural form of a to-many relationship property into its singular equivalent (eg. policies to policy)
      * @param string $name
      * @return string

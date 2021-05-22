@@ -33,8 +33,9 @@ class TestCourse
 
     /**
      * Join columns are optional - they default to the values shown here
+     * (there is no @ symbol for ORM/JoinTable to disable it for test purposes - with or without should work the same way)
      * @ORM\ManyToMany(targetEntity="TestStudent", inversedBy="course")
-     * @ORM\JoinTable(name="student_course",
+     * ORM\JoinTable(name="student_course",
      *      joinColumns={@ORM\JoinColumn(name="course_id", referencedColumnName="id")},
      *      inverseJoinColumns={@ORM\JoinColumn(name="student_id", referencedColumnName="id")}
      * )

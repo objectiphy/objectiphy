@@ -324,7 +324,7 @@ final class ObjectBinder
             $relationshipMapping = $mappingCollection->getRelationships()[$propertyMapping->getRelationshipKey()];
             $relationship = $relationshipMapping->relationship;
 
-            if ($relationship->relationshipType == Relationship::MANY_TO_MANY) {
+            if ($relationship->isManyToMany()) {
                 $joinAlias = uniqid('obj_many_');
                 $qb->innerJoin($this->sqlStringReplacer->delimit($relationship->bridgeJoinTable), $joinAlias)
                     ->on($this->sqlStringReplacer->delimit($joinAlias . '.' . $relationship->bridgeTargetJoinColumn),

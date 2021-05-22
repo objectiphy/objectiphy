@@ -520,6 +520,9 @@ final class ObjectMapper
                     $childGroups
                 );
                 $mappingCollection->addMapping($propertyMapping);
+                if ($propertyMapping->relationship->isManyToMany()) {
+                    $this->nameResolver->resolveColumnName($propertyMapping); //Resolve any many-to-many join columns
+                }
             }
         } else {
             $childParents = array_merge($parents, [$propertyName]);

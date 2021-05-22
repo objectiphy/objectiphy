@@ -22,6 +22,23 @@ class ExactMatch implements NamingStrategyInterface
     }
 
     /**
+     * Split the given name into words. This base implementation will split snake_case, camelCase, and PascalCase, but
+     * you can override it if required.
+     * @param string $name
+     * @return array
+     */
+    public function splitIntoWords(string $name): array
+    {
+        //Pascal and camel
+        $converted = ltrim(strtolower(preg_replace('/[A-Z]([A-Z](?![a-z]))*/', '_$0', $name)), ' ');
+        if ($converted != $name) { //We detected camel or pascal case
+            return explode(' ', $converted);
+        } else { //Just assume snake (or a single word)
+            return explode('_', $converted);
+        }
+    }
+
+    /**
      * Convert the plural form of a to-many relationship property into its singular equivalent (eg. policies to policy).
      * If this fails, you will just have to define it explicitly in the mapping instead of letting us guess.
      * @param string $name

@@ -28,7 +28,7 @@ class PascalCamelToSnake extends ExactMatch implements NamingStrategyInterface
         int $type,
         ?PropertyMapping $propertyMapping = null
     ): string {
-        $converted = ltrim(strtolower(preg_replace('/[A-Z]([A-Z](?![a-z]))*/', '_$0', $name)), '_');
+        $converted = implode('_', $this->splitIntoWords($name));
         if ($type == self::TYPE_RELATIONSHIP_PROPERTY) {
             $targetColumnName = $propertyMapping->relationship->targetJoinColumn ?: 'id';
             $converted .= substr($converted, -3) != "_$targetColumnName" ? "_$targetColumnName" : '';

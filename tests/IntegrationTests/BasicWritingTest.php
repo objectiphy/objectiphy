@@ -168,7 +168,7 @@ class BasicWritingTest extends IntegrationTestBase
             );
         }
         $this->objectRepository->clearCache(); //Necessary to force refresh from database
-//Wheels don't know about their parent vehicle, and try to lazy load instead
+
         $policy3 = $this->objectRepository->find(19071974);
         $this->assertEquals('TESTPOLICY UPDATED AGAIN', $policy3->policyNo);
         $this->assertEquals('ChildUpdate', $policy3->contact->lastName);
