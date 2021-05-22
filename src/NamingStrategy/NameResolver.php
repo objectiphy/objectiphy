@@ -115,7 +115,7 @@ class NameResolver
                 $partOne = $this->convertName($this->columnNamingStrategy->dePluralise($propertyName));
                 $partTwo = substr($relationship->bridgeJoinTable, 13);
                 $relationship->bridgeJoinTable = $this->convertName(implode('_', [$partOne, $partTwo]));
-            } 
+            }
             if (!$relationship->bridgeSourceJoinColumn || $relationship->bridgeSourceJoinColumn == '[calculated]') {
                 //Second part of $relationship->bridgeJoinTable, plus $relationship->targetJoinColumn
                 $targetTable = $this->columnNamingStrategy->splitIntoWords($relationship->bridgeJoinTable)[1] ?? '';

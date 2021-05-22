@@ -270,7 +270,7 @@ class MappingCollection
      */
     public function getPropertyMappings(?array $parents = null): array
     {
-        if ($parents ?: null === null) {
+        if ($parents === null) {
             return $this->properties;
         } else {
             $parentPropertyPath = implode('.', $parents);
