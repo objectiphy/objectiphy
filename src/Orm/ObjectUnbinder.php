@@ -78,7 +78,7 @@ final class ObjectUnbinder
                     }
                 } else {
                     $columnName = $propertyMapping->getFullColumnName();
-                    if ($columnName) {
+                    if ($columnName && !$propertyMapping->relationship->isManyToMany()) {
                         $pkProperty = '';
                         $unboundValue = $this->unbindValue($value, $propertyMapping->relationship->targetJoinColumn, $pkProperty);
                         if ($pkProperty) {

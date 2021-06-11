@@ -652,6 +652,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     ) {
         //TODO: Use command bus pattern to send queries of different types to different handlers
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
+        $query->setClassName($query->getClassName() ?: $this->getClassName());
         $this->setClassName($query->getClassName());
         $this->mappingCollection->setGroups(...$this->configOptions->serializationGroups);
         if ($query instanceof SelectQueryInterface) {

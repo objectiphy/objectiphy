@@ -36,6 +36,7 @@ final class ObjectRemover implements TransactionInterface
     private EntityTracker $entityTracker;
     private SqlStringReplacer $stringReplacer;
     private DeleteOptions $options;
+    private InternalQueryHelper $queryHelper;
     private bool $disableDeleteRelationships = false;
     private bool $disableDeleteEntities = false;
     private ExplanationInterface $explanation;
@@ -47,6 +48,7 @@ final class ObjectRemover implements TransactionInterface
         StorageInterface $storage,
         ObjectFetcher $objectFetcher,
         EntityTracker $entityTracker,
+        InternalQueryHelper $queryHelper,
         SqlStringReplacer $stringReplacer,
         ExplanationInterface $explanation
     ) {
@@ -55,6 +57,7 @@ final class ObjectRemover implements TransactionInterface
         $this->storage = $storage;
         $this->objectFetcher = $objectFetcher;
         $this->entityTracker = $entityTracker;
+        $this->queryHelper = $queryHelper;
         $this->stringReplacer = $stringReplacer;
         $this->explanation = $explanation;
     }
@@ -131,7 +134,7 @@ final class ObjectRemover implements TransactionInterface
             $parentProperty = $childPropertyMapping->relationship->mappedBy;
             if ($childPropertyMapping->relationship->isToMany()
                 && !$this->config->disableDeleteRelationships
-                && $parentProperty
+                && ($parentProperty || $childPropertyMapping->relationship->isManyToMany())
             ) {
                 $childProperty = $childPropertyMapping->propertyName;
                 $childClassName = $childPropertyMapping->getChildClassName();
@@ -146,10 +149,13 @@ final class ObjectRemover implements TransactionInterface
                     $removedChildren = $this->loadRemovedChildrenFromDatabase($entity, $childPropertyMapping, $childPks);
                 }
                 if ($removedChildren) {
+                    $parentPkValues = $this->options->mappingCollection->getPrimaryKeyValues($entity);
                     $this->setDeleteOptions(DeleteOptions::create($this->options->mappingCollection));
                     $this->sendOrphanedKidsAway(
                         $childPropertyName,
                         $removedChildren,
+                        $parentPkValues,
+                        $childPks,
                         $updateCount,
                         $deleteCount
                     );
@@ -197,7 +203,10 @@ final class ObjectRemover implements TransactionInterface
     {
         $this->setDeleteOptions($options);
         $deleteCount = 0;
-        $this->setClassName($deleteQuery->getDelete() ?: $this->getClassName());
+
+        $delimiter = $this->stringReplacer->getDelimiter();
+        $deleteFrom = $deleteQuery->getDelete();
+        $this->setClassName($deleteFrom && strpos($deleteFrom, $delimiter) === false ? $deleteFrom : $this->getClassName());
         $deleteQuery->finalise($this->options->mappingCollection, $this->stringReplacer, $this->getClassName());
         $sql = $this->sqlDeleter->getDeleteSql($deleteQuery);
         $this->explanation->addQuery($deleteQuery, $sql, $this->options->mappingCollection, $this->config);
@@ -266,7 +275,7 @@ final class ObjectRemover implements TransactionInterface
     /**
      * @param object $entity
      * @param PropertyMapping $childPropertyMapping
-     * @param array $childPks
+     * @param array $childPks Primary key properties for the child objects
      * @return array
      * @throws ObjectiphyException|QueryException|\ReflectionException|\Throwable
      */
@@ -276,23 +285,20 @@ final class ObjectRemover implements TransactionInterface
         array $childPks
     ): array {
         $removedChildren = [];
-        $parentProperty = $childPropertyMapping->relationship->mappedBy;
-        if ($parentProperty) {
-            //$delimitedPks = array_map(function($value){ return '%' . $value . '%'; }, $childPks);
-            $originalClass = $this->getClassName();
-            $this->setClassName($childPropertyMapping->getChildClassName());
-            $query = QB::create()
-                ->select(...$childPks)
-                ->from($this->getClassName())
-                ->where($parentProperty, QB::EQ, $entity)
-                ->buildSelectQuery();
+        $relationship = $childPropertyMapping->relationship;
+        $parentProperty = $relationship->mappedBy;
+        if ($parentProperty || $relationship->isManyToMany()) {
+            if ($relationship->isManyToMany()) {
+                $query = $this->queryHelper->selectManyToManyChildren($entity, $childPropertyMapping, $childPks);
+            } else {
+                $query = $this->queryHelper->selectOneToManyChildren($entity, $childPropertyMapping, $childPks, $parentProperty);
+            }
 
             //Need to set multiple to true on the find options
             $this->objectFetcher->setFindOptions(FindOptions::create($this->options->mappingCollection, ['multiple' => true]));
             $dbChildren = $this->objectFetcher->executeFind($query) ?: [];
             $entityChildren = ObjectHelper::getValueFromObject($entity, $childPropertyMapping->propertyName) ?: [];
             $removedChildren = $this->detectRemovals($dbChildren, $entityChildren, $childPks);
-            $this->setClassName($originalClass);
         }
 
         return $removedChildren;
@@ -344,8 +350,12 @@ final class ObjectRemover implements TransactionInterface
         foreach ($children as $childPropertyName) {
             $child = $entity->$childPropertyName ?? null;
             if (!empty($child)) {
+                $parentPkValues = $this->options->mappingCollection->getPrimaryKeyValues($entity);
                 $children = is_iterable($child) ? $child : [$child];
-                $this->sendOrphanedKidsAway($childPropertyName, $children, $updateCount, $deleteCount);
+                $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
+                $childClassName = $childPropertyMapping->relationship->childClassName;
+                $childPks = $this->options->mappingCollection->getPrimaryKeyProperties($childClassName);
+                $this->sendOrphanedKidsAway($childPropertyName, $children, $parentPkValues, $childPks, $updateCount, $deleteCount);
             }
         }
     }
@@ -360,12 +370,18 @@ final class ObjectRemover implements TransactionInterface
     private function sendOrphanedKidsAway(
         string $propertyName,
         iterable $removedChildren,
+        array $parentPkValues,
+        array $childPks,
         int &$updateCount,
         int &$deleteCount
     ): void {
         $goingToOrphanage = [];
         $goingToBelize = [];
         $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($propertyName);
+        if ($childPropertyMapping->relationship->isManyToMany()) {
+            //Delete from bridging table (regardless of orphans - we definitely need to delete the relationship)
+            $deleteCount += $this->deleteManyToManyRelationship($childPropertyMapping, $removedChildren, $parentPkValues, $childPks);
+        }
         foreach ($removedChildren as $removedChild) {
             if (!$this->config->disableDeleteEntities
                 && !$this->options->disableCascade
@@ -390,12 +406,12 @@ final class ObjectRemover implements TransactionInterface
     }
 
     /**
-     * @param array $orphans
+     * @param iterable $orphans
      * @param string $parentProperty
      * @param $updateCount
      * @throws ObjectiphyException|QueryException|\ReflectionException
      */
-    private function sendKidsToOrphanage(array $orphans, string $parentProperty, &$updateCount): void
+    private function sendKidsToOrphanage(iterable $orphans, string $parentProperty, &$updateCount): void
     {
         if ($orphans && $parentProperty) {
             $childClass = ObjectHelper::getObjectClassName(reset($orphans));
@@ -415,5 +431,55 @@ final class ObjectRemover implements TransactionInterface
             $saveOptions = SaveOptions::create($this->objectMapper->getMappingCollectionForClass($childClass));
             $updateCount += $this->objectPersister->executeSave($query, $saveOptions);
         }
+    }
+
+    /**
+     * Remove records from the bridging table for a many to many relationship
+     * @param PropertyMapping $propertyMapping
+     * @param iterable $removedChildren
+     */
+    private function deleteManyToManyRelationship(
+        PropertyMapping $propertyMapping,
+        iterable $removedChildren,
+        array $parentPkValues,
+        array $childPks
+    ) {
+        $sourceAndCriteria = [];
+        $sourceColumns = explode(',', $propertyMapping->relationship->bridgeSourceJoinColumn);
+        foreach ($sourceColumns as $index => $sourceColumn) {
+            $parentPkValue = array_values($parentPkValues)[$index] ?? null;
+            $sourceAndCriteria[] = [$this->stringReplacer->delimit($sourceColumn) => $parentPkValue];
+        }
+
+        $childPkColumns = explode(',', $propertyMapping->relationship->bridgeTargetJoinColumn);
+        $qb = QB::create()->delete($this->stringReplacer->delimit($propertyMapping->relationship->bridgeJoinTable));
+        foreach ($removedChildren as $removedChild) {
+            $qb->orStart();
+            foreach ($childPks as $index => $childPk) {
+                if (isset($childPkColumns[$index])) {
+                    //Specify source
+                    foreach ($sourceAndCriteria as $index => $criteria) {
+                        foreach ($criteria as $sourceColumn => $sourceValue) {
+                            $qb->and(
+                                $sourceColumn,
+                                is_null($sourceValue) ? 'IS' : '=',
+                                $sourceValue
+                            );
+                        }
+                    }
+                    //Specify target
+                    $childPkValue = ObjectHelper::getValueFromObject($removedChild, $childPk);
+                    $qb->and(
+                        $this->stringReplacer->delimit($childPkColumns[$index]),
+                        is_null($childPkValue) ? 'IS' : '=',
+                        $childPkValue
+                    );
+                }
+            }
+            $qb->orEnd();
+        }
+        $deleteQuery = $qb->buildDeleteQuery();
+
+        return $this->executeDelete($deleteQuery, $this->options);
     }
 }

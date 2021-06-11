@@ -19,6 +19,7 @@ use Objectiphy\Objectiphy\Contract\UpdateQueryInterface;
 use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
+use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Traits\TransactionTrait;
 
@@ -193,7 +194,7 @@ final class ObjectPersister implements TransactionInterface
                 $updateCount += $this->storage->getAffectedRecordCount();
             }
         } elseif ($query instanceof InsertQueryInterface) {
-            $sql = $this->sqlUpdater->getInsertSql($query);
+            $sql = $this->sqlUpdater->getInsertSql($query, $options->replaceExisting);
             $this->explanation->addQuery($query, $sql, $this->options->mappingCollection, $this->config);
             if ($this->storage->executeQuery($sql, $query->getParams())) {
                 $insertCount += $this->storage->getAffectedRecordCount();
@@ -298,8 +299,9 @@ final class ObjectPersister implements TransactionInterface
         $updateQuery = $qb->buildUpdateQuery();
         $this->objectMapper->addExtraMappings($className, $updateQuery);
         $rows = $this->objectUnbinder->unbindEntityToRow($entity, $pkValues, $this->options->saveChildren);
+        //Even if there are no rows, still finalise in cases children need relationship mappings afterwards
+        $updateQuery->finalise($this->options->mappingCollection, $this->stringReplacer, $className, $rows);
         if ($rows) {
-            $updateQuery->finalise($this->options->mappingCollection, $this->stringReplacer, $className, $rows);
             $sql = $this->sqlUpdater->getUpdateSql($updateQuery, $this->options->replaceExisting);
             $this->explanation->addQuery($updateQuery, $sql, $this->options->mappingCollection, $this->config);
             if ($this->storage->executeQuery($sql, $updateQuery->getParams())) {
@@ -341,8 +343,9 @@ final class ObjectPersister implements TransactionInterface
         $qb = QB::create();
         $insertQuery = $qb->buildInsertQuery();
         $row = $this->objectUnbinder->unbindEntityToRow($entity, [], $this->options->saveChildren);
+        //Even if there is no row, still finalise in cases children need relationship mappings afterwards
+        $insertQuery->finalise($this->options->mappingCollection, $this->stringReplacer, $this->getClassName(), $row);
         if ($row) {
-            $insertQuery->finalise($this->options->mappingCollection, $this->stringReplacer, $this->getClassName(), $row);
             $sql = $this->sqlUpdater->getInsertSql($insertQuery, $this->options->replaceExisting);
             $this->explanation->addQuery($insertQuery, $sql, $this->options->mappingCollection, $this->config);
             if ($this->storage->executeQuery($sql, $insertQuery->getParams())) {
@@ -398,26 +401,65 @@ final class ObjectPersister implements TransactionInterface
             if (!empty($child)) {
                 $childEntities = is_iterable($child) ? $child : [$child];
                 foreach ($childEntities as $childEntity) {
-                    if (in_array($childEntity, $this->savedObjects)) {
-                        continue; //Prevent recursion
-                    }
-                    $childEntityPkValues = $this->options->mappingCollection->getPrimaryKeyValues($childEntity);
-                    if (!$childEntityPkValues) {
-                        //If we have a pk, this is an insert - if we don't, we cannot do anything with it
-                        $childPkProperties = $this->options->mappingCollection->getPrimaryKeyProperties($childPropertyMapping->getChildClassName());
-                    }
-                    if (($childEntityPkValues || $childPkProperties)
-                        && !($childEntity instanceof ObjectReferenceInterface)
-                        && $this->entityTracker->isEntityDirty($childEntity, $childEntityPkValues)
-                    ) {
-                        //Populate parent
-                        if ($childParentProperty) {
-                            ObjectHelper::setValueOnObject($childEntity, $childParentProperty, $entity);
+                    if (!in_array($childEntity, $this->savedObjects)) {
+                        $childEntityPkValues = $this->options->mappingCollection->getPrimaryKeyValues($childEntity);
+                        if (!$childEntityPkValues) {
+                            //If we have a pk, this is an insert - if we don't, we cannot do anything with it
+                            $childPkProperties = $this->options->mappingCollection->getPrimaryKeyProperties(
+                                $childPropertyMapping->getChildClassName()
+                            );
                         }
-                        $this->doSaveEntity($childEntity, $insertCount, $updateCount, $deleteCount);
+                        if (($childEntityPkValues || $childPkProperties)
+                            && !($childEntity instanceof ObjectReferenceInterface)
+                            && $this->entityTracker->isEntityDirty($childEntity, $childEntityPkValues)
+                        ) {
+                            //Populate parent
+                            if ($childParentProperty && !$childPropertyMapping->relationship->isManyToMany()) {
+                                ObjectHelper::setValueOnObject($childEntity, $childParentProperty, $entity);
+                            }
+                            $this->doSaveEntity($childEntity, $insertCount, $updateCount, $deleteCount);
+                        }
                     }
+                }
+                if (!$ownedOnly && $childPropertyMapping->relationship->isManyToMany()) {
+                    //Children saved, but bridging table also needs populating
+                    $this->saveManyToMany($entity, $childPropertyMapping, $childEntities, $insertCount, $updateCount);
                 }
             }
         }
+    }
+
+    private function saveManyToMany(
+        object $parentEntity,
+        PropertyMapping $propertyMapping,
+        iterable $childEntities,
+        int &$insertCount,
+        int &$updateCount
+    ) {
+        $pkValues = $this->options->mappingCollection->getPrimaryKeyValues($parentEntity);
+        if ($this->entityTracker->getDirtyProperties($parentEntity, $pkValues, [$propertyMapping->propertyName])) {
+            $sourceColumn = $propertyMapping->relationship->bridgeSourceJoinColumn;
+            $targetColumn = $propertyMapping->relationship->bridgeTargetJoinColumn;
+            $parentKeyValues = $this->buildKeyValues($parentEntity, $sourceColumn, $pkValues);
+            $qb = QB::create()->insert($this->stringReplacer->delimit($propertyMapping->relationship->bridgeJoinTable));
+            foreach ($childEntities as $childEntity) {
+                $childKeyValues = $this->buildKeyValues($childEntity, $targetColumn);
+                $qb->set(array_merge($parentKeyValues, $childKeyValues));
+            }
+            $query = $qb->buildInsertQuery();
+            $this->options->replaceExisting = true;
+            $this->executeSave($query, $this->options, $insertCount, $updateCount);
+        }
+    }
+
+    private function buildKeyValues(object $entity, string $joinColumnMapping, array $pkValues = [])
+    {
+        $pk = array_values($pkValues ?: $this->options->mappingCollection->getPrimaryKeyValues($entity));
+        $keyValues = [];
+        foreach (explode(',', $joinColumnMapping) as $index => $column) {
+            $keyValues[$this->stringReplacer->delimit($column)] = $pk[$index] ?? null;
+        }
+
+        return $keyValues;
     }
 }

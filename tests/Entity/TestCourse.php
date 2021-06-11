@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use Objectiphy\Objectiphy\Mapping\Relationship;
 
 /**
  * @ORM\Table(name="objectiphy_test.course")
@@ -33,11 +34,17 @@ class TestCourse
 
     /**
      * Join columns are optional - they default to the values shown here
-     * (there is no @ symbol for ORM/JoinTable to disable it for test purposes - with or without should work the same way)
-     * @ORM\ManyToMany(targetEntity="TestStudent", inversedBy="course")
+     * (annotations can be disabled by removing the @ symbol for test purposes - some missing items can be guessed)
+     * ORM\ManyToMany(targetEntity="TestStudent", inversedBy="course")
      * ORM\JoinTable(name="student_course",
      *      joinColumns={@ORM\JoinColumn(name="course_id", referencedColumnName="id")},
      *      inverseJoinColumns={@ORM\JoinColumn(name="student_id", referencedColumnName="id")}
+     * )
+     *
+     * @Relationship(
+     *     relationshipType="many_to_many",
+     *     childClassName="TestStudent",
+     *     bridgeJoinTable="student_course"
      * )
      */
     public array $students = [];

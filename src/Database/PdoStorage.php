@@ -186,6 +186,10 @@ class PdoStorage implements StorageInterface, TransactionInterface
         $affectedRows = 0;
         if (isset($this->stm)) {
             $affectedRows = $this->stm->rowCount();
+            if ($affectedRows > 1 && strpos($this->stm->queryString, 'ON DUPLICATE KEY') !== false) {
+                //Updated records return 2, not 1
+                $affectedRows = intval($affectedRows / 2);
+            }
         }
 
         return intval($affectedRows);

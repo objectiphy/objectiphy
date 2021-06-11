@@ -129,10 +129,11 @@ class EntityTracker
      * The return values are keyed by property name
      * @param object $entity
      * @param array $pkValues
+     * @param array $propertiesToCheck If supplied, filtered to just check the supplied properties, otherwise, check all.
      * @return array
      * @throws \ReflectionException
      */
-    public function getDirtyProperties(object $entity, array $pkValues): array
+    public function getDirtyProperties(object $entity, array $pkValues, array $propertiesToCheck = []): array
     {
         $changes = [];
         $className = ObjectHelper::getObjectClassName($entity);
@@ -144,9 +145,11 @@ class EntityTracker
         $reflectionClass = new \ReflectionClass($className);
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
             $property = $reflectionProperty->getName();
-            $entityValue = null;
-            if ($this->isPropertyDirty($entity, $property, $entityValue, $clone)) {
-                $changes[$property] = $entityValue;
+            if (!$propertiesToCheck || in_array($property, $propertiesToCheck)) {
+                $entityValue = null;
+                if ($this->isPropertyDirty($entity, $property, $entityValue, $clone)) {
+                    $changes[$property] = $entityValue;
+                }
             }
         }
         

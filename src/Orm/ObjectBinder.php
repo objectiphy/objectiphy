@@ -30,6 +30,8 @@ final class ObjectBinder
     private EntityTracker $entityTracker;
     private DataTypeHandlerInterface $dataTypeHandler;
     private CollectionFactoryInterface $collectionFactory;
+    private SqlStringReplacer $stringReplacer;
+    private InternalQueryHelper $queryHelper;
     private array $knownValues = [];
 
     public function __construct(
@@ -38,7 +40,8 @@ final class ObjectBinder
         EntityTracker $entityTracker,
         DataTypeHandlerInterface $dataTypeHandler,
         CollectionFactoryInterface $collectionFactory,
-        SqlStringReplacer $sqlStringReplacer
+        SqlStringReplacer $sqlStringReplacer,
+        InternalQueryHelper $queryHelper
     ) {
         $this->repositoryFactory = $repositoryFactory;
         $this->entityFactory = $entityFactory;
@@ -46,6 +49,7 @@ final class ObjectBinder
         $this->dataTypeHandler = $dataTypeHandler;
         $this->collectionFactory = $collectionFactory;
         $this->sqlStringReplacer = $sqlStringReplacer;
+        $this->queryHelper = $queryHelper;
     }
 
     /**
@@ -325,6 +329,7 @@ final class ObjectBinder
             $relationship = $relationshipMapping->relationship;
 
             if ($relationship->isManyToMany()) {
+                
                 $joinAlias = uniqid('obj_many_');
                 $qb->innerJoin($this->sqlStringReplacer->delimit($relationship->bridgeJoinTable), $joinAlias)
                     ->on($this->sqlStringReplacer->delimit($joinAlias . '.' . $relationship->bridgeTargetJoinColumn),

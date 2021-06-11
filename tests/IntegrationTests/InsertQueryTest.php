@@ -5,6 +5,7 @@ namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Query\QueryBuilder;
 use Objectiphy\Objectiphy\Tests\Entity\TestContact;
+use Objectiphy\Objectiphy\Tests\Entity\TestStudent;
 
 class InsertQueryTest extends IntegrationTestBase
 {
@@ -15,7 +16,7 @@ class InsertQueryTest extends IntegrationTestBase
      */
     public function testQueryDefault()
     {
-        $this->testName = 'Update query default' . $this->getCacheSuffix();
+        $this->testName = 'Insert query default' . $this->getCacheSuffix();
         $this->doTests();
     }
 
@@ -24,7 +25,7 @@ class InsertQueryTest extends IntegrationTestBase
      */
     public function testQueryMixed()
     {
-        $this->testName = 'Update query mixed' . $this->getCacheSuffix();
+        $this->testName = 'Insert query mixed' . $this->getCacheSuffix();
         $this->objectRepository->setConfigOption('eagerLoadToOne', true);
         $this->objectRepository->setConfigOption('eagerLoadToMany', false);
         $this->doTests();
@@ -35,7 +36,7 @@ class InsertQueryTest extends IntegrationTestBase
      */
     public function testQueryLazy()
     {
-        $this->testName = 'Update query lazy' . $this->getCacheSuffix();
+        $this->testName = 'Insert query lazy' . $this->getCacheSuffix();
         $this->objectRepository->setConfigOption('eagerLoadToOne', false);
         $this->objectRepository->setConfigOption('eagerLoadToMany', false);
         $this->doTests();
@@ -46,7 +47,7 @@ class InsertQueryTest extends IntegrationTestBase
      */
     public function testQueryEager()
     {
-        $this->testName = 'Update query eager' . $this->getCacheSuffix();
+        $this->testName = 'Insert query eager' . $this->getCacheSuffix();
         $this->objectRepository->setConfigOption('eagerLoadToOne', true);
         $this->objectRepository->setConfigOption('eagerLoadToMany', true);
         $this->doTests();
@@ -108,6 +109,13 @@ class InsertQueryTest extends IntegrationTestBase
 
         $count2 = intval($this->objectRepository->executeQuery($countQuery));
         $this->assertEquals(3, $count2);
+
+        $this->objectRepository->setClassName(TestStudent::class);
+        $insertQuery2 = QB::create()
+            ->set(['firstName' => 'Slartibartfast', 'lastName' => 'Douglas', 'iq' => 200])
+            ->buildInsertQuery();
+        $result2 = $this->objectRepository->executeQuery($insertQuery2);
+        $this->assertEquals(1, $result2);
     }
 
     protected function doMultipleInsertTests()

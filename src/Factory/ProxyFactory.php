@@ -252,6 +252,7 @@ final class ProxyFactory
     {
         $declaration = implode(' ', \Reflection::getModifierNames($reflectionMethod->getModifiers()));
         $declaration .= ' function ';
+        $declaration .= $reflectionMethod->returnsReference() ? '&' : '';
         $declaration .= $reflectionMethod->getName();
         $declaration .= '(';
         foreach ($reflectionMethod->getParameters() as $parameter) {

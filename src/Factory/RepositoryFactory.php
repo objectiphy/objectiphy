@@ -35,6 +35,7 @@ use Objectiphy\Objectiphy\MappingProvider\MappingProviderDoctrineAnnotation;
 use Objectiphy\Objectiphy\Meta\Explanation;
 use Objectiphy\Objectiphy\NamingStrategy\NameResolver;
 use Objectiphy\Objectiphy\Orm\EntityTracker;
+use Objectiphy\Objectiphy\Orm\InternalQueryHelper;
 use Objectiphy\Objectiphy\Orm\ObjectRepository;
 use Objectiphy\Objectiphy\Orm\ObjectMapper;
 use Objectiphy\Objectiphy\Orm\ObjectBinder;
@@ -59,6 +60,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
     private StorageInterface $storage;
     private ProxyFactory $proxyFactory;
     private EntityTracker $entityTracker;
+    private InternalQueryHelper $queryHelper;
     private JoinProviderMySql $joinProvider;
     private WhereProviderMySql $whereProvider;
     private SqlStringReplacer $stringReplacer;
@@ -244,6 +246,15 @@ class RepositoryFactory implements RepositoryFactoryInterface
         return $this->entityTracker;
     }
 
+    final protected function getQueryHelper(): InternalQueryHelper
+    {
+        if (!isset($this->queryHelper)) {
+            $this->queryHelper = $this->createQueryHelper();
+        }
+
+        return $this->queryHelper;
+    }
+
     final protected function getStorage(): StorageInterface
     {
         if (!isset($this->storage)) {
@@ -314,16 +325,22 @@ class RepositoryFactory implements RepositoryFactoryInterface
         $sqlDeleter = $this->getSqlDeleter();
         $storage = $this->getStorage();
         $entityTracker = $this->getEntityTracker();
+        $queryHelper = $this->getQueryHelper();
         $objectFetcher = $this->createObjectFetcher(); //New instance for different findOptions
         $stringReplacer = $this->getSqlStringReplacer();
         $explanation = $this->getExplanation();
 
-        return new ObjectRemover($objectMapper, $sqlDeleter, $storage, $objectFetcher, $entityTracker, $stringReplacer, $explanation);
+        return new ObjectRemover($objectMapper, $sqlDeleter, $storage, $objectFetcher, $entityTracker, $queryHelper, $stringReplacer, $explanation);
     }
 
     final protected function createEntityTracker(): EntityTracker
     {
         return new EntityTracker();
+    }
+
+    final protected function createQueryHelper(): InternalQueryHelper
+    {
+        return new InternalQueryHelper($this->getObjectMapper(), $this->getSqlStringReplacer());
     }
 
     /**
@@ -338,8 +355,9 @@ class RepositoryFactory implements RepositoryFactoryInterface
         $dataTypeHandler = $this->getDataTypeHandlerMySql();
         $collectionFactory = $this->getCollectionFactory();
         $sqlStringReplacer = $this->getSqlStringReplacer();
+        $queryHelper = $this->getQueryHelper();
 
-        return new ObjectBinder($this, $entityFactory, $entityTracker, $dataTypeHandler, $collectionFactory, $sqlStringReplacer);
+        return new ObjectBinder($this, $entityFactory, $entityTracker, $dataTypeHandler, $collectionFactory, $sqlStringReplacer, $queryHelper);
     }
 
     final protected function createObjectUnbinder(): ObjectUnbinder

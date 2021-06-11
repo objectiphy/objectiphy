@@ -5,9 +5,15 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use Objectiphy\Objectiphy\Mapping\Relationship;
 
 /**
  * @ORM\Table(name="objectiphy_test.student")
+ * @property $id
+ * @property $firstName
+ * @property $lastName
+ * @property $iq
+ * @property $courses
  */
 class TestStudent
 {
@@ -32,7 +38,9 @@ class TestStudent
     private $iq;
 
     /**
-     * @ManyToMany(targetEntity="TestCourse", mappedBy="students")
+     * (annotations can be disabled by removing the @ symbol for test purposes)
+     * ManyToMany(targetEntity="TestCourse", mappedBy="students")
+     * @Relationship(relationshipType="many_to_many", childClassName="TestCourse", mappedBy="students")
      */
     private array $courses = [];
 
@@ -42,11 +50,17 @@ class TestStudent
      * @param $property
      * @return
      */
-    public function __get($property)
+    public function &__get($property)
     {
-        if (property_exists($this, $property)) {
-            return $this->$property;
+        $value = null;
+        if (method_exists($this, 'get' . ucfirst($property))) {
+            $value =& $this->{'get' . ucfirst($property)};
         }
+        if (property_exists($this, $property)) {
+            $value =& $this->$property;
+        }
+
+        return $value;
     }
 
     /**
@@ -60,5 +74,10 @@ class TestStudent
         if (property_exists($this, $property)) {
             $this->$property = $value;
         }
+    }
+    
+    public function &getCourses()
+    {
+        return $this->courses;
     }
 }
