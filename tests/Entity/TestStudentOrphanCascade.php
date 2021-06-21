@@ -15,7 +15,7 @@ use Objectiphy\Objectiphy\Mapping\Relationship;
  * @property $iq
  * @property $courses
  */
-class TestStudent
+class TestStudentOrphanCascade
 {
     /**
      * @ORM\Id
@@ -25,7 +25,7 @@ class TestStudent
     /**
      * @ORM\Column
      */
-    private $firstName;
+    public $firstName; //Public so we can use array_column on it - a bit lazy, but meh.
 
     /**
      * @ORM\Column
@@ -39,8 +39,14 @@ class TestStudent
 
     /**
      * (annotations can be disabled by removing the @ symbol for test purposes)
-     * @ManyToMany(targetEntity="TestCourse", mappedBy="students")
-     * Relationship(relationshipType="many_to_many", childClassName="TestCourse", mappedBy="students")
+     * ManyToMany(targetEntity="TestCourseOrphanCascade", mappedBy="students")
+     * @Relationship(
+     *     relationshipType="many_to_many",
+     *     childClassName="TestCourseOrphanCascade",
+     *     mappedBy="students",
+     *     orphanRemoval=true,
+     *     cascadeDeletes=true
+     * )
      */
     private array $courses = [];
 

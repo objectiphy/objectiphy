@@ -59,6 +59,9 @@ class InsertQuery extends Query implements InsertQueryInterface
     ): void {
         if (!$this->isFinalised) {
             if (!$this->getInsert()) {
+                if (!$className) {
+                    throw new QueryException('Class name to insert has not been specified!');
+                }
                 $this->setInsert($className);
             }
             if (!($this->getAssignments()[0] ?? false) && $assignments) {

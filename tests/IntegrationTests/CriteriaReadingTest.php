@@ -323,7 +323,7 @@ class CriteriaReadingTest extends IntegrationTestBase
         $this->assertEquals(4, count($employeeJack->unionRep->unionMembers));
 
         $employeeRob = $this->objectRepository->findOneBy(['name' => 'Rob']);
-        $this->assertEquals(2, count($employeeRob->unionMembers));
+        $this->assertEquals(3, count($employeeRob->unionMembers));
         $this->assertEquals('Tim', $employeeRob->mentee->mentee->mentee->name);
 
         //Check that multiple scalar joins on an embedded value object on a child object are hydrated

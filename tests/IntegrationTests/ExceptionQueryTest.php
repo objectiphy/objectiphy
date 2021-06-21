@@ -88,7 +88,8 @@ class ExceptionQueryTest extends IntegrationTestBase
 
     protected function doExceptionQueryTest()
     {
-        $this->setUp(); //Restore anything that was deleted by earlier tests
+        $this->setUp(); //Forget about anything added by previous tests
+        
         $criteria = ['departments' => ['Sales', 'Finance']];
         $query = QueryBuilder::create()
             ->select('firstName', 'lastName')
@@ -111,7 +112,7 @@ class ExceptionQueryTest extends IntegrationTestBase
         } else {
             $inserts = 0;
             $updates = 0;
-            $this->objectRepository->saveEntity($firstContact, null, $inserts, $updates);
+            $this->objectRepository->saveEntity($firstContact, null, false, $inserts, $updates);
             $this->assertEquals(1, $inserts);
             $this->assertEquals(0, $updates);
             $this->assertGreaterThan(0, $firstContact->id);

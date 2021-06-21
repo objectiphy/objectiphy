@@ -18,6 +18,7 @@ use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
+use Objectiphy\Objectiphy\Query\InternalQueryHelper;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Traits\TransactionTrait;
 
@@ -131,11 +132,11 @@ final class ObjectRemover implements TransactionInterface
                 continue; //Don't wake it up
             }
             $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
-            $parentProperty = $childPropertyMapping->relationship->mappedBy;
-            if ($childPropertyMapping->relationship->isToMany()
-                && !$this->config->disableDeleteRelationships
-                && ($parentProperty || $childPropertyMapping->relationship->isManyToMany())
-            ) {
+            if (!$this->config->disableDeleteRelationships
+                && (
+                    $childPropertyMapping->relationship->orphanRemoval
+                    || $childPropertyMapping->relationship->isManyToMany()
+                )) {
                 $childProperty = $childPropertyMapping->propertyName;
                 $childClassName = $childPropertyMapping->getChildClassName();
                 $childPks = $this->options->mappingCollection->getPrimaryKeyProperties($childClassName);
@@ -287,19 +288,39 @@ final class ObjectRemover implements TransactionInterface
         $removedChildren = [];
         $relationship = $childPropertyMapping->relationship;
         $parentProperty = $relationship->mappedBy;
-        if ($parentProperty || $relationship->isManyToMany()) {
+
+        if ($relationship->isToOne()) {
+            $parentClass = ObjectHelper::getObjectClassName($entity);
+            $parentPkValues = $this->options->mappingCollection->getPrimaryKeyValues($entity);
+            $query = $this->queryHelper->selectToOneChild($parentClass, $parentPkValues, $childPropertyMapping);
+            $this->objectFetcher->setFindOptions(
+                FindOptions::create($this->options->mappingCollection, ['multiple' => false, 'bindToEntities' => true])
+            );
+            $dbParent = $this->objectFetcher->executeFind($query);
+            if ($dbChild = ObjectHelper::getValueFromObject($dbParent, $childPropertyMapping->propertyName)) {
+                $entityChild = ObjectHelper::getValueFromObject($entity, $childPropertyMapping->propertyName) ?: null;
+                $removedChildren = $this->detectRemovals([$dbChild], [$entityChild], $childPks);
+            }
+        } else {
             if ($relationship->isManyToMany()) {
                 $query = $this->queryHelper->selectManyToManyChildren($entity, $childPropertyMapping, $childPks);
             } else {
-                $query = $this->queryHelper->selectOneToManyChildren($entity, $childPropertyMapping, $childPks, $parentProperty);
+                $query = $this->queryHelper->selectOneToManyChildren(
+                    $entity,
+                    $childPropertyMapping,
+                    $childPks,
+                    $parentProperty
+                );
             }
-
             //Need to set multiple to true on the find options
-            $this->objectFetcher->setFindOptions(FindOptions::create($this->options->mappingCollection, ['multiple' => true]));
+            $this->objectFetcher->setFindOptions(
+                FindOptions::create($this->options->mappingCollection, ['multiple' => true])
+            );
             $dbChildren = $this->objectFetcher->executeFind($query) ?: [];
             $entityChildren = ObjectHelper::getValueFromObject($entity, $childPropertyMapping->propertyName) ?: [];
             $removedChildren = $this->detectRemovals($dbChildren, $entityChildren, $childPks);
         }
+        $this->config->disableEntityCache ? $this->objectFetcher->clearCache() : false;
 
         return $removedChildren;
     }
@@ -378,18 +399,31 @@ final class ObjectRemover implements TransactionInterface
         $goingToOrphanage = [];
         $goingToBelize = [];
         $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($propertyName);
-        if ($childPropertyMapping->relationship->isManyToMany()) {
-            //Delete from bridging table (regardless of orphans - we definitely need to delete the relationship)
-            $deleteCount += $this->deleteManyToManyRelationship($childPropertyMapping, $removedChildren, $parentPkValues, $childPks);
-        }
         foreach ($removedChildren as $removedChild) {
+            $offToBelizeWithYou = false;
             if (!$this->config->disableDeleteEntities
                 && !$this->options->disableCascade
                 && ($childPropertyMapping->relationship->cascadeDeletes
                     || $childPropertyMapping->relationship->orphanRemoval)
-            ) { //Nobody wants this baby
+            ) {
+                $offToBelizeWithYou = true;
+                //Hold your gosh-darn horses mister! If many to one or many to many, check whether another parent already has it
+                if ($childPropertyMapping->relationship->isFromMany()) {
+                    $query = $this->queryHelper->countFromManyParents($childPropertyMapping, $removedChild, $childPks);
+                    $findOptions = ['multiple' => false, 'bindToEntities' => false, 'count' => true];
+                    $this->objectFetcher->setFindOptions(FindOptions::create($this->options->mappingCollection, $findOptions));
+                    $foundParents = intval(current($this->objectFetcher->executeFind($query) ?: [0])); //Unlike reset, current does not require a reference
+                    if ($foundParents > 1) { //Current parent is not the only one
+                        $offToBelizeWithYou = false;
+                    }
+                }
+            }
+
+            if ($offToBelizeWithYou) {
+                //Nobody wants this baby
                 $goingToBelize[] = $removedChild;
-            } else { //Available for adoption
+            } elseif (!$childPropertyMapping->relationship->isManyToMany()) {
+                //Available for adoption
                 $parentProperty = $childPropertyMapping->relationship->mappedBy;
                 if ($parentProperty && !$this->config->disableDeleteRelationships) {
                     $goingToOrphanage[] = $removedChild;
@@ -397,11 +431,14 @@ final class ObjectRemover implements TransactionInterface
             }
         }
 
-        if ($goingToOrphanage) {
+        if ($childPropertyMapping->relationship->isManyToMany()) {
+            //Delete from bridging table (regardless of orphans - we definitely need to delete the relationship)
+            $deleteCount += $this->deleteManyToManyRelationship($childPropertyMapping, $removedChildren, $parentPkValues, $childPks);
+        } elseif ($goingToOrphanage) {
             $this->sendKidsToOrphanage($goingToOrphanage, $parentProperty, $updateCount);
         }
         if ($goingToBelize) { //Sorry kids, nothing personal.
-            $this->deleteEntities($goingToBelize, $this->options, $deleteCount);
+            $deleteCount += $this->deleteEntities($goingToBelize, $this->options, $updateCount);
         }
     }
 

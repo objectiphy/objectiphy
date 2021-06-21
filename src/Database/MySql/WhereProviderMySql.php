@@ -55,7 +55,7 @@ class WhereProviderMySql
                 $removeJoiner = false;
             }
         }
-        $sql = trim($this->stringReplacer->replaceNames($sql));
+        $sql = rtrim($this->stringReplacer->replaceNames($sql));
 
         return $sql;
     }

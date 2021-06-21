@@ -184,12 +184,6 @@ class SqlSelectorMySql implements SqlSelectorInterface
                     $sql .= $this->stringReplacer->replaceNames(strval($orderByField)) . " $direction\n";
                 }
             }
-
-//            $orderBy = $this->query->getOrderBy();
-//            if (!empty($orderBy)) {
-//                $orderByString = ' ORDER BY ' . implode(', ', $orderBy);
-//                $sql = $this->stringReplacer->replaceNames($orderByString) . "\n";
-//            }
         }
 
         return $sql;

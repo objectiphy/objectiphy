@@ -187,7 +187,8 @@ class SelectQueryTest extends IntegrationTestBase
 
     protected function doRunningQueryTests()
     {
-        $this->setUp();
+        $this->setUp(); //Forget about anything added by previous tests
+        
         $query = QueryBuilder::create()
             ->select('firstName', 'lastName')
             ->from(TestContact::class)

@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy\Orm;
+namespace Objectiphy\Objectiphy\Query;
 
 use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
 use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
-use Objectiphy\Objectiphy\Query\QB;
+use Objectiphy\Objectiphy\Orm\ObjectHelper;
+use Objectiphy\Objectiphy\Orm\ObjectMapper;
 
 class InternalQueryHelper
 {
@@ -18,6 +19,21 @@ class InternalQueryHelper
     {
         $this->objectMapper = $objectMapper;
         $this->stringReplacer = $stringReplacer;
+    }
+
+    public function selectToOneChild(
+        string $parentClass,
+        array $parentPkValues,
+        PropertyMapping $childPropertyMapping
+    ): SelectQueryInterface {
+        $qb = QB::create()
+            ->select($childPropertyMapping->propertyName, ...array_keys($parentPkValues))
+            ->from($parentClass);
+        foreach ($parentPkValues as $key => $value) {
+            $qb->where($key, is_null($value) ? 'IS' : '=', $value);
+        }
+        
+        return $qb->buildSelectQuery();;
     }
 
     public function selectOneToManyChildren(
@@ -40,7 +56,7 @@ class InternalQueryHelper
         PropertyMapping $childPropertyMapping,
         array $childPks
     ): SelectQueryInterface {
-        $delimit = function($string) { return $this->stringReplacer->delimit($string); }; //Just for ease of use
+        $delimit = fn(string $string) => $this->stringReplacer->delimit($string); //Just for ease of use
         $parentClass = ObjectHelper::getObjectClassName($entity);
         $parentMapping = $this->objectMapper->getMappingCollectionForClass($parentClass);
         $childTable = $parentMapping->getTableForClass($childPropertyMapping->getChildClassName())->name;
@@ -81,5 +97,67 @@ class InternalQueryHelper
         $query = $qb->buildSelectQuery();
 
         return $query;
+    }
+    
+    public function countFromManyParents(
+        PropertyMapping $parentPropertyMapping,
+        object $childEntity, 
+        array $childPks
+    ): SelectQueryInterface {
+        //Select parentClassName where propertyName = childEntity->childPks
+        $childPkValues = [];
+        foreach ($childPks as $childPk) {
+            $childPkValues[$childPk] = ObjectHelper::getValueFromObject($childEntity, $childPk);
+        }
+        $delimit = fn(string $string) => $this->stringReplacer->delimit($string);
+        $relationship = $parentPropertyMapping->relationship;
+        $sourceColumns = explode(',', $relationship->sourceJoinColumn);
+        $targetColumns = explode(',', $relationship->targetJoinColumn);
+        $bridgeSourceColumns = explode(',', $relationship->bridgeSourceJoinColumn);
+        $bridgeTargetColumns = explode(',', $relationship->bridgeTargetJoinColumn);
+        $alias1 = 'obj_' . uniqid();
+        if ($relationship->isManyToMany()) {
+            $alias1 = 'obj_' . uniqid();
+            $alias2 = 'obj2_' . uniqid();
+            $qb = QB::create()
+                ->select('COUNT(*)')
+                ->from($parentPropertyMapping->className)
+                ->innerJoin($delimit($relationship->bridgeJoinTable), $alias1)
+                    ->on(
+                        $delimit(reset($sourceColumns)),
+                        '=',
+                        $delimit($alias1 . '.' . reset( $bridgeSourceColumns))
+                    );
+                for ($index = 1; $index < count($sourceColumns); $index++) {
+                    $qb->and($delimit($sourceColumns[$index]),
+                         '=',
+                         $delimit($alias1 . '.' . $bridgeSourceColumns[$index])
+                    );
+                }
+                $qb->innerJoin($relationship->childClassName, $alias2)
+                    ->on(
+                        $delimit($alias1 . '.' . reset($bridgeTargetColumns)),
+                        '=',
+                        $delimit($alias2 . '.' . reset($targetColumns))
+                    );
+                for ($index = 1; $index < count($targetColumns); $index++) {
+                    $qb->and($delimit($alias1 . '.' . $targetColumns[$index]),
+                         '=',
+                         $delimit($alias2 . '.' . $bridgeTargetColumns[$index])
+                    );
+                }
+            foreach ($childPkValues as $key => $value) {
+                $qb->where($alias2 . '.' . $key, is_null($value) ? 'IS' : '=', $value);
+            }
+        } else {
+            $qb = QB::create()
+                ->select('COUNT(*)')
+                ->from($parentPropertyMapping->className);
+            foreach (array_values($childPkValues) as $index => $value) {
+                $qb->where($delimit($sourceColumns[$index]), is_null($value) ? 'IS' : '=', $value);
+            }
+        }
+
+        return $qb->buildSelectQuery();
     }
 }

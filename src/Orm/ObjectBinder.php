@@ -15,6 +15,7 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Relationship;
+use Objectiphy\Objectiphy\Query\InternalQueryHelper;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Factory\RepositoryFactory;
 
@@ -302,6 +303,9 @@ final class ObjectBinder
      */
     private function createLateBoundClosure(PropertyMapping $propertyMapping, array $row, array $knownValues = [])
     {
+        //TODO: Use the query helper to build the queries instead of doing it here.
+        //TODO: Handle multi-column joins and composite primary keys.
+
         $mappingCollection = $this->mappingCollection;
         $configOptions = clone($this->configOptions);
         return function() use ($mappingCollection, $configOptions, $propertyMapping, $row, $knownValues) {
@@ -329,7 +333,6 @@ final class ObjectBinder
             $relationship = $relationshipMapping->relationship;
 
             if ($relationship->isManyToMany()) {
-                
                 $joinAlias = uniqid('obj_many_');
                 $qb->innerJoin($this->sqlStringReplacer->delimit($relationship->bridgeJoinTable), $joinAlias)
                     ->on($this->sqlStringReplacer->delimit($joinAlias . '.' . $relationship->bridgeTargetJoinColumn),

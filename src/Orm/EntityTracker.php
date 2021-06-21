@@ -175,7 +175,9 @@ class EntityTracker
                 return null;
             }
             $clonedCollection = ObjectHelper::getValueFromObject($clone, $propertyName) ?? [];
+            $clonedCollection = is_iterable($clonedCollection) ? $clonedCollection : [$clonedCollection];
             $entityCollection = ObjectHelper::getValueFromObject($entity, $propertyName) ?? [];
+            $entityCollection = is_iterable($entityCollection) ? $entityCollection : [$entityCollection];
             foreach ($clonedCollection as $clonedChildItem) {
                 $pkValueMatch = false;
                 foreach ($childPks as $childPk) {

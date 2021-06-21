@@ -202,12 +202,17 @@ CREATE TABLE `employee` (
 --  Records of `employee`
 -- ----------------------------
 
-INSERT INTO `employee` VALUES (1, 'Steve', 3, 5, 2, 'GD');
-INSERT INTO `employee` VALUES (2, 'Rob', 4, 3, 3, 'DD');
-INSERT INTO `employee` VALUES (3, 'Becky', 2, 1, 3, 'SB');
-INSERT INTO `employee` VALUES (4, 'Jack', 5, 2, 3, 'DD');
-INSERT INTO `employee` VALUES (5, 'Tim', 1, 4, 2, 'VP');
-INSERT INTO `employee` VALUES (6, 'Ben', 5, 2, 3, 'MD');
+INSERT INTO `employee` (`id`, `name`, `mentor_id`, `mentee_id`, `union_rep_id`, `position_code`)
+        VALUES
+               (1, 'Steve', 3, 5, 2, 'GD'),
+               (2, 'Rob', 4, 3, 3, 'DD'),
+               (3, 'Becky', 2, 1, 3, 'SB'),
+               (4, 'Jack', 5, 2, 3, 'DD'),
+               (5, 'Tim', 1, 4, 2, 'VP'),
+               (6, 'Ben', 5, 2, 3, 'MD'),
+               (7, 'Olivia', 1, 0, 2, 'DD'),
+               (8, 'Carmen', 1, 0, 7, 'DD'),
+               (9, 'Carruthers', 1, 0, 7, 'DD');
 
 -- ----------------------------
 --  Table structure for `login`
@@ -735,7 +740,11 @@ CREATE TABLE `course` (
 --  Records of `course`
 -- ----------------------------
 BEGIN;
-INSERT INTO `course` VALUES ('1', 'PHP Ninja', 'Advanced OOP course for PHP', '8500.00'), ('2', 'Javascript for Dummies', 'For those who can\'t cope with a real programming language', '0.50'), ('3', 'C# and Beyond', 'If you are married to Microsoft', '4250.00');
+INSERT INTO `course` VALUES
+                            ('1', 'PHP Ninja', 'Advanced OOP course for PHP', '8500.00'),
+                            ('2', 'Javascript for Dummies', 'For those who can\'t cope with a real programming language', '0.50'),
+                            ('3', 'C# and Beyond', 'If you are married to Microsoft', '4250.00'),
+                            ('4', 'Orphan Removal and Cascading', 'How not to do it', '1.00');
 COMMIT;
 
 -- ----------------------------
@@ -754,7 +763,15 @@ CREATE TABLE `student` (
 --  Records of `student`
 -- ----------------------------
 BEGIN;
-INSERT INTO `student` VALUES ('1', 'Russell', 'Walker', '160'), ('2', 'Olivia', 'Farquad', '210'), ('3', 'James', 'Fluffy', '73'), ('4', 'Katrina', 'Beaver', '101'), ('5', 'Jake', 'McVitie', '124'), ('6', 'Jemma', 'Thomas', '152'), ('7', 'Obadiah', 'Sputnik', '141'), ('8', 'Elizabeth', 'Shard', '99');
+INSERT INTO `student` VALUES
+                             ('1', 'Russell', 'Walker', '160'),
+                             ('2', 'Olivia', 'Farquad', '210'),
+                             ('3', 'James', 'Fluffy', '73'),
+                             ('4', 'Katrina', 'Beaver', '101'),
+                             ('5', 'Jake', 'McVitie', '124'),
+                             ('6', 'Jemma', 'Thomas', '152'),
+                             ('7', 'Obadiah', 'Sputnik', '141'),
+                             ('8', 'Elizabeth', 'Shard', '99');
 COMMIT;
 
 -- ----------------------------
@@ -775,7 +792,24 @@ CREATE TABLE `student_course` (
 --  Records of `student_course`
 -- ----------------------------
 BEGIN;
-INSERT INTO `student_course` VALUES ('1', '1', '2'), ('1', '3', '1'), ('2', '2', '1'), ('2', '3', '1'), ('3', '1', '2'), ('3', '2', '2'), ('3', '3', '2'), ('4', '1', '1'), ('4', '2', '1'), ('5', '2', '1'), ('5', '3', '3'), ('6', '1', '3'), ('6', '2', '2'), ('6', '3', '1');
+INSERT INTO `student_course` VALUES
+                                    ('1', '1', '2'),
+                                    ('1', '3', '1'),
+                                    ('2', '2', '1'),
+                                    ('2', '3', '1'),
+                                    ('3', '1', '2'),
+                                    ('3', '2', '2'),
+                                    ('3', '3', '2'),
+                                    ('4', '1', '1'),
+                                    ('4', '2', '1'),
+                                    ('5', '2', '1'),
+                                    ('5', '3', '3'),
+                                    ('6', '1', '3'),
+                                    ('6', '2', '2'),
+                                    ('6', '3', '1'),
+                                    ('7', '4', '1'),
+                                    ('8', '4', '1'),
+                                    ('8', '3', '1');
 COMMIT;
 
 SET FOREIGN_KEY_CHECKS = 1;

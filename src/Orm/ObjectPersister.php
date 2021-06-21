@@ -292,6 +292,7 @@ final class ObjectPersister implements TransactionInterface
         $originalClassName = $this->getClassName();
         $className = ObjectHelper::getObjectClassName($entity);
         $this->setClassName($className);
+        $this->options->mappingCollection->getRelationships(); //Ensures all mapping is populated even if mapped by other side
         $qb = QB::create();
         foreach ($pkValues as $key => $value) {
             $qb->where($key, QB::EQ, $this->objectUnbinder->unbindValue($value));
@@ -313,7 +314,7 @@ final class ObjectPersister implements TransactionInterface
             $this->saveChildren($entity, $insertCount, $updateCount, $deleteCount);
         }
         $this->setClassName($originalClassName);
-        
+
         return $insertCount + $updateCount + $deleteCount;
     }
 
@@ -340,6 +341,7 @@ final class ObjectPersister implements TransactionInterface
         //Then save the parent
         $originalClassName = $this->getClassName();
         $this->setClassName(ObjectHelper::getObjectClassName($entity));
+        $this->options->mappingCollection->getRelationships(); //Ensures all mapping is populated even if mapped by other side
         $qb = QB::create();
         $insertQuery = $qb->buildInsertQuery();
         $row = $this->objectUnbinder->unbindEntityToRow($entity, [], $this->options->saveChildren);
@@ -386,6 +388,14 @@ final class ObjectPersister implements TransactionInterface
         int &$deleteCount,
         bool $ownedOnly = false
     ): void {
+        static $depth = 0;
+        $depth++;
+        if ($this->config->disableEntityCache && $depth > $this->config->maxDepth) {
+            //Without the entity cache, we won't track what has changed and will try to save everything
+            $depth--;
+            return;
+        }
+
         $childProperties = $this->options->mappingCollection->getChildObjectProperties($ownedOnly);
 
         foreach ($childProperties as $childPropertyName) {
@@ -427,6 +437,8 @@ final class ObjectPersister implements TransactionInterface
                 }
             }
         }
+
+        $depth--;
     }
 
     private function saveManyToMany(
@@ -436,6 +448,7 @@ final class ObjectPersister implements TransactionInterface
         int &$insertCount,
         int &$updateCount
     ) {
+        $this->options->mappingCollection->getRelationships(); //Ensure all mapping information is populated
         $pkValues = $this->options->mappingCollection->getPrimaryKeyValues($parentEntity);
         if ($this->entityTracker->getDirtyProperties($parentEntity, $pkValues, [$propertyMapping->propertyName])) {
             $sourceColumn = $propertyMapping->relationship->bridgeSourceJoinColumn;

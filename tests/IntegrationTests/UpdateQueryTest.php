@@ -86,8 +86,8 @@ class UpdateQueryTest extends IntegrationTestBase
 
     protected function doUpdateQueryTests()
     {
-        $this->setUp(); //To ensure we update the same number of records each time
-
+        $this->setUp(); //Forget about anything added by previous tests
+        
         $query = QueryBuilder::create()
             ->update(TestContact::class)
             ->set([

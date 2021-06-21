@@ -4,9 +4,11 @@ namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Tests\Entity\TestEmployee;
 use Objectiphy\Objectiphy\Tests\Entity\TestPet;
 use Objectiphy\Objectiphy\Tests\Entity\TestChild;
 use Objectiphy\Objectiphy\Tests\Entity\TestParent;
+use Objectiphy\Objectiphy\Tests\Entity\TestUser;
 
 class DeleteTest extends IntegrationTestBase
 {
@@ -80,8 +82,49 @@ class DeleteTest extends IntegrationTestBase
     public function testOrphanRemoval()
     {
         $this->testName = 'Orphan removal';
+        
+        // Test that orphans are only removed on a many-to-one relationship if no other parent has the child
+        // (many to many is tested separately in ManyToManyTest.php)
+
+        //Remove Olivia as the union rep from Carmen - should not delete Olivia (because Carruthers still has her as union rep)
+        //Then remove Olivia as the union rep from Carruthers - should delete Olivia (because nobody has Olivia as union rep)
+        $this->objectRepository->setClassName(TestEmployee::class);
+        $carmen = $this->objectRepository->find(8);
+        $carmen->unionRep = null;
+        $this->objectRepository->saveEntity($carmen);
+        $this->objectRepository->clearCache();
+        $refreshedOlivia = $this->objectRepository->find(7);
+        $this->assertNotNull($refreshedOlivia);
+        $this->assertEquals('Olivia', $refreshedOlivia->name);
+        $carruthers = $this->objectRepository->find(9);
+        $carruthers->unionRep = null;
+        $this->objectRepository->saveEntity($carruthers);
+        $this->objectRepository->clearCache();
+        $zombieOlivia = $this->objectRepository->find(7);
+        $this->assertNull($zombieOlivia);
+
+        //Test orphan removal in a one to one relationship (no need to check for other parents)
+        $this->objectRepository->setClassName(TestParent::class);
+        $userlessParent = $this->objectRepository->find(2);
+        $removedUserId = $userlessParent->getUser()->getId();
+        $userlessParent->setUser(null);
+        $insertCount = 0;
+        $updateCount = 0;
+        $deleteCount = 0;
+        $this->objectRepository->saveEntity($userlessParent, null, false, $insertCount, $updateCount, $deleteCount);
+        $this->assertEquals(0, $insertCount);
+        $this->assertEquals(1, $updateCount);
+        $this->assertEquals(1, $deleteCount);
+        $this->objectRepository->clearCache();
+        $refreshedParent = $this->objectRepository->find(2);
+        $this->assertEquals(null, $refreshedParent->user);
+        $this->objectRepository->setClassName(TestUser::class);
+        $zombieUser = $this->objectRepository->find($removedUserId);
+        $this->assertNull($zombieUser);
+
+        $this->objectRepository->setClassName(TestParent::class);
         $bereavedParent = $this->objectRepository->find(1);
-        //Remove a child entity which has orphan removal - it should be deleted
+        //Remove a one to many child entity which has orphan removal - it should be deleted
         $pets = $bereavedParent->getPets();
         $elderlyPetId = $pets[count($pets) - 1]->id;
         $pets->offsetUnset(count($pets) - 1); //Euthanised! :(
@@ -101,9 +144,7 @@ class DeleteTest extends IntegrationTestBase
         //Eg. create a new child, assign an existing parent to it, update a property on
         //the parent, remove one of the parent's pets, then add a new pet, then save the child.
         //Removed pet should be deleted, new pet should be inserted, child should be inserted, parent should be updated.
-        $existingParent = $this->objectRepository->find(
-            3
-        ); //Pets not being cloned properly - lazy loader populates clone
+        $existingParent = $this->objectRepository->find(3);
         $existingPets = $existingParent->getPets();
         $this->assertEquals('Trixie', $existingPets[1]->name); //Make sure the pet we want to replace is there
         $this->assertEquals(13, $existingPets[1]->id);

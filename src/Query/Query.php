@@ -217,9 +217,20 @@ abstract class Query implements QueryInterface
         $relationshipsUsed = [];
         $propertyPathsUsed = $this->getPropertyPaths();
         $relationships = $this->mappingCollection->getRelationships();
+        $relationshipPaths = [];
         foreach ($relationships as $key => $relationship) {
             foreach ($propertyPathsUsed as $propertyPath) {
                 if (in_array($relationship->propertyName, explode('.', $propertyPath))) {
+                    //Ensure we pick up any necessary intermediate relationships
+                    $relationshipPath = strpos($relationship->getPropertyPath(), '.') !== false ? strtok($relationship->getPropertyPath(), '.') : null;
+                    if ($relationshipPath) {
+                        foreach ($relationships as $key2 => $relationship2) {
+                            if ($relationshipPath == $relationship2->getPropertyPath()) {
+                                $relationshipsUsed[$key2] = $relationship2;
+                                break;
+                            }
+                        }
+                    }
                     $relationshipsUsed[$key] = $relationship;
                     break;
                 }
@@ -293,7 +304,7 @@ abstract class Query implements QueryInterface
      */
     private function populateMappedJoin(PropertyMapping $propertyMapping, array &$ons): ?JoinExpression
     {
-        $propertyDelimiter = $this->stringReplacer->getDelimiter('property');
+        $propertyDelimiter = $this->stringReplacer->getDelimiter('propertyPath');
         $alias = 'obj_alias_' . str_replace('.', '_', $propertyMapping->getPropertyPath());
         $join = new JoinExpression(
             $this->stringReplacer->delimit($propertyMapping->relationship->joinTable),

@@ -91,7 +91,7 @@ class SqlUpdaterMySql implements SqlUpdaterInterface
         $sql .= $this->joinProvider->getJoins($query);
         $sql .= " SET \n";
         $sql .= $this->constructAssignmentSql($query);
-        $sql .= $this->whereProvider->getWhere($query, $this->options->mappingCollection);
+        $sql = trim($sql) . $this->whereProvider->getWhere($query, $this->options->mappingCollection);
 
         return $this->stringReplacer->replaceNames($sql);
     }

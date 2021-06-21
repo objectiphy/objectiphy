@@ -10,7 +10,7 @@ use Objectiphy\Objectiphy\Mapping\Relationship;
 /**
  * @ORM\Table(name="objectiphy_test.course")
  */
-class TestCourse
+class TestCourseOrphanCascade
 {
     /**
      * @ORM\Id
@@ -35,16 +35,18 @@ class TestCourse
     /**
      * Join columns are optional - they default to the values shown here
      * (annotations can be disabled by removing the @ symbol for test purposes - some missing items can be guessed)
-     * @ORM\ManyToMany(targetEntity="TestStudent", inversedBy="course")
-     * @ORM\JoinTable(name="student_course",
+     * ORM\ManyToMany(targetEntity="TestStudentOrphanCascade", inversedBy="course")
+     * ORM\JoinTable(name="student_course",
      *      joinColumns={@ORM\JoinColumn(name="course_id", referencedColumnName="id")},
      *      inverseJoinColumns={@ORM\JoinColumn(name="student_id", referencedColumnName="id")}
      * )
      *
-     * Relationship(
+     * @Relationship(
      *     relationshipType="many_to_many",
-     *     childClassName="TestStudent",
-     *     bridgeJoinTable="student_course"
+     *     childClassName="TestStudentOrphanCascade",
+     *     bridgeJoinTable="student_course",
+     *     orphanRemoval=true,
+     *     cascadeDeletes=true
      * )
      */
     public array $students = [];

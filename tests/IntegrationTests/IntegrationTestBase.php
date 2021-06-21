@@ -21,6 +21,7 @@ class IntegrationTestBase extends TestCase
 
     protected function setUp(): void
     {
+        $disabledCache = $this->getCacheSuffix();
         ini_set('memory_limit', '512M'); //Only because PHP 7.4.5 has memory leaks when running PHPUnit
         $config = require(__DIR__ . '/../config.php');
         if (empty($config['DB_HOST']) || empty($config['DB_NAME']) || empty($config['DB_USER'])) {
@@ -35,6 +36,9 @@ class IntegrationTestBase extends TestCase
         $setupTime = round(microtime(true) - $start, 3);
         echo "Objectiphy setup time: $setupTime seconds.\n";
         $this->startTime = microtime(true);
+        if ($disabledCache) { //Have to re-do this as it will have been forgotten
+            $this->disableCache();
+        }
     }
 
     protected function tearDown(): void

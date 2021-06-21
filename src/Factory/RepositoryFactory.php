@@ -35,7 +35,6 @@ use Objectiphy\Objectiphy\MappingProvider\MappingProviderDoctrineAnnotation;
 use Objectiphy\Objectiphy\Meta\Explanation;
 use Objectiphy\Objectiphy\NamingStrategy\NameResolver;
 use Objectiphy\Objectiphy\Orm\EntityTracker;
-use Objectiphy\Objectiphy\Orm\InternalQueryHelper;
 use Objectiphy\Objectiphy\Orm\ObjectRepository;
 use Objectiphy\Objectiphy\Orm\ObjectMapper;
 use Objectiphy\Objectiphy\Orm\ObjectBinder;
@@ -43,6 +42,7 @@ use Objectiphy\Objectiphy\Orm\ObjectFetcher;
 use Objectiphy\Objectiphy\Orm\ObjectPersister;
 use Objectiphy\Objectiphy\Orm\ObjectRemover;
 use Objectiphy\Objectiphy\Orm\ObjectUnbinder;
+use Objectiphy\Objectiphy\Query\InternalQueryHelper;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>

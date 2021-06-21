@@ -484,6 +484,8 @@ class BasicWritingTest extends IntegrationTestBase
     
     protected function doClassInstanceUpdateTests()
     {
+        $this->setUp(); //Forget about anything added by previous tests
+                
         //Save data to two different instances of the same class
         $this->objectRepository->setClassName(TestParent::class);
         $parent = $this->objectRepository->find(1);
@@ -491,7 +493,9 @@ class BasicWritingTest extends IntegrationTestBase
         $parent->getChild()->getUser()->setType('staff2');
         $this->objectRepository->saveEntity($parent);
         $refreshedParent = $this->objectRepository->find(1);
-        $this->assertNotEquals($refreshedParent->getUser()->getId(), $refreshedParent->getChild()->getUser()->getId());
+        $parentUserId = $refreshedParent->getUser()->getId();
+        $childUserId = $refreshedParent->getChild()->getUser()->getId();
+        $this->assertNotEquals($parentUserId, $childUserId);
         $this->assertEquals('branch2', $refreshedParent->getUser()->getType());
         $this->assertEquals('staff2', $refreshedParent->getChild()->getUser()->getType());
     }
