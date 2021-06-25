@@ -300,6 +300,8 @@ class Relationship extends ObjectiphyAnnotation
         $errorMessage = '';
         if ($this->isManyToMany() && !$this->bridgeJoinTable) {
             $errorMessage = 'Bridge join table has not been specified on many-to-many relationship for %1$s';
+        } elseif ($this->isFromMany() && $this->cascadeDeletes) {
+            $errorMessage = 'It is a bad idea to cascade deletes on a many-to-one or many-to-many relationship. Please remove the cascade option and use orphan removal instead.';
         } elseif ($this->isEmbedded || $this->isLateBound()) {
             return; //No join involved
         } elseif (!$this->joinTable) {

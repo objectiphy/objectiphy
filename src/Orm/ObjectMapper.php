@@ -111,6 +111,7 @@ final class ObjectMapper
             $this->mappingCollections[$className] = $mappingCollection;
             $this->currentDepth = 0;
             $this->populateMappingCollection($mappingCollection);
+            $mappingCollection->getRelationships(); //Ensure all mapping information is populated
         }
 
         return $this->mappingCollections[$className];

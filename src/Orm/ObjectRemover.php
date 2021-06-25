@@ -43,6 +43,8 @@ final class ObjectRemover implements TransactionInterface
     private ExplanationInterface $explanation;
     private ConfigOptions $config;
 
+    private array $entitiesBeingDeleted = []; //Used to prevent recursion
+
     public function __construct(
         ObjectMapper $objectMapper,
         SqlDeleterInterface $sqlDeleter,
@@ -152,8 +154,9 @@ final class ObjectRemover implements TransactionInterface
                 if ($removedChildren) {
                     $parentPkValues = $this->options->mappingCollection->getPrimaryKeyValues($entity);
                     $this->setDeleteOptions(DeleteOptions::create($this->options->mappingCollection));
+                    //$this->doNotDeleteEntity = $entity; //Prevent orphan removal or cascade from removing the parent
                     $this->sendOrphanedKidsAway(
-                        $childPropertyName,
+                        $childPropertyMapping,
                         $removedChildren,
                         $parentPkValues,
                         $childPks,
@@ -176,21 +179,92 @@ final class ObjectRemover implements TransactionInterface
      */
     public function deleteEntity(object $entity, DeleteOptions $deleteOptions, int &$updateCount): int
     {
+        $entityId = spl_object_id($entity);
+        if (!array_key_exists($entityId, $this->entitiesBeingDeleted)) {
+            $this->entitiesBeingDeleted[$entityId] = 1; //Prevent recursion
+            if ($this->config->disableDeleteEntities) {
+                return 0;
+            }
+            $originalClass = $this->getClassName();
+            $this->setClassName(ObjectHelper::getObjectClassName($entity));
+            $deleteCount = 0;
+            $this->setDeleteOptions($deleteOptions);
+            $this->removeChildren($entity, $updateCount, $deleteCount);
+
+            //Delete entity
+            $qb = QB::create();
+            $pkValues = $this->options->mappingCollection->getPrimaryKeyValues($entity);
+            foreach ($pkValues as $key => $value) {
+                $qb->where($key, is_null($value) ? 'IS' : '=', $value);
+            }
+            $deleteQuery = $qb->buildDeleteQuery();
+            $affectedCount = $deleteCount + $this->executeDelete($deleteQuery, $this->options);
+            $this->entityTracker->remove($this->getClassName(), $pkValues);
+            $this->setClassName($originalClass);
+            unset($this->entitiesBeingDeleted[$entityId]);
+        }
+
+        return $affectedCount ?? 0;
+    }
+
+    /**
+     * @param iterable $entities
+     * @param DeleteOptions $deleteOptions
+     * @param int $updateCount
+     * @return int
+     * @throws ObjectiphyException|QueryException|\ReflectionException
+     */
+    public function deleteEntities(
+        iterable $entities,
+        DeleteOptions $deleteOptions,
+        int &$updateCount
+    ): int {
         if ($this->config->disableDeleteEntities) {
             return 0;
         }
-        $originalClass = $this->getClassName();
-        $this->setClassName(ObjectHelper::getObjectClassName($entity));
         $deleteCount = 0;
         $this->setDeleteOptions($deleteOptions);
-        $this->removeChildren($entity, $updateCount, $deleteCount);
 
-        //Delete entity
-        $qb = QB::create();
-        $deleteQuery = $qb->buildDeleteQuery();
-        $this->setClassName($originalClass);
-        
-        return $deleteCount + $this->executeDelete($deleteQuery, $this->options);
+        //Extract primary keys by class (just in case we have a mixture of entities)
+        $deletes = [];
+        foreach ($entities as $entity) {
+            $entityId = spl_object_id($entity);
+            if (!array_key_exists($entityId, $this->entitiesBeingDeleted)) {
+                $this->entitiesBeingDeleted[$entityId] = 1; //Prevent recursion
+                $className = ObjectHelper::getObjectClassName($entity);
+                $pkValues = $this->options->mappingCollection->getPrimaryKeyValues($entity);
+                if (empty($pkValues)) {
+                    throw new ObjectiphyException('Cannot delete an entity which has no primary key value.');
+                }
+                foreach ($pkValues as $key => $value) {
+                    $deletes[$className][$key][] = $value;
+                }
+                $this->removeChildren($entity, $updateCount, $deleteCount);
+                unset($this->entitiesBeingDeleted[$entityId]);
+            }
+        }
+
+        if ($deletes) {
+            //Delete en-masse per class
+            $originalClassName = $this->options->getClassName();
+            foreach ($deletes as $className => $pkValues) {
+                $this->setClassName($className);
+                $deleteQuery = QB::create()->delete($className);
+                $valueCount = count(reset($pkValues));
+                for ($valueIndex = 0; $valueIndex < $valueCount; $valueIndex++) {
+                    $deleteQuery->orStart();
+                    foreach ($pkValues as $propertyName => $values) {
+                        $deleteQuery->and($propertyName, QB::EQ, $values[$valueIndex]);
+                    }
+                    $deleteQuery->orEnd();
+                }
+                $deleteCount += $this->executeDelete($deleteQuery->buildDeleteQuery(), $this->options);
+            }
+            $this->entityTracker->remove($className, $pkValues);
+            $this->setClassName($originalClassName);
+        }
+
+        return $deleteCount;
     }
 
     /**
@@ -219,59 +293,7 @@ final class ObjectRemover implements TransactionInterface
         return $deleteCount;
     }
 
-    /**
-     * @param iterable $entities
-     * @param DeleteOptions $deleteOptions
-     * @param int $updateCount
-     * @return int
-     * @throws ObjectiphyException|QueryException|\ReflectionException
-     */
-    public function deleteEntities(
-        iterable $entities,
-        DeleteOptions $deleteOptions,
-        int &$updateCount
-    ): int {
-        if ($this->config->disableDeleteEntities) {
-            return 0;
-        }
-        $deleteCount = 0;
-        $this->setDeleteOptions($deleteOptions);
 
-        //Extract primary keys by class (just in case we have a mixture of entities)
-        $deletes = [];
-        foreach ($entities as $entity) {
-            $className = ObjectHelper::getObjectClassName($entity);
-            $pkValues = $this->options->mappingCollection->getPrimaryKeyValues($entity);
-            if (empty($pkValues)) {
-                throw new ObjectiphyException('Cannot delete an entity which has no primary key value.');
-            }
-            foreach ($pkValues as $key => $value) {
-                $deletes[$className][$key][] = $value;
-            }
-            $this->removeChildren($entity, $updateCount, $deleteCount);
-        }
-
-        if ($deletes) {
-            //Delete en-masse per class
-            $originalClassName = $this->options->getClassName();
-            foreach ($deletes as $className => $pkValues) {
-                $this->setClassName($className);
-                $deleteQuery = QB::create()->delete($className);
-                $valueCount = count(reset($pkValues));
-                for ($valueIndex = 0; $valueIndex < $valueCount; $valueIndex++) {
-                    $deleteQuery->orStart();
-                    foreach ($pkValues as $propertyName => $values) {
-                        $deleteQuery->and($propertyName, QB::EQ, $values[$valueIndex]);
-                    }
-                    $deleteQuery->orEnd();
-                }
-                $deleteCount += $this->executeDelete($deleteQuery->buildDeleteQuery(), $this->options);
-            }
-            $this->setClassName($originalClassName);
-        }
-
-        return $deleteCount;
-    }
 
     /**
      * @param object $entity
@@ -367,16 +389,41 @@ final class ObjectRemover implements TransactionInterface
      */
     private function removeChildren(object $entity, int &$updateCount, int &$deleteCount): void
     {
-        $children = $this->options->mappingCollection->getChildObjectProperties();
+        $parentClassName = ObjectHelper::getObjectClassName($entity);
+        $mappingCollection = $this->objectMapper->getMappingCollectionForClass($parentClassName);
+        $children = $mappingCollection->getChildObjectProperties();
         foreach ($children as $childPropertyName) {
-            $child = $entity->$childPropertyName ?? null;
+            $child = ObjectHelper::getValueFromObject($entity, $childPropertyName);
+
+            // If we have an object reference rather than a real entity, or the child has been removed from the entity
+            // but still exists in the database, we will need to load its clone from the entity tracker, or failing that,
+            // load it from the database so we can remove it...
+            if (empty($child) && $this->entityTracker->hasEntity($entity)) {
+                $clonedParent = $this->entityTracker->getClone(
+                    ObjectHelper::getObjectClassName($entity),
+                    $mappingCollection->getPrimaryKeyValues($entity)
+                );
+                $child = ObjectHelper::getValueFromObject($clonedParent, $childPropertyName);
+            } elseif (empty($child)) {
+                $childPropertyMapping = $mappingCollection->getPropertyMapping($childPropertyName);
+                $childPks = $mappingCollection->getPrimaryKeyProperties($childPropertyMapping->getChildClassName());
+                $child = $this->loadRemovedChildrenFromDatabase($entity, $childPropertyMapping, $childPks);
+            }
+
             if (!empty($child)) {
-                $parentPkValues = $this->options->mappingCollection->getPrimaryKeyValues($entity);
+                $parentPkValues = $mappingCollection->getPrimaryKeyValues($entity);
                 $children = is_iterable($child) ? $child : [$child];
-                $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
+                $childPropertyMapping = $mappingCollection->getPropertyMapping($childPropertyName);
                 $childClassName = $childPropertyMapping->relationship->childClassName;
-                $childPks = $this->options->mappingCollection->getPrimaryKeyProperties($childClassName);
-                $this->sendOrphanedKidsAway($childPropertyName, $children, $parentPkValues, $childPks, $updateCount, $deleteCount);
+                $childPks = $mappingCollection->getPrimaryKeyProperties($childClassName);
+                $this->sendOrphanedKidsAway(
+                    $childPropertyMapping,
+                    $children,
+                    $parentPkValues,
+                    $childPks,
+                    $updateCount,
+                    $deleteCount
+                );
             }
         }
     }
@@ -389,7 +436,7 @@ final class ObjectRemover implements TransactionInterface
      * @throws ObjectiphyException|\ReflectionException
      */
     private function sendOrphanedKidsAway(
-        string $propertyName,
+        PropertyMapping $childPropertyMapping,
         iterable $removedChildren,
         array $parentPkValues,
         array $childPks,
@@ -398,35 +445,46 @@ final class ObjectRemover implements TransactionInterface
     ): void {
         $goingToOrphanage = [];
         $goingToBelize = [];
-        $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($propertyName);
+        //$childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($propertyName);
         foreach ($removedChildren as $removedChild) {
-            $offToBelizeWithYou = false;
-            if (!$this->config->disableDeleteEntities
-                && !$this->options->disableCascade
-                && ($childPropertyMapping->relationship->cascadeDeletes
-                    || $childPropertyMapping->relationship->orphanRemoval)
-            ) {
-                $offToBelizeWithYou = true;
-                //Hold your gosh-darn horses mister! If many to one or many to many, check whether another parent already has it
-                if ($childPropertyMapping->relationship->isFromMany()) {
-                    $query = $this->queryHelper->countFromManyParents($childPropertyMapping, $removedChild, $childPks);
-                    $findOptions = ['multiple' => false, 'bindToEntities' => false, 'count' => true];
-                    $this->objectFetcher->setFindOptions(FindOptions::create($this->options->mappingCollection, $findOptions));
-                    $foundParents = intval(current($this->objectFetcher->executeFind($query) ?: [0])); //Unlike reset, current does not require a reference
-                    if ($foundParents > 1) { //Current parent is not the only one
-                        $offToBelizeWithYou = false;
+            $childObjectId = spl_object_id($removedChild);
+            if (!array_key_exists($childObjectId, $this->entitiesBeingDeleted)) {
+                $offToBelizeWithYou = false;
+                if (!$this->config->disableDeleteEntities
+                    && !$this->options->disableCascade
+                    && ($childPropertyMapping->relationship->cascadeDeletes
+                        || $childPropertyMapping->relationship->orphanRemoval)
+                ) {
+                    $offToBelizeWithYou = true;
+                    //Hold your gosh-darn horses mister! If many to one or many to many, check whether another parent already has it
+                    if ($childPropertyMapping->relationship->isFromMany()) {
+                        $query = $this->queryHelper->countFromManyParents(
+                            $childPropertyMapping,
+                            $removedChild,
+                            $childPks
+                        );
+                        $findOptions = ['multiple' => false, 'bindToEntities' => false, 'count' => true];
+                        $this->objectFetcher->setFindOptions(
+                            FindOptions::create($this->options->mappingCollection, $findOptions)
+                        );
+                        $foundParents = intval(
+                            current($this->objectFetcher->executeFind($query) ?: [0])
+                        ); //Unlike reset, current does not require a reference
+                        if ($foundParents > 1) { //Current parent is not the only one
+                            $offToBelizeWithYou = false;
+                        }
                     }
                 }
-            }
 
-            if ($offToBelizeWithYou) {
-                //Nobody wants this baby
-                $goingToBelize[] = $removedChild;
-            } elseif (!$childPropertyMapping->relationship->isManyToMany()) {
-                //Available for adoption
-                $parentProperty = $childPropertyMapping->relationship->mappedBy;
-                if ($parentProperty && !$this->config->disableDeleteRelationships) {
-                    $goingToOrphanage[] = $removedChild;
+                if ($offToBelizeWithYou) {
+                    //Nobody wants this baby
+                    $goingToBelize[] = $removedChild;
+                } elseif (!$childPropertyMapping->relationship->isManyToMany()) {
+                    //Available for adoption
+                    $parentProperty = $childPropertyMapping->relationship->mappedBy;
+                    if ($parentProperty && !$this->config->disableDeleteRelationships) {
+                        $goingToOrphanage[] = $removedChild;
+                    }
                 }
             }
         }

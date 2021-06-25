@@ -462,6 +462,20 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     }
 
     /**
+     * Count records that match criteria
+     * @param array $criteria
+     * @return int
+     */
+    public function count($criteria = []): int
+    {
+        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
+        $this->assertClassNameSet();
+        $count = intval($this->findOneValueBy($criteria, 'COUNT(*)'));
+
+        return $count;
+    }
+
+    /**
      * Insert or update the supplied entity.
      * @param object $entity The entity to insert or update.
      * @param bool $saveChildren Whether or not to also update any child objects. You can set a default value as a

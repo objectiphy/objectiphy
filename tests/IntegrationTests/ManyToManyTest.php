@@ -2,11 +2,12 @@
 
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
+use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Tests\Entity\TestCourse;
-use Objectiphy\Objectiphy\Tests\Entity\TestCourseOrphanCascade;
+use Objectiphy\Objectiphy\Tests\Entity\TestCourseOrphan;
 use Objectiphy\Objectiphy\Tests\Entity\TestStudent;
-use Objectiphy\Objectiphy\Tests\Entity\TestStudentOrphanCascade;
+use Objectiphy\Objectiphy\Tests\Entity\TestStudentOrphan;
 
 class ManyToManyTest extends IntegrationTestBase
 {
@@ -71,6 +72,8 @@ class ManyToManyTest extends IntegrationTestBase
         $this->doWritingTests();
         $this->doDeletingTests();
         $this->doOrphanRemovalTest();
+        $this->doOrphanRemovalOnDeleteTest();
+        $this->doSuppressedOrphanRemovalTest();
     }
 
     protected function doReadingTests()
@@ -105,7 +108,7 @@ class ManyToManyTest extends IntegrationTestBase
         $this->assertEquals(0, $updateCount);
         $this->assertEquals(0, $deleteCount);
 
-        $this->objectRepository->clearCache();
+        //$this->objectRepository->clearCache();
         $course2 = $this->objectRepository->find(1);
         $this->assertEquals(5, count($course2->students));
 
@@ -123,7 +126,7 @@ class ManyToManyTest extends IntegrationTestBase
         $this->assertEquals(0, $insertCount);
         $this->assertEquals(1, $updateCount);
 
-        $this->objectRepository->clearCache();
+        //$this->objectRepository->clearCache();
         $refreshedStudent = $this->objectRepository->find($studentId);
         $this->assertEquals('7500.00', $refreshedStudent->courses[0]->cost);
     }
@@ -147,20 +150,17 @@ class ManyToManyTest extends IntegrationTestBase
         $this->assertEquals(0, $updateCount);
         $this->assertEquals(2, $deleteCount);
 
-        $this->objectRepository->clearCache();
+        //$this->objectRepository->clearCache();
         $refreshedCourse = $this->objectRepository->find(1);
         $this->assertEquals(2, count($course->students));
     }
 
     public function doOrphanRemovalTest()
     {
-        // TODO: check that no other parent has this child before orphan removal (we will not check parents of a
+        // Check that no other parent has this child before orphan removal (we will not check parents of a
         // different class as we have no way of knowing which classes might be parents. If you have switched on
         // orphan removal, we will assume you have a private relationship, so no other class types will be involved).
-        // Update documentation accordingly, as it currently says that no check will be done.
-        // Likewise for many-to-one.
-
-        $this->objectRepository->setClassName(TestCourseOrphanCascade::class);
+        $this->objectRepository->setClassName(TestCourseOrphan::class);
         $afflictedCourse = $this->objectRepository->find(4);
         //Remove a child entity which has orphan removal but where the child has another parent - it should not be deleted
         $students =& $afflictedCourse->students;
@@ -168,31 +168,30 @@ class ManyToManyTest extends IntegrationTestBase
         unset($students[count($students) - 1]); //Expelled!
         $this->objectRepository->saveEntity($afflictedCourse);
         //Check that we only have one student in the course
-        $this->objectRepository->clearCache();
         $afflictedCourse = $this->objectRepository->find(4);
         $remainingStudents = $afflictedCourse->students;
         $this->assertEquals(1, count($remainingStudents));
         //Check that the expelled student has not actually been deleted (because it is not an orphan)
-        $this->objectRepository->setClassName(TestStudentOrphanCascade::class);
+        $this->objectRepository->setClassName(TestStudentOrphan::class);
         $zombieStudent = $this->objectRepository->find($unrulyStudentId);
         $this->assertNotNull($zombieStudent);
         $this->assertEquals($unrulyStudentId, $zombieStudent->id);
 
         //Remove a child entity which has orphan removal and child is really an orphan - it should be deleted
         $this->setUp(); //Forget about anything added by previous tests
-        $this->objectRepository->setClassName(TestCourseOrphanCascade::class);
+        $this->objectRepository->setClassName(TestCourseOrphan::class);
         $afflictedCourse = $this->objectRepository->find(4);
         $students =& $afflictedCourse->students;
         $unrulyStudentId = $students[0]->id;
         unset($students[0]); //Expelled!
         $this->objectRepository->saveEntity($afflictedCourse);
         //Check that we only have one student
-        $this->objectRepository->clearCache();
+        //$this->objectRepository->clearCache();
         $afflictedCourse = $this->objectRepository->find(4);
         $remainingStudents = $afflictedCourse->students;
         $this->assertEquals(1, count($remainingStudents));
         //Check that the expelled student has really gone
-        $this->objectRepository->setClassName(TestStudentOrphanCascade::class);
+        $this->objectRepository->setClassName(TestStudentOrphan::class);
         $zombieStudent = $this->objectRepository->find($unrulyStudentId);
         $this->assertEquals(null, $zombieStudent);
 
@@ -202,17 +201,17 @@ class ManyToManyTest extends IntegrationTestBase
         //remove one of the course's students, then add another new student, then save the original new student.
         //Removed student should be deleted, two new students should be inserted, course should be updated.
         $this->setUp(); //Forget about anything added by previous tests
-        $this->objectRepository->setClassName(TestCourseOrphanCascade::class);
+        $this->objectRepository->setClassName(TestCourseOrphan::class);
         $existingCourse = $this->objectRepository->find(4);
         $existingStudents = $existingCourse->students;
         $this->assertEquals('Shard', $existingStudents[1]->lastName); //Make sure the pet we want to replace is there
         $this->assertEquals(8, $existingStudents[1]->id);
-        $newStudent = new TestStudentOrphanCascade();
+        $newStudent = new TestStudentOrphan();
         $newStudent->firstName = 'Arthur';
         $newStudent->courses[] = $existingCourse;
         $existingCourse->students[] = $newStudent; //Would normally be handled by the entities, but whatever
         $newStudent->courses[0]->name = 'Updated Course Name';
-        $newStudent2 = new TestStudentOrphanCascade();
+        $newStudent2 = new TestStudentOrphan();
         $newStudent2->firstName = 'Sam';
         $newStudent2->iq = 126;
         $newStudent2->courses[] = $existingCourse; //Would normally be handled by the entities, but whatever
@@ -220,8 +219,8 @@ class ManyToManyTest extends IntegrationTestBase
         $replacedStudentId = $courseStudents[0]->id;
         $courseStudents[0] = $newStudent2;
         $this->objectRepository->saveEntity($newStudent);
-        $this->objectRepository->clearCache();
-        $this->objectRepository->setClassName(TestStudentOrphanCascade::class);
+        //$this->objectRepository->clearCache();
+        $this->objectRepository->setClassName(TestStudentOrphan::class);
         $refreshedStudent = $this->objectRepository->find($newStudent->id);
         $this->assertEquals('Arthur', $refreshedStudent->firstName);
         $this->assertEquals($existingCourse->id, $refreshedStudent->courses[0]->id);
@@ -233,107 +232,86 @@ class ManyToManyTest extends IntegrationTestBase
         $this->assertContains('Arthur', $studentNames);
         $this->assertNotContains('Obadiah', $studentNames);
         //Make sure orphan was deleted
-        $this->objectRepository->setClassName(TestStudentOrphanCascade::class);
+        $this->objectRepository->setClassName(TestStudentOrphan::class);
         $deadStudent = $this->objectRepository->find($replacedStudentId);
         $this->assertNull($deadStudent);
     }
 
-    //TODO: convert the following to use the student/course many-to-many relationship
-    public function doCascadingTest()
+    public function doOrphanRemovalOnDeleteTest()
     {
-        $this->testName = 'Cascade deletes';
-        //Delete a parent entity: without cascading, child should be orphaned; with cascading, child should be deleted.
-        $suicidalParent = $this->objectRepository->find(2);
-        $childAtRiskId = $suicidalParent->getChild()->getId();
-        $petsToDie = $suicidalParent->getPets();
-        $this->objectRepository->deleteEntity($suicidalParent);
-        $zombieParent = $this->objectRepository->find(2);
-        $this->assertEquals(null, $zombieParent); //Make sure parent is really dead
-        $this->objectRepository->setClassName(TestChild::class);
-        $orphan = $this->objectRepository->find($childAtRiskId);
-        $this->assertEquals($childAtRiskId, $orphan->getId()); //Make sure child was loaded
-        $this->assertEquals(null, $orphan->getParent()); //Make sure child is an orphan
-        //Will need to hit the database directly to see if foreign key is null (as objectiphy uses the pk of the joined table)
-        $sql = "SELECT parent_id FROM child WHERE id = 2";
+        $this->testName = 'Orphan removal on delete';
+        $this->setUp();
+        //Delete a parent entity: child should be deleted only if it is orphaned.
+        $this->objectRepository->setClassName(TestCourseOrphan::class);
+        $obsoleteCourse = $this->objectRepository->find(4);
+        $studentAtRiskId = $obsoleteCourse->students[1]->id;
+        $this->objectRepository->deleteEntity($obsoleteCourse);
+        $zombieCourse = $this->objectRepository->find(4);
+        $this->assertEquals(null, $zombieCourse); //Make sure parent is really dead
+        $this->objectRepository->setClassName(TestStudentOrphan::class);
+        $orphan = $this->objectRepository->find($studentAtRiskId);
+        $this->assertEquals($studentAtRiskId, $orphan->id); //Make sure child was loaded
+        $orphanCourses = $orphan->courses;
+        $this->assertEquals(1, count($orphanCourses)); //Make sure child is an orphan
+        //Will need to hit the database directly to see if relationship has been deleted from bridging table
+        $sql = "SELECT course_id FROM student_course WHERE course_id = 4";
         $stm = $this->pdo->prepare($sql);
         $stm->execute();
-        $parentId = $stm->fetchColumn();
-        $this->assertEquals(null, $parentId);
-        $this->objectRepository->setClassName(TestPet::class);
-        foreach ($petsToDie as $deadPet) {
-            $zombiePet = $this->objectRepository->find($deadPet->id);
-            $this->assertEquals(null, $zombiePet);
-        }
+        $courseId = $stm->fetchColumn();
+        $this->assertEquals(null, $courseId);
 
-        //Delete using an ObjectReference
-        $alivePet = $this->objectRepository->find(2);
-        $this->assertEquals(2, $alivePet->id);
-        $petReference = $this->objectRepository->getObjectReference(TestPet::class, ['id' => 2]);
-        $this->objectRepository->deleteEntity($petReference);
-        $deadPet = $this->objectRepository->find(2);
-        $this->assertEquals(null, $deadPet);
+        //Now delete the remaining course, causing the student to be orphaned, and therefore deleted
+        $this->objectRepository->setClassName(TestCourseOrphan::class);
+        $obsoleteCourse = $this->objectRepository->find(3);
+        $studentsAtRisk = $obsoleteCourse->students;
+        $this->objectRepository->deleteEntity($obsoleteCourse);
+        $zombieCourse = $this->objectRepository->find(3);
+        $this->assertEquals(null, $zombieCourse); //Make sure parent is really dead
+        $this->objectRepository->setClassName(TestStudentOrphan::class);
+        $zombieStudent = $this->objectRepository->find($studentAtRiskId);
+        $this->assertEquals(null, $zombieStudent);
+        foreach ($studentsAtRisk as $newStudentAtRisk) {
+            $student = $this->objectRepository->find($newStudentAtRisk->id);
+            if ($newStudentAtRisk->id != $studentAtRiskId) {
+                $this->assertEquals($newStudentAtRisk->id, $student->id);
+            } else {
+                $this->assertNull($student);
+            }
+        }
     }
 
     public function doSuppressedOrphanRemovalTest()
     {
+        $this->setUp();
         $this->testName = 'Suppressed orphan removal';
+        $this->objectRepository->setClassName(TestCourseOrphan::class);
+
+        //Create an orphan by deleting course 3, leaving student 8 with only one course (4)
+        $course3 = $this->objectRepository->getObjectReference(TestCourseOrphan::class, ['id' => 3]);
+        $deleteCount = $this->objectRepository->deleteEntity($course3);
+        $this->assertEquals(7, $deleteCount);
+
         $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_RELATIONSHIPS, true);
         $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_ENTITIES, true);
-        $bereavedParent = $this->objectRepository->find(1);
-        //Remove a child entity which has orphan removal - it should NOT be deleted
-        $pets = $bereavedParent->getPets();
-        $elderlyPetId = $pets[0]->id;
-        $pets->offsetUnset(count($pets) - 1); //Euthanised! :(
-        $bereavedParent->setPets($pets);
-        $this->objectRepository->saveEntity($bereavedParent);
 
-        //Check that the euthanised pet is not really dead
-        $this->objectRepository->setClassName(TestPet::class);
-        $zombiePet = $this->objectRepository->find($elderlyPetId);
-        $this->assertEquals($elderlyPetId, $zombiePet->id);
-        $this->objectRepository->setClassName(TestParent::class);
+        $obsoleteCourse = $this->objectRepository->find(4);
+        //Remove a child entity which has orphan removal - it should NOT be deleted
+        $students = $obsoleteCourse->students;
+        $studentAtRisk = $students[0]->id;
+        unset($students[count($students) - 1]); //Expelled!
+        $obsoleteCourse->students = $students;
+        $this->objectRepository->saveEntity($obsoleteCourse);
+
+        //Check that the naughty student still exists
+        $this->objectRepository->setClassName(TestStudentOrphan::class);
+        $zombieStudent = $this->objectRepository->find($studentAtRisk);
+        $this->assertEquals($studentAtRisk, $zombieStudent->id);
 
         //And still belongs to the parent
+        $this->objectRepository->setClassName(TestCourseOrphan::class);
         $this->objectRepository->clearCache(); //Necessary to re-load as the orphan removal was suppressed.
-        $bereavedParent = $this->objectRepository->find(1);
-        $remainingPets = $bereavedParent->pets;
-        $this->assertEquals(4, count($remainingPets));
-    }
-
-    public function doSuppressedCascadeDeleteTest()
-    {
-        $this->testName = 'Suppressed cascade deletes';
-        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_RELATIONSHIPS, true);
-        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_ENTITIES, true);
-        //Delete a parent entity without cascading (child should NOT be orphaned, and pets should NOT be killed, as
-        //parent delete will fail).
-        $suicidalParent = $this->objectRepository->find(2);
-        $childAtRiskId = $suicidalParent->getChild()->getId();
-        $petsToDie = $suicidalParent->getPets();
-        $this->objectRepository->deleteEntity($suicidalParent, false, false);
-        $zombieParent = $this->objectRepository->find(2);
-        $this->assertEquals($suicidalParent->id, $zombieParent->id); //Make sure parent is not really dead
-        $this->objectRepository->setClassName(TestChild::class);
-        $orphan = $this->objectRepository->find($childAtRiskId);
-        $this->assertEquals($childAtRiskId, $orphan->getId()); //Make sure child was loaded
-        $this->assertEquals($zombieParent->getId(), $orphan->getParent()->getId()); //Make sure child is not an orphan
-        foreach ($petsToDie as $deadPet) {
-            $this->objectRepository->setClassName(TestPet::class);
-            $zombiePet = $this->objectRepository->find($deadPet->id); //zombie pet should have a parent!
-            $this->assertEquals($deadPet->id, $zombiePet->id);
-            $this->assertEquals($deadPet->parent->id, $zombiePet->parent->id);
-        }
-    }
-
-    public function doSuppressedExceptionTest()
-    {
-        $this->testName = 'Suppressed exception';
-        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_RELATIONSHIPS, true);
-        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_DELETE_ENTITIES, true);
-        //Check for exception when attempting to delete (test execution stops on exceptions, so it has to be last)
-        $this->objectRepository->setClassName(TestParent::class);
-        $suicidalParent = $this->objectRepository->find(2);
-        $this->expectException(ObjectiphyException::class);
-        $this->objectRepository->deleteEntity($suicidalParent);
+        $refreshedCourse = $this->objectRepository->find(4);
+        $remainingStudents = $refreshedCourse->students;
+        $this->assertEquals(2, count($remainingStudents));
     }
 }

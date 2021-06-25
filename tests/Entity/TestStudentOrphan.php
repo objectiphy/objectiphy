@@ -15,7 +15,7 @@ use Objectiphy\Objectiphy\Mapping\Relationship;
  * @property $iq
  * @property $courses
  */
-class TestStudentOrphanCascade
+class TestStudentOrphan
 {
     /**
      * @ORM\Id
@@ -39,13 +39,11 @@ class TestStudentOrphanCascade
 
     /**
      * (annotations can be disabled by removing the @ symbol for test purposes)
-     * ManyToMany(targetEntity="TestCourseOrphanCascade", mappedBy="students")
+     * ManyToMany(targetEntity="TestCourseOrphan", mappedBy="students")
      * @Relationship(
      *     relationshipType="many_to_many",
-     *     childClassName="TestCourseOrphanCascade",
-     *     mappedBy="students",
-     *     orphanRemoval=true,
-     *     cascadeDeletes=true
+     *     childClassName="TestCourseOrphan",
+     *     mappedBy="students"
      * )
      */
     private array $courses = [];

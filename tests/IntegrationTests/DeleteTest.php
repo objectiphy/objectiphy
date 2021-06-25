@@ -4,6 +4,7 @@ namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Tests\Entity\TestEmployee;
 use Objectiphy\Objectiphy\Tests\Entity\TestPet;
 use Objectiphy\Objectiphy\Tests\Entity\TestChild;
@@ -16,6 +17,30 @@ class DeleteTest extends IntegrationTestBase
     {
         parent::setUp();
         $this->objectRepository->setClassName(TestParent::class);
+    }
+
+    public function testDeleteEntity()
+    {
+        $this->testName = 'Delete entity';
+        $this->objectRepository->setClassName(TestUser::class);
+        $countUsers = $this->objectRepository->count();
+        $user = $this->objectRepository->find(1);
+        $deleteCount = $this->objectRepository->deleteEntity($user);
+        $this->assertEquals(1, $deleteCount);
+        $newCountUsers = $this->objectRepository->count();
+        $this->assertEquals($countUsers - 1, $newCountUsers);
+    }
+
+    public function testDeleteEntities()
+    {
+        $this->testName = 'Delete entities';
+        $this->objectRepository->setClassName(TestUser::class);
+        $countUsers = $this->objectRepository->count();
+        $users = $this->objectRepository->findBy(['id' => ['operator' => 'IN', 'value' => [1, 2]]]);
+        $deleteCount = $this->objectRepository->deleteEntities($users);
+        $this->assertEquals(2, $deleteCount);
+        $newCountUsers = $this->objectRepository->count();
+        $this->assertEquals($countUsers - 2, $newCountUsers);
     }
 
     public function testDeleteParentOwner()
@@ -92,14 +117,14 @@ class DeleteTest extends IntegrationTestBase
         $carmen = $this->objectRepository->find(8);
         $carmen->unionRep = null;
         $this->objectRepository->saveEntity($carmen);
-        $this->objectRepository->clearCache();
+        //$this->objectRepository->clearCache();
         $refreshedOlivia = $this->objectRepository->find(7);
         $this->assertNotNull($refreshedOlivia);
         $this->assertEquals('Olivia', $refreshedOlivia->name);
         $carruthers = $this->objectRepository->find(9);
         $carruthers->unionRep = null;
         $this->objectRepository->saveEntity($carruthers);
-        $this->objectRepository->clearCache();
+        //$this->objectRepository->clearCache();
         $zombieOlivia = $this->objectRepository->find(7);
         $this->assertNull($zombieOlivia);
 
@@ -115,7 +140,7 @@ class DeleteTest extends IntegrationTestBase
         $this->assertEquals(0, $insertCount);
         $this->assertEquals(1, $updateCount);
         $this->assertEquals(1, $deleteCount);
-        $this->objectRepository->clearCache();
+        //$this->objectRepository->clearCache();
         $refreshedParent = $this->objectRepository->find(2);
         $this->assertEquals(null, $refreshedParent->user);
         $this->objectRepository->setClassName(TestUser::class);
@@ -305,6 +330,18 @@ class DeleteTest extends IntegrationTestBase
         $suicidalParent = $this->objectRepository->find(2);
         $this->expectException(ObjectiphyException::class);
         $this->objectRepository->deleteEntity($suicidalParent);
+    }
+
+    public function testDeleteEntityNoCache()
+    {
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_ENTITY_CACHE, true);
+        $this->testDeleteEntity();
+    }
+
+    public function testDeleteEntitiesNoCache()
+    {
+        $this->objectRepository->setConfigOption(ConfigOptions::DISABLE_ENTITY_CACHE, true);
+        $this->testDeleteEntities();
     }
 
     public function testDeleteParentOwnerNoCache()

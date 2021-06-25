@@ -448,7 +448,6 @@ final class ObjectPersister implements TransactionInterface
         int &$insertCount,
         int &$updateCount
     ) {
-        $this->options->mappingCollection->getRelationships(); //Ensure all mapping information is populated
         $pkValues = $this->options->mappingCollection->getPrimaryKeyValues($parentEntity);
         if ($this->entityTracker->getDirtyProperties($parentEntity, $pkValues, [$propertyMapping->propertyName])) {
             $sourceColumn = $propertyMapping->relationship->bridgeSourceJoinColumn;

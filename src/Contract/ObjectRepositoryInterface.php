@@ -202,6 +202,13 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
     public function findAll(?array $orderBy = null, ?string $indexBy = null, bool $fetchOnDemand = false);
 
     /**
+     * Count records that match criteria
+     * @param array $criteria
+     * @return int
+     */
+    public function count($criteria = []): int;
+
+    /**
      * Insert or update the supplied entity.
      * @param object $entity The entity to insert or update.
      * @param bool $saveChildren Whether or not to also update any child objects.

@@ -81,6 +81,18 @@ class EntityTracker
     }
 
     /**
+     * Retrieve the clone of an existing entity from the tracker (to see what it was like when it was loaded).
+     * @param string $className
+     * @param array $pkValues
+     * @return object|null
+     */
+    public function getClone(string $className, array $pkValues): ?object
+    {
+        $pkIndex = $this->getIndexForPk($pkValues);
+        return $this->clones[$className][$pkIndex] ?? null;
+    }
+
+    /**
      * @param object $entity
      * @param array $pkValues
      * @return bool Whether or not anything has changed on the given entity (if unknown, returns true)
@@ -257,6 +269,27 @@ class EntityTracker
     }
 
     /**
+     * Remove a deleted entity from the tracker
+     * @param object $entity
+     */
+    public function removeEntity(object $entity): void
+    {
+        $key = $this->hasEntity($entity);
+        $this->removeByKey($key);
+    }
+
+    /**
+     * Remove a deleted entity from the tracker using just primary key values
+     * @param string $className
+     * @param array $pkValues
+     */
+    public function remove(string $className, array $pkValues)
+    {
+        $key = $this->hasEntity($className, $pkValues);
+        $this->removeByKey($key);
+    }
+
+    /**
      * Cannot use type hints, as this is compatible with Doctrine's change tracker interface
      * @param object $sender The entity whose property has changed
      * @param string $propertyName
@@ -268,6 +301,15 @@ class EntityTracker
         $className = ObjectHelper::getObjectClassName($sender);
         if (property_exists($className, $propertyName)) {
             $this->trackedChanges[$className][$propertyName] = $newValue;
+        }
+    }
+
+    private function removeByKey(?string $key)
+    {
+        if ($key) {
+            $className = ObjectHelper::getObjectClassName($entity);
+            unset($this->entities[$className][$key]);
+            unset($this->clones[$className][$key]);
         }
     }
 

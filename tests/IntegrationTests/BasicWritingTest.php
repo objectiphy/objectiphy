@@ -167,7 +167,7 @@ class BasicWritingTest extends IntegrationTestBase
                 ['vehicle' => ['lazyLoad' => null]]
             );
         }
-        $this->objectRepository->clearCache(); //Necessary to force refresh from database
+        $this->objectRepository->clearCache(); //Necessary to force refresh from database as we did not save the child
 
         $policy3 = $this->objectRepository->find(19071974);
         $this->assertEquals('TESTPOLICY UPDATED AGAIN', $policy3->policyNo);
@@ -202,7 +202,7 @@ class BasicWritingTest extends IntegrationTestBase
         $this->objectRepository->saveEntity($policy3->vehicle, false);
 
         //Verify update
-        $this->objectRepository->clearCache(); //Necessary to force refresh from database
+        $this->objectRepository->clearCache(); //Necessary to force refresh from database as we did not save the child
         $policy4a = $this->objectRepository->find(19071974);
         $this->assertEquals('TESTPOLICY UPDATED YET AGAIN', $policy4a->policyNo);
         $this->assertEquals('UpdatedRegNoTwo', $policy4a->vehicle->regNo);
@@ -217,7 +217,7 @@ class BasicWritingTest extends IntegrationTestBase
             $this->objectRepository->saveEntity($policy3a);
 
             //Verify update
-            $this->objectRepository->clearCache(); //Necessary to force refresh from database
+            //$this->objectRepository->clearCache(); //Necessary to force refresh from database
             $policy4 = $this->objectRepository->find(19071974);
             $this->assertEquals('TESTPOLICY UPDATED YET AGAIN', $policy4->policyNo);
             $this->assertEquals('DoNotIgnoreMe!', $policy4->contact->lastName);
@@ -228,7 +228,7 @@ class BasicWritingTest extends IntegrationTestBase
             $this->objectRepository->saveEntity($policy4a, false);
 
             //Verify update
-            $this->objectRepository->clearCache(); //Necessary to force refresh from database
+            $this->objectRepository->clearCache(); //Change not saved
             $policy5 = $this->objectRepository->find(19071974);
             $this->assertEquals('TESTPOLICY UPDATED ONE LAST TIME', $policy5->policyNo);
             $this->assertEquals('DoNotIgnoreMe!', $policy5->contact->lastName);
@@ -244,7 +244,7 @@ class BasicWritingTest extends IntegrationTestBase
         $this->objectRepository->saveEntity($parent);
 
         //Verify
-        $this->objectRepository->clearCache();
+        //$this->objectRepository->clearCache();
         $parent2 = $this->objectRepository->find(1);
         $this->assertEquals('2021-01-01', ($parent2->hasModifiedDateTimeBeenSet())->format('Y-m-d'));
     }
@@ -262,7 +262,7 @@ class BasicWritingTest extends IntegrationTestBase
         $this->assertEquals(1, $insertCount);
         $this->assertEquals(0, $updateCount);
 
-        $this->objectRepository->clearCache();
+        //$this->objectRepository->clearCache();
         $loadedPk = $this->objectRepository->findOneBy(['keyReference' => 'C54321']);
         $this->assertEquals('New value', $loadedPk->someValue);
 
@@ -281,7 +281,7 @@ class BasicWritingTest extends IntegrationTestBase
         $this->assertEquals(0, $insertCount);
         $this->assertEquals(0, $updateCount);
 
-        $this->objectRepository->clearCache();
+        //$this->objectRepository->clearCache();
         $loadedPk = $this->objectRepository->findOneBy(['keyReference' => 'D54321']);
         $this->assertNull($loadedPk);
 
@@ -295,7 +295,7 @@ class BasicWritingTest extends IntegrationTestBase
         $this->assertEquals(1, $insertCount);
         $this->assertEquals(0, $updateCount);
 
-        $this->objectRepository->clearCache();
+        //$this->objectRepository->clearCache();
         $loadedPk = $this->objectRepository->findOneBy(['keyReference' => 'E54321']);
         $this->assertEquals('New value 3', $loadedPk->someValue);
     }
@@ -317,7 +317,7 @@ class BasicWritingTest extends IntegrationTestBase
         $insertCount = $this->objectRepository->saveEntity($newPolicy);
         $this->assertEquals(3, $insertCount);
         $this->assertGreaterThan(0, $newPolicy->id);
-        $this->objectRepository->clearCache();
+        //$this->objectRepository->clearCache();
         $refreshedNewPolicy = $this->objectRepository->find($newPolicy->id);
         $this->assertEquals('NEW123', $refreshedNewPolicy->vehicle->regNo);
 
@@ -338,7 +338,7 @@ class BasicWritingTest extends IntegrationTestBase
         $newPolicy2Id = $newPolicy2->id;
 
         //Verify save
-        $this->objectRepository->clearCache(); //Necessary to force refresh from database
+        $this->objectRepository->clearCache(); //Necessary to force refresh from database as our contact is just an object reference
         $refreshedPolicy = $this->objectRepository->findOneBy(['policyNo' => 'Test2']);
         $this->assertEquals('Existing Contact' . $random, $refreshedPolicy->contact->getName());
 
@@ -522,12 +522,12 @@ class BasicWritingTest extends IntegrationTestBase
         $parent = $this->objectRepository->find(1);
         $parent->getAddress()->setCountryDescription('Mos Eisley');
         $this->objectRepository->saveEntity($parent);
-        $this->objectRepository->clearCache();
+        $this->objectRepository->clearCache(); //Our change will not have been saved
         $unrefreshedParent = $this->objectRepository->find(1);
         $this->assertEquals('United Kingdom', $unrefreshedParent->getAddress()->getCountryDescription());
         $parent->getAddress()->setCountryCode('EU');
         $this->objectRepository->saveEntity($parent);
-        $this->objectRepository->clearCache();
+        $this->objectRepository->clearCache(); //Change not saved
         $refreshedParent = $this->objectRepository->find(1);
         $this->assertEquals('Somewhere in Europe', $refreshedParent->getAddress()->getCountryDescription());
 
@@ -582,7 +582,7 @@ class BasicWritingTest extends IntegrationTestBase
         $this->objectRepository->saveEntity($newParent);
         $newParentId = $newParent->getId();
         $this->assertGreaterThan(0, $newParentId);
-        $this->objectRepository->clearCache();
+        $this->objectRepository->clearCache(); //Change not saved
         $refreshedNewParent = $this->objectRepository->find($newParentId);
         $this->assertEquals('Deepest Darkest Peru', $refreshedNewParent->getAddress()->getCountryDescription());
         $this->assertEquals('US', $refreshedNewParent->getChild()->address->getCountryCode());
@@ -641,7 +641,7 @@ class BasicWritingTest extends IntegrationTestBase
         );
         $refreshedNewParent4->getChild()->setHeight(49);
         $this->objectRepository->saveEntity($refreshedNewParent4);
-        $this->objectRepository->clearCache();
+        $this->objectRepository->clearCache(); //Change not saved
         $refreshedNewParent5 = $this->objectRepository->find($refreshedNewParent4->getId());
         $this->assertEquals(48, $refreshedNewParent5->getChild()->getHeight());
         $this->objectRepository->setEntityConfigOption(
