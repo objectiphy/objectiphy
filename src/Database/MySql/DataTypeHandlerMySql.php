@@ -14,6 +14,7 @@ use Objectiphy\Objectiphy\Orm\ObjectHelper;
  */
 class DataTypeHandlerMySql implements DataTypeHandlerInterface
 {
+    //MySQL functions which can be used without any arguments, or with just an asterisk
     public const FUNCTION_IDENTIFIERS = [
         'COUNT(',
         'CURDATE(',

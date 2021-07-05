@@ -60,11 +60,13 @@ class Explanation implements ExplanationInterface
         MappingCollection $mappingCollection = null,
         ConfigOptions $config = null
     ): void {
-        $this->queryHistory[] = $query;
-        $this->sqlHistory[] = $sql;
-        $this->paramHistory[] = $query->getParams();
-        $this->mapping[] = $mappingCollection;
-        $this->config[] = $config;
+        if ($config->recordQueries || (is_null($config->recordQueries) && $config->devMode)) {
+            $this->queryHistory[] = $query;
+            $this->sqlHistory[] = $sql;
+            $this->paramHistory[] = $query->getParams();
+            $this->mapping[] = $mappingCollection;
+            $this->config[] = $config;
+        }
     }
 
     /**

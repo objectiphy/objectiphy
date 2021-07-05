@@ -10,6 +10,9 @@ use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Orm\ObjectHelper;
 use Objectiphy\Objectiphy\Orm\ObjectMapper;
 
+/**
+ * @author Russell Walker <rwalker.php@gmail.com>
+ */
 class InternalQueryHelper
 {
     private ObjectMapper $objectMapper;

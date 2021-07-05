@@ -12,6 +12,7 @@ use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
  * @property bool $devMode
+ * @property bool $recordQueries
  * @property string $cacheDirectory
  * @property array $serializationGroups
  * @property bool $hydrateUngroupedProperties
@@ -34,6 +35,7 @@ use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
 class ConfigOptions extends ConfigBase
 {
     public const DEV_MODE = 'devMode';
+    public const RECORD_QUERIES = 'recordQueries';
     public const CACHE_DIRECTORY = 'cacheDirectory';
     public const SERIALIZATION_GROUPS = 'serializationGroups';
     public const HYDRATE_UNGROUPED_PROPERTIES = 'hydrateUngroupedProperties';
@@ -58,6 +60,12 @@ class ConfigOptions extends ConfigBase
      * @var bool Whether or not we are running in debug mode (proxy classes get rebuilt on each run).
      */
     protected bool $devMode;
+
+    /**
+     * @var bool Whether or not to record every query that is run (for debugging purposes). If null, this will default 
+     * to true when running in dev mode, and false when in production. Memory usage will be lower if this is false.
+     */
+    protected ?bool $recordQueries = null;
     
     /**
      * @var string Directory in which to store cache and proxy class files.
