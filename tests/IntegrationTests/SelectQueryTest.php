@@ -155,7 +155,6 @@ class SelectQueryTest extends IntegrationTestBase
         $this->assertEquals(1, $updates);
         $this->assertGreaterThan(0, $firstContact->id);
 
-        //$this->objectRepository->clearCache();
         $this->objectRepository->setClassName(TestContact::class);
         $refreshedContact = $this->objectRepository->find($firstContact->id);
         if ($this->getCacheSuffix()) {
@@ -175,8 +174,7 @@ class SelectQueryTest extends IntegrationTestBase
             ->buildSelectQuery();
         $users = $this->objectRepository->findBy($query);
         $this->assertEquals(2, count($users));
-        //$this->objectRepository->clearCache();
-
+        
         $this->objectRepository->setClassName(TestUser::class);
         $query2 = QueryBuilder::create()
             ->where('dateOfBirth', '>', '2000-01-01')

@@ -166,6 +166,23 @@ CREATE TABLE `country` (
 INSERT INTO `country` VALUES ('GB', 'United Kingdom'), ('EU', 'Somewhere in Europe'), ('US', 'United States'), ('XX', 'Deepest Darkest Peru');
 
 -- ----------------------------
+--  Table structure for `customer`
+-- ----------------------------
+DROP TABLE IF EXISTS `customer`;
+CREATE TABLE `customer` (
+                              `id` int(11) NOT NULL AUTO_INCREMENT,
+                              `first_name` varchar(255) DEFAULT NULL,
+                              `last_name` varchar(255) DEFAULT NULL,
+                              PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO `customer` (`id`, `first_name`, `last_name`)
+    VALUES
+        (1, 'Spike', 'Smith'),
+        (2, 'Simon', 'Kirk'),
+        (3, 'Audrey', 'Hepburn');
+
+-- ----------------------------
 --  Table structure for `department`
 -- ----------------------------
 DROP TABLE IF EXISTS `department`;
@@ -240,6 +257,27 @@ INSERT INTO `login` VALUES
 (8, 'testuser8', 'hash8'),
 (9, 'testuser9', 'hash9'),
 (10, 'testuser10', 'hash10');
+
+-- ----------------------------
+--  Table structure for `order`
+-- ----------------------------
+DROP TABLE IF EXISTS `order`;
+CREATE TABLE `order` (
+                            `id` int(11) NOT NULL AUTO_INCREMENT,
+                            `customer_id` int(11) NOT NULL,
+                            `product_name` varchar(100),
+                            `price` decimal(10, 2) DEFAULT NULL,
+                            `description` varchar(100) DEFAULT NULL,
+                            PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO `order` (`id`, `customer_id`, `product_name`, `price`, `description`)
+    VALUES
+        (1, 1, 'Widget', 10.50, 'Standard Widget'),
+        (2, 1, 'Super Widget', 15.95, 'Enhanced Widget'),
+        (3, 2, 'Widget Holder', 12.99, 'Holds 12 widgets'),
+        (4, 3, 'Economy Widget', 2.99, 'A bit rubbish'),
+        (5, 3, 'Decal', 0.50, 'Shiny sticker');
 
 -- ----------------------------
 --  Table structure for `position`

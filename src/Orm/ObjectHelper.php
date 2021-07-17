@@ -168,24 +168,21 @@ class ObjectHelper
         return $className;
     }
 
-    public static function getTypeName(\ReflectionType $reflectionType, string $className, string $propertyName, $defaultToStdClass = false)
+    public static function getTypeName(\ReflectionType $reflectionType, string $className = '', string $propertyName = '', $defaultToStdClass = false)
     {
         $type = '';
-        
-        //PHP seems to be very buggy here - either returning gibberish, or causing segfaults
-        //As such, it is safer to just set data types in the mapping annotations
-        
-//        if ($reflectionType instanceof \ReflectionNamedType) {
-//            $type = $reflectionType->getName();
-//        } elseif ($reflectionType instanceof \ReflectionUnionType) {
-//            $types = $reflectionType->getTypes();
-//            $type = reset($types);
-//        }
-//        $type = self::sanitizeType($type);
-//        
-//        if (!$type && $className && $propertyName) { 
-//            $type = self::getTypeHacky($className, $propertyName);
-//        }
+        if ($reflectionType instanceof \ReflectionNamedType) {
+            $type = self::sanitizeType($reflectionType->getName());
+        } elseif ($reflectionType instanceof \ReflectionUnionType) {
+            $types = [];
+            foreach ($reflectionType->getTypes() as $reflectionType) {
+                $types[] = self::sanitizeType($reflectionType->getName());
+            }
+            $type = implode(' | ', array_filter($types));
+        }
+        if (!$type && $className && $propertyName) {
+            $type = self::getTypeHacky($className, $propertyName);
+        }
 
         return $type ?: ($defaultToStdClass ? 'stdClass' : '');
     }

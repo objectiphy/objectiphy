@@ -190,4 +190,5 @@ class EntityProxy implements EntityProxyInterface
         
         unset($this->objectiphySettingValue[$propertyName]);
     }
+    /** end of proxy **/
 }

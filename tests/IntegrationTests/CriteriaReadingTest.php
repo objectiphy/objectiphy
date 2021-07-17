@@ -220,7 +220,6 @@ class CriteriaReadingTest extends IntegrationTestBase
 
     protected function doSerializationGroupTests()
     {
-        //$this->objectRepository->clearCache();
         $this->objectRepository->setClassName(TestPolicy::class);
         $this->objectRepository->setPagination(null);
         $this->objectRepository->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, ['Default', 'PolicyDetails']);

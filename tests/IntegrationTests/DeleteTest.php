@@ -2,10 +2,13 @@
 
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
+use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Query\QB;
+use Objectiphy\Objectiphy\Tests\Entity\TestCustomer;
 use Objectiphy\Objectiphy\Tests\Entity\TestEmployee;
+use Objectiphy\Objectiphy\Tests\Entity\TestOrder;
 use Objectiphy\Objectiphy\Tests\Entity\TestPet;
 use Objectiphy\Objectiphy\Tests\Entity\TestChild;
 use Objectiphy\Objectiphy\Tests\Entity\TestParent;
@@ -117,14 +120,12 @@ class DeleteTest extends IntegrationTestBase
         $carmen = $this->objectRepository->find(8);
         $carmen->unionRep = null;
         $this->objectRepository->saveEntity($carmen);
-        //$this->objectRepository->clearCache();
         $refreshedOlivia = $this->objectRepository->find(7);
         $this->assertNotNull($refreshedOlivia);
         $this->assertEquals('Olivia', $refreshedOlivia->name);
         $carruthers = $this->objectRepository->find(9);
         $carruthers->unionRep = null;
         $this->objectRepository->saveEntity($carruthers);
-        //$this->objectRepository->clearCache();
         $zombieOlivia = $this->objectRepository->find(7);
         $this->assertNull($zombieOlivia);
 
@@ -140,7 +141,6 @@ class DeleteTest extends IntegrationTestBase
         $this->assertEquals(0, $insertCount);
         $this->assertEquals(1, $updateCount);
         $this->assertEquals(1, $deleteCount);
-        //$this->objectRepository->clearCache();
         $refreshedParent = $this->objectRepository->find(2);
         $this->assertEquals(null, $refreshedParent->user);
         $this->objectRepository->setClassName(TestUser::class);
@@ -198,6 +198,62 @@ class DeleteTest extends IntegrationTestBase
         $this->objectRepository->setClassName(TestPet::class);
         $deadPet = $this->objectRepository->find(13);
         $this->assertNull($deadPet);
+
+        //Test orphan removal example from docs (first without orphan removal, then with)
+        $this->objectRepository->setClassName(TestCustomer::class);
+        $customer = $this->objectRepository->find(3);
+        $this->assertEquals(2, count($customer->orders));
+        $firstOrderId = $customer->orders[0]->id;
+        unset($customer->orders[0]);
+
+        $this->objectRepository->saveEntity($customer);
+        $refreshedCustomer = $this->objectRepository->find(3);
+        $this->assertEquals(1, count($refreshedCustomer->orders));
+        $this->assertNotEquals($firstOrderId, reset($refreshedCustomer->orders)->id);
+        $this->objectRepository->setClassName(TestOrder::class);
+        $orphan = $this->objectRepository->find($firstOrderId);
+        $this->assertNotNull($orphan);
+        $this->assertEquals($firstOrderId, $orphan->id);
+
+        //Now delete the parent and check orphans are not removed (later turn on orphan removal and check they are removed)
+        $this->objectRepository->setClassName(TestCustomer::class);
+        $customer2 = $this->objectRepository->find(1);
+        $this->assertEquals(2, count($customer2->orders));
+        $orderIds = [$customer2->orders[0]->id, $customer2->orders[1]->id];
+        $this->objectRepository->deleteEntity($customer2);
+        $this->objectRepository->setClassName(TestOrder::class);
+        $orphans = $this->objectRepository->findBy($orderIds);
+        $this->assertTrue(in_array($orphans[0]->id, $orderIds));
+        $this->assertTrue(in_array($orphans[1]->id, $orderIds));
+
+        $this->setUp(); //We need our orders back!
+        $this->objectRepository->setEntityConfigOption(
+            TestCustomer::class,
+            ConfigEntity::RELATIONSHIP_OVERRIDES,
+            ['orders' => ['orphanRemoval' => true]]
+        );
+        $this->objectRepository->setClassName(TestCustomer::class);
+        $customer = $this->objectRepository->find(3);
+        $this->assertEquals(2, count($customer->orders));
+        $firstOrderId = $customer->orders[0]->id;
+        unset($customer->orders[0]);
+        $this->objectRepository->saveEntity($customer);
+        $refreshedCustomer = $this->objectRepository->find(3);
+        $this->assertEquals(1, count($refreshedCustomer->orders));
+        $this->assertNotEquals($firstOrderId, reset($refreshedCustomer->orders)->id);
+        $this->objectRepository->setClassName(TestOrder::class);
+        $orphan = $this->objectRepository->find($firstOrderId);
+        $this->assertNull($orphan);
+
+        //Check orphans are removed when parent deleted
+        $this->objectRepository->setClassName(TestCustomer::class);
+        $customer2 = $this->objectRepository->find(1);
+        $this->assertEquals(2, count($customer2->orders));
+        $orderIds = [$customer2->orders[0]->id, $customer2->orders[1]->id];
+        $this->objectRepository->deleteEntity($customer2);
+        $this->objectRepository->setClassName(TestOrder::class);
+        $orphans = $this->objectRepository->findBy($orderIds);
+        $this->assertEmpty($orphans);
     }
 
     public function testCascading()
@@ -233,6 +289,36 @@ class DeleteTest extends IntegrationTestBase
         $this->objectRepository->deleteEntity($petReference);
         $deadPet = $this->objectRepository->find(2);
         $this->assertEquals(null, $deadPet);
+
+        //Test cascade example from docs (first with just the relationship removed, then with the parent entity deleted)
+        $this->objectRepository->setEntityConfigOption(
+            TestCustomer::class,
+            ConfigEntity::RELATIONSHIP_OVERRIDES,
+            ['orders' => ['cascadeDeletes' => true]]
+        );
+        $this->objectRepository->setClassName(TestCustomer::class);
+        $customer = $this->objectRepository->find(3);
+        $this->assertEquals(2, count($customer->orders));
+        $firstOrderId = $customer->orders[0]->id;
+        unset($customer->orders[0]);
+        $this->objectRepository->saveEntity($customer);
+        $refreshedCustomer = $this->objectRepository->find(3);
+        $this->assertEquals(1, count($refreshedCustomer->orders));
+        $this->assertNotEquals($firstOrderId, reset($refreshedCustomer->orders)->id);
+        $this->objectRepository->setClassName(TestOrder::class);
+        $orphan = $this->objectRepository->find($firstOrderId);
+        $this->assertNotNull($orphan); //Should not have been deleted, as it is not a cascade
+        $this->assertEquals($firstOrderId, $orphan->id);
+
+        //Check that it cascades when parent deleted
+        $this->objectRepository->setClassName(TestCustomer::class);
+        $customer2 = $this->objectRepository->find(1);
+        $this->assertEquals(2, count($customer2->orders));
+        $orderIds = [$customer2->orders[0]->id, $customer2->orders[1]->id];
+        $this->objectRepository->deleteEntity($customer2);
+        $this->objectRepository->setClassName(TestOrder::class);
+        $orphans = $this->objectRepository->findBy($orderIds);
+        $this->assertEmpty($orphans);
     }
 
     public function testSuppressedDeleteParentOwner()

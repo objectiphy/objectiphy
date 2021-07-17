@@ -108,7 +108,6 @@ class ManyToManyTest extends IntegrationTestBase
         $this->assertEquals(0, $updateCount);
         $this->assertEquals(0, $deleteCount);
 
-        //$this->objectRepository->clearCache();
         $course2 = $this->objectRepository->find(1);
         $this->assertEquals(5, count($course2->students));
 
@@ -126,7 +125,6 @@ class ManyToManyTest extends IntegrationTestBase
         $this->assertEquals(0, $insertCount);
         $this->assertEquals(1, $updateCount);
 
-        //$this->objectRepository->clearCache();
         $refreshedStudent = $this->objectRepository->find($studentId);
         $this->assertEquals('7500.00', $refreshedStudent->courses[0]->cost);
     }
@@ -150,7 +148,6 @@ class ManyToManyTest extends IntegrationTestBase
         $this->assertEquals(0, $updateCount);
         $this->assertEquals(2, $deleteCount);
 
-        //$this->objectRepository->clearCache();
         $refreshedCourse = $this->objectRepository->find(1);
         $this->assertEquals(2, count($course->students));
     }
@@ -186,7 +183,6 @@ class ManyToManyTest extends IntegrationTestBase
         unset($students[0]); //Expelled!
         $this->objectRepository->saveEntity($afflictedCourse);
         //Check that we only have one student
-        //$this->objectRepository->clearCache();
         $afflictedCourse = $this->objectRepository->find(4);
         $remainingStudents = $afflictedCourse->students;
         $this->assertEquals(1, count($remainingStudents));
@@ -219,7 +215,7 @@ class ManyToManyTest extends IntegrationTestBase
         $replacedStudentId = $courseStudents[0]->id;
         $courseStudents[0] = $newStudent2;
         $this->objectRepository->saveEntity($newStudent);
-        //$this->objectRepository->clearCache();
+
         $this->objectRepository->setClassName(TestStudentOrphan::class);
         $refreshedStudent = $this->objectRepository->find($newStudent->id);
         $this->assertEquals('Arthur', $refreshedStudent->firstName);

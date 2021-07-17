@@ -137,7 +137,7 @@ final class ObjectRemover implements TransactionInterface
             if (!$this->config->disableDeleteRelationships
                 && (
                     $childPropertyMapping->relationship->orphanRemoval
-                    || $childPropertyMapping->relationship->isManyToMany()
+                    || $childPropertyMapping->relationship->isToMany()
                 )) {
                 $childProperty = $childPropertyMapping->propertyName;
                 $childClassName = $childPropertyMapping->getChildClassName();
@@ -422,7 +422,8 @@ final class ObjectRemover implements TransactionInterface
                     $parentPkValues,
                     $childPks,
                     $updateCount,
-                    $deleteCount
+                    $deleteCount,
+                    true
                 );
             }
         }
@@ -441,11 +442,11 @@ final class ObjectRemover implements TransactionInterface
         array $parentPkValues,
         array $childPks,
         int &$updateCount,
-        int &$deleteCount
+        int &$deleteCount,
+        bool $isParentBeingDeleted = false
     ): void {
         $goingToOrphanage = [];
         $goingToBelize = [];
-        //$childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($propertyName);
         foreach ($removedChildren as $removedChild) {
             $childObjectId = spl_object_id($removedChild);
             if (!array_key_exists($childObjectId, $this->entitiesBeingDeleted)) {
@@ -455,9 +456,9 @@ final class ObjectRemover implements TransactionInterface
                     && ($childPropertyMapping->relationship->cascadeDeletes
                         || $childPropertyMapping->relationship->orphanRemoval)
                 ) {
-                    $offToBelizeWithYou = true;
+                    $offToBelizeWithYou = $isParentBeingDeleted || $childPropertyMapping->relationship->orphanRemoval;
                     //Hold your gosh-darn horses mister! If many to one or many to many, check whether another parent already has it
-                    if ($childPropertyMapping->relationship->isFromMany()) {
+                    if ($offToBelizeWithYou && $childPropertyMapping->relationship->isFromMany()) {
                         $query = $this->queryHelper->countFromManyParents(
                             $childPropertyMapping,
                             $removedChild,

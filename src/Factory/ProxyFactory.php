@@ -80,6 +80,7 @@ final class ProxyFactory
                     $classDefinition,
                     $className,
                     $proxyClassName,
+                    $reflectionClass,
                     $getterMethod
                 );
 
@@ -133,6 +134,7 @@ final class ProxyFactory
                 $classDefinition,
                 $className,
                 $proxyClassName,
+                $reflectionClass,
                 $getterMethod,
                 $setterMethod,
                 $issetMethod
@@ -186,6 +188,7 @@ final class ProxyFactory
         string $classDefinition,
         string $className,
         string $proxyClassName,
+        \ReflectionClass $reflectionClass,
         ?\ReflectionMethod $getterMethod = null,
         ?\ReflectionMethod $setterMethod = null,
         ?\ReflectionMethod $issetMethod = null
@@ -239,6 +242,32 @@ final class ProxyFactory
         $classDeclaration = 'class EntityProxy implements EntityProxyInterface';
         $newClassDeclaration = "class $proxyClassName extends \\" . $className . " implements " . EntityProxyInterface::class;
         $classDefinition = str_replace($classDeclaration, $newClassDeclaration, $classDefinition);
+        $classDefinition = $this->replaceCustomGetterMethods($reflectionClass, $classDefinition);
+
+        return $classDefinition;
+    }
+
+    /**
+     * Ensure lazy load is triggered before calling the custom getter, if applicable
+     * @param string $className
+     * @param string $classDefinition
+     */
+    private function replaceCustomGetterMethods(\ReflectionClass $reflectionClass, string $classDefinition)
+    {
+        foreach ($reflectionClass->getProperties() as $reflectionProperty) {
+            $getterName = 'get' . ucfirst($reflectionProperty->getName());
+            if ($reflectionClass->hasMethod($getterName)) {
+                $getter = $reflectionClass->getMethod($getterName);
+                if ($getter->isPublic() && !$getter->isStatic()) {
+                    $newMethod = "\n" . $this->getMethodDeclaration($getter);
+                    $newMethod .= "\n{";
+                    $newMethod .= "\n    \$this->triggerLazyLoad('" . $reflectionProperty->getName() . "');";
+                    $newMethod .= "\n    return parent::$getterName(...func_get_args());";
+                    $newMethod .= "\n}\n";
+                    $classDefinition = str_replace('/** end of proxy **/', $newMethod . '/** end of proxy **/', $classDefinition);
+                }
+            }
+        }
 
         return $classDefinition;
     }
