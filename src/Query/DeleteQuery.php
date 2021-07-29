@@ -66,6 +66,7 @@ class DeleteQuery extends Query implements DeleteQueryInterface
     public function finalise(MappingCollection $mappingCollection, SqlStringReplacer $stringReplacer, ?string $className = null): void
     {
         if (!$this->isFinalised) {
+            parent::finalise($mappingCollection, $stringReplacer, $className);
             $this->mappingCollection = $mappingCollection;
             $className = $this->getDelete() ?: ($className ?? $mappingCollection->getEntityClassName());
             $this->setClassName($className);

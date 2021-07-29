@@ -147,7 +147,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $entityConfig->setConfigOption($optionName, $value);
         $entityConfigs[$entityClassName] = $entityConfig;
         $this->setConfigOption(ConfigOptions::ENTITY_CONFIG, $entityConfigs);
-        $this->clearCache($entityClassName, true);
+        $this->clearCache($entityClassName);
     }
 
     /**

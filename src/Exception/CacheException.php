@@ -6,16 +6,24 @@ namespace Objectiphy\Objectiphy\Exception;
 
 use Objectiphy\Annotations\PsrSimpleCacheInvalidArgumentException;
 
-//Conditional import - we won't force you to have Psr\SimpleCache installed
-if (!interface_exists('\Psr\SimpleCache\CacheException')) {
-    class_alias(PsrSimpleCacheException::class, '\Psr\SimpleCache\CacheException');
+//We won't force you to have Psr\SimpleCache installed
+if (interface_exists('\Psr\SimpleCache\CacheException')) {
+    /**
+     * @author Russell Walker <rwalker.php@gmail.com>
+     * Exceptions thrown by the cache.
+     */
+    class CacheException extends ObjectiphyException implements \Psr\SimpleCache\CacheException
+    {
+
+    }
+} else {
+    /**
+     * @author Russell Walker <rwalker.php@gmail.com>
+     * Exceptions thrown by the cache.
+     */
+    class CacheException extends ObjectiphyException
+    {
+
+    }
 }
 
-/**
- * @author Russell Walker <rwalker.php@gmail.com>
- * Exceptions thrown by the cache.
- */
-class CacheException extends ObjectiphyException implements \Psr\SimpleCache\CacheException
-{
-
-}

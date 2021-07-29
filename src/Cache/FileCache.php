@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Cache;
 
 use Objectiphy\Objectiphy\Exception\CacheException;
-use Objectiphy\Annotations\PsrSimpleCacheInvalidArgumentException;
-//Conditional import - we won't force you to have Psr\SimpleCache installed
 use Objectiphy\Annotations\PsrSimpleCacheInterface;
 use Objectiphy\Objectiphy\Exception\CacheInvalidArgumentException;
 use Psr\SimpleCache\CacheInterface;

@@ -34,5 +34,5 @@ interface RepositoryFactoryInterface
         bool $resetFirst = false
     ): ObjectRepositoryInterface;
 
-    public function clearCache(?string $className = null, bool $clearMappingCache = true): void;
+    public function clearCache(?string $className = null, bool $clearMappingCache = false): void;
 }

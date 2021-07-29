@@ -89,11 +89,11 @@ final class ObjectMapper
                 }
             }
             foreach ($unsets as $unset) {
+                $cacheKey = 'mc' . sha1($this->configHash . '_' . $unset);
                 if ($this->cache) {
-                    $cacheKey = 'mc' . sha1($this->configHash . '_' . $unset);
                     $this->cache->delete($cacheKey);
                 }
-                unset($this->mappingCollections[$unset]);
+                unset($this->mappingCollections[$cacheKey]);
             }
         } else {
             if ($this->cache) {
@@ -121,11 +121,12 @@ final class ObjectMapper
         ) {
             $className = get_parent_class($className);
         }
-        if (!isset($this->mappingCollections[$className])) {
+        $cacheKey = 'mc' . sha1($this->configHash . '_' . $className);
+
+        if (!isset($this->mappingCollections[$cacheKey])) {
             $mappingCollection = null;
             if ($this->cache) {
                 //Load from cache
-                $cacheKey = 'mc' . sha1($this->configHash . '_' . $className);
                 $mappingCollection = $this->cache->get($cacheKey);
                 if (!$mappingCollection) {
                     //Not found? create it and save to cache
@@ -136,10 +137,10 @@ final class ObjectMapper
                 $mappingCollection = $this->createMappingCollection($className);
             }
             //Either way, save to in memory cache
-            $this->mappingCollections[$className] = $mappingCollection;
+            $this->mappingCollections[$cacheKey] = $mappingCollection;
         }
 
-        return $this->mappingCollections[$className];
+        return $this->mappingCollections[$cacheKey];
     }
 
     private function createMappingCollection(string $className): MappingCollection

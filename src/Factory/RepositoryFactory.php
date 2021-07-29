@@ -103,9 +103,10 @@ class RepositoryFactory implements RepositoryFactoryInterface
         ], $configIniFile);
         $this->configOptions = $configOptions;
         if ($devMode) {
-            //Delete all proxy classes
+            //Delete all proxy classes and clear the mapping cache
             $proxyFactory = $this->createProxyFactory();
             $proxyFactory->clearProxyCache();
+            $this->getObjectMapper()->clearMappingCache();
         }
     }
 
@@ -254,7 +255,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
         return $this->repositories[$entityClassName][$configHash];
     }
 
-    public function clearCache(?string $className = null, bool $clearMappingCache = true): void
+    public function clearCache(?string $className = null, bool $clearMappingCache = false): void
     {
         $this->entityTracker->clear($className);
         if ($clearMappingCache) {

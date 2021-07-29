@@ -58,6 +58,7 @@ class InsertQuery extends Query implements InsertQueryInterface
         array $assignments = []
     ): void {
         if (!$this->isFinalised) {
+            parent::finalise($mappingCollection, $stringReplacer, $className);
             if (!$this->getInsert()) {
                 if (!$className) {
                     throw new QueryException('Class name to insert has not been specified!');
@@ -75,7 +76,7 @@ class InsertQuery extends Query implements InsertQueryInterface
                         $assignmentExpressions[] = new AssignmentExpression($key, $value);
                         //If scalar join, ensure we have the join
                         if ($propertyMapping->relationship->isScalarJoin()) {
-                            $this->populateRelationshipJoin($mappingCollection, $propertyMapping);
+                            $this->populateRelationshipJoin($propertyMapping);
                         }
                     }
                 }

@@ -151,8 +151,7 @@ final class ObjectFetcher
     /**
      * Clear the entity tracker to ensure objects get refreshed from the database
      * @param string|null $className
-     * @param bool $clearMappingCache Whether or not to also clear the mapping information (only useful when the
-     * mapping information is being overridden).
+     * @param bool $clearMappingCache Whether or not to also clear the mapping information.
      */
     public function clearCache(?string $className = null, bool $clearMappingCache = true): void
     {

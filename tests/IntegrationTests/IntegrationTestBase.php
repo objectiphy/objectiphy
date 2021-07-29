@@ -18,6 +18,8 @@ class IntegrationTestBase extends TestCase
     protected $startTime;
     /** @var string */
     protected $testName;
+    /** @var RepositoryFactory */
+    public static $repositoryFactory; //Static so we can re-use it for all tests, avoiding a complete cache clear for each one
 
     protected function setUp(): void
     {
@@ -30,7 +32,9 @@ class IntegrationTestBase extends TestCase
         $this->pdo = new \PDO('mysql:host=' . $config['DB_HOST'] . ';dbname=' . $config['DB_NAME'], $config['DB_USER'], $config['DB_PASSWORD']);
         $this->createFixtures();
         $start = microtime(true);
-        $repositoryFactory = new RepositoryFactory($this->pdo);
+        if (!isset(static::$repositoryFactory)) {
+            static::$repositoryFactory = new RepositoryFactory($this->pdo);}
+        $repositoryFactory = static::$repositoryFactory;
         $repositoryFactory->setConfigOptions(['commonProperty' => 'loginId']);
         $this->objectRepository = $repositoryFactory->createRepository(TestPolicy::class);
         $setupTime = round(microtime(true) - $start, 3);
