@@ -6,12 +6,11 @@ namespace Objectiphy\Objectiphy\Mapping;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
- * Mapping information to describe how the value of a property is stored and retrieved from a database column.
+ * An alternative to the Symfony or JMS serialization group annotation (if specified, this will take precedence over
+ * Symfony and JMS).
  * The following annotation is just to stop the Doctrine annotation reader complaining if it comes across this.
  * @Annotation
  * @Target("PROPERTY")
- * An alternative to the Symfony or JMS serialization group annotation (if specified, this will take precedence over
- * Symfony and JMS).
  */
 class Groups
 {

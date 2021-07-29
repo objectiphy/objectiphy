@@ -20,6 +20,7 @@ use Objectiphy\Objectiphy\Mapping\PropertyMapping;
 use Objectiphy\Objectiphy\Mapping\Relationship;
 use Objectiphy\Objectiphy\Mapping\Table;
 use Objectiphy\Objectiphy\NamingStrategy\NameResolver;
+use Psr\SimpleCache\CacheInterface;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
@@ -44,11 +45,17 @@ final class ObjectMapper
     private int $maxDepth;
     private int $currentDepth = 0;
     private string $defaultCollectionClass = '';
-    
-    public function __construct(MappingProviderInterface $mappingProvider, NameResolver $nameResolver)
-    {
+    private string $configHash = '';
+    private ?CacheInterface $cache = null;
+
+    public function __construct(
+        MappingProviderInterface $mappingProvider,
+        NameResolver $nameResolver,
+        ?CacheInterface $cache = null
+    ) {
         $this->mappingProvider = $mappingProvider;
         $this->nameResolver = $nameResolver;
+        $this->cache = $cache;
     }
 
     /**
@@ -65,6 +72,7 @@ final class ObjectMapper
         $this->defaultCollectionClass = $config->defaultCollectionClass;
         $this->nameResolver->setConfigOptions($config);
         $this->entityConfig = $config->getConfigOption(ConfigOptions::ENTITY_CONFIG);
+        $this->configHash = $config->getHash();
     }
 
     /**
@@ -81,9 +89,16 @@ final class ObjectMapper
                 }
             }
             foreach ($unsets as $unset) {
+                if ($this->cache) {
+                    $cacheKey = 'mc' . sha1($this->configHash . '_' . $unset);
+                    $this->cache->delete($cacheKey);
+                }
                 unset($this->mappingCollections[$unset]);
             }
         } else {
+            if ($this->cache) {
+                $this->cache->clear();
+            }
             $this->mappingCollections = [];
         }
     }
@@ -107,14 +122,34 @@ final class ObjectMapper
             $className = get_parent_class($className);
         }
         if (!isset($this->mappingCollections[$className])) {
-            $mappingCollection = new MappingCollection($className, $this->maxDepth);
+            $mappingCollection = null;
+            if ($this->cache) {
+                //Load from cache
+                $cacheKey = 'mc' . sha1($this->configHash . '_' . $className);
+                $mappingCollection = $this->cache->get($cacheKey);
+                if (!$mappingCollection) {
+                    //Not found? create it and save to cache
+                    $mappingCollection = $this->createMappingCollection($className);
+                    $this->cache->set($cacheKey, $mappingCollection);
+                }
+            } else {
+                $mappingCollection = $this->createMappingCollection($className);
+            }
+            //Either way, save to in memory cache
             $this->mappingCollections[$className] = $mappingCollection;
-            $this->currentDepth = 0;
-            $this->populateMappingCollection($mappingCollection);
-            $mappingCollection->getRelationships(); //Ensure all mapping information is populated
         }
 
         return $this->mappingCollections[$className];
+    }
+
+    private function createMappingCollection(string $className): MappingCollection
+    {
+        $mappingCollection = new MappingCollection($className, $this->maxDepth);
+        $this->currentDepth = 0;
+        $this->populateMappingCollection($mappingCollection);
+        $mappingCollection->getRelationships(); //Ensure all mapping information is populated
+
+        return $mappingCollection;
     }
 
     /**

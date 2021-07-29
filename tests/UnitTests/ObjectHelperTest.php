@@ -96,9 +96,9 @@ class ObjectHelperTest extends TestCase
     public function testSetIntOnObject()
     {
         $parent = new TestParent();
-        ObjectHelper::setValueOnObject($parent, 'totalWeightOfPets', 120);
-        $this->assertEquals(true, is_integer($parent->totalWeightOfPets));
-        $this->assertEquals(120, $parent->totalWeightOfPets);
+        ObjectHelper::setValueOnObject($parent, 'id', 120);
+        $this->assertEquals(true, is_integer($parent->getId()));
+        $this->assertEquals(120, $parent->getId());
     }
 
     public function testSetBoolOnObject()

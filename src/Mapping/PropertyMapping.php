@@ -127,6 +127,27 @@ class PropertyMapping
         }
     }
 
+    public function __serialize(): array
+    {
+        $vars = get_object_vars($this);
+        if ($vars['reflectionProperty']) {
+            $vars['reflectionProperty'] = [$this->reflectionProperty->class, $this->reflectionProperty->getName()];
+        }
+
+        return $vars;
+    }
+
+    public function __unserialize(array $vars): void
+    {
+        if (!empty($vars['reflectionProperty'])) {
+            $definition = $vars['reflectionProperty'];
+            $vars['reflectionProperty'] = new \ReflectionProperty($definition[0], $definition[1]);
+        }
+        foreach ($vars as $property => $value) {
+            $this->$property = $value;
+        }
+    }
+
     public function __toString(): string
     {
         return $this->getPropertyPath();
@@ -256,9 +277,6 @@ class PropertyMapping
 
     public function getFullColumnName(string $overrideTableAlias = ''): string
     {
-        if ($this->column->aggregateFunctionName) {
-            return ''; //Temporary measure until we support aggregates.
-        }
         $table = $overrideTableAlias ?: $this->getTableAlias();
         $table = $table ?: $this->table->name;
         if ($this->relationship->isScalarJoin()) {

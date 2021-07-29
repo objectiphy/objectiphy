@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Factory;
 
 use Objectiphy\Annotations\AnnotationReader;
+use Objectiphy\Objectiphy\Cache\FileCache;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\CollectionFactoryInterface;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
@@ -43,6 +44,13 @@ use Objectiphy\Objectiphy\Orm\ObjectPersister;
 use Objectiphy\Objectiphy\Orm\ObjectRemover;
 use Objectiphy\Objectiphy\Orm\ObjectUnbinder;
 use Objectiphy\Objectiphy\Query\InternalQueryHelper;
+//Conditional import - we won't force you to have Psr\SimpleCache installed
+use Objectiphy\Annotations\PsrSimpleCacheInterface;
+use Psr\SimpleCache\CacheInterface;
+
+if (!interface_exists('\Psr\SimpleCache\CacheInterface')) {
+    class_alias(PsrSimpleCacheInterface::class, '\Psr\SimpleCache\CacheInterface');
+}
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
@@ -50,6 +58,7 @@ use Objectiphy\Objectiphy\Query\InternalQueryHelper;
 class RepositoryFactory implements RepositoryFactoryInterface
 {
     private \PDO $pdo;
+    private CacheInterface $cache;
     private ConfigOptions $configOptions;
     private MappingProviderInterface $mappingProvider;
     private SqlSelectorInterface $sqlSelector;
@@ -126,6 +135,10 @@ class RepositoryFactory implements RepositoryFactoryInterface
         unset($this->objectRemover);
     }
 
+    /************************************/
+    /* Allow for custom implementations */
+    /************************************/
+
     public function setCollectionFactoryClass(CollectionFactoryInterface $collectionFactory): void
     {
         $this->collectionFactoryClass = $factoryClassName;
@@ -142,6 +155,34 @@ class RepositoryFactory implements RepositoryFactoryInterface
         $this->mappingProvider = $mappingProvider;
     }
 
+    public function setDataTypeHandler(DataTypeHandlerInterface $dataTypeHandler): void
+    {
+        $this->dataTypeHandler = $dataTypeHandler;
+    }
+
+    public function setStorage(StorageInterface $storage): void
+    {
+        $this->storage = $storage;
+    }
+    
+    public function setCache(CacheInterface $cache): void
+    {
+        $this->cache = $cache;
+    }
+
+    /************************************/
+    /* End of custom implementations    */
+    /************************************/
+
+    public function getCache(): CacheInterface
+    {
+        if (!isset($this->cache)) {
+            $this->cache = $this->createCache();
+        }
+        
+        return $this->cache;
+    }
+    
     /**
      * If no custom mapping provider has been set, return the default one, which reads both Doctrine and Objectiphy
      * annotations.
@@ -280,7 +321,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
     
     final protected function createObjectMapper(): ObjectMapper
     {
-        return new ObjectMapper($this->getMappingProvider(), $this->createNameResolver());
+        return new ObjectMapper($this->getMappingProvider(), $this->createNameResolver(), $this->getCache());
     }
 
     /**
@@ -301,6 +342,11 @@ class RepositoryFactory implements RepositoryFactoryInterface
         return new ObjectFetcher($sqlSelector, $objectMapper, $objectBinder, $storage, $entityTracker, $stringReplacer, $explanation);
     }
 
+    final protected function createCache(): CacheInterface
+    {
+        return new FileCache($this->configOptions->cacheDirectory);
+    }
+    
     final protected function createNameResolver(): NameResolver
     {
         return new NameResolver();

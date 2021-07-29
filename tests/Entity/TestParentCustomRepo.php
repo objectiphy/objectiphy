@@ -47,16 +47,16 @@ class TestParentCustomRepo
      * )
      */
     public array $pets = [];
-    /**
-     * var int
-     * @Mapping\Column(aggregateFunctionName="COUNT", aggregateCollection="pets")
-     */
-    public $numberOfPets;
-    /**
-     * @var int
-     * @Mapping\Column(aggregateFunctionName="SUM", aggregateCollection="pets", aggregateProperty="weightInGrams")
-     */
-    public $totalWeightOfPets;
+//    /**
+//     * var int
+//     * @Mapping\Column(aggregateFunctionName="COUNT", aggregateCollection="pets")
+//     */
+//    public $numberOfPets;
+//    /**
+//     * @var int
+//     * @Mapping\Column(aggregateFunctionName="SUM", aggregateCollection="pets", aggregateProperty="weightInGrams")
+//     */
+//    public $totalWeightOfPets;
     /**
      * @var datetime
      * @Mapping\Column(name="modified_date_time")
