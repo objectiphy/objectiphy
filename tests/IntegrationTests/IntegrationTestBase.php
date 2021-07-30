@@ -37,6 +37,10 @@ class IntegrationTestBase extends TestCase
         $repositoryFactory = static::$repositoryFactory;
         $repositoryFactory->setConfigOptions(['commonProperty' => 'loginId']);
         $this->objectRepository = $repositoryFactory->createRepository(TestPolicy::class);
+        //We might get back a second-hand repo, as the factory hangs onto them - so clear the entity cache as it will not be valid now the fixtures have been run
+        $this->objectRepository->clearCache();
+        //Also reset to default configuration
+        $this->objectRepository->resetConfiguration();
         $setupTime = round(microtime(true) - $start, 3);
         echo "Objectiphy setup time: $setupTime seconds.\n";
         $this->startTime = microtime(true);

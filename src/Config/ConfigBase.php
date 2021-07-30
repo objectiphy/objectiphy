@@ -111,7 +111,7 @@ class ConfigBase
     public function getHash(string $suffix = ''): string
     {
         ksort($this->nonDefaults);
-        return sha1(json_encode($this->nonDefaults) . $suffix);
+        return sha1(serialize($this->nonDefaults) . $suffix);
     }
 
     /**

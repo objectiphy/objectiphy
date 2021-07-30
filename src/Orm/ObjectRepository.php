@@ -106,6 +106,22 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     }
 
     /**
+     * Reset config options to their default values.
+     * @param string $configFile Optionally specify a config file to load the defaults from.
+     */
+    public function resetConfiguration(string $configFile = ''): void
+    {
+        $defaultConfig = new ConfigOptions(
+            [
+                'cacheDirectory' => $this->configOptions->cacheDirectory,
+                'devMode' => $this->configOptions->devMode
+            ],
+            $configFile
+        );
+        $this->setConfiguration($defaultConfig);
+    }
+    
+    /**
      * Set a general configuration option by name. Available options are defined on
      * the Objectiphy\Objectiphy\Config\ConfigOptions class.
      * @param string $optionName
@@ -124,6 +140,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             //We cannot return a cached entity as the property hydration might be wrong
             $this->clearCache();
         }
+        $this->setClassName($this->getClassName()); //Ensure we have the right mapping collection for the updated config
         
         return $previousValue;
     }

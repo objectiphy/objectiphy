@@ -69,7 +69,8 @@ class InsertQuery extends Query implements InsertQueryInterface
                 $assignmentExpressions = [];
                 foreach ($assignments as $key => $value) {
                     $propertyMapping = $mappingCollection->getPropertyMapping($key);
-                    if ($propertyMapping->isReadOnly()) {
+                    //isScalarJoin check here might be temporary - we cannot insert a scalar joined value yet
+                    if ($propertyMapping->isReadOnly() || $propertyMapping->relationship->isScalarJoin()) {
                         continue;
                     }
                     if (!($value instanceof AssignmentExpression)) {

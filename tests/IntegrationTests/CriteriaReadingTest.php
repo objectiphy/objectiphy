@@ -105,6 +105,7 @@ class CriteriaReadingTest extends IntegrationTestBase
 
     protected function doReadingTests()
     {
+        $this->objectRepository->setClassName(TestPolicy::class);
         //Ordering, pagination, and more complex criteria are possible. You can even order
         //by properties on child objects (not possible in Doctrine).
         $this->objectRepository->setOrderBy(['contact.lastName' => 'DESC', 'policyNo']);
@@ -220,6 +221,7 @@ class CriteriaReadingTest extends IntegrationTestBase
 
     protected function doSerializationGroupTests()
     {
+        $this->objectRepository->resetConfiguration();
         $this->objectRepository->setClassName(TestPolicy::class);
         $this->objectRepository->setPagination(null);
         $this->objectRepository->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, ['Default', 'PolicyDetails']);

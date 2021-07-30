@@ -37,6 +37,12 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
     public function setConfigOption(string $optionName, $value);
 
     /**
+     * Reset config options to their default values.
+     * @param string $configFile Optionally specify a config file to load the defaults from.
+     */
+    public function resetConfiguration(string $configFile = ''): void;
+    
+    /**
      * Set an entity-specific configuration option by name. Available options are
      * defined on the Objectiphy\Objectiphy\Config\ConfigEntity class.
      * @param string $entityClassName

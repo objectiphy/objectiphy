@@ -119,6 +119,7 @@ class BasicReadingTest extends IntegrationTestBase
     protected function doReadingTests()
     {
         //Find by ID, as per doctrine
+        $this->objectRepository->setClassName(TestPolicy::class);
         $policy = $this->objectRepository->find(19071974);
         $this->assertEquals('P123456', $policy->policyNo);
         $this->assertEquals('Skywalker', $policy->contact->lastName);

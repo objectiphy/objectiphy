@@ -121,6 +121,7 @@ class BasicWritingTest extends IntegrationTestBase
     protected function doUpdateTests()
     {
         //Update an existing entity (will also update any child entities)
+        $this->objectRepository->setClassName(TestPolicy::class);
         $policy = $this->objectRepository->find(19071974);
         $policy->policyNo = 'TESTPOLICY UPDATED';
         $policy->contact->lastName = 'ChildUpdate';
@@ -250,7 +251,6 @@ class BasicWritingTest extends IntegrationTestBase
     protected function doReplacementTests()
     {
         $this->objectRepository->setClassName(TestSuppliedPk::class);
-
         $suppliedPk = new TestSuppliedPk();
         $suppliedPk->keyReference = 'C54321';
         $suppliedPk->someValue = 'New value';

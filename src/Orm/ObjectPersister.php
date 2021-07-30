@@ -239,7 +239,7 @@ final class ObjectPersister implements TransactionInterface
             $update = true;
         } elseif ($pkValues) { //We have values for the primary key so probably an update
             $update = !$this->options->replaceExisting;
-            //Check if the primary key is a foreign key (if so, could be an insert so will need to replace)
+            //Check if the primary key is a foreign key or does not auto-increment (if so, could be an insert so will need to replace)
             if ($update) {
                 foreach (array_keys($pkValues) as $pkKey) {
                     $pkPropertyMapping = $this->options->mappingCollection->getPropertyMapping($pkKey);
