@@ -10,17 +10,13 @@ use PHPUnit\Framework\TestCase;
 
 class IntegrationTestBase extends TestCase
 {
-    /** @var ObjectRepository */
-    protected $objectRepository;
-    /** @var \PDO */
-    protected $pdo;
-    /** @var int */
-    protected $startTime;
-    /** @var string */
-    protected $testName;
-    /** @var RepositoryFactory */
-    public static $repositoryFactory; //Static so we can re-use it for all tests, avoiding a complete cache clear for each one
-
+    protected ObjectRepository $objectRepository;
+    protected \PDO $pdo;
+    protected int $startTime = 0;
+    protected string $testName = '';
+    public static RepositoryFactory $repositoryFactory; //Static so we can re-use it for all tests, avoiding a complete cache clear for each one
+    protected static bool $devMode = true; //Can temporarily set this to false to test production mode
+    
     protected function setUp(): void
     {
         $disabledCache = $this->getCacheSuffix();
@@ -33,7 +29,13 @@ class IntegrationTestBase extends TestCase
         $this->createFixtures();
         $start = microtime(true);
         if (!isset(static::$repositoryFactory)) {
-            static::$repositoryFactory = new RepositoryFactory($this->pdo);}
+            if (self::$devMode) {
+                static::$repositoryFactory = new RepositoryFactory($this->pdo);
+            } else {
+                $cacheDir = realpath(__DIR__ . '/../../../../../var/cache/dev');
+                static::$repositoryFactory = new RepositoryFactory($this->pdo, $cacheDir, false);
+            }
+        }
         $repositoryFactory = static::$repositoryFactory;
         $repositoryFactory->setConfigOptions(['commonProperty' => 'loginId']);
         $this->objectRepository = $repositoryFactory->createRepository(TestPolicy::class);
