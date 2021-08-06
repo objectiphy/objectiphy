@@ -153,7 +153,7 @@ final class ObjectFetcher
      * @param string|null $className
      * @param bool $clearMappingCache Whether or not to also clear the mapping information.
      */
-    public function clearCache(?string $className = null, bool $clearMappingCache = true): void
+    public function clearCache(?string $className = null, bool $clearMappingCache = false): void
     {
         $this->entityTracker->clear($className);
         if ($clearMappingCache) {

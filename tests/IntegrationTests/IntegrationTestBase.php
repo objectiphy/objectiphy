@@ -15,7 +15,7 @@ class IntegrationTestBase extends TestCase
     protected int $startTime = 0;
     protected string $testName = '';
     public static RepositoryFactory $repositoryFactory; //Static so we can re-use it for all tests, avoiding a complete cache clear for each one
-    protected static bool $devMode = false; //Can temporarily set this to false to test production mode
+    protected static bool $devMode = true; //Can temporarily set this to false to test production mode
     
     protected function setUp(): void
     {
@@ -29,15 +29,11 @@ class IntegrationTestBase extends TestCase
         $this->createFixtures();
         $start = microtime(true);
         if (!isset(static::$repositoryFactory)) {
-            if (self::$devMode) {
-                static::$repositoryFactory = new RepositoryFactory($this->pdo);
-            } else {
-                $cacheDir = __DIR__ . '/../../../../../var/cache/dev/objectiphy';
-                if (!file_exists($cacheDir)) {
-                    mkdir($cacheDir, 0777, true);
-                }
-                static::$repositoryFactory = new RepositoryFactory($this->pdo, realpath($cacheDir), false);
+            $cacheDir = __DIR__ . '/../../../../../var/cache/dev/objectiphy';
+            if (!file_exists($cacheDir)) {
+                mkdir($cacheDir, 0777, true);
             }
+            static::$repositoryFactory = new RepositoryFactory($this->pdo, realpath($cacheDir), static::$devMode);
         }
         $repositoryFactory = static::$repositoryFactory;
         $repositoryFactory->setConfigOptions(['commonProperty' => 'loginId']);

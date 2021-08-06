@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Factory;
 
 use Objectiphy\Annotations\AnnotationReader;
+use Objectiphy\Annotations\CachedAnnotationReader;
 use Objectiphy\Objectiphy\Cache\FileCache;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\CollectionFactoryInterface;
@@ -80,6 +81,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
      */
     private array $repositories = [];
     private CollectionFactoryInterface $collectionFactory;
+    private $useCacheForMappingProvider = false; //Default file cache just slows things down, but an in-memory cache might speed things up
 
     /**
      * @param \PDO $pdo A PDO database connection
@@ -151,9 +153,16 @@ class RepositoryFactory implements RepositoryFactoryInterface
         $this->dataTypeHandler = $dataTypeHandler;
     }
 
-    public function setMappingProvider(MappingProviderInterface $mappingProvider): void
+    /**
+     * @param MappingProviderInterface $mappingProvider
+     * @param bool $useCache Whether or not to cache mapping definitions (this can slow things down, depending on
+     * the caching mechanism used - eg. a file-based cache which has to serialize and write to file will be slower
+     * than an in-memory cache and might be slower than not caching at all).
+     */
+    public function setMappingProvider(MappingProviderInterface $mappingProvider, bool $useCache = true): void
     {
         $this->mappingProvider = $mappingProvider;
+        $this->useCacheForMappingProvider = $useCache;
     }
 
     public function setDataTypeHandler(DataTypeHandlerInterface $dataTypeHandler): void
@@ -200,9 +209,15 @@ class RepositoryFactory implements RepositoryFactoryInterface
                 'collectionClass',
                 'repositoryClassName'
             ]);
+            $cache = $this->getCache();
+            if ($this->useCacheForMappingProvider) { //FileCache is too slow for this
+                $cachedAnnotationReader = new CachedAnnotationReader($annotationReader, $cache);
+            } else {
+                $cachedAnnotationReader = $annotationReader; //Not actually cached
+            }
             $baseMappingProvider = new MappingProvider();
             $doctrineMappingProvider = new MappingProviderDoctrineAnnotation($baseMappingProvider, $annotationReader);
-            $this->mappingProvider = new MappingProviderAnnotation($doctrineMappingProvider, $annotationReader);
+            $this->mappingProvider = new MappingProviderAnnotation($doctrineMappingProvider, $cachedAnnotationReader);
             $this->mappingProvider->setThrowExceptions($this->configOptions->devMode);
         }
 

@@ -45,7 +45,7 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
             //Ignore and just treat it as a cache miss
         }
 
-        return $value ?? null;
+        return $value ?? $default;
     }
 
     public function set($key, $value, $ttl = null)
