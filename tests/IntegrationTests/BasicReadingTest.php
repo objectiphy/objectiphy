@@ -291,7 +291,7 @@ class BasicReadingTest extends IntegrationTestBase
 
     protected function doAdvancedTests()
     {
-        $repositoryFactory = new RepositoryFactory($this->pdo);
+        $repositoryFactory = new RepositoryFactory($this->pdo, static::$cacheDirectory, static::$devMode);
 
         //Ensure custom repo rules are respected
         $childWithCustomParentRepo = $repositoryFactory->createRepository(TestChildCustomParentRepo::class);

@@ -16,11 +16,12 @@ class IntegrationTestBase extends TestCase
     protected string $testName = '';
     public static RepositoryFactory $repositoryFactory; //Static so we can re-use it for all tests, avoiding a complete cache clear for each one
     protected static bool $devMode = true; //Can temporarily set this to false to test production mode
-    
+    protected static string $cacheDirectory = '';
+
     protected function setUp(): void
     {
         $disabledCache = $this->getCacheSuffix();
-        ini_set('memory_limit', '512M'); //Only because PHP 7.4.5 has memory leaks when running PHPUnit
+        ini_set('memory_limit', '256M');
         $config = require(__DIR__ . '/../config.php');
         if (empty($config['DB_HOST']) || empty($config['DB_NAME']) || empty($config['DB_USER'])) {
             throw new \RuntimeException('Please populate the database credentials either in environment variables (recommended) or directly in /src/test/config.php (if you must).');
@@ -29,11 +30,11 @@ class IntegrationTestBase extends TestCase
         $this->createFixtures();
         $start = microtime(true);
         if (!isset(static::$repositoryFactory)) {
-            $cacheDir = __DIR__ . '/../../../../../var/cache/dev/objectiphy';
-            if (!file_exists($cacheDir)) {
-                mkdir($cacheDir, 0777, true);
+            static::$cacheDirectory = realpath(__DIR__ . '/../../../../../var/cache/dev/objectiphy');
+            if (!file_exists(static::$cacheDirectory)) {
+                mkdir(static::$cacheDirectory, 0777, true);
             }
-            static::$repositoryFactory = new RepositoryFactory($this->pdo, realpath($cacheDir), static::$devMode);
+            static::$repositoryFactory = new RepositoryFactory($this->pdo, static::$cacheDirectory, static::$devMode);
         }
         $repositoryFactory = static::$repositoryFactory;
         $repositoryFactory->setConfigOptions(['commonProperty' => 'loginId']);

@@ -17,6 +17,7 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
 {
     private string $cacheDirectory;
     private string $fileNamePrefix;
+    private bool $useIgBinary = false;
 
     public function __construct(string $cacheDirectory, string $fileNamePrefix = '')
     {
@@ -34,13 +35,17 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
         }
         $this->cacheDirectory = $cacheDirectory;
         $this->fileNamePrefix = $fileNamePrefix;
+        if (function_exists('igbinary_serialize')) {
+            $this->useIgBinary = true;
+            $this->fileNamePrefix = 'ig' . $this->fileNamePrefix;
+        }
     }
 
     public function get($key, $default = null)
     {
         $fileName = $this->getFileName($key);
         try {
-            $value = file_exists($fileName) ? unserialize(file_get_contents($fileName)) : $default;
+            $value = file_exists($fileName) ? $this->unserialize(file_get_contents($fileName)) : $default;
         } catch (\Throwable $ex) {
             //Ignore and just treat it as a cache miss
         }
@@ -56,7 +61,7 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
             if (is_int($ttl) && $ttl <= 0) {
                 return $this->delete($key);
             } else {
-                file_put_contents($fileName, serialize($value));
+                file_put_contents($fileName, $this->serialize($value));
             }
             return true;
         } catch (\Throwable $ex) {
@@ -93,7 +98,9 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
     public function getMultiple($keys, $default = null)
     {
         if (!is_array($keys) && !($keys instanceof \Traversable)) {
-            throw new CacheInvalidArgumentException('Must supply an array (or \Traversable instance) of keys when calling getMultiple.');
+            throw new CacheInvalidArgumentException(
+                'Must supply an array (or \Traversable instance) of keys when calling getMultiple.'
+            );
         }
         $results = [];
         foreach ($keys as $key) {
@@ -106,7 +113,9 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
     public function setMultiple($values, $ttl = null)
     {
         if (!is_array($values) && !($values instanceof \Traversable)) {
-            throw new CacheInvalidArgumentException('Must supply an array (or \Traversable instance) of values when calling setMultiple.');
+            throw new CacheInvalidArgumentException(
+                'Must supply an array (or \Traversable instance) of values when calling setMultiple.'
+            );
         }
         $success = true;
         foreach ($values as $key => $value) {
@@ -141,10 +150,22 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
     {
         if (preg_match('/[{}()\/\\\@:]/', $key)) {
             //This is a requirement of PSR-16
-            throw new CacheInvalidArgumentException('Cache keys cannot contain any of the following characters: {}()/\@:');
+            throw new CacheInvalidArgumentException(
+                'Cache keys cannot contain any of the following characters: {}()/\@:'
+            );
         }
         $fileSuffix = $key === '*' ? $key : str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($key));
 
         return $this->cacheDirectory . '/obj_cache_' . $this->fileNamePrefix . $fileSuffix . '.txt';
+    }
+
+    private function serialize($value): string
+    {
+        return $this->useIgBinary ? igbinary_serialize($value) : serialize($value);
+    }
+
+    private function unserialize(string $value)
+    {
+        return $this->useIgBinary ? igbinary_unserialize($value) : unserialize($value);
     }
 }
