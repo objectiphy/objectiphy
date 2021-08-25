@@ -137,6 +137,30 @@ class BasicWritingTest extends IntegrationTestBase
         $policy2 = $this->objectRepository->find(19071974);
         $this->assertEquals('TESTPOLICY UPDATED', $policy2->policyNo);
         $this->assertEquals('ChildUpdate', $policy2->contact->lastName);
+
+        //If we tell it not to update children, ensure foreign keys are ignored
+        $policy = $this->objectRepository->find(19071974);
+        $policy->vehicle->policy = null;
+        $policy->contact = null;
+        $this->objectRepository->saveEntity($policy, false);
+        $this->objectRepository->clearCache();
+        $refreshedPolicy = $this->objectRepository->find(19071974);
+        $this->assertEquals(123, $refreshedPolicy->contact->id);
+        $this->assertEquals(1, $refreshedPolicy->vehicle->id);
+        $this->assertEquals(19071974, $refreshedPolicy->vehicle->policy->id);
+
+        //And if we tell it to update children, they are not ignored
+        //(known issue: if child owns relationship, the relationship won't be deleted unless you save the child
+        //directly - hence we don't check for a null vehicle or vehicle->policy here, as it will not have removed the
+        //relationship)
+        $this->objectRepository->saveEntity($policy, true);
+        $this->objectRepository->clearCache();
+        $refreshedPolicy = $this->objectRepository->find(19071974);
+        $this->assertNull($refreshedPolicy->contact);
+
+        //Put the contact back, ready for the next test (quicker than running $this->setUp() again)
+        $refreshedPolicy->contact = $this->objectRepository->getObjectReference(TestContact::class, ['id' => 123]);
+        $this->objectRepository->saveEntity($refreshedPolicy);
     }
 
     protected function doParentOnlyTests()

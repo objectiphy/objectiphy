@@ -36,6 +36,7 @@ class EntityTracker
                 $this->clones[$entityClass][$pkIndex] = $this->cloneEntity($entity);
             } catch (\Throwable $ex) {
                 //Not the end of the world, we'll just assume it is dirty
+                unset($this->clones[$entityClass][$pkIndex]);
             }
         }
     }
@@ -183,7 +184,8 @@ class EntityTracker
 
         if ($pkIndex) {
             $clone = $this->clones[$className][$pkIndex] ?? null;
-            if (!$clone) { //We are not tracking changes on this child, so will need to refresh from database.
+            if (!$clone || ($clone instanceof EntityProxyInterface && $clone->isChildAsleep($propertyName))) {
+                //We are not tracking changes on this child, so will need to refresh from database.
                 return null;
             }
             $clonedCollection = ObjectHelper::getValueFromObject($clone, $propertyName) ?? [];
@@ -361,9 +363,12 @@ class EntityTracker
     {
         $clone = $this->getOrCreateClone($entity);
         //Clone child objects 1 level deep
-        $reflectionClass = new \ReflectionClass($entity);
+        $reflectionClass = new \ReflectionClass(ObjectHelper::getObjectClassName($entity));
+        //$reflectionClass = new \ReflectionClass($entity);
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
             if ($entity instanceof EntityProxyInterface && $entity->isChildAsleep($reflectionProperty->getName())) {
+                //We need to know it was asleep so we can detect removals by loading from the database
+                $clone->setLazyLoader($reflectionProperty->getName(), fn() => null);
                 continue;
             }
             $value = ObjectHelper::getValueFromObject($entity, $reflectionProperty->getName());
