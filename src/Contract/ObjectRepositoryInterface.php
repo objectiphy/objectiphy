@@ -57,9 +57,10 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
     public function setClassName(string $className): void;
 
     /**
+     * Compatible with the equivalent method in Doctrine (therefore, no return type).
      * @return string Name of the parent entity class.
      */
-    public function getClassName(): string;
+    public function getClassName();
 
     /**
      * Set a pagination object (to store and supply information about how the results are paginated).
