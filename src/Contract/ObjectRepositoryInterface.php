@@ -7,18 +7,13 @@ namespace Objectiphy\Objectiphy\Contract;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Exception\QueryException;
 
-if (interface_exists('\Doctrine\Common\Persistence\ObjectRepository')) {
-    interface ObjectRepositoryBaseInterface extends \Doctrine\Common\Persistence\ObjectRepository {}
-} else {
-    interface ObjectRepositoryBaseInterface {}
-}
-
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
  * Objectiphy repository interface, compatible with Doctrine Repository interface, with additional methods for
- * persistence and other features.
+ * persistence and other features. Does not extend the Doctrine interface though, as that is too restrictive and
+ * requires us to keep in line with any changes Doctrine might make in future.
  */
-interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
+interface ObjectRepositoryInterface
 {
     /**
      * Apply an entire config option set in one go. Typically you would set config options one at a time using
@@ -85,8 +80,8 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
     /**
      * Find a single record (and hydrate it as an entity) for the given criteria. Compatible with the equivalent method
      * in Doctrine.
-     * @param array|SelectQueryInterface $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
-     * with Doctrine criteria arrays, but also supports more options (see documentation).
+     * @param array|SelectQueryInterface $criteria A query, an array of CriteriaExpression objects or key/value pairs, 
+     * or criteria arrays. Compatible with Doctrine criteria arrays, but also supports more options (see documentation).
      * @return mixed
      */
     public function findOneBy($criteria = []);
