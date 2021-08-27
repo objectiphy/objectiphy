@@ -70,8 +70,9 @@ interface ObjectRepositoryInterface extends ObjectRepositoryBaseInterface
 
     /**
      * @param array $orderBy Key = property name, value = ASC or DESC.
+     * No return type for backward compatibility
      */
-    public function setOrderBy(array $orderBy): void;
+    public function setOrderBy(array $orderBy);
 
     /**
      * Find a single record (and hydrate it as an entity) with the given primary key value. Compatible with the
