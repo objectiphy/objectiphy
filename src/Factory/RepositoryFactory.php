@@ -192,7 +192,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
         
         return $this->cache;
     }
-    
+
     /**
      * If no custom mapping provider has been set, return the default one, which reads both Doctrine and Objectiphy
      * annotations.
@@ -201,27 +201,37 @@ class RepositoryFactory implements RepositoryFactoryInterface
     public function getMappingProvider(): MappingProviderInterface
     {
         if (!isset($this->mappingProvider)) {
-            //Decorate a mapping provider for Doctrine/Objectiphy annotations
-            $annotationReader = new AnnotationReader();
-            $annotationReader->setClassNameAttributes([
-                'childClassName',
-                'targetEntity',
-                'collectionClass',
-                'repositoryClassName'
-            ]);
-            $cache = $this->getCache();
-            if ($this->useCacheForMappingProvider) { //FileCache is too slow for this
-                $cachedAnnotationReader = new CachedAnnotationReader($annotationReader, $cache);
-            } else {
-                $cachedAnnotationReader = $annotationReader; //Not actually cached
-            }
+            $annotationReader = $this->getAnnotationReader();
             $baseMappingProvider = new MappingProvider();
             $doctrineMappingProvider = new MappingProviderDoctrineAnnotation($baseMappingProvider, $annotationReader);
-            $this->mappingProvider = new MappingProviderAnnotation($doctrineMappingProvider, $cachedAnnotationReader);
+            $this->mappingProvider = new MappingProviderAnnotation($doctrineMappingProvider, $annotationReader);
             $this->mappingProvider->setThrowExceptions($this->configOptions->devMode);
         }
 
         return $this->mappingProvider;
+    }
+
+    public function getAnnotationReader()
+    {
+        //Decorate a mapping provider for Doctrine/Objectiphy annotations
+        $annotationReader = new AnnotationReader();
+        $annotationReader->setClassNameAttributes(
+            [
+                'childClassName',
+                'targetEntity',
+                'collectionClass',
+                'repositoryClassName'
+            ]
+        );
+
+        if ($this->useCacheForMappingProvider) { //FileCache is too slow for this
+            $cache = $this->getCache();
+            $cachedAnnotationReader = new CachedAnnotationReader($annotationReader, $cache);
+        } else {
+            $cachedAnnotationReader = $annotationReader; //Not actually cached
+        }
+
+        return $cachedAnnotationReader;
     }
 
     public function setExplanation(ExplanationInterface $explanation)
