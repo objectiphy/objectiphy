@@ -75,6 +75,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
     private WhereProviderMySql $whereProvider;
     private SqlStringReplacer $stringReplacer;
     private ObjectRemover $objectRemover;
+    private AnnotationReader $annotationReader;
     private ?ExplanationInterface $explanation = null;
     /**
      * @var ObjectRepositoryInterface[]
@@ -213,25 +214,27 @@ class RepositoryFactory implements RepositoryFactoryInterface
 
     public function getAnnotationReader()
     {
-        //Decorate a mapping provider for Doctrine/Objectiphy annotations
-        $annotationReader = new AnnotationReader();
-        $annotationReader->setClassNameAttributes(
-            [
-                'childClassName',
-                'targetEntity',
-                'collectionClass',
-                'repositoryClassName'
-            ]
-        );
+        if (!isset($this->annotationReader)) {
+            //Decorate a mapping provider for Doctrine/Objectiphy annotations
+            $annotationReader = new AnnotationReader();
+            $annotationReader->setClassNameAttributes(
+                [
+                    'childClassName',
+                    'targetEntity',
+                    'collectionClass',
+                    'repositoryClassName'
+                ]
+            );
 
-        if ($this->useCacheForMappingProvider) { //FileCache is too slow for this
-            $cache = $this->getCache();
-            $cachedAnnotationReader = new CachedAnnotationReader($annotationReader, $cache);
-        } else {
-            $cachedAnnotationReader = $annotationReader; //Not actually cached
+            if ($this->useCacheForMappingProvider) { //FileCache is too slow for this
+                $cache = $this->getCache();
+                $this->annotationReader = new CachedAnnotationReader($annotationReader, $cache);
+            } else {
+                $this->annotationReader = $annotationReader; //Not actually cached
+            }
         }
 
-        return $cachedAnnotationReader;
+        return $this->annotationReader;
     }
 
     public function setExplanation(ExplanationInterface $explanation)
