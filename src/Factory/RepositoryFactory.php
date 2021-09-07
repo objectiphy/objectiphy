@@ -143,9 +143,9 @@ class RepositoryFactory implements RepositoryFactoryInterface
     /* Allow for custom implementations */
     /************************************/
 
-    public function setCollectionFactoryClass(CollectionFactoryInterface $collectionFactory): void
+    public function setCollectionFactory(CollectionFactoryInterface $collectionFactory): void
     {
-        $this->collectionFactoryClass = $factoryClassName;
+        $this->collectionFactory = $collectionFactory;
     }
 
     public function setSqlBuilder(SqlSelectorInterface $sqlSelector, DataTypeHandlerInterface $dataTypeHandler): void
