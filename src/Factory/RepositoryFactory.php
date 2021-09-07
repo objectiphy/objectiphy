@@ -164,6 +164,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
     {
         $this->mappingProvider = $mappingProvider;
         $this->useCacheForMappingProvider = $useCache;
+        unset($this->objectMapper); //Force it to be re-created with the new provider
     }
 
     public function setDataTypeHandler(DataTypeHandlerInterface $dataTypeHandler): void
