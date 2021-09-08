@@ -126,16 +126,15 @@ class RepositoryFactory implements RepositoryFactoryInterface
 
     public function reset(): void
     {
-        unset($this->mappingProvider);
-        unset($this->sqlSelector);
-        unset($this->sqlUpdater);
-        unset($this->sqlDeleter);
-        unset($this->dataTypeHandler);
+        //Unset anything that might cross-pollinate across requests
+        //(but ensure any custom implementations are preserved)
+
+        //unset($this->sqlUpdater);
+        //unset($this->sqlDeleter);
         unset($this->objectMapper);
-        unset($this->storage);
-        unset($this->proxyFactory);
-        unset($this->joinProvider);
-        unset($this->whereProvider);
+        //unset($this->proxyFactory);
+        //unset($this->joinProvider);
+        //unset($this->whereProvider);
         unset($this->objectRemover);
     }
 
