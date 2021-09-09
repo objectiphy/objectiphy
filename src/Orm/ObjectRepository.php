@@ -289,67 +289,6 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     }
 
     /**
-     * Return the latest record from a group
-     * @param array|SelectQueryInterface $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
-     * with Doctrine criteria arrays, but also supports more options (see documentation).
-     * @param string|null $commonProperty Property on root entity whose value you want to group by (see also the
-     * setCommonProperty method).
-     * @param string|null $recordAgeIndicator Fully qualified database column or expression that determines record age
-     * (see also the setCommonProperty method).
-     * @return object|array|null
-     * @throws ObjectiphyException|\ReflectionException|\Throwable
-     */
-    public function findLatestOneBy(
-        $criteria = [],
-        ?string $commonProperty = null,
-        ?string $recordAgeIndicator = null
-    ) {
-
-        //TODO: common property/age indicator
-
-        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
-        $this->assertClassNameSet();
-        $findOptions = FindOptions::create($this->mappingCollection, [
-            'multiple' => false,
-            'latest' => true,
-            'bindToEntities' => $this->configOptions->bindToEntities,
-        ]);
-
-        return $this->doFindBy($findOptions, $criteria);
-    }
-
-    /**
-     * Return the latest record from each group
-     * @param array|SelectQueryInterface $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible
-     * with Doctrine criteria arrays, but also supports more options (see documentation).
-     * @param string|null $commonProperty Property on root entity whose value you want to group by (see also the
-     * setCommonProperty method).
-     * @param string|null $recordAgeIndicator Fully qualified database column or expression that determines record age
-     * (see also the setCommonProperty method).
-     * @param string|null $indexBy If you want the resulting array to be associative, based on a value in the
-     * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
-     * child object, but make sure the property you use has a unique value in the result set, otherwise some records
-     * will be lost).
-     * @param bool $multiple For internal use (when this method is called by the findLatestOneBy method).
-     * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
-     * set(for streaming large amounts of data).
-     * @return iterable
-     * @throws ObjectiphyException|\ReflectionException
-     */
-    public function findLatestBy(
-        $criteria = [],
-        ?string $commonProperty = null,
-        ?string $recordAgeIndicator = null,
-        ?string $indexBy = null,
-        bool $multiple = true,
-        bool $fetchOnDemand = false
-    ): ?iterable {
-        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
-        $this->assertClassNameSet();
-        return null;
-    }
-
-    /**
      * Find all records that match the given criteria (and hydrate them as entities). Compatible with the equivalent
      * method in Doctrine.
      * @param array|SelectQueryInterface $criteria An array of criteria or a Query object built by the QueryBuilder. Compatible

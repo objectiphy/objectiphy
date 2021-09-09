@@ -87,48 +87,6 @@ interface ObjectRepositoryInterface
     public function findOneBy($criteria = []);
 
     /**
-     * Return the latest record from a group.
-     * @param array|SelectQueryInterface $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
-     * with Doctrine criteria arrays, but also supports more options (see documentation).
-     * @param string|null $commonProperty Property on root entity whose value you want to group by (see also the
-     * setCommonProperty method).
-     * @param string|null $recordAgeIndicator Fully qualified database column or expression that determines record age
-     * (see also the setCommonProperty method).
-     * @return mixed
-     */
-    public function findLatestOneBy(
-        $criteria = [],
-        ?string $commonProperty = null,
-        ?string $recordAgeIndicator = null
-    );
-
-    /**
-     * Return the latest record from each group.
-     * @param array|SelectQueryInterface $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
-     * with Doctrine criteria arrays, but also supports more options (see documentation).
-     * @param string|null $commonProperty Property on root entity whose value you want to group by (see also the
-     * setCommonProperty method).
-     * @param string|null $recordAgeIndicator Fully qualified database column or expression that determines record age
-     * (see also the setCommonProperty method).
-     * @param string|null $indexBy If you want the resulting array to be associative, based on a value in the
-     * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
-     * child object, but make sure the property you use has a unique value in the result set, otherwise some records
-     * will be lost).
-     * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
-     * set(for streaming large amounts of data).
-     * @param bool $multiple For internal use (when this method is called by the findLatestOneBy method).
-     * @return mixed
-     */
-    public function findLatestBy(
-        $criteria,
-        ?string $commonProperty = null, 
-        ?string $recordAgeIndicator = null, 
-        ?string $indexBy = null,
-        bool $fetchOnDemand = false,
-        bool $multiple = true
-    );
-
-    /**
      * Find all records that match the given criteria (and hydrate them as entities). Compatible with the equivalent
      * method in Doctrine.
      * @param array|SelectQueryInterface $criteria An array of CriteriaExpression objects or key/value pairs, or criteria arrays. Compatible
