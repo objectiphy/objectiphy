@@ -53,7 +53,7 @@ class JoinProviderMySql
             }
         }
 
-        return $this->sql;
+        return $this->stringReplacer->replaceNames($this->sql);
     }
 
     private function initialise(): void
