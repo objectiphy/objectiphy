@@ -118,6 +118,26 @@ abstract class Query implements QueryInterface
             }
         }
 
+        //If any of these paths relate to aggregate functions, check for other properties used with it
+        if (!empty($this->mappingCollection)) {
+            foreach ($paths as $path) {
+                 $propertyMapping = $this->mappingCollection->getPropertyMapping($path);
+                 if ($propertyMapping && $propertyMapping->column && $propertyMapping->column->aggregateFunctionName) {
+                     $aggregateFields = [];
+                     $prefix = $propertyMapping->getParentPath() . '.';
+                     $aggregateCollection = $propertyMapping->column->aggregateCollectionPropertyName;
+                     $aggregateProperty = $propertyMapping->column->aggregatePropertyName;
+                     $aggregateGroupBy = $propertyMapping->column->aggregateGroupBy;
+                     $aggregateFields[] = $aggregateCollection ? new FieldExpression($prefix . $aggregateCollection) : null;
+                     $aggregateFields[] = $aggregateProperty ? new FieldExpression($prefix . $aggregateCollection . '.' . $aggregateProperty) : null;
+                     $aggregateFields[] = $aggregateGroupBy ? new FieldExpression($prefix . $aggregateGroupBy) : null;
+                     foreach (array_filter($aggregateFields) as $aggregateField) {
+                         $paths = array_merge($paths, $aggregateField->getPropertyPaths());
+                     }
+                 }
+            }
+        }
+
         return array_unique($paths);
     }
 

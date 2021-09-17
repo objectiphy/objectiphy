@@ -104,7 +104,7 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
     {
         $paths = [];
         if ($this->isPropertyPath) {
-            $paths[] = str_replace('%', '', $this->expression);
+            $paths[] = str_replace('%', '', $this->expression) ?: null;
         } elseif (is_string($this->expression)) {
             $match = [];
             preg_match('/\%(.*?)\%/', $this->expression, $match);
@@ -114,6 +114,6 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
             }
         }
 
-        return $paths;
+        return array_filter($paths);
     }
 }

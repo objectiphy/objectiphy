@@ -39,24 +39,26 @@ class Column extends ObjectiphyAnnotation
      */
     public ?bool $isReadOnly = null;
     
-//    /**
-//     * @var string Name of aggregate function to use for this value (eg. 'AVG'). If specified, it will of course be
-//     * read-only.
-//     */
-//    public string $aggregateFunctionName = '';
-//
-//    /**
-//     * @var string Name of property on the entity that holds the collection whose values should have the
-//     * aggregateFunctionName applied to them (only takes effect if a value is specifid in $aggregateFunctionName
-//     */
-//    public string $aggregateCollectionPropertyName = '';
-//
-//    /**
-//     * @var string Name of property on the child class in the collection on which the aggregate function is being
-//     * performed, if applicable (eg. a COUNT does not require a property, but MAX does).
-//     */
-//    public string $aggregatePropertyName = '';
-//
-//    /** @var string Name of property or properties to group by (comma separated) */
-//    public string $aggregateGroupBy = '';
+    /**
+     * @var string Name of aggregate function to use for this value (eg. 'AVG'). If specified, it will of course be
+     * read-only.
+     */
+    public string $aggregateFunctionName = '';
+
+    /**
+     * @var string Name of property on the entity that holds the collection whose values should have the
+     * aggregateFunctionName applied to them (only takes effect if a value is specifid in $aggregateFunctionName
+     */
+    public string $aggregateCollectionPropertyName = '';
+
+    /**
+     * @var string Name of property on the child class in the collection on which the aggregate function is being
+     * performed, if applicable (eg. a COUNT does not require a property, but MAX does).
+     */
+    public string $aggregatePropertyName = '';
+
+    /** 
+     * @var string Name of property or properties to group by (comma separated) 
+     */
+    public string $aggregateGroupBy = '';
 }

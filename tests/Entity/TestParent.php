@@ -37,16 +37,16 @@ class TestParent
      * @Mapping\Relationship(collectionClass="TestCollection",childClassName="TestPet", mappedBy="parent", relationshipType="one_to_many", orderBy={"name"="ASC","type"="DESC"}, cascadeDeletes=true, orphanRemoval=true)
      */
     public ?TestCollection $pets;
-//    /**
-//     * var int
-//     * @Mapping\Column(aggregateFunctionName="COUNT", aggregateCollection="pets")
-//     */
-//    public $numberOfPets;
-//    /**
-//     * @var int
-//     * @Mapping\Column(aggregateFunctionName="SUM", aggregateCollection="pets", aggregateProperty="weightInGrams")
-//     */
-//    public $totalWeightOfPets;
+    /**
+     * var int
+     * @Mapping\Column(aggregateFunctionName="COUNT", aggregateCollectionPropertyName="pets")
+     */
+    public $numberOfPets;
+    /**
+     * @var int
+     * @Mapping\Column(aggregateFunctionName="SUM", aggregateCollectionPropertyName="pets", aggregatePropertyName="weightInGrams")
+     */
+    public $totalWeightOfPets;
     /**
      * @var \DateTime
      * @Mapping\Column(name="modified_date_time",type="datetime")

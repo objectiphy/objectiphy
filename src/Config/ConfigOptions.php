@@ -219,6 +219,11 @@ class ConfigOptions extends ConfigBase
         if ($cacheDirectory) {
             $usedCacheDir = (!$this->devMode ? '.' : ' (' . $cacheDirectory . ').');
             if (!file_exists($cacheDirectory)) {
+                try {
+                    mkdir($cacheDirectory, 0777, true);
+                } catch (\Throwable $ex) {}
+            }
+            if (!file_exists($cacheDirectory)) {
                 throw new ObjectiphyException('Objectiphy cache directory does not exist' . $usedCacheDir);
             } elseif (!is_writable($cacheDirectory)) {
                 throw new ObjectiphyException('Objectiphy cache directory is not writable' . $usedCacheDir);

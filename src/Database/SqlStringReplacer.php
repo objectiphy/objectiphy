@@ -212,6 +212,7 @@ class SqlStringReplacer
         $replaced = [];
         $isArray = is_array($fieldValue);
         $fieldValueArray = $isArray ? $fieldValue : [$fieldValue];
+        $aggregateFunctions = [];
         foreach ($fieldValueArray as $index => $fieldValueItem) {
             $persistenceValue = null;
             if (is_string($fieldValueItem)) {
@@ -223,25 +224,41 @@ class SqlStringReplacer
                     $persistenceValue = strval($fieldValueItem);
                 }
             }
-            if ($persistenceValue === null) {
-                $persistenceValue = $this->checkLiteralValue($fieldValueItem, $query);
-            }
 
-            //Apply prefix and suffix to literals, if required
-            if (($valuePrefix || $valueSuffix)
-                && substr($persistenceValue, 0, 1) == "'" && substr(
-                    $persistenceValue,
-                    strlen($persistenceValue) - 1
-                ) == "'"
-            ) {
-                $persistenceValue = substr($persistenceValue, 1, strlen($persistenceValue) - 2);
-                $persistenceValue = "'" . $valuePrefix . $persistenceValue . $valueSuffix . "'";
-            }
+            if ($persistenceValue == 'AGGREGATE_FUNCTION') {
+                //After everything else is resolved, we'll come back and resolve this
+                $aggregateFunctions[$index] = $fieldValue;
+            } else {
+                if ($persistenceValue === null) {
+                    $persistenceValue = $this->checkLiteralValue($fieldValueItem, $query);
+                }
 
-            $replaced[$index] = $this->replaceLiteralsWithParams($query, $persistenceValue);
+                //Apply prefix and suffix to literals, if required
+                if (($valuePrefix || $valueSuffix)
+                    && substr($persistenceValue, 0, 1) == "'" && substr(
+                        $persistenceValue,
+                        strlen($persistenceValue) - 1
+                    ) == "'"
+                ) {
+                    $persistenceValue = substr($persistenceValue, 1, strlen($persistenceValue) - 2);
+                    $persistenceValue = "'" . $valuePrefix . $persistenceValue . $valueSuffix . "'";
+                }
+
+                $replaced[$index] = $this->replaceLiteralsWithParams($query, $persistenceValue);
+            }
         }
+        $this->resolveAggregates($query, $replaced, $aggregateFunctions);
 
         return $isArray ? $replaced : reset($replaced);
+    }
+
+    private function resolveAggregates(QueryInterface $query, array &$replaced, array $aggregateFunctions)
+    {
+        foreach ($aggregateFunctions as $index => $fieldValue) {
+            if ($mappingCollectionn = $this->getMappingCollectionForFieldValue($query, $fieldValue)) {
+                $stop = true;
+            }
+        }
     }
 
     /**
@@ -301,24 +318,23 @@ class SqlStringReplacer
      */
     private function checkPropertyPath(string &$fieldValue, &$alias, QueryInterface $query, MappingCollection $mappingCollection): bool
     {
+        $mappingCollection = $this->getMappingCollectionForFieldValue($query, $fieldValue);
         if (strpos($fieldValue, '.') !== false) {
             //Check if first part is a custom join alias
             $alias = strtok($fieldValue, '.');
             $aliasClass = $query->getClassForAlias($alias);
-            if ($aliasClass) {
-                if ($mappingCollection = $this->getMappingCollection($aliasClass)) {
-                    $propertyPath = substr($fieldValue, strpos($fieldValue, '.') + 1);
-                    $propertyMapping = $mappingCollection->getPropertyMapping($propertyPath);
-                    if ($propertyMapping) {
-                        $fieldValue = $this->delimit($alias . '.' . $propertyMapping->getShortColumnName(false));
-                        $alias = $this->delimit($propertyMapping->getAlias());
-                        return true;
-                    }
+            if ($aliasClass && $mappingCollection) {
+                $propertyPath = substr($fieldValue, strpos($fieldValue, '.') + 1);
+                $propertyMapping = $mappingCollection->getPropertyMapping($propertyPath);
+                if ($propertyMapping) {
+                    $fieldValue = $this->delimit($alias . '.' . $propertyMapping->getShortColumnName(false));
+                    $alias = $this->delimit($propertyMapping->getAlias());
+                    return true;
                 }
             }
         }
 
-        if ($mappingCollection = $mappingCollection ?? $this->getMappingCollection($query->getClassName())) {
+        if ($mappingCollection) {
             $propertyMapping = $mappingCollection->getPropertyMapping($fieldValue);
             if ($propertyMapping) {
                 $explicitTable = '';
@@ -330,7 +346,11 @@ class SqlStringReplacer
                     $explicitTable = $query->getClassName();
                 }
                 $alias = $this->delimit($propertyMapping->getAlias());
-                $fieldValue = $this->delimit($propertyMapping->getFullColumnName($explicitTable));
+                if ($propertyMapping->column->aggregateFunctionName) {
+                    $fieldValue = 'AGGREGATE_FUNCTION'; //Populate it last when we have access to other properties
+                } else {
+                    $fieldValue = $this->delimit($propertyMapping->getFullColumnName($explicitTable));
+                }
 
                 //If we are being asked for a column that is owned by the other side, check the other side
                 if (!$fieldValue && $propertyMapping->relationship->mappedBy && $propertyMapping->childTable) {
@@ -338,7 +358,9 @@ class SqlStringReplacer
                     $pkProperty = reset($pkProperties);
                     if ($pkProperty) {
                         $pkPropertyMapping = $mappingCollection->getPropertyMapping($propertyMapping->getPropertyPath() . '.' . $pkProperty);
-                        $fieldValue = $this->delimit($pkPropertyMapping->getFullColumnName($explicitTable));
+                        if ($pkPropertyMapping) {
+                            $fieldValue = $this->delimit($pkPropertyMapping->getFullColumnName($explicitTable));
+                        } //else probably an aggregate function
                     }
                 }
                 
@@ -347,6 +369,20 @@ class SqlStringReplacer
         }
 
         return false;
+    }
+
+    private function getMappingCollectionForFieldValue(QueryInterface $query, $fieldValue)
+    {
+        if (strpos($fieldValue, '.') !== false) {
+            //Check if first part is a custom join alias
+            $alias = strtok($fieldValue, '.');
+            $aliasClass = $query->getClassForAlias($alias);
+            if ($aliasClass) {
+                $mappingCollection = $this->getMappingCollection($aliasClass);
+            }
+        }
+
+        return $mappingCollection ?? $this->getMappingCollection($query->getClassName());
     }
 
     private function checkFunction($fieldValue): bool
