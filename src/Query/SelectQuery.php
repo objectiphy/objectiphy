@@ -24,11 +24,6 @@ class SelectQuery extends Query implements SelectQueryInterface
     private array $groupBy = [];
 
     /**
-     * @var CriteriaExpression[]
-     */
-    private array $having = [];
-
-    /**
      * @var FieldExpression[]
      */
     private array $orderBy = [];
@@ -71,16 +66,6 @@ class SelectQuery extends Query implements SelectQueryInterface
         return $this->groupBy;
     }
 
-    public function setHaving(CriteriaPartInterface ...$criteria): void
-    {
-        $this->having = $criteria;
-    }
-
-    public function getHaving(): array
-    {
-        return $this->having;
-    }
-
     public function setOrderBy(FieldExpression ...$fields): void
     {
         $this->orderBy = $fields;
@@ -121,9 +106,9 @@ class SelectQuery extends Query implements SelectQueryInterface
         return $this->offset;
     }
 
-    public function getPropertyPaths(): array
+    public function getPropertyPaths(bool $includingAggregateFunctions = true): array
     {
-        $paths = parent::getPropertyPaths();
+        $paths = parent::getPropertyPaths($includingAggregateFunctions);
         foreach ($this->groupBy ?? []  as $groupBy) {
             $paths = array_merge($paths, $groupBy->getPropertyPaths());
         }

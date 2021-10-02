@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Database\MySql;
 
+use Objectiphy\Objectiphy\Contract\CriteriaPartInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
+use Objectiphy\Objectiphy\Contract\QueryPartInterface;
 use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
@@ -39,23 +41,77 @@ class WhereProviderMySql
         $sql = "\nWHERE 1";
         $removeJoiner = false;
         foreach ($query->getWhere() as $index => $criteriaExpression) {
-            if ($criteriaExpression instanceof CriteriaGroup) {
-                $removeJoiner = $criteriaExpression->type != CriteriaGroup::GROUP_TYPE_END;
-                if ($index == 0 && $criteriaExpression->type == CriteriaGroup::GROUP_TYPE_START_OR) {
-                    //If first item is an OR group, change it to AND, otherwise it ORs with 1 and matches every record!
-                    $sql .= "\n    AND " . substr((string) $criteriaExpression, 2);
-                } else {
-                    $sql .= "\n    " . (string) $criteriaExpression;
-                }
-            } else {
-                if (!$removeJoiner) {
-                    $sql .= "\n    " . $criteriaExpression->joiner;
-                }
-                $sql .= " " . $this->addCriteriaSql($criteriaExpression, $query, $mappingCollection);
-                $removeJoiner = false;
-            }
+            $sql .= $this->buildCriteriaSql($query, $index, $criteriaExpression, $mappingCollection, $removeJoiner);
         }
         $sql = rtrim($this->stringReplacer->replaceNames($sql));
+
+        return $sql;
+    }
+
+    public function getHaving(QueryInterface $query, MappingCollection $mappingCollection): string
+    {
+        $sql = "\nHAVING 1";
+        $where = $query->getWhere();
+        $criteriaExpressions = array_merge($where, $query->getHaving());
+        $nestingLevelSql = '';
+        $nestingLevelHasSql = false;
+        $removeJoiner = false;
+        foreach ($criteriaExpressions as $index => $criteriaExpression) {
+            $isGroupDelimiter = false;
+            if ($criteriaExpression instanceof CriteriaGroup) {
+                if ($criteriaExpression->type == CriteriaGroup::GROUP_TYPE_END) {
+                    if ($nestingLevelHasSql) {
+                        $sql .= $nestingLevelSql;
+                        $nestingLevelHasSql = '';
+                        $nestingLevelHasSql = false;
+                        $removeJoiner = false;
+                    }
+                }
+                $isGroupDelimiter = true;
+            }
+            $isWhere = $index < count($where);
+            $thisSql = $this->buildCriteriaSql($query, $index, $criteriaExpression, $mappingCollection, $removeJoiner, $isWhere);
+            $nestingLevelHasSql = $nestingLevelHasSql ?: strlen(trim($thisSql)) > 0 && !$isGroupDelimiter;
+            $nestingLevelSql .= $thisSql;
+        }
+        if ($nestingLevelHasSql) {
+            $sql .= $nestingLevelSql;
+        }
+        $sql = rtrim($this->stringReplacer->replaceNames($sql));
+
+        return $sql == "\nHAVING 1" ? "" : $sql;
+    }
+
+    private function buildCriteriaSql(
+        QueryInterface $query,
+        int $index,
+        CriteriaPartInterface $criteriaExpression,
+        MappingCollection $mappingCollection,
+        bool &$removeJoiner,
+        bool $aggOnly = false
+    ): string {
+        $sql = '';
+        if ($criteriaExpression instanceof CriteriaGroup) {
+            $removeJoiner = $criteriaExpression->type != CriteriaGroup::GROUP_TYPE_END;
+            if ($index == 0 && $criteriaExpression->type == CriteriaGroup::GROUP_TYPE_START_OR) {
+                //If first item is an OR group, change it to AND, otherwise it ORs with 1 and matches every record!
+                $sql .= "\n    AND " . substr((string) $criteriaExpression, 2);
+            } else {
+                $sql .= "\n    " . (string) $criteriaExpression;
+            }
+        } else {
+            $propertyMapping = $mappingCollection->getPropertyMapping(strval($criteriaExpression->property));
+            if ($propertyMapping->column->aggregateFunctionName ?? false && !$aggOnly) {
+                return ''; //This will be added to the HAVING section
+            } elseif (!($propertyMapping->column->aggregateFunctionName ?? false) && $aggOnly) {
+                return '';
+            }
+            if (!$removeJoiner) {
+                $sql .= "\n    " . $criteriaExpression->joiner;
+            }
+            $sql .= " " . $this->addCriteriaSql($criteriaExpression, $query, $mappingCollection);
+            $removeJoiner = false;
+        }
 
         return $sql;
     }

@@ -310,6 +310,9 @@ class BasicReadingTest extends IntegrationTestBase
         $parent = $parentRepository->find(1);
         $this->assertEquals('United Kingdom', $parent->address->getCountryDescription());
 
+        //TODO: $parent->child->parent is null - should it be?
+        
+
         //Load child again using an object with a protected pk instead of the pk value directly
         $parentByChild = $parentRepository->findOneBy(['child' => $child]);
         $this->assertEquals($child->getName(), $parentByChild->child->getName());

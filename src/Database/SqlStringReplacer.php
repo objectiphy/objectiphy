@@ -7,7 +7,9 @@ namespace Objectiphy\Objectiphy\Database;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
+use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Exception\QueryException;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
 use Objectiphy\Objectiphy\Orm\ObjectMapper;
 
@@ -23,6 +25,7 @@ class SqlStringReplacer
     private array $objectNames = [];
     private array $persistenceNames = [];
     private array $aliases = [];
+    private array $aggregateGroupBys = [];
     private string $databaseDelimiter = '`';
     private string $valueDelimiter = "'";
     private string $propertyPathDelimiter = '%';
@@ -59,6 +62,14 @@ class SqlStringReplacer
         }
 
         return '';
+    }
+    
+    public function getAggregateGroupBys(bool $reset = true): array
+    {
+        $retVal = $this->aggregateGroupBys;
+        $this->aggregateGroupBys = [];
+
+        return $retVal;
     }
 
     /**
@@ -101,11 +112,11 @@ class SqlStringReplacer
         $this->aliases = [];
         $mappingCollection = $mappingCollection ?? $this->getMappingCollection($query->getClassName());
 
-        $propertiesUsed = $query->getPropertyPaths();
+        $propertiesUsed = $query->getPropertyPaths(false);
         foreach ($propertiesUsed as $propertyPath) {
             $alias = '';
             $this->objectNames[] = $this->delimit($propertyPath, $this->propertyPathDelimiter, '');
-            $persistenceValue = $this->getPersistenceValueForField($query, $propertyPath, $mappingCollection, '', '', '', '', $alias);
+            $persistenceValue = $this->getPersistenceValueForField($query, $propertyPath, $mappingCollection, '', '', '', '', $alias, $this->aggregateGroupBys);
             $this->persistenceNames[] = $persistenceValue;
             $this->aliases[] = $alias ?: $persistenceValue;
         }
@@ -207,7 +218,8 @@ class SqlStringReplacer
         string $format = '',
         string $valuePrefix = '',
         string $valueSuffix = '' ,
-        ?string &$alias = null
+        ?string &$alias = null,
+        array &$groupBy = []
     ) {
         $replaced = [];
         $isArray = is_array($fieldValue);
@@ -247,16 +259,47 @@ class SqlStringReplacer
                 $replaced[$index] = $this->replaceLiteralsWithParams($query, $persistenceValue);
             }
         }
-        $this->resolveAggregates($query, $replaced, $aggregateFunctions);
+        $this->resolveAggregates($query, $replaced, $aggregateFunctions, $groupBy);
 
         return $isArray ? $replaced : reset($replaced);
     }
 
-    private function resolveAggregates(QueryInterface $query, array &$replaced, array $aggregateFunctions)
+    private function resolveAggregates(QueryInterface $query, array &$replaced, array $aggregateFunctions, array &$groupBy)
     {
         foreach ($aggregateFunctions as $index => $fieldValue) {
-            if ($mappingCollectionn = $this->getMappingCollectionForFieldValue($query, $fieldValue)) {
-                $stop = true;
+            if ($mappingCollection = $this->getMappingCollectionForFieldValue($query, $fieldValue)) {
+                $propertyMapping = $mappingCollection->getPropertyMapping($fieldValue);
+                if ($propertyMapping) {
+                    $func = $propertyMapping->column->aggregateFunctionName . '(';
+                    //Get alias for collection
+                    $collectionProperty = $propertyMapping->column->aggregateCollectionPropertyName;
+                    $collectionProperty = implode('.', array_filter([$propertyMapping->getParentPath(), $collectionProperty]));
+                    $collectionPropertyMapping = $mappingCollection->getPropertyMapping($collectionProperty);
+                    $alias = $collectionPropertyMapping ? ($collectionPropertyMapping->getTableAlias(true) ?? null) : null;
+                    if (!$alias) {
+                        throw new MappingException('Cannot find table alias to use for property used as the subject of an aggregate function (' . $fieldValue . ')');
+                    }
+
+                    $property = $propertyMapping->column->aggregatePropertyName ?? '';
+                    if ($func == 'COUNT(' && !$property) {
+                        $property = $mappingCollection->getPrimaryKeyProperties($collectionPropertyMapping->getChildClassName())[0];
+                    }
+                    if ($property) {
+                        $aggPropertyMappingCollection = $this->getMappingCollection($collectionPropertyMapping->getChildClassName());
+                        $aggPropertyMapping = $aggPropertyMappingCollection->getPropertyMapping($property);
+                        $aggColumn = $aggPropertyMapping->getShortColumnName(false);
+                        $func .= $this->delimit($alias . '.' . $aggColumn);
+                    }
+                    $func .= ')';
+                    $replaced[$index] = $func;
+                    $groupByProperties = array_filter(explode(',', $propertyMapping->column->aggregateGroupBy));
+                    $groupByProperties = $groupByProperties ?: $mappingCollection->getPrimaryKeyProperties($propertyMapping->className);
+                    $tableAlias = $propertyMapping->getTableAlias();
+                    $groupByProperties = array_map(fn($value) => ($tableAlias ? $tableAlias . '.' : '') . $value, $groupByProperties);
+                    $groupBy = array_merge($groupBy, $groupByProperties);
+                } else {
+                    throw new MappingException('Cannot find property mapping information for aggregate function (' . $fieldValue . ')');
+                }
             }
         }
     }

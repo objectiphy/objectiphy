@@ -20,36 +20,43 @@ class TestContact
      * @ORM\GeneratedValue(strategy="AUTO")
      */
     protected $id;
+    
     /**
      * @Groups({"Default"})
      * @ORM\Column(type="string", name="first_name")
      */
     protected $firstName;
+    
     /**
      * @Groups({"Default"})
      * @ORM\Column(type="string", name="last_name")
      */
     protected $lastName;
+    
     /**
      * @ORM\Column(type="string", name="postcode")
      * @Groups({"SomethingDifferent"})
      */
     protected $postcode;
+    
     /**
      * @ORM\Column(type="string", name="title_code")
      */
     protected $title;
+    
     /**
      * This is here to make sure that a column `title` will map to property 'titleText' even though there is also a
      * property named 'title'.
      * @ORM\Column(type="string", name="title")
      */
     protected $titleText;
+    
     /**
      * Unidirectional relationship (TODO: allow for other side of unidirectional relationship to have a scalar ID that stays scalar)
      * @Relationship(relationshipType="one_to_one", childClassName="TestSecurityPass", sourceJoinColumn="security_pass_id")
      */
     protected $securityPass;
+    
     /**
      * Unidirectional relationship on non PK column
      * @Relationship(relationshipType="one_to_one", childClassName="TestNonPkChild", sourceJoinColumn="child_nebulous_identifier", targetJoinColumn="nebulous_identifier")

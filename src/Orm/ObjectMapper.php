@@ -326,6 +326,9 @@ final class ObjectMapper
                 }
             }
         }
+        if ($column->aggregateFunctionName) {
+            $column->isReadOnly = true;
+        }
         
         return $column;
     }

@@ -20,30 +20,36 @@ class TestWeirdPropertyNames
      * @Mapping\Column(isPrimaryKey=true,name="id")
      */
     protected $primary_key;
+    
     /**
      * @var string
      * @Mapping\Column(type="string", name="first_name")
      */
     protected $firstName;
+    
     /**
      * @var string
      * @Mapping\Column(type="string", name="lastname")
      */
     protected $last_name;
+    
     /**
      * @var \DateTime
      * @Mapping\Column(type="datetime", name="event_date_time")
      */
     protected $some_random_event_dateTime;
+    
     /**
      * @var string
      * @Mapping\Column(type="string", name="veryInconsistent_naming_Conventionhere")
      */
     protected $a_VERY_Very_InconsistentnamingConvention_here;
+    
     /**
      * @Mapping\Relationship(childClassName="TestAddress", relationshipType="one_to_one", isEmbedded=true)
      */
     protected $address_with_underscores;
+    
     /**
      * @var TestUser
      * @Mapping\Relationship(childClassName="TestUser", sourceJoinColumn="user_id", relationshipType="one_to_one")

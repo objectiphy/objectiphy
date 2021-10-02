@@ -102,9 +102,9 @@ class InsertQuery extends Query implements InsertQueryInterface
         return $queryString;
     }
 
-    public function getPropertyPaths(): array
+    public function getPropertyPaths(bool $includingAggregateFunctions = true): array
     {
-        $paths = parent::getPropertyPaths();
+        $paths = parent::getPropertyPaths($includingAggregateFunctions);
         foreach ($this->assignments ?? [] as $assignments) {
             if ($assignments) {
                 $paths = array_merge($paths, $assignments[0]->getPropertyPaths());

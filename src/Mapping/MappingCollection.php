@@ -141,6 +141,15 @@ class MappingCollection
         }
         if ($propertyMapping->relationship->isDefined() && !$propertyMapping->relationship->isEmbedded) {
             $relationshipKey = $propertyMapping->getRelationshipKey();
+            if (
+                isset($this->relationships[$relationshipKey])
+                && $propertyMapping->parents
+                && $propertyMapping->parentCollection->hasAggregateFunctions($propertyMapping->className, $propertyMapping->propertyName)
+            ) {
+                //Another instance of this relationship already exists. Agg functions will fail if they appear more than once. Lazy load!
+                $parentPropertyMapping = $this->getPropertyMapping($propertyMapping->getParentPath());
+                $parentPropertyMapping->relationship->lazyLoad = true;
+            }
             $this->relationships[$relationshipKey] ??= $propertyMapping;
         }
         if ($propertyMapping->relationship->isScalarJoin()) {
@@ -469,10 +478,22 @@ class MappingCollection
      * Whether or not any of the properties in this collection use an aggregate function
      * @return bool
      */
-    public function hasAggregateFunctions(): bool
-    {
+    public function hasAggregateFunctions(
+        string $className = '',
+        string $collectionPropertyName = '',
+        bool $fetchableOnly = false
+    ): bool {
         foreach ($this->properties as $propertyMapping) {
-            if ($propertyMapping->column->aggregateFunctionName) {
+            if ($propertyMapping->column->aggregateFunctionName
+                && (!$fetchableOnly || $propertyMapping->isFetchable)
+                && (
+                    (!$className && !$collectionPropertyName)
+                    || (
+                        $propertyMapping->className == $className &&
+                        $propertyMapping->column->aggregateCollectionPropertyName == $collectionPropertyName
+                    )
+                )
+            ) {
                 return true;
             }
         }
@@ -518,8 +539,7 @@ class MappingCollection
                                     && $relationship->getPropertyPath() == $propertyMapping->getPropertyPath()
                                 )
                             ) {
-                                $propertyMapping->isFetchable = !$relationship->isLateBound(
-                                    ) || $propertyMapping->column->isPrimaryKey;
+                                $propertyMapping->isFetchable = !$relationship->isLateBound() || $propertyMapping->column->isPrimaryKey;
                                 if ($propertyMapping->relationship->isScalarJoin()) {
                                     $propertyMapping->isFetchable = $parentPropertyMapping && $parentPropertyMapping->relationship->isEmbedded ? true : $propertyMapping->isFetchable;
                                 }

@@ -195,12 +195,19 @@ class PropertyMapping
         return $this->serializationGroups;
     }
 
+    /**
+     * @return string
+     */
     public function getRelationshipKey(): string
     {
         //If parent is embedded, use class name from parent as we might need multiple joins for different parents
         $className = $this->className;
         $parentProperty = $this->parentCollection->getPropertyMapping($this->getParentPath());
-        if ($parentProperty && ($parentProperty->relationship->isEmbedded || $this->relationship->isScalarJoin())) {
+        if ($parentProperty && (
+            $parentProperty->relationship->isEmbedded
+            || $this->relationship->isScalarJoin()
+            )
+        ) {
             $className = $parentProperty->className . ':';
             //To enable same class on different properties, allow as far as grandparent
             $grandparent = $this->parentCollection->getPropertyMapping($parentProperty->getParentPath());
@@ -337,16 +344,13 @@ class PropertyMapping
     {
         if ($this->relationship->joinType == 'INNER') {
             return false; //Inner joins can filter records so cannot be late bound
-        }
-        if (!$forJoin && !$this->isWithinDepth()) {
+        } elseif (!$forJoin && !$this->isWithinDepth()) {
             return true;
-        }
-        if ($this->parents
+        } elseif ($this->parents
             && $this->parentCollection->getPropertyMapping($this->getParentPath())
             && $this->parentCollection->getPropertyMapping($this->getParentPath())->isLateBound($forJoin)) {
             return true;
-        }
-        if ($forJoin && $this->forcedEarlyBindingForJoin) {
+        } elseif ($forJoin && $this->forcedEarlyBindingForJoin) {
             return false;
         } elseif ($this->relationship->isEmbedded || $this->relationship->isScalarJoin()) {
             return false;
@@ -369,7 +373,9 @@ class PropertyMapping
                     return true;
                 }
             }
-        }
+        } /*elseif ($this->parentCollection->hasAggregateFunctions($this->getParentPath(), $this->propertyName, true)) {
+            return false; //used in agg function
+        }*/
 
         return false;
     }

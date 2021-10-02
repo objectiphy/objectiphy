@@ -17,21 +17,25 @@ class TestNonPkChild
      * @Mapping\Relationship(childClassName="TestUser", sourceJoinColumn="user_id", relationshipType="one_to_one")
      */
     protected $user;
+    
     /**
      * @var string
      * @Mapping\Column(type="string")
      */
     protected $nebulousIdentifier;
+    
     /**
      * @var TestParentOfNonPkChild
      * @Mapping\Relationship(childClassName="TestParentOfNonPkChild", sourceJoinColumn="parent_id", relationshipType="one_to_one")
      */
     protected $parent;
+    
     /**
      * @var TestParentOfNonPkChild
      * @Mapping\Relationship(childClassName="TestParentOfNonPkChild", sourceJoinColumn="second_parent_id", relationshipType="one_to_one")
      */
     protected $secondParent;
+    
     /**
      * @var TestParentOfNonPkChild
      * @Mapping\Relationship(childClassName="TestParentOfNonPkChild", sourceJoinColumn="foster_parent_name", relationshipType="many_to_one", targetJoinColumn="name")

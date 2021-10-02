@@ -19,6 +19,7 @@ class TestUnderwriter
      * @Mapping\Column(isPrimaryKey=true)
      */
     protected $id;
+    
     /**
      * @ORM\Column(type="string")
      */

@@ -79,7 +79,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $sql .= $this->joinProvider->getJoins($query);
         $sql .= $this->whereProvider->getWhere($query, $this->options->mappingCollection);
         $sql .= $this->getGroupBy();
-        $sql .= $this->getHaving();
+        $sql .= $this->whereProvider->getHaving($query, $this->options->mappingCollection);
         $sql .= $this->getOrderBy();
         $sql .= $this->getLimit();
         $sql .= $this->getOffset();
@@ -139,32 +139,13 @@ class SqlSelectorMySql implements SqlSelectorInterface
     public function getGroupBy(): string
     {
         $sql = '';
-        $groupBy = $this->query->getGroupBy();
+        $groupBy = array_unique(array_filter(array_merge($this->query->getGroupBy(), $this->stringReplacer->getAggregateGroupBys())));
         if ($groupBy) {
+            $groupBy = array_map(fn($value) => $this->stringReplacer->delimit($value), $groupBy);
             $sql = "\nGROUP BY " . $this->stringReplacer->replaceNames(implode(', ', $groupBy));
         }
 
         return $sql;
-    }
-
-    /**
-     * @return string The SQL string for the HAVING clause, if applicable (used where the criteria involves an
-     * aggregate function, either directly in the criteria itself, or by comparing against a property that uses one.
-     * @throws ObjectiphyException
-     */
-    public function getHaving(): string
-    {
-        $having = '';
-        $criteria = [];
-        foreach ($this->query->getHaving() as $criteriaExpression) {
-            $criteria[] = $this->stringReplacer->replaceNames((string) $criteriaExpression);
-        }
-
-        if ($criteria) {
-            $having = "\nHAVING " . implode("\nAND ", $criteria) . "\n";
-        }
-
-        return $having;
     }
 
     /**

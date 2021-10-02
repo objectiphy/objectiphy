@@ -329,7 +329,8 @@ final class ObjectBinder
             $qb = QB::create();
 
             //Relationship used by mapping collection might differ from $propertyMapping
-            $relationshipMapping = $mappingCollection->getRelationships()[$propertyMapping->getRelationshipKey()];
+            $relationships = $mappingCollection->getRelationships();
+            $relationshipMapping = $relationships[$propertyMapping->getRelationshipKey()] ?? $relationships[$propertyMapping->getRelationshipKey(false)] ?? $propertyMapping->relationship;
             $relationship = $relationshipMapping->relationship;
 
             if ($relationship->isManyToMany()) {

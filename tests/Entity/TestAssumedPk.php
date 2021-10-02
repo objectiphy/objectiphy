@@ -14,20 +14,22 @@ class TestAssumedPk
      * @Mapping\Column(name="id")
      */
     public $id;
+
     /**
      * @var string
      * @Mapping\Column(type="string", name="name")
      */
     public $name;
-//    /**
-//     * @Mapping\Relationship(
-//     *     childClassName="TestPet",
-//     *     mappedBy="parent",
-//     *     relationshipType="one_to_many",
-//     *     orderBy={"name"="ASC","type"="DESC"},
-//     *     cascadeDeletes=true,
-//     *     orphanRemoval=true
-//     * )
-//     */
-//    public $pets;
+
+    /**
+     * @Mapping\Relationship(
+     *     childClassName="TestPet",
+     *     mappedBy="parent",
+     *     relationshipType="one_to_many",
+     *     orderBy={"name"="ASC","type"="DESC"},
+     *     cascadeDeletes=true,
+     *     orphanRemoval=true
+     * )
+     */
+    public $pets;
 }

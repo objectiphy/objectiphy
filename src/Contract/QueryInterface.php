@@ -6,6 +6,7 @@ namespace Objectiphy\Objectiphy\Contract;
 
 use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
+use Objectiphy\Objectiphy\Query\CriteriaExpression;
 use Objectiphy\Objectiphy\Query\FieldExpression;
 
 /**
@@ -32,6 +33,10 @@ interface QueryInterface extends PropertyPathConsumerInterface
 
     public function getWhere(): array;
 
+    public function setHaving(CriteriaExpression ...$criteria): void;
+
+    public function getHaving(): array;
+    
     public function &getParams(): array;
 
     public function setParams(array $params): void;
@@ -45,7 +50,7 @@ interface QueryInterface extends PropertyPathConsumerInterface
      */
     public function addParam($paramValue, ?string $paramName = null): string;
 
-    public function getPropertyPaths(): array;
+    public function getPropertyPaths(bool $includingAggregateFunctions = true): array;
 
     public function getClassesUsed(): array;
 

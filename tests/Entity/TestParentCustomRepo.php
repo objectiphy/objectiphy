@@ -16,24 +16,28 @@ class TestParentCustomRepo
      * @Mapping\Column(isPrimaryKey=true)
      */
     protected $id;
+    
     /**
      * @var TestUser
      * @Objectiphy\Objectiphy\Mapping\Groups({"Default"})
      * @Mapping\Relationship(childClassName="TestUser", sourceJoinColumn="user_id", relationshipType="one_to_one", cascadeDeletes=true)
      */
     protected $user;
+    
     /**
      * @var string
      * @Objectiphy\Objectiphy\Mapping\Groups({"Default"})
      * @Mapping\Column(type="string", name="name")
      */
     protected $name;
+    
     /**
      * @var TestChild
      * @Objectiphy\Objectiphy\Mapping\Groups({"Full"})
      * @Mapping\Relationship(childClassName="TestChild", mappedBy="parent", relationshipType="one_to_one")
      */
     protected $child;
+    
     /**
      * @var array
      * @Mapping\Relationship(
@@ -47,21 +51,25 @@ class TestParentCustomRepo
      * )
      */
     public array $pets = [];
-//    /**
-//     * var int
-//     * @Mapping\Column(aggregateFunctionName="COUNT", aggregateCollection="pets")
-//     */
-//    public $numberOfPets;
-//    /**
-//     * @var int
-//     * @Mapping\Column(aggregateFunctionName="SUM", aggregateCollection="pets", aggregateProperty="weightInGrams")
-//     */
-//    public $totalWeightOfPets;
+    
+    /**
+     * var int
+     * @Mapping\Column(aggregateFunctionName="COUNT", aggregateCollectionPropertyName="pets")
+     */
+    public $numberOfPets;
+    
+    /**
+     * @var int
+     * @Mapping\Column(aggregateFunctionName="SUM", aggregateCollectionPropertyName="pets", aggregatePropertyName="weightInGrams")
+     */
+    public $totalWeightOfPets;
+    
     /**
      * @var datetime
      * @Mapping\Column(name="modified_date_time")
      */
     public $modifiedDateTime;
+    
     /**
      * @Mapping\Relationship(childClassName="TestAddress", relationshipType="one_to_one", isEmbedded=true)
      */

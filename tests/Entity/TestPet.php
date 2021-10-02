@@ -21,23 +21,28 @@ class TestPet
      * @ORM\Column(type="int")
      */
     protected $id;
+    
     /**
      * @ORM\ManyToOne(targetEntity="TestParent", inversedBy="pets")
      * @ORM\JoinColumn(name="parent_id")
      */
     protected $parent;
+    
     /**
      * @ORM\Column(type="string")
      */
     protected $type;
+    
     /**
      * @ORM\Column(type="string")
      */
     protected $name;
+    
     /**
      * @Mapping\Column(type="integer")
      */
     protected $weightInGrams;
+    
 
     /**
      * This is a dirty bodge, just for unit test purposes - not recommended

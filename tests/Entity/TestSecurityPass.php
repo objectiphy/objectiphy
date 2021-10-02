@@ -17,11 +17,13 @@ class TestSecurityPass
      * @Mapping\Column(name="id",isPrimaryKey=true)
      */
     public $id;
+    
     /**
      * @var string
      * @Mapping\Column(type="string")
      */
     public $serialNo;
+    
     /**
      * @var TestEmployee
      * @Mapping\Relationship(relationshipType="one_to_one", childClassName="TestEmployee")

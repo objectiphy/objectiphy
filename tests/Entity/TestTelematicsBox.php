@@ -19,10 +19,12 @@ class TestTelematicsBox
      * @ORM\JoinColumn(name="vehicle_id")
      */
     protected $vehicle;
+    
     /**
      * @ORM\Column(type="string", name="imei")
      */
     protected $unitId;
+    
     /**
      * @ORM\Column(type="datetime")
      */

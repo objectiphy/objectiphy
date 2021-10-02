@@ -102,9 +102,9 @@ class UpdateQuery extends Query implements UpdateQueryInterface
         return $queryString;
     }
 
-    public function getPropertyPaths(): array
+    public function getPropertyPaths(bool $includingAggregateFunctions = true): array
     {
-        $paths = parent::getPropertyPaths();
+        $paths = parent::getPropertyPaths($includingAggregateFunctions);
         foreach ($this->assignments ?? [] as $assignment) {
             $paths = array_merge($paths, $assignment->getPropertyPaths());
         }

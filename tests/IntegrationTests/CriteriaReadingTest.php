@@ -202,7 +202,7 @@ class CriteriaReadingTest extends IntegrationTestBase
         foreach ($policies as $policy) {
             $this->assertTrue(in_array($policy->contact->lastName, ['Skywalker', 'Smith']));
         }
-
+//For some reason this is not forcing the join for the late bound child.parent property (to get the primary key for lazy loading)
         //Filter based on properties of one-to-many child object
         $this->objectRepository->setClassName(TestParent::class);
         $parentsWithADog = $this->objectRepository->findBy(['pets.type' => 'dog']);
@@ -303,10 +303,13 @@ class CriteriaReadingTest extends IntegrationTestBase
         $prefixedColumnCriteriaParent = $this->objectRepository->findOneBy(['child.address.town'=>'Loughborough']);
         $this->assertEquals(2, $prefixedColumnCriteriaParent->getId());
 
+//TODO: We can't have the same agg function property twice, as it messes up the grouping
+//If it appears twice, lazy load the deeper nested one
+
         //Aggregate function for a property value
-//        $parentTwo = $this->objectRepository->find(2);
-//        $this->assertEquals(7, $parentTwo->numberOfPets);
-//        $this->assertEquals(220, $parentTwo->totalWeightOfPets);
+        $parentTwo = $this->objectRepository->find(2);
+        $this->assertEquals(7, $parentTwo->numberOfPets);
+        $this->assertEquals(220, $parentTwo->totalWeightOfPets);
     }
 
     protected function doNestedObjectTests()
@@ -356,51 +359,51 @@ class CriteriaReadingTest extends IntegrationTestBase
 
     protected function doAggregateFunctionTests()
     {
-//        //Use criteria that references an aggregate function property value
-//        $this->objectRepository->setClassName(TestParent::class);
-//        $criteria = QB::create()->where('totalWeightOfPets', '>', 1000)->build();
-//        $heavilyPettedParentsLol = $this->objectRepository->findBy($criteria);
-//        $this->assertEquals(2, count($heavilyPettedParentsLol));
-//        $this->assertEquals(1, $heavilyPettedParentsLol[0]->getId());
-//
-//        //Use criteria that uses an aggregate function directly where we would not normally join
-//        $this->objectRepository->seClassName(TestPolicy::class);
-//        $criteria = QB::create()->where('vehicle.wheels.id', '>', 4, null, 'COUNT')->build(); //(5 wheels incl steering wheel!)
-//        $policiesWithFiveWheelVehicle = $this->objectRepository->findBy($criteria);
-//        $this->assertEquals(1, count($policiesWithFiveWheelVehicle));
-//        $this->assertEquals(1, $policiesWithFiveWheelVehicle[0]->vehicle->id);
-//
-//        //Order by aggregate function property (case insensitive direction)
-//        $this->objectRepository->setClassName(TestParent::class);
-//        $parents = $this->objectRepository->findAll(['totalWeightOfPets'=>'desc']);
-//        $this->assertEquals(1, $parents[0]->getId());
-//
-//        //Use criteria with an aggregate function where we already join for an aggregate function property
-//        //NOTE: Keep this as the last test here, so that the doSqlTests method, below, gets what it expects!
-//        $this->objectRepository->setClassName(TestParent::class);
-//        $criteria = QB::create()->where('pets.id', QB::LTE, 4, null, 'COUNT')->build();
-//        $parentsWithLessThanFivePets = $this->objectRepository->findBy($criteria);
-//        $this->assertEquals(2, count($parentsWithLessThanFivePets));
-//        $this->assertEquals('Danger Mouse', $parentsWithLessThanFivePets[0]->getName());
+        //Use criteria that references an aggregate function property value
+        $this->objectRepository->setClassName(TestParent::class);
+        $criteria = QB::create()->where('totalWeightOfPets', '>', 1000)->build();
+        $heavilyPettedParentsLol = $this->objectRepository->findBy($criteria);
+        $this->assertEquals(2, count($heavilyPettedParentsLol));
+        $this->assertEquals(1, $heavilyPettedParentsLol[0]->getId());
+
+        //Use criteria that uses an aggregate function directly where we would not normally join
+        $this->objectRepository->seClassName(TestPolicy::class);
+        $criteria = QB::create()->where('vehicle.wheels.id', '>', 4, null, 'COUNT')->build(); //(5 wheels incl steering wheel!)
+        $policiesWithFiveWheelVehicle = $this->objectRepository->findBy($criteria);
+        $this->assertEquals(1, count($policiesWithFiveWheelVehicle));
+        $this->assertEquals(1, $policiesWithFiveWheelVehicle[0]->vehicle->id);
+
+        //Order by aggregate function property (case insensitive direction)
+        $this->objectRepository->setClassName(TestParent::class);
+        $parents = $this->objectRepository->findAll(['totalWeightOfPets'=>'desc']);
+        $this->assertEquals(1, $parents[0]->getId());
+
+        //Use criteria with an aggregate function where we already join for an aggregate function property
+        //NOTE: Keep this as the last test here, so that the doSqlTests method, below, gets what it expects!
+        $this->objectRepository->setClassName(TestParent::class);
+        $criteria = QB::create()->where('pets.id', QB::LTE, 4, null, 'COUNT')->build();
+        $parentsWithLessThanFivePets = $this->objectRepository->findBy($criteria);
+        $this->assertEquals(2, count($parentsWithLessThanFivePets));
+        $this->assertEquals('Danger Mouse', $parentsWithLessThanFivePets[0]->getName());
     }
 
     protected function doSqlTests()
     {
-//        if ($this->testName != 'Criteria Reading eager') { //Final query will be different for eager load
-//            $sql = $this->objectRepository->getQuery(false);
-//            $this->assertStringEndsWith("(COUNT(`objectiphy_test`.`pets`.`id`) <= :param_1)", $sql);
-//            $parameterisedSql = $this->objectRepository->getQuery();
-//            $this->assertStringEndsWith("(COUNT(`objectiphy_test`.`pets`.`id`) <= '4')", $parameterisedSql);
-//            $sqlHistory = $this->objectRepository->getQueryHistory();
-//            $this->assertGreaterThan(40, count($sqlHistory));
-//            $this->assertStringStartsWith('SELECT', reset($sqlHistory));
-//            $this->assertStringStartsWith('SELECT', end($sqlHistory));
-//            $params = $this->objectRepository->getParamHistory();
-//            $this->assertEquals(count($sqlHistory), count($params));
-//            $this->assertEquals(['param_1' => 4], end($params));
-//            $parameterisedSqlHistory = $this->objectRepository->getQueryHistory(true);
-//            $this->assertEquals(count($sqlHistory), count($parameterisedSqlHistory));
-//            $this->assertStringEndsWith("(COUNT(`objectiphy_test`.`pets`.`id`) <= '4')", end($parameterisedSqlHistory));
-//        }
+        if ($this->testName != 'Criteria Reading eager') { //Final query will be different for eager load
+            $sql = $this->objectRepository->getQuery(false);
+            $this->assertStringEndsWith("(COUNT(`objectiphy_test`.`pets`.`id`) <= :param_1)", $sql);
+            $parameterisedSql = $this->objectRepository->getQuery();
+            $this->assertStringEndsWith("(COUNT(`objectiphy_test`.`pets`.`id`) <= '4')", $parameterisedSql);
+            $sqlHistory = $this->objectRepository->getQueryHistory();
+            $this->assertGreaterThan(40, count($sqlHistory));
+            $this->assertStringStartsWith('SELECT', reset($sqlHistory));
+            $this->assertStringStartsWith('SELECT', end($sqlHistory));
+            $params = $this->objectRepository->getParamHistory();
+            $this->assertEquals(count($sqlHistory), count($params));
+            $this->assertEquals(['param_1' => 4], end($params));
+            $parameterisedSqlHistory = $this->objectRepository->getQueryHistory(true);
+            $this->assertEquals(count($sqlHistory), count($parameterisedSqlHistory));
+            $this->assertStringEndsWith("(COUNT(`objectiphy_test`.`pets`.`id`) <= '4')", end($parameterisedSqlHistory));
+        }
     }
 }

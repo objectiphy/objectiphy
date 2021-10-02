@@ -40,11 +40,17 @@ abstract class Query implements QueryInterface
      * @var CriteriaExpression[]
      */
     protected array $where = [];
+    
+    /**
+     * @var CriteriaExpression[]
+     */
+    private array $having = [];
 
     protected MappingCollection $mappingCollection;
     protected bool $isFinalised = false;
     protected array $params = [];
     protected SqlStringReplacer $stringReplacer;
+    protected array $pathsUsedInAggregateFunctions = [];
 
     public function setFields(FieldExpression ...$fields): void
     {
@@ -100,7 +106,17 @@ abstract class Query implements QueryInterface
         return $this->where ?? [];
     }
 
-    public function getPropertyPaths(): array
+    public function setHaving(CriteriaPartInterface ...$criteria): void
+    {
+        $this->having = $criteria;
+    }
+
+    public function getHaving(): array
+    {
+        return $this->having;
+    }
+
+    public function getPropertyPaths(bool $includingAggregateFunctions = true): array
     {
         $paths = [];
         foreach ($this->fields ?? [] as $field) {
@@ -118,26 +134,37 @@ abstract class Query implements QueryInterface
             }
         }
 
-        //If any of these paths relate to aggregate functions, check for other properties used with it
-        if (!empty($this->mappingCollection)) {
-            foreach ($paths as $path) {
-                 $propertyMapping = $this->mappingCollection->getPropertyMapping($path);
-                 if ($propertyMapping && $propertyMapping->column && $propertyMapping->column->aggregateFunctionName) {
-                     $aggregateFields = [];
-                     $prefix = $propertyMapping->getParentPath() . '.';
-                     $aggregateCollection = $propertyMapping->column->aggregateCollectionPropertyName;
-                     $aggregateProperty = $propertyMapping->column->aggregatePropertyName;
-                     $aggregateGroupBy = $propertyMapping->column->aggregateGroupBy;
-                     $aggregateFields[] = $aggregateCollection ? new FieldExpression($prefix . $aggregateCollection) : null;
-                     $aggregateFields[] = $aggregateProperty ? new FieldExpression($prefix . $aggregateCollection . '.' . $aggregateProperty) : null;
-                     $aggregateFields[] = $aggregateGroupBy ? new FieldExpression($prefix . $aggregateGroupBy) : null;
-                     foreach (array_filter($aggregateFields) as $aggregateField) {
-                         $paths = array_merge($paths, $aggregateField->getPropertyPaths());
-                     }
-                 }
+        if ($includingAggregateFunctions) {
+            //If any of these paths relate to aggregate functions, check for other properties used with it
+            if (!empty($this->mappingCollection)) {
+                foreach ($paths as $path) {
+                    $propertyMapping = $this->mappingCollection->getPropertyMapping($path);
+                    if ($propertyMapping && $propertyMapping->column && $propertyMapping->column->aggregateFunctionName) {
+                        $aggregateFields = [];
+                        $prefix = $propertyMapping->getParentPath();
+                        $prefix = $prefix ? $prefix . '.' : '';
+                        $aggregateCollection = $propertyMapping->column->aggregateCollectionPropertyName;
+                        $aggregateProperty = $propertyMapping->column->aggregatePropertyName;
+                        $aggregateGroupBy = $propertyMapping->column->aggregateGroupBy;
+                        $aggregateFields[] = $aggregateCollection ? new FieldExpression(
+                            $prefix . $aggregateCollection
+                        ) : null;
+                        $aggregateFields[] = $aggregateProperty ? new FieldExpression(
+                            $prefix . $aggregateCollection . '.' . $aggregateProperty
+                        ) : null;
+                        $aggregateFields[] = $aggregateGroupBy ? new FieldExpression(
+                            $prefix . $aggregateGroupBy
+                        ) : null;
+                        foreach (array_filter($aggregateFields) as $aggregateField) {
+                            $aggregatePaths = $aggregateField->getPropertyPaths();
+                            $this->pathsUsedInAggregateFunctions = array_merge($this->pathsUsedInAggregateFunctions, $aggregatePaths);
+                            $paths = array_merge($paths, $aggregatePaths);
+                        }
+                    }
+                }
             }
         }
-
+        
         return array_unique($paths);
     }
 
@@ -161,6 +188,9 @@ abstract class Query implements QueryInterface
             $this->mappingCollection = $mappingCollection;
             $relationships = $this->getRelationshipsUsed();
             foreach ($relationships as $propertyMapping) {
+                if (in_array($propertyMapping->getPropertyPath(), $this->pathsUsedInAggregateFunctions)) {
+                    $propertyMapping->forceEarlyBindingForJoin();
+                }
                 $this->populateRelationshipJoin($propertyMapping);
             }
             $this->isFinalised = true; //Overriding subclass could change this back if it has its own finalising to do.

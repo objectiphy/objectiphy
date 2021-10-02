@@ -18,21 +18,25 @@ class TestParentOfNonPkChild
      * @Mapping\Column(isPrimaryKey=true)
      */
     protected $id;
+    
     /**
      * @var string
      * @Mapping\Column(type="string", name="name")
      */
     protected $name;
+    
     /**
      * @var TestNonPkChild
      * @Mapping\Relationship(childClassName="TestNonPkChild", mappedBy="parent", relationshipType="one_to_one")
      */
     protected $child;
+    
     /**
      * @var TestNonPkChild
      * @Mapping\Relationship(childClassName="TestNonPkChild", mappedBy="secondParent", relationshipType="one_to_one")
      */
     protected $secondChild;
+    
     /**
      * @var TestNonPkChild
      * @Mapping\Relationship(childClassName="TestNonPkChild", mappedBy="fosterParent", relationshipType="one_to_many", orderBy={"nebulousIdentifier"="DESC"})

@@ -17,28 +17,33 @@ class TestChildCustomParentRepo
      * @Mapping\Column(isPrimaryKey=true)
      */
     protected $id;
+
     /**
      * @var TestUser
      * @Mapping\Relationship(childClassName="TestUser", sourceJoinColumn="user_id", relationshipType="one_to_one")
      */
     protected $user;
+    
     /**
      * @var string
      * @Objectiphy\Objectiphy\Mapping\Groups({"Special"})
      * @Mapping\Column(type="string", name="name")
      */
     protected $name;
+    
     /**
      * @var string
      * @Objectiphy\Objectiphy\Mapping\Groups({"Special"})
      * @Mapping\Column(type="int", name="height_in_cm")
      */
     protected $height;
+    
     /**
      * @var TestParentCustomRepo
      * @Mapping\Relationship(childClassName="TestParentCustomRepo", sourceJoinColumn="parent_id", relationshipType="one_to_one")
      */
     protected $parent;
+    
     /**
      * @Mapping\Relationship(childClassName="TestAddress", relationshipType="one_to_one", isEmbedded=true, embeddedColumnPrefix="child_")
      */

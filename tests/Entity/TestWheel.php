@@ -17,15 +17,18 @@ class TestWheel
      * @ORM\Id
      */
     protected $id;
+    
     /**
      * @ORM\ManyToOne(targetEntity="TestVehicle", inversedBy="wheels")
      * @ORM\JoinColumn(name="vehicle_id")
      */
     protected $vehicle;
+    
     /**
      * @ORM\Column(type="boolean")
      */
     protected $loadBearing = true;
+    
     /**
      * @ORM\Column(type="string")
      */

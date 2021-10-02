@@ -25,10 +25,6 @@ interface SelectQueryInterface extends QueryInterface
 
     public function getGroupBy(): array;
 
-    public function setHaving(CriteriaExpression ...$criteria): void;
-
-    public function getHaving(): array;
-
     public function setOrderBy(FieldExpression ...$fields): void;
 
     public function getOrderBy(): array;

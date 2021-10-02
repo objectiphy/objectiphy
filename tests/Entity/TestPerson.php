@@ -38,10 +38,14 @@ class TestPerson
      */
     public int $year;
 
-    /** @Column */
+    /** 
+     * @Column 
+     */
     public string $postcode;
 
-    /** @Column */
+    /** 
+     * @Column 
+     */
     public string $email;
 
     /**
