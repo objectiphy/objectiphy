@@ -149,6 +149,7 @@ class MappingCollection
                 //Another instance of this relationship already exists. Agg functions will fail if they appear more than once. Lazy load!
                 $parentPropertyMapping = $this->getPropertyMapping($propertyMapping->getParentPath());
                 $parentPropertyMapping->relationship->lazyLoad = true;
+                $parentPropertyMapping->forceEarlyBindingForJoin();
             }
             $this->relationships[$relationshipKey] ??= $propertyMapping;
         }
@@ -229,7 +230,7 @@ class MappingCollection
             $this->finaliseColumnMappings();
         }
 
-        if ($this->groups && !$this->filteredFetchableProperties) {
+        if ($this->groups) {
             $unfetchables = [];
             foreach ($this->fetchableProperties as $propertyMapping) {
                 $propertyGroups = $propertyMapping->getGroups();
@@ -336,6 +337,7 @@ class MappingCollection
 
     public function getPropertyMapping(string $propertyPath): ?PropertyMapping
     {
+        $propertyPath = str_replace('%', '', $propertyPath);
         return $this->properties[$propertyPath] ?? null;
     }
 

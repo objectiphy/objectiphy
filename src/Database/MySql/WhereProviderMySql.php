@@ -101,7 +101,7 @@ class WhereProviderMySql
             }
         } else {
             $propertyMapping = $mappingCollection->getPropertyMapping(strval($criteriaExpression->property));
-            if ($propertyMapping->column->aggregateFunctionName ?? false && !$aggOnly) {
+            if (($propertyMapping->column->aggregateFunctionName ?? false) && !$aggOnly) {
                 return ''; //This will be added to the HAVING section
             } elseif (!($propertyMapping->column->aggregateFunctionName ?? false) && $aggOnly) {
                 return '';

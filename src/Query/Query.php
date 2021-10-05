@@ -128,7 +128,7 @@ abstract class Query implements QueryInterface
                 $paths = array_merge($paths, $join->getPropertyPaths($joinAliases));
             }
         }
-        foreach ($this->where ?? [] as $where) {
+        foreach (array_merge($this->where ?? [], $this->having ?? []) as $where) {
             if ($where instanceof PropertyPathConsumerInterface) {
                 $paths = array_merge($paths, $where->getPropertyPaths());
             }

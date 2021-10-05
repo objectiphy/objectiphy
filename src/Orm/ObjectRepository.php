@@ -335,6 +335,9 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
 
         $result = $this->doFindBy($findOptions, $criteria);
         $this->setConfigOption(ConfigOptions::EAGER_LOAD_TO_ONE, $eagerLoadToOneSetting);
+        if ($orderBy) { //Don't hang onto it if it was just passed in for this query
+            $this->setOrderBy([]);
+        }
 
         return $result;
     }
