@@ -708,7 +708,7 @@ class BasicWritingTest extends IntegrationTestBase
         $this->objectRepository->setClassName(TestParent::class);
         //When saving an entity that was only partially loaded (due to serialization groups), do not try to save the unhydrated properties
         $this->objectRepository->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, ['Default', 'Full']); //Not 'Special', which is used on the child name property
-//SQL Error ONLY when using serialization groups! ??!
+
         /** @var $parent TestParent */
         $parent = $this->objectRepository->find(1);
         $this->assertEquals(null, $parent->getChild()->getName()); //We did not hydrate the child name

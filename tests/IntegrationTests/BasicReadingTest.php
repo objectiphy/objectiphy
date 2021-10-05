@@ -307,11 +307,12 @@ class BasicReadingTest extends IntegrationTestBase
 
         //Load a value from a scalar join on an embedded value object
         $parentRepository = $repositoryFactory->createRepository(TestParent::class);
+        $parentRepository->clearCache(); //Cache already contains partially hydrated child object
         $parent = $parentRepository->find(1);
         $this->assertEquals('United Kingdom', $parent->address->getCountryDescription());
 
-        //TODO: $parent->child->parent is null - should it be?
-        
+        //TODO: $parent->child->parent is null - should be either set or lazy loaded
+        $this->assertEquals($parent, $parent->child->parent);
 
         //Load child again using an object with a protected pk instead of the pk value directly
         $parentByChild = $parentRepository->findOneBy(['child' => $child]);
