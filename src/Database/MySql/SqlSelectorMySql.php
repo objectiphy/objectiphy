@@ -143,7 +143,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
         if ($groupBy) {
             $sql = "\nGROUP BY ";
             foreach ($groupBy as $index => $groupItem) {
-                $groupBy[$index] = $this->stringReplacer->delimit($this->stringReplacer->replaceNames($groupItem));
+                $groupBy[$index] = $this->stringReplacer->delimit($this->stringReplacer->replaceNames(strval($groupItem)));
             }
             $sql .= implode(', ', $groupBy);
         }
