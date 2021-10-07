@@ -141,9 +141,11 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $sql = '';
         $groupBy = array_unique(array_filter(array_merge($this->query->getGroupBy(), $this->stringReplacer->getAggregateGroupBys())));
         if ($groupBy) {
-            $sql = "\nGROUP BY " . $this->stringReplacer->delimit(
-                $this->stringReplacer->replaceNames(implode(', ', $groupBy))
-            );
+            $sql = "\nGROUP BY ";
+            foreach ($groupBy as $index => $groupItem) {
+                $groupBy[$index] = $this->stringReplacer->delimit($this->stringReplacer->replaceNames($groupItem));
+            }
+            $sql .= implode(', ', $groupBy);
         }
 
         return $sql;
