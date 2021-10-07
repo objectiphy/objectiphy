@@ -275,14 +275,14 @@ final class ObjectBinder
      */
     private function applyValue(object $entity, PropertyMapping $propertyMapping, $value): void
     {
-        if ($propertyMapping->getChildClassName()) {
+        if ($propertyMapping->relationship->isDefined() && $propertyMapping->getChildClassName()) {
             $type = $propertyMapping->relationship->isToOne() ? $propertyMapping->getChildClassName() : '\iterable';
             $format = ''; //Not applicable to child objects
         } else {
             $type = $propertyMapping->column->type;
             $format = $propertyMapping->column->format;
             if (!$type) {
-                $type = $propertyMapping->getDataType();
+                $type = $propertyMapping->getDataType(false, $value);
             }
         }
 

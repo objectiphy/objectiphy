@@ -419,16 +419,21 @@ class PropertyMapping
         return $collectionClass;
     }
 
-    public function getDataType(bool $mustBeTraversable = false): string
+    /**
+     * @param bool $mustBeTraversable
+     * @param null $value Optionally specify a value that can be checked to ensure it is coercible to the expected data type
+     * @return string
+     * @throws MappingException
+     */
+    public function getDataType(bool $mustBeTraversable = false, $value = null): string
     {
-//        try {
         $dataType = '';
         if ($this->column->type) {
             $dataType = $this->column->type;
         }
 
+        $defaultValue = $this->reflectionProperty->getDeclaringClass()->getDefaultProperties()[$this->propertyName] ?? null; //Works with PHP7 and 8
         if (!$dataType && $this->reflectionProperty->hasType() && $mustBeTraversable) {
-            $defaultValue = $this->reflectionProperty->getDeclaringClass()->getDefaultProperties()[$this->propertyName] ?? null; //Works with PHP7 and 8
             if (!is_null($defaultValue) && is_array($defaultValue)) {
                 $dataType = 'array';
             } elseif ($defaultValue && is_object($defaultValue)) {
@@ -438,12 +443,39 @@ class PropertyMapping
                     'Please either supply a default value for ' . $this->propertyName . ' on class ' . $this->className . ', or specify the collectionClass attribute on the Relationship mapping definition (this cannot be inferred from the property\'s data type due to bugs in some versions of PHP, so must be set explicitly.)'
                 );
             }
-            //$dataType = ObjectHelper::getTypeName($this->reflectionProperty->getType(), $this->reflectionProperty->getDeclaringClass()->getName(), $this->reflectionProperty->getName());
         }
 
-//        } catch (\Throwable $ex) {
-//            $dataType = '';
-//        }
+        if (!$dataType && !empty($value)) {
+            if ($value instanceof \DateTimeInterface
+                || (!empty($defaultValue) && $defaultValue instanceof \DateTimeInterface)
+                || (substr($this->propertyName, 0, 4) == 'date' || substr($this->propertyName, -4) == 'Date')
+                || (substr($this->propertyName, 0, 8) == 'dateTime' || substr($this->propertyName, -8) == 'DateTime')
+            ) {
+                $coercible = true;
+                try {
+                    $dateTime = new \DateTime($value);
+                    $coercible = $dateTime && empty(DateTime::getLastErrors()['warning_count'] ?? null);
+                } catch (\Throwable $ex) {
+                    $coercible = false;
+                }
+                $dataType = $coercible ? 'datetime' : $dataType;
+            } elseif (
+                ($this->propertyName == 'id' || substr($this->propertyName, -2) == 'Id')
+                && strval(intval($value)) === strval($value)
+            ) {
+                //Is an ID and value can be an integer
+                $dataType = 'integer';
+            } elseif (in_array($value, ['1', '0', 'true', 'false']) && (substr($this->propertyName, 0, 2) == 'is' || substr($this->propertyName, 0, 3) == 'has')) {
+                //Property starts with 'is' or 'has', and value can be boolean
+                $dataType = 'boolean';
+            } elseif (is_array($value) || (!empty($defaultValue) && is_array($defaultValue))) {
+                $dataType = 'array';
+            } elseif (is_object($value)) {
+                $dataType = ObjectHelper::getObjectClassName($value);
+            } elseif (!empty($defaultValue) && is_object($defaultValue)) {
+                $dataType = ObjectHelper::getObjectClassName($defaultValue);
+            }
+        }
         $dataType = ($mustBeTraversable && !is_a($dataType, '\Traversable', true)) ? '' : $dataType;
 
         return $dataType;
