@@ -393,6 +393,15 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         return $result;
     }
 
+    /**
+     * Find the value of a single property on multiple entities
+     * @param array $criteria
+     * @param string $valueProperty
+     * @param array|null $orderBy
+     * @param string|null $indexBy
+     * @param bool $fetchOnDemand
+     * @return mixed
+     */
     public function findValuesBy(
         $criteria = [],
         string $valueProperty = '',
@@ -423,6 +432,34 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         }
 
         return [];
+    }
+
+    /**
+     * Find the value of a single property on multiple entities and return as an on-demand iterable result
+     * @param array $criteria
+     * @param string $valueProperty
+     * @param array|null $orderBy
+     * @return IterableResult
+     */
+    public function findOnDemandValuesBy(
+        $criteria = [],
+        string $valueProperty = '',
+        ?array $orderBy = null
+    ): IterableResult {
+        $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
+        $this->assertClassNameSet();
+        $this->setOrderBy(array_filter($orderBy ?? $this->orderBy ?? []));
+        $findOptions = FindOptions::create($this->mappingCollection, [
+            'multiple' => true,
+            'orderBy' => $this->orderBy,
+            'onDemand' => true,
+            'pagination' => $this->pagination ?? null,
+            'bindToEntities' => false,
+            'scalarProperty' => $valueProperty
+        ]);
+        $result = $this->doFindBy($findOptions, $criteria);
+
+        return $result;
     }
 
     /**

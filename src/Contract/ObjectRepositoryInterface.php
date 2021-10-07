@@ -150,6 +150,15 @@ interface ObjectRepositoryInterface
     );
 
     /**
+     * Find the value of a single property on multiple entities and return as an on-demand iterable result
+     * @param array $criteria
+     * @param string $valueProperty
+     * @param array|null $orderBy
+     * @return mixed
+     */
+    public function findOnDemandValuesBy($criteria = [], string $valueProperty = '', ?array $orderBy = null);
+    
+    /**
      * Find all records. Compatible with the equivalent method in Doctrine.
      * @param array|null $orderBy
      * @param string|null $indexBy If you want the resulting array to be associative, based on a value in the
