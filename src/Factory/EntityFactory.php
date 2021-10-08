@@ -11,7 +11,7 @@ use Objectiphy\Objectiphy\Orm\ObjectHelper;
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-class EntityFactory implements EntityFactoryInterface
+class EntityFactory /*implements EntityFactoryInterface*/
 {
     private ProxyFactory $proxyFactory;
     private array $entityFactories = [];

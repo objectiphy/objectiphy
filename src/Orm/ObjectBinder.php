@@ -7,7 +7,7 @@ namespace Objectiphy\Objectiphy\Orm;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\CollectionFactoryInterface;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
-use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
+use Objectiphy\Objectiphy\Factory\EntityFactory;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Exception\MappingException;
@@ -25,7 +25,7 @@ use Objectiphy\Objectiphy\Factory\RepositoryFactory;
 final class ObjectBinder
 {
     private RepositoryFactory $repositoryFactory;
-    private EntityFactoryInterface $entityFactory;
+    private EntityFactory $entityFactory;
     private MappingCollection $mappingCollection;
     private ConfigOptions $configOptions;
     private EntityTracker $entityTracker;
@@ -37,7 +37,7 @@ final class ObjectBinder
 
     public function __construct(
         RepositoryFactory $repositoryFactory, 
-        EntityFactoryInterface $entityFactory,
+        EntityFactory $entityFactory,
         EntityTracker $entityTracker,
         DataTypeHandlerInterface $dataTypeHandler,
         CollectionFactoryInterface $collectionFactory,

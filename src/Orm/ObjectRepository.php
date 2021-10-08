@@ -178,7 +178,6 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $oldClassName = $this->className;
             $this->className = $className;
             $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
-            //$this->setConfigOption(ConfigOptions::SERIALIZATION_GROUPS, []);
             if ($className != $oldClassName) {
                 $this->orderBy = [];
                 //In case of custom repository that does not pass along the find/save options, set defaults here
@@ -216,6 +215,11 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     public function setPagination(?PaginationInterface $pagination): void
     {
         $this->pagination = $pagination;
+    }
+    
+    public function getPagination(): PaginationInterface
+    {
+        return $this->pagination;
     }
 
     /**

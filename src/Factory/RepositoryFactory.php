@@ -447,7 +447,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
      * @return EntityFactoryInterface
      * @throws ObjectiphyException
      */
-    final protected function createEntityFactory(?ConfigOptions $configOptions = null): EntityFactoryInterface
+    final protected function createEntityFactory(?ConfigOptions $configOptions = null): EntityFactory
     {
         return new EntityFactory($this->createProxyFactory($configOptions));
     }
