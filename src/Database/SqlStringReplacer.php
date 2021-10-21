@@ -361,7 +361,10 @@ class SqlStringReplacer
      */
     private function checkPropertyPath(string &$fieldValue, &$alias, QueryInterface $query, MappingCollection $mappingCollection): bool
     {
-        $mappingCollection = $this->getMappingCollectionForFieldValue($query, $fieldValue);
+        if ($this->delimit($mappingCollection->getPrimaryTableMapping()->name) != $query->getClassName()) {
+            $fieldValueMappingCollection = $this->getMappingCollectionForFieldValue($query, $fieldValue);
+            $mappingCollection = $fieldValueMappingCollection ?? $mappingCollection; //In case of table override in query
+        }
         if (strpos($fieldValue, '.') !== false) {
             //Check if first part is a custom join alias
             $alias = strtok($fieldValue, '.');

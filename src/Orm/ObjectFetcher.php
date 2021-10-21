@@ -132,6 +132,9 @@ final class ObjectFetcher
         $this->objectMapper->addExtraMappings($this->getClassName(), $this->options);
         $this->objectMapper->addExtraMappings($this->getClassName(), $query);
         $this->objectMapper->addExtraClassMappings($this->getClassName(), $query);
+        if ($this->options->indexBy) {
+            $this->options->mappingCollection->getPropertyMapping($this->options->indexBy)->forceFetchable();
+        }
         $this->options->mappingCollection->getRelationships(); //Ensures all mapping is populated even if mapped by other side
         $query->finalise($this->options->mappingCollection, $this->stringReplacer, null);
         if ($this->options->indexBy) {

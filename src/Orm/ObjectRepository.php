@@ -217,7 +217,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $this->pagination = $pagination;
     }
     
-    public function getPagination(): PaginationInterface
+    public function getPagination(): ?PaginationInterface
     {
         return $this->pagination;
     }
@@ -513,7 +513,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
                 'replaceExisting' => boolval($replace)
             ]);
             $this->beginTransaction();
-            $return = $this->objectPersister->saveEntity($entity, $saveOptions, $insertCount, $updateCount, $deleteCount);
+            $return = $this->objectPersister->saveEntity($entity, $saveOptions, $insertCount, $updateCount, $deleteCount, true);
             $this->commit();
 
             return $return;
@@ -575,6 +575,11 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         }
     }
 
+    public function getLastInsertId(): ?int
+    {
+        return $this->objectPersister->getLastInsertId();
+    }
+    
     /**
      * Hard delete an entity (and cascade to children, if applicable).
      * @param object $entity The entity to delete.
@@ -690,11 +695,6 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             throw new QueryException('Unrecognised query type: ' . ObjectHelper::getObjectClassName($query));
         }
     }
-
-    public function getLastInsertId(): ?int
-    {
-        return $this->objectPersister->getLastInsertId();
-    }
     
     /**
      * Create an object that does not have to be fully hydrated just to save it as a child of another entity.
@@ -711,6 +711,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         array $constructorParams = []
     ): ?ObjectReferenceInterface {
         try {
+            if (array_key_first($pkValues) === 0) { //Key property name(s) not specified - look them up
+                $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
+                $pkValues = array_combine($pkProperties, $pkValues);
+            }
             return $this->proxyFactory->createObjectReferenceProxy($className, $pkValues, $constructorParams);
         } catch (\Throwable $ex) {
             $this->throwException($ex);
@@ -814,12 +818,14 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     }
 
     /**
+     * Converts an array of criteria into a query if applicable. You do not normally need to call this directly as it 
+     * gets called automatically whenever you call a find method. It is only public for backward compatibility purposes.
      * @param $criteria
      * @param string $queryType
      * @return QueryInterface
      * @throws QueryException
      */
-    protected function normalizeCriteria($criteria, $queryType = SelectQuery::class): QueryInterface
+    public function normalizeCriteria($criteria, $queryType = SelectQuery::class): QueryInterface
     {
         if (!is_a($queryType, QueryInterface::class, true)) {
             $errorMessage = sprintf('$queryType argument of normalizeCriteria method must be the name of a class that implements %1$s. %2$s does not.', QueryInterface::class, $queryType);

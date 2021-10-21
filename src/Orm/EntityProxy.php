@@ -123,7 +123,7 @@ class EntityProxy implements EntityProxyInterface
      * @param $propertyName
      * @throws \ReflectionException
      */
-    public function triggerLazyLoad($propertyName): void
+    public function triggerLazyLoad(string $propertyName): void
     {
         if (count($this->lazyLoaders)) {
             if (array_key_exists($propertyName, $this->lazyLoaders)) {

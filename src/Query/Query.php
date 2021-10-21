@@ -270,7 +270,10 @@ abstract class Query implements QueryInterface
         $relationshipPaths = [];
         foreach ($relationships as $key => $relationship) {
             foreach ($propertyPathsUsed as $propertyPath) {
-                if (in_array($relationship->propertyName, explode('.', $propertyPath))) {
+                if (
+                    $relationship->getPropertyPath() == $propertyPath
+                    || $relationship->getPropertyPath() == implode('.', explode('.', $propertyPath, -1))
+                ) {
                     //Ensure we pick up any necessary intermediate relationships
                     $relationshipPath = strpos($relationship->getPropertyPath(), '.') !== false ? strtok($relationship->getPropertyPath(), '.') : null;
                     if ($relationshipPath) {

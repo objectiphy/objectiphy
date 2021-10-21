@@ -4,6 +4,7 @@ namespace Objectiphy\Objectiphy\Tests\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use Objectiphy\Objectiphy\Mapping\Relationship;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 /**
  * @ORM\Entity

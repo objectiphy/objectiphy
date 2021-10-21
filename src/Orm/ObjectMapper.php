@@ -209,8 +209,8 @@ final class ObjectMapper
                     $table = $this->getTableMapping(new \ReflectionClass($parent->getChildClassName()));
                     $parents = array_merge($parent->parents, [$parent->propertyName]);
                     //Mark it as early bound...
-                    $parent->forceEarlyBindingForJoin(); //We need to join even if it is to-many, so we can filter
                     $parent = $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents, $parent->relationship, true);
+                    $parent->forceEarlyBindingForJoin(); //We need to join even if it is to-many, so we can filter
                     if (!$parent->relationship->sourceJoinColumn && $parent->relationship->mappedBy) {
                         //If mapping is on the other side, we have to get that too
                         $additional = $parent->getPropertyPath() . '.' . $parent->relationship->mappedBy;

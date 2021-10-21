@@ -73,6 +73,12 @@ class PropertyMapping
     public bool $isFetchable = false;
 
     /**
+     * @var bool Whether we have forced the fetch of this property (used for indexBy) - if true, prevents serialization
+     * group restrictions from skipping the field.
+     */
+    public bool $isForcedFetch = false;
+
+    /**
      * @var string Locally cached fully qualified property path using dot notation.
      */
     private string $propertyPath = '';
@@ -101,6 +107,7 @@ class PropertyMapping
      * @var bool Whether or not the property can accept a null value.
      */
     private bool $isNullable;
+
 
     public function __construct(
         string $className,
@@ -322,6 +329,12 @@ class PropertyMapping
         $this->forcedEarlyBindingForJoin = true;
     }
 
+    public function forceFetchable(): void
+    {
+        $this->isForcedFetch = true;
+        $this->parentCollection->forceFetchable($this);
+    }
+
     public function isWithinDepth(): bool
     {
         $maxDepth = $this->parentCollection->getMaxDepth();
@@ -430,9 +443,13 @@ class PropertyMapping
         $dataType = '';
         if ($this->column->type) {
             $dataType = $this->column->type;
+            $dataType = $mustBeTraversable && !is_a($dataType, '\Traversable', true) ? '' : $dataType;
         }
 
         $defaultValue = $this->reflectionProperty->getDeclaringClass()->getDefaultProperties()[$this->propertyName] ?? null; //Works with PHP7 and 8
+        try {
+            $defaultValue = $defaultValue ?: $this->reflectionProperty->getValue($this->reflectionProperty->getDeclaringClass()->newInstance());
+        } catch (\Throwable $ex) { }
         if (!$dataType && $this->reflectionProperty->hasType() && $mustBeTraversable) {
             if (!is_null($defaultValue) && is_array($defaultValue)) {
                 $dataType = 'array';

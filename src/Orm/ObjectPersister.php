@@ -136,12 +136,13 @@ final class ObjectPersister implements TransactionInterface
         SaveOptions $options,
         int &$insertCount = 0,
         int &$updateCount = 0,
-        int &$deleteCount = 0
+        int &$deleteCount = 0,
+        bool $storeInsertId = false
     ): int {
         $this->setSaveOptions($options);
         $this->savedObjects = []; //Avoid recursion
 
-        return $this->doSaveEntity($entity, $insertCount, $updateCount, $deleteCount);
+        return $this->doSaveEntity($entity, $insertCount, $updateCount, $deleteCount, $storeInsertId);
     }
 
     /**
@@ -219,7 +220,8 @@ final class ObjectPersister implements TransactionInterface
         object $entity,
         int &$insertCount,
         int &$updateCount,
-        int &$deleteCount
+        int &$deleteCount,
+        bool $storeInsertId = false
     ): int {
         $originalClassName = $this->getClassName();
         $this->setClassName(ObjectHelper::getObjectClassName($entity));
@@ -257,7 +259,7 @@ final class ObjectPersister implements TransactionInterface
             $this->objectRemover->checkForRemovals($entity, $updateCount, $deleteCount);
             $result = $this->updateEntity($entity, $pkValues, $insertCount, $updateCount, $deleteCount);
         } else {
-            $result = $this->insertEntity($entity, $insertCount, $updateCount);
+            $result = $this->insertEntity($entity, $insertCount, $updateCount, $storeInsertId);
         }
         $this->setClassName($originalClassName);
 
@@ -325,7 +327,7 @@ final class ObjectPersister implements TransactionInterface
      * @return int Total number of rows updated or inserted
      * @throws \ReflectionException|ObjectiphyException
      */
-    private function insertEntity(object $entity, int &$insertCount, int &$updateCount): int
+    private function insertEntity(object $entity, int &$insertCount, int &$updateCount, bool $storeInsertId = false): int
     {
         if (in_array($entity, $this->savedObjects)) {
             return 0;
@@ -351,14 +353,17 @@ final class ObjectPersister implements TransactionInterface
             $sql = $this->sqlUpdater->getInsertSql($insertQuery, $this->options->replaceExisting);
             $this->explanation->addQuery($insertQuery, $sql, $this->options->mappingCollection, $this->config);
             if ($this->storage->executeQuery($sql, $insertQuery->getParams())) {
-                $this->lastInsertId = $this->storage->getLastInsertId();
+                $lastInsertId = $this->storage->getLastInsertId();
+                if ($storeInsertId) {
+                    $this->lastInsertId = $lastInsertId;
+                }
                 $insertCount += $this->storage->getAffectedRecordCount();
                 $pkProperties = $this->options->mappingCollection->getPrimaryKeyProperties($this->getClassName());
                 $pkValues = [];
-                if ($this->lastInsertId && count($pkProperties) == 1) {
+                if ($lastInsertId && count($pkProperties) == 1) {
                     $pkProperty = reset($pkProperties);
-                    $pkValues[$pkProperty] = $this->lastInsertId;
-                    ObjectHelper::setValueOnObject($entity, $pkProperty, $this->lastInsertId);
+                    $pkValues[$pkProperty] = $lastInsertId;
+                    ObjectHelper::setValueOnObject($entity, $pkProperty, $lastInsertId);
                 }
                 $this->entityTracker->storeEntity($entity, $pkValues);
             }

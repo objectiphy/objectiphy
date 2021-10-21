@@ -223,7 +223,13 @@ class MappingCollection
         $value = $this->getFetchableProperties(false)[$propertyMapping->getPropertyPath()] ?? false;
         return $value ? true : false; //$value could be an object
     }
-    
+
+    public function forceFetchable(PropertyMapping $propertyMapping): void
+    {
+        $propertyMapping->isFetchable = true;
+        $this->fetchableProperties[$propertyMapping->getPropertyPath()] = $propertyMapping;
+    }
+
     public function getFetchableProperties(bool $finalise = true): array
     {
         if ($finalise && !$this->columnMappingDone) {
@@ -237,7 +243,7 @@ class MappingCollection
                 if (!$propertyGroups && $this->hydrateUngrouped) {
                     continue;
                 }
-                if (!array_intersect($this->groups, $propertyGroups)) {
+                if (!array_intersect($this->groups, $propertyGroups) && !$propertyMapping->isForcedFetch) {
                     $unfetchables[] = $propertyMapping;
                 }
             }
