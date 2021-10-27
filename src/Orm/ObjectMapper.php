@@ -161,13 +161,17 @@ final class ObjectMapper
      * @throws ObjectiphyException
      * @throws \ReflectionException
      */
-    public function addExtraMappings(string $className, PropertyPathConsumerInterface $pathConsumer = null): void
+    public function addExtraMappings(string $className, PropertyPathConsumerInterface $pathConsumer = null): bool
     {
+        $extraMappingsAdded = false;
         if ($pathConsumer) {
             foreach ($pathConsumer->getPropertyPaths() ?? [] as $propertyPath) {
                 $this->addMappingForProperty($className, $propertyPath, true);
+                $extraMappingsAdded = true;
             }
         }
+
+        return $extraMappingsAdded;
     }
 
     public function addExtraClassMappings(string $parentClass, QueryInterface $query)

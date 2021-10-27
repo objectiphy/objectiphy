@@ -308,7 +308,7 @@ class QueryBuilder extends CriteriaBuilder implements CriteriaBuilderInterface
         $this->applyValues($this->having, $params, $removeUnbound);
         $this->applyValues($this->joins, $params, $removeUnbound);
 
-        //TODO: Check we have valid info? Eg. that we don't have a JOIN without an ON
+        //TODO: Check we have valid info? Eg. that we don't have a JOIN without an ON or unmatched parentheses
 
         $query = new SelectQuery();
         $query->setSelect(...$this->select);

@@ -271,9 +271,9 @@ class MappingCollection
      * @return PropertyMapping[]
      * @throws MappingException
      */
-    public function getRelationships(bool $finalise = true): array
+    public function getRelationships(bool $finalise = true, bool $forceRefresh = false): array
     {
-        if ($finalise && !$this->relationshipMappingDone) {
+        if ($forceRefresh || ($finalise && !$this->relationshipMappingDone)) {
             $this->finaliseRelationshipMappings();
         }
 

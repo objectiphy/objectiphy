@@ -386,9 +386,7 @@ class PropertyMapping
                     return true;
                 }
             }
-        } /*elseif ($this->parentCollection->hasAggregateFunctions($this->getParentPath(), $this->propertyName, true)) {
-            return false; //used in agg function
-        }*/
+        } 
 
         return false;
     }

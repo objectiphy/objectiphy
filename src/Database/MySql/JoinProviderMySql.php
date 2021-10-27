@@ -102,10 +102,11 @@ class JoinProviderMySql
         $propertyUsesAlias = $propertyAlias && $query->getClassForAlias($propertyAlias) ? true : false;
         $joinPartValues = is_array($joinPart->value) ? $joinPart->value : [$joinPart->value];
         foreach ($joinPartValues as $joinPartValue) {
-            $valueAlias = strtok(strval($joinPartValue), '.');
-            $valueUsesAlias = $query->getClassForAlias($valueAlias) ? true : false;
-            if ($valueUsesAlias) {
-                break;
+            if ($valueAlias = strtok(strval($joinPartValue), '.')) {
+                $valueUsesAlias = $query->getClassForAlias($valueAlias) ? true : false;
+                if ($valueUsesAlias) {
+                    break;
+                }
             }
         }
 

@@ -18,7 +18,7 @@ CREATE TABLE `anomalies` (
                              `address_country_code` varchar(2) DEFAULT NULL,
                              `user_id` int(11) DEFAULT NULL,
                              PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `anomalies`
@@ -36,7 +36,7 @@ CREATE TABLE `assumed_pk` (
                               `id` int(11) NOT NULL,
                               `name` varchar(100) DEFAULT NULL,
                               PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `assumed_pk`
@@ -66,7 +66,7 @@ CREATE TABLE `child` (
                          KEY `user_id_2` (`user_id`),
   CONSTRAINT `child_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE SET NULL,
   CONSTRAINT `parent` FOREIGN KEY (`parent_id`) REFERENCES `parent` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `child`
@@ -98,7 +98,7 @@ CREATE TABLE `contact` (
                            `higher_rate_earner` tinyint DEFAULT 0,
                            `login_id` int(11) DEFAULT NULL,
                            PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=170 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=170 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `contact`
@@ -157,7 +157,7 @@ CREATE TABLE `country` (
                            `code` varchar(2) DEFAULT NULL,
                            `description` varchar(255) DEFAULT NULL,
                            UNIQUE KEY `code` (`code`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `country`
@@ -174,7 +174,7 @@ CREATE TABLE `customer` (
                               `first_name` varchar(255) DEFAULT NULL,
                               `last_name` varchar(255) DEFAULT NULL,
                               PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 INSERT INTO `customer` (`id`, `first_name`, `last_name`)
     VALUES
@@ -190,7 +190,7 @@ CREATE TABLE `department` (
                               `id` int(11) NOT NULL AUTO_INCREMENT,
                               `name` varchar(255) DEFAULT NULL,
                               PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `department`
@@ -213,7 +213,7 @@ CREATE TABLE `employee` (
                             CONSTRAINT `mentor` FOREIGN KEY (`mentor_id`) REFERENCES `employee` (`id`) ON DELETE SET NULL,
                             CONSTRAINT `mentee` FOREIGN KEY (`mentee_id`) REFERENCES `employee` (`id`) ON DELETE SET NULL,
                             CONSTRAINT `unionRep` FOREIGN KEY (`union_rep_id`) REFERENCES `employee` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `employee`
@@ -240,7 +240,7 @@ CREATE TABLE `login` (
                          `username` varchar(255) DEFAULT NULL,
                          `password` varchar(255) DEFAULT NULL,
                          PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `login`
@@ -269,7 +269,7 @@ CREATE TABLE `order` (
                             `price` decimal(10, 2) DEFAULT NULL,
                             `description` varchar(100) DEFAULT NULL,
                             PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 INSERT INTO `order` (`id`, `customer_id`, `product_name`, `price`, `description`)
     VALUES
@@ -289,7 +289,7 @@ CREATE TABLE `position` (
                             `value` varchar(2) DEFAULT NULL,
                             `description` varchar(100) DEFAULT NULL,
                             PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `position`
@@ -316,9 +316,9 @@ CREATE TABLE `parent` (
                           `address_country_code` varchar(2) DEFAULT NULL,
                           `modified_date_time` datetime ON UPDATE CURRENT_TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                           PRIMARY KEY (`id`),
-                          KEY `user_id` (`user_id`)/*,
+                          KEY `user_id` (`user_id`),
   CONSTRAINT `parent_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) /*ON DELETE SET NULL*/
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `parent`
@@ -338,7 +338,7 @@ CREATE TABLE `non_pk_child` (
                                 `parent_id` int(11) DEFAULT NULL,
                                 `second_parent_id` int(11) DEFAULT NULL,
                                 `foster_parent_name` varchar(100) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `non_pk_child`
@@ -355,7 +355,7 @@ CREATE TABLE `parent_of_non_pk_child` (
                                           `name` varchar(100) DEFAULT NULL,
                                           `unmapped` varchar(100) DEFAULT NULL,
                                           PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `parent_of_non_pk_child`
@@ -379,7 +379,7 @@ CREATE TABLE `person` (
                            `postcode` varchar(20) DEFAULT NULL,
                            `login_id` int(11) DEFAULT NULL,
                            PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `person`
@@ -406,7 +406,7 @@ CREATE TABLE `pets` (
                         `name` varchar(255),
                         `weight_in_grams` int(11),
                         PRIMARY KEY (`id`)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;;
 
 -- ----------------------------
 --  Records of `pets`
@@ -441,7 +441,7 @@ CREATE TABLE `policy` (
                           `contact_id` int(11) DEFAULT NULL,
                           `login_id` int(11) DEFAULT NULL,
                           PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT 19072016 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT 19072016 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 ALTER TABLE `policy` ADD INDEX `policy_number` USING BTREE (`policy_number`) comment '', ADD INDEX `policy_status` USING BTREE (`policy_status`) comment '', ADD INDEX `modification` USING BTREE (`modification`) comment '', ADD INDEX `login_id` USING BTREE (`login_id`) comment '';
 
@@ -504,7 +504,7 @@ CREATE TABLE `security_pass` (
                                  `serial_no` varchar(100),
                                  `employee_id` int(11) DEFAULT NULL,
                                  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `employee`
@@ -525,7 +525,7 @@ CREATE TABLE `supplied_pk` (
                                   `key_reference` varchar(255) NOT NULL,
                                   `some_value` varchar(255) DEFAULT NULL,
                                   PRIMARY KEY (`key_reference`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `supplied_pk`
@@ -542,7 +542,7 @@ CREATE TABLE `telematics_box` (
                                   `imei` varchar(255) DEFAULT NULL,
                                   `status_date` datetime DEFAULT NULL,
                                   PRIMARY KEY (`vehicle_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `telematics_box`
@@ -558,7 +558,7 @@ CREATE TABLE `underwriter` (
                                `id` int(11) NOT NULL AUTO_INCREMENT,
                                `name` varchar(255) DEFAULT NULL,
                                PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `underwriter`
@@ -576,7 +576,7 @@ CREATE TABLE `user` (
                         `email` varchar(100) DEFAULT NULL,
                         `date_of_birth` date DEFAULT NULL,
                         PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `user`
@@ -598,7 +598,7 @@ CREATE TABLE `user_alternative` (
                                     `email` varchar(100) DEFAULT NULL,
                                     `date_of_birth` date DEFAULT NULL,
                                     PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `user_alternative`
@@ -625,7 +625,7 @@ CREATE TABLE `vehicle` (
                            `telematics_box_id` int(11) DEFAULT NULL,
                            `owner_contact_id` int(11) DEFAULT NULL,
                            PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=42 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=42 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 ALTER TABLE `objectiphy_test`.`vehicle` ADD INDEX `regNo` USING BTREE (`reg_no`) comment '';
 
@@ -745,7 +745,7 @@ CREATE TABLE `wheel` (
                          `load_bearing` tinyint(4) DEFAULT NULL,
                          `description` varchar(255) NOT NULL,
                          PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `wheel`
@@ -772,7 +772,7 @@ CREATE TABLE `course` (
                           `description` text,
                           `cost` decimal(10,2) DEFAULT NULL,
                           PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `course`
@@ -780,7 +780,7 @@ CREATE TABLE `course` (
 BEGIN;
 INSERT INTO `course` VALUES
                             ('1', 'PHP Ninja', 'Advanced OOP course for PHP', '8500.00'),
-                            ('2', 'Javascript for Dummies', 'For those who can\'t cope with a real programming language', '0.50'),
+                            ('2', 'Javascript for Dummies', "For those who can\'t cope with a real programming language", '0.50'),
                             ('3', 'C# and Beyond', 'If you are married to Microsoft', '4250.00'),
                             ('4', 'Orphan Removal and Cascading', 'How not to do it', '1.00');
 COMMIT;
@@ -795,7 +795,7 @@ CREATE TABLE `student` (
                            `last_name` varchar(100) DEFAULT NULL,
                            `intelligence_quotient` int(11) DEFAULT NULL,
                            PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `student`
@@ -824,7 +824,7 @@ CREATE TABLE `student_course` (
                                   KEY `course_id` (`course_id`),
                                   CONSTRAINT `course` FOREIGN KEY (`course_id`) REFERENCES `course` (`id`),
                                   CONSTRAINT `student` FOREIGN KEY (`student_id`) REFERENCES `student` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `student_course`

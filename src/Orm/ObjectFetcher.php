@@ -129,8 +129,9 @@ final class ObjectFetcher
             $query->setSelect(new FieldExpression($this->options->scalarProperty));
         }
         $query->selectPrimaryKeys($this->options->mappingCollection);
-        $this->objectMapper->addExtraMappings($this->getClassName(), $this->options);
-        $this->objectMapper->addExtraMappings($this->getClassName(), $query);
+        $extraMappingsAdded = false;
+        $extraMappingsAdded = $this->objectMapper->addExtraMappings($this->getClassName(), $this->options);
+        $extraMappingsAdded = $this->objectMapper->addExtraMappings($this->getClassName(), $query) || $extraMappingsAdded;
         $this->objectMapper->addExtraClassMappings($this->getClassName(), $query);
         if ($this->options->indexBy) {
             $indexProperty = $this->options->mappingCollection->getPropertyMapping($this->options->indexBy);
@@ -138,7 +139,7 @@ final class ObjectFetcher
                 $indexProperty->forceFetchable();
             }
         }
-        $this->options->mappingCollection->getRelationships(); //Ensures all mapping is populated even if mapped by other side
+        $this->options->mappingCollection->getRelationships(true, $extraMappingsAdded); //Ensures all mapping is populated even if mapped by other side
         $query->finalise($this->options->mappingCollection, $this->stringReplacer, null);
         if ($this->options->indexBy) {
             $indexByField = new FieldExpression($this->options->indexBy);

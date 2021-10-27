@@ -270,9 +270,16 @@ abstract class Query implements QueryInterface
         $relationshipPaths = [];
         foreach ($relationships as $key => $relationship) {
             foreach ($propertyPathsUsed as $propertyPath) {
+                $parentPath = implode('.', explode('.', $propertyPath, -1));
+                //While parentPath is embedded, keep going back to get the 'real' parent
+                $parentMapping = $this->mappingCollection->getPropertyMapping($parentPath);
+                while ($parentMapping && $parentMapping->relationship->isEmbedded) {
+                    $parentPath = implode('.', explode('.', $parentPath, -1));
+                    $parentMapping = $this->mappingCollection->getPropertyMapping($parentPath);
+                }
                 if (
                     $relationship->getPropertyPath() == $propertyPath
-                    || $relationship->getPropertyPath() == implode('.', explode('.', $propertyPath, -1))
+                    || $relationship->getPropertyPath() == $parentPath
                 ) {
                     //Ensure we pick up any necessary intermediate relationships
                     $relationshipPath = strpos($relationship->getPropertyPath(), '.') !== false ? strtok($relationship->getPropertyPath(), '.') : null;
