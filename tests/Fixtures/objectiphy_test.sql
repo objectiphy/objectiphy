@@ -316,8 +316,8 @@ CREATE TABLE `parent` (
                           `address_country_code` varchar(2) DEFAULT NULL,
                           `modified_date_time` datetime ON UPDATE CURRENT_TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                           PRIMARY KEY (`id`),
-                          KEY `user_id` (`user_id`),
-  CONSTRAINT `parent_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) /*ON DELETE SET NULL*/
+                          KEY `user_id` (`user_id`)
+  /*CONSTRAINT `parent_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE SET NULL*/
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
@@ -406,7 +406,7 @@ CREATE TABLE `pets` (
                         `name` varchar(255),
                         `weight_in_grams` int(11),
                         PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ----------------------------
 --  Records of `pets`
