@@ -280,7 +280,10 @@ class RepositoryFactory implements RepositoryFactoryInterface
             $this->repositories[$entityClassName][$configHash] = $objectRepository;
         }
 
-        return $this->repositories[$entityClassName][$configHash];
+        $repository = $this->repositories[$entityClassName][$configHash];
+        $repository->setClassName($entityClassName); //Just in case it was changed for a lazy load
+
+        return $repository;
     }
 
     public function clearCache(?string $className = null, bool $clearMappingCache = false): void
