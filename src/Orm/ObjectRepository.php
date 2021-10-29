@@ -362,23 +362,6 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         return $this->findBy($criteria, $orderBy, null, null, null, true);
     }
 
-    /**
-     * Find all records. Compatible with the equivalent method in Doctrine.
-     * @param array|null $orderBy
-     * @param string|null $indexBy If you want the resulting array to be associative, based on a value in the
-     * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
-     * child object, but make sure the property you use has a unique value in the result set, otherwise some records
-     * will be lost).
-     * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
-     * set(for streaming large amounts of data).
-     * @return iterable|null
-     * @throws ObjectiphyException|\ReflectionException|\Throwable
-     */
-    public function findAll(?array $orderBy = null, ?string $indexBy = null, bool $fetchOnDemand = false): ?iterable
-    {
-        return $this->findBy([], $orderBy, null, null, $indexBy, $fetchOnDemand);
-    }
-
     public function findOneValueBy($criteria = [], string $valueProperty = '')
     {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
@@ -466,6 +449,23 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         return $result;
     }
 
+    /**
+     * Find all records. Compatible with the equivalent method in Doctrine.
+     * @param array|null $orderBy
+     * @param string|null $indexBy If you want the resulting array to be associative, based on a value in the
+     * result, specify which property to use as the key here (note, you can use dot notation to key by a value on a
+     * child object, but make sure the property you use has a unique value in the result set, otherwise some records
+     * will be lost).
+     * @param bool $fetchOnDemand Whether or not to read directly from the database on each iteration of the result
+     * set(for streaming large amounts of data).
+     * @return iterable|null
+     * @throws ObjectiphyException|\ReflectionException|\Throwable
+     */
+    public function findAll(?array $orderBy = null, ?string $indexBy = null, bool $fetchOnDemand = false): ?iterable
+    {
+        return $this->findBy([], $orderBy, null, null, $indexBy, $fetchOnDemand);
+    }
+    
     /**
      * Count records that match criteria
      * @param array $criteria

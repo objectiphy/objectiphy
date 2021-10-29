@@ -23,6 +23,18 @@ interface ObjectRepositoryInterface
     public function setConfiguration(ConfigOptions $configOptions): void;
 
     /**
+     * Return all the current configuration options
+     * @return ConfigOptions
+     */
+    public function getConfiguration(): ConfigOptions;
+
+    /**
+     * Reset config options to their default values.
+     * @param string $configFile Optionally specify a config file to load the defaults from.
+     */
+    public function resetConfiguration(string $configFile = ''): void;
+
+    /**
      * Set a general configuration option by name. Available options are defined on
      * the Objectiphy\Objectiphy\Config\ConfigOptions class.
      * @param string $optionName
@@ -30,12 +42,6 @@ interface ObjectRepositoryInterface
      * @return mixed The previously set value (or default value if not previously set).
      */
     public function setConfigOption(string $optionName, $value);
-
-    /**
-     * Reset config options to their default values.
-     * @param string $configFile Optionally specify a config file to load the defaults from.
-     */
-    public function resetConfiguration(string $configFile = ''): void;
     
     /**
      * Set an entity-specific configuration option by name. Available options are
@@ -62,6 +68,12 @@ interface ObjectRepositoryInterface
      * @param PaginationInterface
      */
     public function setPagination(PaginationInterface $pagination): void;
+
+    /**
+     * Return the current pagination object.
+     * @return PaginationInterface|null
+     */
+    public function getPagination(): ?PaginationInterface;
 
     /**
      * @param array $orderBy Key = property name, value = ASC or DESC.
@@ -215,6 +227,13 @@ interface ObjectRepositoryInterface
         int &$insertCount = 0,
         int &$updateCount = 0
     ): int;
+
+    /**
+     * If the table relating to this repository's class has an autoincremented primary key, and a record has been
+     * inserted, return the new ID.
+     * @return int|null
+     */
+    public function getLastInsertId(): ?int;
 
    /**
      * Hard delete an entity (and cascade to children, if applicable).
