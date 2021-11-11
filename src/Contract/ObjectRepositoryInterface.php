@@ -6,6 +6,7 @@ namespace Objectiphy\Objectiphy\Contract;
 
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Exception\QueryException;
+use Objectiphy\Objectiphy\Orm\IterableResult;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
@@ -45,12 +46,14 @@ interface ObjectRepositoryInterface
     
     /**
      * Set an entity-specific configuration option by name. Available options are
-     * defined on the Objectiphy\Objectiphy\Config\ConfigEntity class.
+     * defined on the Objectiphy\Objectiphy\Config\ConfigEntity class. The previous
+     * value of the option is returned.
      * @param string $entityClassName
      * @param string $optionName
      * @param $value
+     * @return mixed The previously set value (or default value if not previously set).
      */
-    public function setEntityConfigOption(string $entityClassName, string $optionName, $value): void;
+    public function setEntityConfigOption(string $entityClassName, string $optionName, $value);
 
     /**
      * @param string $className Name of the parent entity class.
@@ -61,7 +64,7 @@ interface ObjectRepositoryInterface
      * Compatible with the equivalent method in Doctrine (therefore, no return type).
      * @return string Name of the parent entity class.
      */
-    public function getClassName();
+    public function getClassName(): string;
 
     /**
      * Set a pagination object (to store and supply information about how the results are paginated).
@@ -166,9 +169,9 @@ interface ObjectRepositoryInterface
      * @param array $criteria
      * @param string $valueProperty
      * @param array|null $orderBy
-     * @return mixed
+     * @return IterableResult
      */
-    public function findOnDemandValuesBy($criteria = [], string $valueProperty = '', ?array $orderBy = null);
+    public function findOnDemandValuesBy($criteria = [], string $valueProperty = '', ?array $orderBy = null): IterableResult;
     
     /**
      * Find all records. Compatible with the equivalent method in Doctrine.
