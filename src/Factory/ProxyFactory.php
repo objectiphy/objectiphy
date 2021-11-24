@@ -286,12 +286,16 @@ final class ProxyFactory
         $declaration .= '(';
         foreach ($reflectionMethod->getParameters() as $parameter) {
             if ($parameter->hasType()) {
-                $declaration .= ($parameter->getType() ? ObjectHelper::getTypeName($parameter->getType()) : '') . ' ';
+                $paramType = ($parameter->getType() ? ObjectHelper::getTypeName($parameter->getType()) : '');
+                $allowNull = $paramType && $parameter->allowsNull() ? '?' : '';
+                $declaration .= $allowNull . $paramType . ' ';
             }
             $declaration .= '$' . $parameter->getName();
             if ($parameter->isOptional()) {
                 $declaration .= ' = ';
-                $declaration .= $parameter->getDefaultValueConstantName() ?: $parameter->getDefaultValue();
+                $paramDefault = $parameter->getDefaultValueConstantName() ?: $parameter->getDefaultValue();
+                $paramDefault = !$paramDefault && $allowNull ? 'null' : $paramDefault;
+                $declaration .= $paramDefault;
             }
             $declaration .= ',';
         }
