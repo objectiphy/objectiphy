@@ -303,7 +303,8 @@ final class ProxyFactory
         $reflectionType = $reflectionMethod->getReturnType();
         $returnType = $reflectionType ? ObjectHelper::getTypeName($reflectionType) : '';
         if ($returnType) {
-            $declaration .= ': ' . $returnType;
+            $allowNull = $reflectionMethod->getReturnType()->allowsNull() ? true : false;
+            $declaration .= ': ' . ($allowNull ? '?' : '') . $returnType;
         }
 
         return trim($declaration);

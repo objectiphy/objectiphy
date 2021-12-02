@@ -30,11 +30,11 @@ class IntegrationTestBase extends TestCase
         $this->createFixtures();
         $start = microtime(true);
         if (!isset(static::$repositoryFactory)) {
-            static::$cacheDirectory = realpath(__DIR__ . '/../../../../../var/cache/dev/objectiphy');
+            static::$cacheDirectory = __DIR__ . '/../../../../../var/cache/dev/objectiphy';
             if (!file_exists(static::$cacheDirectory)) {
                 mkdir(static::$cacheDirectory, 0777, true);
             }
-            static::$repositoryFactory = new RepositoryFactory($this->pdo, static::$cacheDirectory, static::$devMode);
+            static::$repositoryFactory = new RepositoryFactory($this->pdo, realpath(static::$cacheDirectory), static::$devMode);
         }
         $repositoryFactory = static::$repositoryFactory;
         $repositoryFactory->setConfigOptions(['commonProperty' => 'loginId']);

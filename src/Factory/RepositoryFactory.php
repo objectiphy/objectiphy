@@ -128,13 +128,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
     {
         //Unset anything that might cross-pollinate across requests
         //(but ensure any custom implementations are preserved)
-
-        //unset($this->sqlUpdater);
-        //unset($this->sqlDeleter);
         unset($this->objectMapper);
-        //unset($this->proxyFactory);
-        //unset($this->joinProvider);
-        //unset($this->whereProvider);
         unset($this->objectRemover);
     }
 

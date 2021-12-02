@@ -392,7 +392,7 @@ final class ObjectMapper
                         $childReflectionClass = new \ReflectionClass($propertyMapping->getChildClassName());
                         $this->populateScalarMappings($mappingCollection, $childReflectionClass, $childParents, $propertyMapping->relationship);
                     }
-                } elseif ((!isset($mappingCollection->getRelationships(false)[$propertyMapping->getRelationshipKey()])
+                } /*elseif ((!isset($mappingCollection->getRelationships(false)[$propertyMapping->getRelationshipKey()])
                             || $propertyMapping->isLateBound())
                         && !$propertyMapping->relationship->mappedBy
                 ) {
@@ -404,7 +404,7 @@ final class ObjectMapper
                             $propertyMapping->getChildClassName()
                         );
                     }
-                }
+                }*/
             }
         }
     }
@@ -566,6 +566,15 @@ final class ObjectMapper
                 $mappingCollection->addMapping($propertyMapping);
                 if ($propertyMapping->relationship->isManyToMany()) {
                     $this->nameResolver->resolveColumnName($propertyMapping); //Resolve any many-to-many join columns
+                }
+            } elseif (!$relationship->targetJoinColumn) {
+                //For lazy loading, we must have the primary key so we can load the child
+                $childPks = $mappingCollection->getPrimaryKeyProperties($relationship->childClassName);
+                if (empty($childPks)) {
+                    $this->populatePrimaryKeyMappings(
+                        $mappingCollection,
+                        $relationship->childClassName
+                    );
                 }
             }
         } else {
