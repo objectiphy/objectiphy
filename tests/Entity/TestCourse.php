@@ -35,13 +35,13 @@ class TestCourse
     /**
      * Join columns are optional - they default to the values shown here
      * (annotations can be disabled by removing the @ symbol for test purposes - some missing items can be guessed)
-     * @ORM\ManyToMany(targetEntity="TestStudent", inversedBy="course")
-     * @ORM\JoinTable(name="student_course",
+     * ORM\ManyToMany(targetEntity="TestStudent", inversedBy="course")
+     * ORM\JoinTable(name="student_course",
      *      joinColumns={@ORM\JoinColumn(name="course_id", referencedColumnName="id")},
      *      inverseJoinColumns={@ORM\JoinColumn(name="student_id", referencedColumnName="id")}
      * )
      *
-     * Relationship(
+     * @Relationship(
      *     relationshipType="many_to_many",
      *     childClassName="TestStudent",
      *     bridgeJoinTable="student_course"

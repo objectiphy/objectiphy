@@ -39,8 +39,8 @@ class TestStudent
 
     /**
      * (annotations can be disabled by removing the @ symbol for test purposes)
-     * @ManyToMany(targetEntity="TestCourse", mappedBy="students")
-     * Relationship(relationshipType="many_to_many", childClassName="TestCourse", mappedBy="students")
+     * ManyToMany(targetEntity="TestCourse", mappedBy="students")
+     * @Relationship(relationshipType="many_to_many", childClassName="TestCourse", mappedBy="students")
      */
     private array $courses = [];
 

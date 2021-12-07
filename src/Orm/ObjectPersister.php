@@ -357,7 +357,12 @@ final class ObjectPersister implements TransactionInterface
                 if ($storeInsertId) {
                     $this->lastInsertId = $lastInsertId;
                 }
-                $insertCount += $this->storage->getAffectedRecordCount();
+                $duplicateUpdated = false;
+                $insertCount += $this->storage->getAffectedRecordCount($duplicateUpdated);
+                if ($duplicateUpdated) {
+                    $insertCount--;
+                    $updateCount++;
+                }
                 $pkProperties = $this->options->mappingCollection->getPrimaryKeyProperties($this->getClassName());
                 $pkValues = [];
                 if ($lastInsertId && count($pkProperties) == 1) {

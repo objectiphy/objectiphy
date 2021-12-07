@@ -123,7 +123,7 @@ class EntityTracker
                     continue;
                 }
                 $entityValue = ObjectHelper::getValueFromObject($entity, $reflectionProperty->getName());
-                if (!(is_object($entityValue) || ($entityValue instanceof \DateTimeInterface))) {
+                if (!(is_object($entityValue) || is_iterable($entityValue) || ($entityValue instanceof \DateTimeInterface))) {
                     $cloneValue = ObjectHelper::getValueFromObject($clone, $reflectionProperty->getName());
                     if ($cloneValue != $entityValue) { //Not strict, eg. for comparing DateTimes
                         return true;

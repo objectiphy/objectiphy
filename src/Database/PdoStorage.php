@@ -181,7 +181,7 @@ class PdoStorage implements StorageInterface, TransactionInterface
     /**
      * @return int Return the number of rows that were affected by the last executed query.
      */
-    public function getAffectedRecordCount(): int
+    public function getAffectedRecordCount(&$duplicateUpdated = false): int
     {
         $affectedRows = 0;
         if (isset($this->stm)) {
@@ -189,6 +189,7 @@ class PdoStorage implements StorageInterface, TransactionInterface
             if ($affectedRows > 1 && strpos($this->stm->queryString, 'ON DUPLICATE KEY') !== false) {
                 //Updated records return 2, not 1
                 $affectedRows = intval($affectedRows / 2);
+                $duplicateUpdated = true;
             }
         }
 

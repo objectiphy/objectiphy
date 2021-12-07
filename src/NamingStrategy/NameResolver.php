@@ -84,7 +84,7 @@ class NameResolver
             }
         }
 
-        if ($relationship->isDefined() && !$column->name) {
+        if ($relationship->isDefined() && $relationship->isToOne() && !$column->name) {
             $column->name = $relationship->sourceJoinColumn; //Also retrieve the value in case of late binding
         }
     }
