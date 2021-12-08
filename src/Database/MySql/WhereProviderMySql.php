@@ -149,7 +149,7 @@ class WhereProviderMySql
             $propertyMapping = $mappingCollection->getPropertyMapping($criteriaExpression->property->getPropertyPath());
             $dataType = $propertyMapping ? $propertyMapping->getDataType() : '';
             $format = $propertyMapping ? $propertyMapping->column->format : '';
-            $stringValues[] = $this->stringReplacer->getPersistenceValueForField($query, $value, $mappingCollection, $dataType, $format, $valuePrefix, $valueSuffix);
+            $stringValues[] = $this->stringReplacer->getPersistenceValueForField($query, $value, $mappingCollection, $dataType, $format, $valuePrefix, $valueSuffix, $operator == 'LIKE');
         }
         $sql .= implode(',', $stringValues);
         if (is_array($criteriaExpression->value)) {

@@ -4,6 +4,7 @@ namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
+use Objectiphy\Objectiphy\Tests\Entity\TestChild;
 use Objectiphy\Objectiphy\Tests\Entity\TestCollection;
 use Objectiphy\Objectiphy\Tests\Entity\TestContact;
 use Objectiphy\Objectiphy\Tests\Entity\TestEmployee;
@@ -157,6 +158,12 @@ class CriteriaReadingTest extends IntegrationTestBase
 
     protected function doOperatorTests()
     {
+        //Read using empty string
+        $this->objectRepository->setClassName(TestChild::class);
+        $children = $this->objectRepository->findBy(['address.line2' => '']);
+        $this->assertEquals(1, count($children));
+        $this->assertEquals('Penfold', $children[0]->getName());
+
         //Read using LIKE, paginated
         $this->objectRepository->setClassName(TestPolicy::class);
         $pagination = new Pagination(2);
@@ -164,7 +171,7 @@ class CriteriaReadingTest extends IntegrationTestBase
         $refreshedPolicies = $this->objectRepository->findBy([
             'vehicle.makeDesc' => [
                 'operator' => 'LIKE',
-                'value' => 'F%'
+                'value' => '%F%'
             ]
         ]);
         $this->assertEquals(2, count($refreshedPolicies));

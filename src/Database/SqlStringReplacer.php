@@ -89,7 +89,8 @@ class SqlStringReplacer
                     $this->tokenPrefix . $key . $this->tokenSuffix,
                     (in_array($value, [null, true, false], true)
                         ? var_export($value, true)
-                        : $this->delimit($value, $this->valueDelimiter, '')),
+                        : ($value === '' ? "''" : $this->delimit($value, $this->valueDelimiter, ''))
+                    ),
                     $queryString
                 );
             }
@@ -116,7 +117,7 @@ class SqlStringReplacer
         foreach ($propertiesUsed as $propertyPath) {
             $alias = '';
             $this->objectNames[] = $this->delimit($propertyPath, $this->propertyPathDelimiter, '');
-            $persistenceValue = $this->getPersistenceValueForField($query, $propertyPath, $mappingCollection, '', '', '', '', $alias, $this->aggregateGroupBys);
+            $persistenceValue = $this->getPersistenceValueForField($query, $propertyPath, $mappingCollection, '', '', '', '', false, $alias, $this->aggregateGroupBys);
             $this->persistenceNames[] = $persistenceValue;
             $this->aliases[] = $alias ?: $persistenceValue;
         }
@@ -218,6 +219,7 @@ class SqlStringReplacer
         string $format = '',
         string $valuePrefix = '',
         string $valueSuffix = '' ,
+        bool $ignorePropertyPathDelimiter = false,
         ?string &$alias = null,
         array &$groupBy = []
     ) {
@@ -229,7 +231,7 @@ class SqlStringReplacer
             $persistenceValue = null;
             if (is_string($fieldValueItem)) {
                 //If already delimited, matches a property, or is recognised as a function or expression, use as is
-                if ($this->checkDelimited($fieldValueItem)
+                if ($this->checkDelimited($fieldValueItem, $ignorePropertyPathDelimiter)
                     || $this->checkPropertyPath($fieldValueItem, $alias, $query, $mappingCollection)
                     || $this->checkFunction($fieldValueItem)
                 ) {
@@ -339,9 +341,9 @@ class SqlStringReplacer
         return $fieldValue;
     }
 
-    private function checkDelimited(string $fieldValue): bool
+    private function checkDelimited(string $fieldValue, $ignorePropertyPathDelimiter = false): bool
     {
-        if ($this->countUnescaped($fieldValue, $this->propertyPathDelimiter) >= 2
+        if ((!$ignorePropertyPathDelimiter && $this->countUnescaped($fieldValue, $this->propertyPathDelimiter) >= 2)
             || $this->countUnescaped($fieldValue, $this->databaseDelimiter) >= 2
             || $this->countUnescaped($fieldValue, $this->valueDelimiter) >= 2) {
             return true;

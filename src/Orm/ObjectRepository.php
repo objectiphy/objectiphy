@@ -877,7 +877,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         }
 
         if ($normalizedCriteria && !$propertyFound) {
-            $message = sprintf('Criteria specified does not relate to a known property on %1$s. Please specify a property path, or use the Query Builder to create a custom query.', $this->getClassName());
+            $message = sprintf('Criteria specified does not relate to a known property on %1$s. If you are using an array to specify criteria, use the format [$property => $value] or [$property => [\'operator\' => $operator, \'value\' => $value]. Otherwise please specify a valid property path, or use the Query Builder to create a custom query.', $this->getClassName());
             throw new QueryException($message);
         }
     }

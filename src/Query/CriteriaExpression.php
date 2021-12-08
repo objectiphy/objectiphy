@@ -158,8 +158,10 @@ class CriteriaExpression implements CriteriaPartInterface, JoinPartInterface, Pr
     public function getPropertyPaths(array $joinAliases = []): array
     {
         $paths = $this->property->getPropertyPaths();
-        $paths = array_merge($paths, $this->getPropertyPathsFromValue($this->value, $joinAliases));
-        $paths = array_merge($paths, $this->getPropertyPathsFromValue($this->value2, $joinAliases));
+        if (!in_array($this->operator, [QB::LIKE, QB::BEGINS_WITH, QB::ENDS_WITH, QB::CONTAINS])) {
+            $paths = array_merge($paths, $this->getPropertyPathsFromValue($this->value, $joinAliases));
+            $paths = array_merge($paths, $this->getPropertyPathsFromValue($this->value2, $joinAliases));
+        }
         
         return array_filter($paths);
     }
