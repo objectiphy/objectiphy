@@ -383,29 +383,28 @@ final class ObjectMapper
         if (count($parents) == 0) {
             $mappingCollection->setPrimaryTableMapping($table);
         }
-        foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-            $propertyMapping = $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents, $parentRelationship);
-            if ($propertyMapping && $propertyMapping->relationship->isDefined()) {
-                if ($propertyMapping->relationship->isEmbedded || $propertyMapping->relationship->isScalarJoin()) {
-                    $childParents = array_merge($parents, [$propertyMapping->propertyName]);
-                    if ($propertyMapping->relationship->isEmbedded) {
-                        $childReflectionClass = new \ReflectionClass($propertyMapping->getChildClassName());
-                        $this->populateScalarMappings($mappingCollection, $childReflectionClass, $childParents, $propertyMapping->relationship);
+
+        $propertyMappings = [];
+        while ($reflectionClass) {
+            foreach ($reflectionClass->getProperties() as $reflectionProperty) {
+                $propertyMapping = $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents, $parentRelationship);
+                if ($propertyMapping && $propertyMapping->relationship->isDefined()) {
+                    if ($propertyMapping->relationship->isEmbedded || $propertyMapping->relationship->isScalarJoin()) {
+                        $childParents = array_merge($parents, [$propertyMapping->propertyName]);
+                        if ($propertyMapping->relationship->isEmbedded) {
+                            $childReflectionClass = new \ReflectionClass($propertyMapping->getChildClassName());
+                            $this->populateScalarMappings($mappingCollection, $childReflectionClass, $childParents, $propertyMapping->relationship);
+                        }
                     }
-                } /*elseif ((!isset($mappingCollection->getRelationships(false)[$propertyMapping->getRelationshipKey()])
-                            || $propertyMapping->isLateBound())
-                        && !$propertyMapping->relationship->mappedBy
-                ) {
-                    //For lazy loading, we must have the primary key so we can load the child
-                    $childPks = $mappingCollection->getPrimaryKeyProperties($propertyMapping->getChildClassName());
-                    if (empty($childPks)) {
-                        $this->populatePrimaryKeyMappings(
-                            $mappingCollection,
-                            $propertyMapping->getChildClassName()
-                        );
-                    }
-                }*/
+                }
+                $propertyMappings[] = $propertyMapping;
             }
+            $reflectionClass = $reflectionClass->getParentClass();
+        }
+
+        //Resolve name *after* adding to collection so that naming strategies have access to the collection.
+        foreach (array_filter($propertyMappings) as $propertyMapping) {
+            $this->nameResolver->resolveColumnName($propertyMapping);
         }
     }
 
@@ -469,8 +468,6 @@ final class ObjectMapper
                 $groups
             );
             $mappingCollection->addMapping($propertyMapping, $suppressFetch);
-            //Resolve name *after* adding to collection so that naming strategies have access to the collection.
-            $this->nameResolver->resolveColumnName($propertyMapping);
 
             return $propertyMapping;
         }
@@ -487,11 +484,14 @@ final class ObjectMapper
     private function populatePrimaryKeyMappings(MappingCollection $mappingCollection, string $className): void
     {
         $reflectionClass = new \ReflectionClass($className);
-        foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-            $column = $this->getColumnMapping($reflectionProperty);
-            if ($column->isPrimaryKey) {
-                $mappingCollection->addPrimaryKeyMapping($reflectionClass->getName(), $reflectionProperty->getName());
+        while ($reflectionClass) {
+            foreach ($reflectionClass->getProperties() as $reflectionProperty) {
+                $column = $this->getColumnMapping($reflectionProperty);
+                if ($column->isPrimaryKey) {
+                    $mappingCollection->addPrimaryKeyMapping($reflectionClass->getName(), $reflectionProperty->getName());
+                }
             }
+            $reflectionClass = $reflectionClass->getParentClass();
         }
     }
 
@@ -509,13 +509,16 @@ final class ObjectMapper
         array $parents,
         bool $drillDown = false
     ): void {
-        foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-            $relationship = $this->getRelationshipMapping($reflectionProperty);
-            if ($relationship->isDefined()) {
-                $this->initialiseRelationship($relationship);
-                $propertyName = $reflectionProperty->getName();
-                $this->mapRelationship($mappingCollection, $propertyName, $relationship, $reflectionClass, $parents, $drillDown);
+        while ($reflectionClass) {
+            foreach ($reflectionClass->getProperties() as $reflectionProperty) {
+                $relationship = $this->getRelationshipMapping($reflectionProperty);
+                if ($relationship->isDefined()) {
+                    $this->initialiseRelationship($relationship);
+                    $propertyName = $reflectionProperty->getName();
+                    $this->mapRelationship($mappingCollection, $propertyName, $relationship, $reflectionClass, $parents, $drillDown);
+                }
             }
+            $reflectionClass = $reflectionClass->getParentClass();
         }
     }
 
@@ -629,19 +632,22 @@ final class ObjectMapper
         $properties = [];
         $reflectionClass = new \ReflectionClass($relationship->childClassName);
         $targetColumns = explode(',', $relationship->targetJoinColumn);
-        foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-            $columnMapping = $this->getColumnMapping($reflectionProperty);
-            //If name not specified, guess mapping if applicable...
-            $columnMapping->name = $columnMapping->name ?: $this->nameResolver->convertName($reflectionProperty->getName(), NamingStrategyInterface::TYPE_SCALAR_PROPERTY);
-            foreach ($targetColumns as $targetColumn) {
-                if ($columnMapping->name == trim($targetColumn)) {
-                    $properties[] = $reflectionProperty->getName();
+        while ($reflectionClass) {
+            foreach ($reflectionClass->getProperties() as $reflectionProperty) {
+                $columnMapping = $this->getColumnMapping($reflectionProperty);
+                //If name not specified, guess mapping if applicable...
+                $columnMapping->name = $columnMapping->name ?: $this->nameResolver->convertName($reflectionProperty->getName(), NamingStrategyInterface::TYPE_SCALAR_PROPERTY);
+                foreach ($targetColumns as $targetColumn) {
+                    if ($columnMapping->name == trim($targetColumn)) {
+                        $properties[] = $reflectionProperty->getName();
+                        break;
+                    }
+                }
+                if (count($properties) == count($targetColumns)) {
                     break;
                 }
             }
-            if (count($properties) == count($targetColumns)) {
-                break;
-            }
+            $reflectionClass = $reflectionClass->getParentClass();
         }
 
         return implode(',', $properties);
