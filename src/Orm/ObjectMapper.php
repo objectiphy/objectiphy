@@ -384,8 +384,8 @@ final class ObjectMapper
             $mappingCollection->setPrimaryTableMapping($table);
         }
 
-        $propertyMappings = [];
-        while ($reflectionClass) {
+        $classes = $this->getReflectionClassHierarchy($reflectionClass);
+        foreach ($classes as $reflectionClass) {
             foreach ($reflectionClass->getProperties() as $reflectionProperty) {
                 $propertyMapping = $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents, $parentRelationship);
                 if ($propertyMapping && $propertyMapping->relationship->isDefined()) {
@@ -399,12 +399,6 @@ final class ObjectMapper
                 }
                 $propertyMappings[] = $propertyMapping;
             }
-            $reflectionClass = $reflectionClass->getParentClass();
-        }
-
-        //Resolve name *after* adding to collection so that naming strategies have access to the collection.
-        foreach (array_filter($propertyMappings) as $propertyMapping) {
-            $this->nameResolver->resolveColumnName($propertyMapping);
         }
     }
 
@@ -468,6 +462,8 @@ final class ObjectMapper
                 $groups
             );
             $mappingCollection->addMapping($propertyMapping, $suppressFetch);
+            //Resolve name *after* adding to collection so that naming strategies have access to the collection.
+            $this->nameResolver->resolveColumnName($propertyMapping);
 
             return $propertyMapping;
         }
@@ -484,15 +480,26 @@ final class ObjectMapper
     private function populatePrimaryKeyMappings(MappingCollection $mappingCollection, string $className): void
     {
         $reflectionClass = new \ReflectionClass($className);
-        while ($reflectionClass) {
+        $classes = $this->getReflectionClassHierarchy($reflectionClass);
+        foreach ($classes as $reflectionClass) {
             foreach ($reflectionClass->getProperties() as $reflectionProperty) {
                 $column = $this->getColumnMapping($reflectionProperty);
                 if ($column->isPrimaryKey) {
                     $mappingCollection->addPrimaryKeyMapping($reflectionClass->getName(), $reflectionProperty->getName());
                 }
             }
+        }
+    }
+
+    private function getReflectionClassHierarchy(\ReflectionClass $reflectionClass)
+    {
+        $classes = [];
+        while ($reflectionClass) {
+            array_unshift($classes, $reflectionClass);
             $reflectionClass = $reflectionClass->getParentClass();
         }
+
+        return $classes;
     }
 
     /**
@@ -509,7 +516,8 @@ final class ObjectMapper
         array $parents,
         bool $drillDown = false
     ): void {
-        while ($reflectionClass) {
+        $classes = $this->getReflectionClassHierarchy($reflectionClass);
+        foreach ($classes as $reflectionClass) {
             foreach ($reflectionClass->getProperties() as $reflectionProperty) {
                 $relationship = $this->getRelationshipMapping($reflectionProperty);
                 if ($relationship->isDefined()) {
@@ -518,7 +526,6 @@ final class ObjectMapper
                     $this->mapRelationship($mappingCollection, $propertyName, $relationship, $reflectionClass, $parents, $drillDown);
                 }
             }
-            $reflectionClass = $reflectionClass->getParentClass();
         }
     }
 
@@ -632,7 +639,8 @@ final class ObjectMapper
         $properties = [];
         $reflectionClass = new \ReflectionClass($relationship->childClassName);
         $targetColumns = explode(',', $relationship->targetJoinColumn);
-        while ($reflectionClass) {
+        $classes = $this->getReflectionClassHierarchy($reflectionClass);
+        foreach ($classes as $reflectionClass) {
             foreach ($reflectionClass->getProperties() as $reflectionProperty) {
                 $columnMapping = $this->getColumnMapping($reflectionProperty);
                 //If name not specified, guess mapping if applicable...
@@ -647,7 +655,6 @@ final class ObjectMapper
                     break;
                 }
             }
-            $reflectionClass = $reflectionClass->getParentClass();
         }
 
         return implode(',', $properties);
