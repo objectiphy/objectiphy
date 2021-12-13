@@ -604,9 +604,11 @@ class MappingCollection
                             )
                         );
                         $relationship->joinTable = $relationship->joinTable ?: $otherSideMapping->getTableAlias();
-                        $relationship->bridgeJoinTable = $relationship->bridgeJoinTable ?: $otherSideMapping->relationship->bridgeJoinTable;
-                        $relationship->bridgeSourceJoinColumn = $relationship->bridgeSourceJoinColumn ?: $otherSideMapping->relationship->bridgeTargetJoinColumn;
-                        $relationship->bridgeTargetJoinColumn = $relationship->bridgeTargetJoinColumn ?: $otherSideMapping->relationship->bridgeSourceJoinColumn;
+                        if ($relationship->relationshipType == Relationship::MANY_TO_MANY) {
+                            $relationship->bridgeJoinTable = $relationship->bridgeJoinTable ?: $otherSideMapping->relationship->bridgeJoinTable;
+                            $relationship->bridgeSourceJoinColumn = $relationship->bridgeSourceJoinColumn ?: $otherSideMapping->relationship->bridgeTargetJoinColumn;
+                            $relationship->bridgeTargetJoinColumn = $relationship->bridgeTargetJoinColumn ?: $otherSideMapping->relationship->bridgeSourceJoinColumn;
+                        }
                     }
                 } elseif (!$relationship->targetJoinColumn) {
                     $pkPropertyNames = $this->getPrimaryKeyProperties($relationship->childClassName);

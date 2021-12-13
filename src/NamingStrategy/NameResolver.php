@@ -103,12 +103,18 @@ class NameResolver
             if (!$relationship->sourceJoinColumn || $relationship->sourceJoinColumn == '[calculated]') {
                 //PK of $propertyMapping->className
                 $pkProperty = $mappingCollection->getPrimaryKeyProperties($propertyMapping->className)[0] ?? '';
-                $relationship->sourceJoinColumn = $mappingCollection->getColumnForPropertyPath($pkProperty);
+                $relationship->sourceJoinColumn = $mappingCollection->getColumnForPropertyPath($pkProperty) ?? '';
+                if (!$relationship->sourceJoinColumn) {
+                    throw new MappingException(sprintf('Unable to determine the source join column for the many-to-many relationship between %1$s and %2$s - make sure you have defined the primary key property for %1$s, or specify the source join column in the mapping definition for this relationship yourself.', $propertyMapping->className, $relationship->childClassName));
+                }
             }
             if (!$relationship->targetJoinColumn || $relationship->targetJoinColumn == '[calculated]') {
                 //PK of $relationship->childClassName
                 $pkProperty = $mappingCollection->getPrimaryKeyProperties($relationship->childClassName)[0] ?? '';
-                $relationship->targetJoinColumn = $mappingCollection->getColumnForPropertyPath($pkProperty);
+                $relationship->targetJoinColumn = $mappingCollection->getColumnForPropertyPath($pkProperty) ?? '';
+                if (!$relationship->sourceJoinColumn) {
+                    throw new MappingException(sprintf('Unable to determine the target join column for the many-to-many relationship between %1$s and %2$s - make sure you have defined the primary key property for %2$s, or specify the target join column in the mapping definition for this relationship yourself.', $propertyMapping->className, $relationship->childClassName));
+                }
             }
             if (substr($relationship->bridgeJoinTable, 0, 13) == '[calculated]_') {
                 //Converted, de-pluralised $propertyName + '_' + substr($relationship->bridgeJoinTable, 13)
@@ -116,21 +122,32 @@ class NameResolver
                 $partTwo = substr($relationship->bridgeJoinTable, 13);
                 $relationship->bridgeJoinTable = $this->convertName(implode('_', [$partOne, $partTwo]));
             }
+            $tableWords = $this->columnNamingStrategy->splitIntoWords($relationship->bridgeJoinTable);
+            $sourceTable = $tableWords[0] ?? '';
+            $targetTable = $tableWords[1] ?? '';
+            $sourceUsed = false;
             if (!$relationship->bridgeSourceJoinColumn || $relationship->bridgeSourceJoinColumn == '[calculated]') {
-                //Second part of $relationship->bridgeJoinTable, plus $relationship->targetJoinColumn
-                $targetTable = $this->columnNamingStrategy->splitIntoWords($relationship->bridgeJoinTable)[1] ?? '';
-                if ($targetTable) {
+                //Try to match appropriate part of table name to source class name
+                if ($sourceTable && (!$targetTable || stripos($propertyMapping->className, $sourceTable) !== false)) {
+                    $relationship->bridgeSourceJoinColumn = $this->convertName(
+                        $sourceTable . '_' . $relationship->sourceJoinColumn
+                    );
+                    $sourceUsed = true;
+                } elseif ($targetTable) {
                     $relationship->bridgeSourceJoinColumn = $this->convertName(
                         $targetTable . '_' . $relationship->targetJoinColumn
                     );
                 }
             }
             if (!$relationship->bridgeTargetJoinColumn || $relationship->bridgeTargetJoinColumn == '[calculated]') {
-                //First part of $relationship->bridgeJoinTable, plus $relationship->sourceJoinColumn
-                $sourceTable = $this->columnNamingStrategy->splitIntoWords($relationship->bridgeJoinTable)[0] ?? '';
-                if ($sourceTable) {
+                //Try to match appropriate part of table name to target class name
+                if (!$sourceUsed && ($sourceTable && (!$targetTable || stripos($relationship->childClassName, $sourceTable) !== false))) {
                     $relationship->bridgeTargetJoinColumn = $this->convertName(
                         $sourceTable . '_' . $relationship->sourceJoinColumn
+                    );
+                } elseif ($targetTable) {
+                    $relationship->bridgeTargetJoinColumn = $this->convertName(
+                        $targetTable . '_' . $relationship->targetJoinColumn
                     );
                 }
             }
