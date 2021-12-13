@@ -397,7 +397,6 @@ final class ObjectMapper
                         }
                     }
                 }
-                $propertyMappings[] = $propertyMapping;
             }
         }
     }
