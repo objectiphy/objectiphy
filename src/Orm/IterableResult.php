@@ -23,9 +23,12 @@ class IterableResult implements \Iterator
      */
     protected $current = null;
     protected ?int $key = -1;
+    protected $query;
+    protected array $params;
 
     /**
      * IterableResult constructor.
+     * @param mixed $query Usually a string of SQL (but could be anything) that is passed to $storage to rewind (re-run)
      * @param StorageInterface $storage a data store that has already executed a query (each call to the next method
      * will fetch another result).
      * @param ObjectBinder|null $objectBinder If binding to entities, the object binder needs to be provided here. If
@@ -34,11 +37,15 @@ class IterableResult implements \Iterator
      * @param bool $fetchValues Whether to just fetch a single value at a time (as opposed to a whole object or array)
      */
     public function __construct(
+        $query,
+        array $params,
         StorageInterface $storage,
         ObjectBinder $objectBinder = null,
         ?string $entityClassName = null,
         bool $fetchValues = false
     ) {
+        $this->query = $query;
+        $this->params = $params;
         $this->storage = $storage;
         $this->objectBinder = $objectBinder;
         $this->entityClassName = $entityClassName;
@@ -102,7 +109,7 @@ class IterableResult implements \Iterator
      */
     public function rewind(): void
     {
-        $this->storage->executeQuery($this->storage->getQuery(), $this->storage->getParams(), true);
+        $this->storage->executeQuery($this->query, $this->params, true);
         $this->next();
     }
 

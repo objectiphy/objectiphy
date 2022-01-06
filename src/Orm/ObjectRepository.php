@@ -269,7 +269,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             throw new QueryException('Number of primary key properties does not match number of values given.');
         }
         
-        return $this->findOneBy(array_combine($pkProperties, [$id]));
+        return $this->findOneBy(array_combine($pkProperties, $idArray));
     }
 
     /**

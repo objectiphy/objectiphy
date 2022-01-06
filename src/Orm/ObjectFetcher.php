@@ -270,9 +270,9 @@ final class ObjectFetcher
         $storage->executeQuery($sql, $params ?: [], true);
 
         if ($this->options->bindToEntities) {
-            $result = new IterableResult($storage, $this->objectBinder, $this->getClassName());
+            $result = new IterableResult($sql, $params ?: [], $storage, $this->objectBinder, $this->getClassName());
         } else {
-            $result = new IterableResult($storage);
+            $result = new IterableResult($sql, $params ?: [], $storage);
         }
 
         return $result;
@@ -288,7 +288,8 @@ final class ObjectFetcher
     {
         $storage = clone($this->storage); //In case further queries happen before we iterate
         $storage->executeQuery($sql, $params ?: [], true);
-        return new IterableResult($storage, null, null, true);
+
+        return new IterableResult($sql, $params ?: [], $storage, null, null, true);
     }
 
     /**

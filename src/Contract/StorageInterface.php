@@ -62,26 +62,4 @@ interface StorageInterface
      * returned.
      */
     public function getLastInsertId();
-
-    /**
-     * @return mixed Returns the last query to be executed.
-     */
-    public function getQuery();
-
-    /**
-     * @return array Returns the parameters that were used on the last query to be executed
-     */
-    public function getParams(): array;
-
-    /**
-     * @return array Returns an array containing all the queries that have been executed (in the order they were
-     * executed).
-     */
-    public function getQueryHistory(): array;
-
-    /**
-     * @return array Returns an array of arrays, each of which is the set of parameters that were used in the
-     * corresponding query from the getQueryHistory method.
-     */
-    public function getParamHistory(): array;
 }

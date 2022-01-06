@@ -18,8 +18,6 @@ class PdoStorage implements StorageInterface, TransactionInterface
     private \PDOStatement $stm;
     private bool $transactionStarted = false;
     private int $transactionNestingLevel = 0;
-    private array $queryHistory = [];
-    private array $paramHistory = [];
 
     public function __construct(\PDO $pdo)
     {
@@ -95,11 +93,8 @@ class PdoStorage implements StorageInterface, TransactionInterface
     public function executeQuery($query, array $params = [], $iterable = false): bool
     {
         try {
-            $sql = str_replace(["\r\n", "\r"], "\n", $query);
-            $this->queryHistory[] = trim($sql);
-            $this->paramHistory[] = $params;
             $this->pdo->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, !$iterable);
-            $this->stm = $this->pdo->prepare($sql);
+            $this->stm = $this->pdo->prepare($query);
             $success = $this->stm->execute($params);
         } catch (\Throwable $ex) {
             throw new StorageException('PDO Error: ' . $ex->getMessage() . ' (' . $query . ') ' . print_r($params, true), intval($ex->getCode()), $ex);
@@ -205,39 +200,5 @@ class PdoStorage implements StorageInterface, TransactionInterface
         $lastInsertId = $this->pdo->lastInsertId();
 
         return intval($lastInsertId) == $lastInsertId ? intval($lastInsertId) : $lastInsertId;
-    }
-
-    /**
-     * @return mixed Returns the last query to be executed.
-     */
-    public function getQuery(): ?string
-    {
-        return !empty($this->queryHistory) ? end($this->queryHistory) : null;
-    }
-
-    /**
-     * @return array Returns the parameters that were used on the last query to be executed
-     */
-    public function getParams(): array
-    {
-        return !empty($this->paramHistory) ? end($this->paramHistory) : [];
-    }
-
-    /**
-     * @return array Returns an array containing all the queries that have been executed (in the order they were
-     * executed).
-     */
-    public function getQueryHistory(): array
-    {
-        return $this->queryHistory;
-    }
-
-    /**
-     * @return array Returns an array of arrays, each of which is the set of parameters that were used in the
-     * corresponding query from the getQueryHistory method.
-     */
-    public function getParamHistory(): array
-    {
-        return $this->paramHistory;
     }
 }
