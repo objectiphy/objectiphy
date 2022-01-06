@@ -20,7 +20,7 @@ class TestChild
     
     /**
      * @var TestUser
-     * @Mapping\Relationship(childClassName="TestUser", sourceJoinColumn="user_id", relationshipType="one_to_one")
+     * @Mapping\Relationship(childClassName="TestUser", relationshipType="one_to_one")
      */
     protected $user;
     

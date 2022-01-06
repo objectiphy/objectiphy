@@ -393,19 +393,21 @@ class CriteriaReadingTest extends IntegrationTestBase
 
     protected function doSqlTests()
     {
-        $sql = $this->objectRepository->getSql(false);
-        $this->assertStringEndsWith("COUNT(`obj_alias_pets`.`id`) <= :param_1", $sql);
-        $parameterisedSql = $this->objectRepository->getSql();
-        $this->assertStringEndsWith("COUNT(`obj_alias_pets`.`id`) <= '4'", $parameterisedSql);
-        $sqlHistory = $this->objectRepository->getExplanation()->getSqlHistory();
-        $this->assertGreaterThan(35, count($sqlHistory));
-        $this->assertStringStartsWith('SELECT', reset($sqlHistory));
-        $this->assertStringStartsWith('SELECT', end($sqlHistory));
-        $params = $this->objectRepository->getExplanation()->getParamHistory();
-        $this->assertEquals(count($sqlHistory), count($params));
-        $this->assertEquals(['param_1' => 4], end($params));
-        $parameterisedSqlHistory = $this->objectRepository->getExplanation()->getSqlHistory(true);
-        $this->assertEquals(count($sqlHistory), count($parameterisedSqlHistory));
-        $this->assertStringEndsWith("COUNT(`obj_alias_pets`.`id`) <= '4'", end($parameterisedSqlHistory));
+        if (self::$devMode) {
+            $sql = $this->objectRepository->getSql(false);
+            $this->assertStringEndsWith("COUNT(`obj_alias_pets`.`id`) <= :param_1", $sql);
+            $parameterisedSql = $this->objectRepository->getSql();
+            $this->assertStringEndsWith("COUNT(`obj_alias_pets`.`id`) <= '4'", $parameterisedSql);
+            $sqlHistory = $this->objectRepository->getExplanation()->getSqlHistory();
+            $this->assertGreaterThan(35, count($sqlHistory));
+            $this->assertStringStartsWith('SELECT', reset($sqlHistory));
+            $this->assertStringStartsWith('SELECT', end($sqlHistory));
+            $params = $this->objectRepository->getExplanation()->getParamHistory();
+            $this->assertEquals(count($sqlHistory), count($params));
+            $this->assertEquals(['param_1' => 4], end($params));
+            $parameterisedSqlHistory = $this->objectRepository->getExplanation()->getSqlHistory(true);
+            $this->assertEquals(count($sqlHistory), count($parameterisedSqlHistory));
+            $this->assertStringEndsWith("COUNT(`obj_alias_pets`.`id`) <= '4'", end($parameterisedSqlHistory));
+        }
     }
 }
