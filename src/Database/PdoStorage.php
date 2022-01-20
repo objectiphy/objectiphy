@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Database;
 
+use Objectiphy\Objectiphy\Contract\QueryInterceptorInterface;
 use Objectiphy\Objectiphy\Contract\StorageInterface;
 use Objectiphy\Objectiphy\Contract\TransactionInterface;
 use Objectiphy\Objectiphy\Exception\StorageException;
@@ -18,10 +19,16 @@ class PdoStorage implements StorageInterface, TransactionInterface
     private \PDOStatement $stm;
     private bool $transactionStarted = false;
     private int $transactionNestingLevel = 0;
+    private QueryInterceptorInterface $queryInterceptor;
 
     public function __construct(\PDO $pdo)
     {
         $this->pdo = $pdo;
+    }
+
+    public function setInterceptor(QueryInterceptorInterface $queryInterceptor)
+    {
+        $this->queryInterceptor = $queryInterceptor;
     }
 
     /**
@@ -93,6 +100,7 @@ class PdoStorage implements StorageInterface, TransactionInterface
     public function executeQuery($query, array $params = [], $iterable = false): bool
     {
         try {
+            $this->intercept($query, $params);
             $this->pdo->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, !$iterable);
             $this->stm = $this->pdo->prepare($query);
             $success = $this->stm->execute($params);
@@ -200,5 +208,12 @@ class PdoStorage implements StorageInterface, TransactionInterface
         $lastInsertId = $this->pdo->lastInsertId();
 
         return intval($lastInsertId) == $lastInsertId ? intval($lastInsertId) : $lastInsertId;
+    }
+
+    protected function intercept(&$query, &$params): void
+    {
+        if (isset($this->queryInterceptor)) {
+            $this->queryInterceptor->intercept($query, $params);
+        }
     }
 }

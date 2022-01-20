@@ -6,6 +6,7 @@ namespace Objectiphy\Objectiphy\Meta;
 
 use Objectiphy\Objectiphy\Config\ConfigOptions;
 use Objectiphy\Objectiphy\Contract\ExplanationInterface;
+use Objectiphy\Objectiphy\Contract\QueryInterceptorInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Database\SqlStringReplacer;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
@@ -42,9 +43,16 @@ class Explanation implements ExplanationInterface
      */
     private array $config = [];
 
+    private QueryInterceptorInterface $queryInterceptor;
+
     public function __construct(SqlStringReplacer $stringReplacer)
     {
         $this->stringReplacer = $stringReplacer;
+    }
+
+    public function setInterceptor(QueryInterceptorInterface $queryInterceptor)
+    {
+        $this->queryInterceptor = $queryInterceptor;
     }
 
     /**
@@ -60,10 +68,14 @@ class Explanation implements ExplanationInterface
         MappingCollection $mappingCollection = null,
         ConfigOptions $config = null
     ): void {
+        $params = $query->getParams();
+        if (isset($this->queryInterceptor)) {
+            $this->queryInterceptor->intercept($sql, $params);
+        }
         if ($config->recordQueries || (is_null($config->recordQueries) && $config->devMode)) {
             $this->queryHistory[] = $query;
             $this->sqlHistory[] = $sql;
-            $this->paramHistory[] = $query->getParams();
+            $this->paramHistory[] = $params;
             $this->mapping[] = $mappingCollection;
             $this->config[] = $config;
         }
