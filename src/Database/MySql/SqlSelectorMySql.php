@@ -85,7 +85,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $sql .= $this->getOffset();
 
         if ($this->options->count && strpos($sql, 'SELECT COUNT') === false) { //We have to select all to get the count :(
-            $sql = "SELECT COUNT(*) FROM (\n$sql\n) subquery";
+            $sql = "/* select count */\nSELECT COUNT(*) FROM (\n$sql\n) subquery";
         }
 
         if ($this->disableMySqlCache) {
@@ -104,7 +104,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $sql = $this->getCountSql();
 
         if (!$sql) {
-            $sql = "SELECT \n";
+            $sql = "/* select */\nSELECT \n";
             foreach ($this->query->getSelect() as $fieldExpression) {
                 $fieldSql = trim((string) $fieldExpression);
                 $usePreparedAlias = $fieldExpression->isPropertyPath() && !$fieldExpression->getAlias();
@@ -129,7 +129,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
      */
     public function getFrom(): string
     {
-        return "\nFROM " . $this->stringReplacer->replaceNames($this->query->getFrom());
+        return "\n/* from */\nFROM " . $this->stringReplacer->replaceNames($this->query->getFrom());
     }
 
     /**
@@ -141,7 +141,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $sql = '';
         $groupBy = array_unique(array_filter(array_merge($this->query->getGroupBy(), $this->stringReplacer->getAggregateGroupBys())));
         if ($groupBy) {
-            $sql = "\nGROUP BY ";
+            $sql = "\n/* groupBy */\nGROUP BY ";
             foreach ($groupBy as $index => $groupItem) {
                 $groupBy[$index] = $this->stringReplacer->delimit($this->stringReplacer->replaceNames(strval($groupItem)));
             }
@@ -161,7 +161,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
 
         if (!$this->options->count) {
             if (!empty($orderBy = $this->query->getOrderBy())) {
-                $sql .= "\nORDER BY ";
+                $sql .= "\n/* orderBy */\nORDER BY ";
                 foreach ($this->query->getOrderBy() as $index => $orderByField) {
                     $sql .= $index > 0 ? ', ' : '';
                     $direction = $this->query->getOrderByDirections()[$index] ?? 'ASC';
@@ -181,11 +181,11 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $sql = '';
 
         if (!$this->options->multiple) {
-            $sql = "\nLIMIT 1";
+            $sql = "\n/* limit */\nLIMIT 1";
         } elseif (!$this->options->count && !empty($this->options->pagination)) {
-            $sql = "\nLIMIT " . $this->options->pagination->getRecordsPerPage();
+            $sql = "\n/* limit */\nLIMIT " . $this->options->pagination->getRecordsPerPage();
         } elseif ($this->query->getLimit() ?? false) {
-            $sql = "\nLIMIT " . $this->query->getLimit();
+            $sql = "\n/* limit */\nLIMIT " . $this->query->getLimit();
         }
 
         return $sql;
@@ -199,9 +199,9 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $sql = '';
         if ($this->options->multiple && !$this->options->count) {
             if ($this->query->getOffset() ?? false) {
-                $sql = "\n    OFFSET " . $this->query->getOffset();
+                $sql = "\n    /* offset */\n    OFFSET " . $this->query->getOffset();
             } elseif (!empty($this->options->pagination) && $this->options->pagination->getOffset()) {
-                $sql = "\n    OFFSET " . $this->options->pagination->getOffset();
+                $sql = "\n    /* offset */\n    OFFSET " . $this->options->pagination->getOffset();
             }
         }
 

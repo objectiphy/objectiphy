@@ -101,7 +101,7 @@ class DeleteQueryTest extends IntegrationTestBase
         $sql = $this->objectRepository->getSql();
         $expected = '';
         if (self::$devMode) {
-            $expected = "DELETE FROM \n`objectiphy_test`.`contact`\nWHERE 1\n    AND `objectiphy_test`.`contact`.`is_permanent` = '0'";
+            $expected = "/* delete */\nDELETE FROM \n`objectiphy_test`.`contact`\n\n/* joins */\n/* where */\nWHERE 1\n    AND `objectiphy_test`.`contact`.`is_permanent` = '0'";
         }
         $this->assertEquals($expected, $sql);
     }

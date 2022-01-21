@@ -38,7 +38,7 @@ class WhereProviderMySql
      */
     public function getWhere(QueryInterface $query, MappingCollection $mappingCollection): string
     {
-        $sql = "\nWHERE 1";
+        $sql = "\n/* where */\nWHERE 1";
         $removeJoiner = false;
         foreach ($query->getWhere() as $index => $criteriaExpression) {
             $sql .= $this->buildCriteriaSql($query, $index, $criteriaExpression, $mappingCollection, $removeJoiner);
@@ -50,7 +50,7 @@ class WhereProviderMySql
 
     public function getHaving(QueryInterface $query, MappingCollection $mappingCollection): string
     {
-        $sql = "\nHAVING 1";
+        $sql = "\n/* having */\nHAVING 1";
         $where = $query->getWhere();
         $criteriaExpressions = array_merge($where, $query->getHaving());
         $nestingLevelSql = '';
@@ -79,7 +79,7 @@ class WhereProviderMySql
         }
         $sql = rtrim($this->stringReplacer->replaceNames($sql));
 
-        return $sql == "\nHAVING 1" ? "" : $sql;
+        return $sql == "\n/* having */\nHAVING 1" ? "" : $sql;
     }
 
     private function buildCriteriaSql(

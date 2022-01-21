@@ -53,10 +53,10 @@ class SqlUpdaterMySql implements SqlUpdaterInterface
         }
 
         $this->stringReplacer->prepareReplacements($query, $this->options->mappingCollection);
-        $sql = "INSERT INTO \n";
+        $sql = "/* insert */\nINSERT INTO \n";
         $sql .= $this->stringReplacer->replaceNames($query->getInsert());
         $columns = $this->extractColumns($query->getAssignments()[0], $query);
-        $sql .= " \n(" . implode(',', $columns) . ") \nVALUES \n";
+        $sql .= " \n(" . implode(',', $columns) . ") \n/* insert values */\nVALUES \n";
         foreach ($query->getAssignments() as $index => $assignments) {
             $sql .= $index > 0 ? ", \n" : '';
             $sql .= "(" . implode(',', $this->extractValues($assignments, $query)) . ")";
@@ -86,10 +86,10 @@ class SqlUpdaterMySql implements SqlUpdaterInterface
     public function getUpdateSql(UpdateQueryInterface $query, bool $replaceExisting = false, array $parents = []): string
     {
         $this->stringReplacer->prepareReplacements($query, $this->options->mappingCollection);
-        $sql = "UPDATE \n";
+        $sql = "/* update */\nUPDATE \n";
         $sql .= $this->stringReplacer->replaceNames($query->getUpdate());
         $sql .= $this->joinProvider->getJoins($query);
-        $sql .= " SET \n";
+        $sql .= " /* update set */\n SET \n";
         $sql .= $this->constructAssignmentSql($query);
         $sql = trim($sql) . $this->whereProvider->getWhere($query, $this->options->mappingCollection);
         $sql .= $this->whereProvider->getHaving($query, $this->options->mappingCollection);

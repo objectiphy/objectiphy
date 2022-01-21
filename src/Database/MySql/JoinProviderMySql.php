@@ -58,7 +58,7 @@ class JoinProviderMySql
 
     private function initialise(): void
     {
-        $this->sql = '';
+        $this->sql = "/* joins */\n";
         $this->joiner = null;
         $this->removeJoiner = false;
     }

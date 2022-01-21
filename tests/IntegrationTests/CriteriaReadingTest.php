@@ -400,8 +400,8 @@ class CriteriaReadingTest extends IntegrationTestBase
             $this->assertStringEndsWith("COUNT(`obj_alias_pets`.`id`) <= '4'", $parameterisedSql);
             $sqlHistory = $this->objectRepository->getExplanation()->getSqlHistory();
             $this->assertGreaterThan(35, count($sqlHistory));
-            $this->assertStringStartsWith('SELECT', reset($sqlHistory));
-            $this->assertStringStartsWith('SELECT', end($sqlHistory));
+            $this->assertStringStartsWith("/* select */\nSELECT", reset($sqlHistory));
+            $this->assertStringStartsWith("/* select */\nSELECT", end($sqlHistory));
             $params = $this->objectRepository->getExplanation()->getParamHistory();
             $this->assertEquals(count($sqlHistory), count($params));
             $this->assertEquals(['param_1' => 4], end($params));

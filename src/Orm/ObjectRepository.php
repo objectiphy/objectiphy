@@ -15,6 +15,7 @@ use Objectiphy\Objectiphy\Contract\InsertQueryInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Contract\ObjectRepositoryInterface;
 use Objectiphy\Objectiphy\Contract\PaginationInterface;
+use Objectiphy\Objectiphy\Contract\QueryInterceptorInterface;
 use Objectiphy\Objectiphy\Contract\QueryInterface;
 use Objectiphy\Objectiphy\Contract\RepositoryFactoryInterface;
 use Objectiphy\Objectiphy\Contract\SelectQueryInterface;
@@ -41,7 +42,7 @@ use Objectiphy\Objectiphy\Traits\TransactionTrait;
 class ObjectRepository implements ObjectRepositoryInterface, TransactionInterface
 {
     use TransactionTrait;
-    
+
     protected ConfigOptions $configOptions;
     protected ObjectMapper $objectMapper;
     protected ObjectFetcher $objectFetcher;
@@ -55,17 +56,19 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     protected MappingCollection $mappingCollection;
     protected ExplanationInterface $explanation;
     protected RepositoryFactoryInterface $repositoryFactory;
+    protected ?QueryInterceptorInterface $queryInterceptor = null;
 
     public function __construct(
-        ObjectMapper $objectMapper,
-        ObjectFetcher $objectFetcher,
-        ObjectPersister $objectPersister,
-        ObjectRemover $objectRemover,
-        ProxyFactory $proxyFactory,
-        ExplanationInterface $explanation,
+        ObjectMapper               $objectMapper,
+        ObjectFetcher              $objectFetcher,
+        ObjectPersister            $objectPersister,
+        ObjectRemover              $objectRemover,
+        ProxyFactory               $proxyFactory,
+        ExplanationInterface       $explanation,
         RepositoryFactoryInterface $repositoryFactory,
-        ?ConfigOptions $configOptions = null
-    ) {
+        ?ConfigOptions             $configOptions = null
+    )
+    {
         $this->objectMapper = $objectMapper;
         $this->objectFetcher = $objectFetcher;
         $this->storage = $this->objectFetcher->getStorage();
@@ -99,7 +102,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $this->configOptions = $configOptions;
         $this->updateConfig();
     }
-    
+
     public function getConfiguration(): ConfigOptions
     {
         return $this->configOptions;
@@ -120,7 +123,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         );
         $this->setConfiguration($defaultConfig);
     }
-    
+
     /**
      * Set a general configuration option by name. Available options are defined on
      * the Objectiphy\Objectiphy\Config\ConfigOptions class.
@@ -134,14 +137,14 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $previousValue = $this->configOptions->setConfigOption($optionName, $value);
         $this->updateConfig();
         if (in_array($optionName, [
-            ConfigOptions::SERIALIZATION_GROUPS,
-            ConfigOptions::HYDRATE_UNGROUPED_PROPERTIES
-        ]) && $value !== $previousValue) {
+                ConfigOptions::SERIALIZATION_GROUPS,
+                ConfigOptions::HYDRATE_UNGROUPED_PROPERTIES
+            ]) && $value !== $previousValue) {
             //We cannot return a cached entity as the property hydration might be wrong
             $this->clearCache();
         }
         $this->setClassName($this->getClassName()); //Ensure we have the right mapping collection for the updated config
-        
+
         return $previousValue;
     }
 
@@ -216,7 +219,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     {
         $this->pagination = $pagination;
     }
-    
+
     public function getPagination(): ?PaginationInterface
     {
         return $this->pagination;
@@ -228,6 +231,26 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     public function setOrderBy(array $orderBy): void
     {
         $this->orderBy = $orderBy;
+    }
+
+    /**
+     * @deprecated
+     * You can use this to modify low-level queries immediately before execution, but only if
+     * the storage mechanism allows it (it is not part of the interface, so storage classes
+     * are not obliged to support this method - the default one does, for backward compatibility
+     * purposes only).
+     * Don't use this unless you absolutely have no other choice!
+     * @param QueryInterceptorInterface $queryInterceptor
+     */
+    public function setInterceptor(?QueryInterceptorInterface $queryInterceptor = null)
+    {
+        $this->queryInterceptor = $queryInterceptor;
+        if (method_exists($this->getStorage(), 'setInterceptor')) {
+            $this->getStorage()->setInterceptor($queryInterceptor);
+            if (method_exists($this->getExplanation(), 'setInterceptor')) {
+                $this->getExplanation()->setInterceptor($queryInterceptor);
+            }
+        }
     }
 
     /**
@@ -813,7 +836,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $this->setClassName($query->getClassName());
         }
         $this->assertClassNameSet();
-
+        if (isset($this->queryInterceptor)) {
+            $this->queryInterceptor->setCriteria($query);
+        }
+        
         return $this->objectFetcher->executeFind($query);
     }
 

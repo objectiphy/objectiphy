@@ -44,7 +44,7 @@ class SqlDeleterMySql implements SqlDeleterInterface
     public function getDeleteSql(DeleteQueryInterface $query): string
     {
         $this->stringReplacer->prepareReplacements($query, $this->options->mappingCollection);
-        $sql = "DELETE FROM \n" . $this->stringReplacer->replaceNames((string) $query->getDelete()) . "\n";
+        $sql = "/* delete */\nDELETE FROM \n" . $this->stringReplacer->replaceNames((string) $query->getDelete()) . "\n";
         $sql .= $this->joinProvider->getJoins($query);
         $sql = trim($sql) . $this->whereProvider->getWhere($query, $this->options->mappingCollection);
         $sql .= $this->whereProvider->getHaving($query, $this->options->mappingCollection);
