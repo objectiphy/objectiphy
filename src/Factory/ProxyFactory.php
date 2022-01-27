@@ -154,6 +154,7 @@ final class ProxyFactory
      */
     public function clearProxyCache(): void
     {
+        clearstatcache();
         if (file_exists($this->cacheDirectory)) {
             $proxies = array_diff(scandir($this->cacheDirectory), ['.', '..']);
             foreach ($proxies as $proxy) {
@@ -161,7 +162,6 @@ final class ProxyFactory
                     unlink($this->cacheDirectory . DIRECTORY_SEPARATOR . $proxy);
                 }
             }
-            clearstatcache();
         }
     }
 
