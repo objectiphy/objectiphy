@@ -371,6 +371,16 @@ final class ObjectBinder
                 if ($relationship->getTargetProperty()) { //Not joining to single primary key
                     $sourceJoinColumns = explode(',', $relationship->sourceJoinColumn) ?? [];
                     $targetProperties = explode(',', $relationship->getTargetProperty()) ?? [];
+                    if (count($sourceJoinColumns) != count($targetProperties)) {
+                        $message = sprintf(
+                            'Count of source columns and target properties does not match for relationship %1$s::%2$s (source: %3$s; target: %4$s)',
+                            $relationshipMapping->className,
+                            $relationshipMapping->propertyName,
+                            $relationship->sourceJoinColumn,
+                            $relationship->getTargetProperty()
+                        );
+                        throw new MappingException($message);
+                    }
                     foreach ($targetProperties as $index => $targetProperty) {
                         $sourceProperty = $mappingCollection->getPropertyByColumn(
                             $sourceJoinColumns[$index],

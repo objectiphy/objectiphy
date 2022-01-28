@@ -656,6 +656,6 @@ final class ObjectMapper
             }
         }
 
-        return implode(',', $properties);
+        return implode(',', array_unique($properties));
     }
 }
