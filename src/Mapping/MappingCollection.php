@@ -192,6 +192,7 @@ class MappingCollection
     public function setPrimaryTableMapping(Table $table): void
     {
         $this->table = $table;
+        $this->classes[$this->entityClassName] = $table;
     }
 
     public function getPrimaryTableMapping(): Table
