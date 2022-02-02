@@ -218,6 +218,7 @@ final class ObjectBinder
     ): bool {
         $valueFound = false;
         foreach ($this->mappingCollection->getPropertyMappings($parents) as $propertyMapping) {
+            $useLateBindingForThisProperty = $useLateBinding;
             $value = null;
             if ($propertyMapping->getChildClassName()) {
                 $valueFound = boolval($value = $this->knownValues[$propertyMapping->propertyName] ?? null);
@@ -240,9 +241,9 @@ final class ObjectBinder
                     if ($this->configOptions->serializationGroups
                         && !$this->mappingCollection->isPropertyFetchable($propertyMapping)
                     ) {
-                        $useLateBinding = false; //No point lazy loading something that we don't want to serialize
+                        $useLateBindingForThisProperty = false; //No point lazy loading something that we don't want to serialize
                     }
-                    if ($useLateBinding) {
+                    if ($useLateBindingForThisProperty) {
                         $closure = $this->createLateBoundClosure($propertyMapping, $row, $knownValues);
                         $valueFound = $closure instanceof \Closure;
                         if ($valueFound) {
