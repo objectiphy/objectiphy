@@ -297,7 +297,7 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
             $doctrineEmbedded = $this->annotationReader->getPropertyAnnotation($reflectionProperty, Embedded::class);
             $wasMapped = $wasMapped || $doctrineEmbedded;
             $relationship->isEmbedded = boolval($doctrineEmbedded ?? $relationship->isEmbedded);
-            $relationship->embeddedColumnPrefix = strval($doctrineEmbedded->columnPrefix ?? $relationship->embeddedColumnPrefix);
+            $relationship->embeddedColumnPrefix = ($doctrineEmbedded->columnPrefix ?? false) ? strval($doctrineEmbedded->columnPrefix) : $relationship->embeddedColumnPrefix;
             $relationship->childClassName = $doctrineEmbedded->class ?? $relationship->childClassName;
         }
     }
