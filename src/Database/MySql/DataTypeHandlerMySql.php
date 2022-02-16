@@ -151,7 +151,7 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
                 break;
             case 'bool':
             case 'boolean':
-                $valueToSet = $value ? (in_array(strtolower($value), ['false', '0']) ? false : true) : false;
+                $valueToSet = $value ? (in_array(strtolower(strval($value)), ['false', '0']) ? false : true) : false;
                 $valueSettable = true;
                 break;
             case 'string':
