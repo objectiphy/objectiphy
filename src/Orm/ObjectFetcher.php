@@ -34,7 +34,7 @@ final class ObjectFetcher
     private FindOptions $options;
     private ConfigOptions $configOptions;
     private ExplanationInterface $explanation;
-    
+
     public function __construct(
         SqlSelectorInterface $sqlSelector,
         ObjectMapper $objectMapper,
@@ -103,7 +103,7 @@ final class ObjectFetcher
         if (!is_iterable($pkValues)) {
             $pkValues = [$pkValues];
         }
-        
+
         return $this->entityTracker->getEntity($className, $pkValues);
     }
 
@@ -113,7 +113,7 @@ final class ObjectFetcher
      * @throws ObjectiphyException
      * @throws \ReflectionException|\Throwable
      */
-    public function executeFind(SelectQueryInterface $query) 
+    public function executeFind(SelectQueryInterface $query)
     {
         $this->validate();
         $this->options->mappingCollection->setGroups(
@@ -123,7 +123,7 @@ final class ObjectFetcher
         $queryClass = $query->getFrom();
         if ($queryClass && strpos($queryClass, '`') === false) { //No explicit table specified
             $originalClass = $this->getClassName();
-            $this->setClassName($query->getFrom());            
+            $this->setClassName($query->getFrom());
         }
         if ($this->options->scalarProperty) {
             $query->setSelect(new FieldExpression($this->options->scalarProperty));
@@ -190,7 +190,7 @@ final class ObjectFetcher
     public function fetchValues(string $sql, array $params = null): array
     {
         $this->storage->executeQuery($sql, $params ?: []);
-        if ($this->options->indexBy) {
+        if ($this->options->indexBy ?? false) {
             $values = $this->storage->fetchResults();
             return $values ? $this->indexValues($values, array_key_first($values[0])) : $values;
         } else {
@@ -209,7 +209,7 @@ final class ObjectFetcher
     {
         $this->storage->executeQuery($sql, $params ?: []);
         $row = $this->storage->fetchResult();
-        if ($this->options->bindToEntities) {
+        if ($this->options->bindToEntities ?? false) {
             $className = $this->getClassName();
             $result = $row ? $this->objectBinder->bindRowToEntity($row, $className) : null;
         } else {
@@ -230,7 +230,7 @@ final class ObjectFetcher
     {
         $this->storage->executeQuery($sql, $params ?: []);
         $rows = $this->storage->fetchResults();
-        if ($rows && $this->options->bindToEntities) {
+        if ($rows && $this->options->bindToEntities ?? false) {
             $result = $this->objectBinder->bindRowsToEntities($rows, $this->getClassName(), $this->options->indexBy);
         } else {
             $result = $this->indexValues($rows);
@@ -268,8 +268,7 @@ final class ObjectFetcher
     {
         $storage = clone($this->storage); //In case further queries happen before we iterate
         $storage->executeQuery($sql, $params ?: [], true);
-
-        if ($this->options->bindToEntities) {
+        if ($this->options->bindToEntities ?? false) {
             $result = new IterableResult($sql, $params ?: [], $storage, $this->objectBinder, $this->getClassName());
         } else {
             $result = new IterableResult($sql, $params ?: [], $storage);
@@ -312,7 +311,7 @@ final class ObjectFetcher
                 }
             }
         }
-        
+
         //If select part is populated and has no pure property paths, we cannot bind to entities
         $selectCount = count($query->getSelect());
         $hasPureProperties = false;
@@ -335,7 +334,7 @@ final class ObjectFetcher
             'bindToEntities' => !$selectCount || $hasPureProperties,
             'scalarProperty' => $scalarProperty,
         ]);
-        
+
         return $findOptions;
     }
 
