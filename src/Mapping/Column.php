@@ -11,6 +11,7 @@ namespace Objectiphy\Objectiphy\Mapping;
  * @Annotation
  * @Target("PROPERTY")
  */
+#[Attribute(\Attribute::TARGET_PROPERTY)]
 class Column extends ObjectiphyAnnotation
 {
     /** @var string Name of column. */

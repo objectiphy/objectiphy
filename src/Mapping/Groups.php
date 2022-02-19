@@ -12,6 +12,7 @@ namespace Objectiphy\Objectiphy\Mapping;
  * @Annotation
  * @Target("PROPERTY")
  */
+#[Attribute(\Attribute::TARGET_PROPERTY)]
 class Groups
 {
     /** @var string[] Names of groups */

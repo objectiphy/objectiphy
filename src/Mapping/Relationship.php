@@ -15,6 +15,7 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
  * @Annotation
  * @Target("PROPERTY")
  */
+#[Attribute(\Attribute::TARGET_PROPERTY)]
 class Relationship extends ObjectiphyAnnotation
 {
     public const UNDEFINED = 'undefined';

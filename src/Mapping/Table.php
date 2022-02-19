@@ -12,6 +12,7 @@ namespace Objectiphy\Objectiphy\Mapping;
  * @Annotation
  * @Target("CLASS")
  */
+#[Attribute(\Attribute::TARGET_CLASS)]
 class Table extends ObjectiphyAnnotation
 {
     /** @var string Name of database table */
