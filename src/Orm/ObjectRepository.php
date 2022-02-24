@@ -741,7 +741,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
                 $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
                 $pkValues = array_combine($pkProperties, $pkValues);
             }
-            
+
             return $this->proxyFactory->createObjectReferenceProxy($className, $pkValues, $constructorParams);
         } catch (\Throwable $ex) {
             $this->throwException($ex);

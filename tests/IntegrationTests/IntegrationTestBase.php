@@ -45,7 +45,7 @@ class IntegrationTestBase extends TestCase
         $this->objectRepository->resetConfiguration();
         $setupTime = round(microtime(true) - $start, 3);
         echo "Objectiphy setup time: $setupTime seconds.\n";
-        $this->startTime = microtime(true);
+        $this->startTime = round(microtime(true));
         if ($disabledCache) { //Have to re-do this as it will have been forgotten
             $this->disableCache();
         }

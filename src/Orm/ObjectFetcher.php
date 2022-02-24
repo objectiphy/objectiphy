@@ -205,8 +205,11 @@ final class ObjectFetcher
      * @return array|object|null Array of data or entity.
      * @throws ObjectiphyException|\Throwable
      */
-    public function fetchResult(string $sql, array $params = null)
+    public function fetchResult(string $sql, array $params = null, ?bool $bindToEntitiesOverride = null)
     {
+        if (!is_null($bindToEntitiesOverride)) {
+            $this->options->bindToEntities = $bindToEntitiesOverride;
+        }
         $this->storage->executeQuery($sql, $params ?: []);
         $row = $this->storage->fetchResult();
         if ($this->options->bindToEntities ?? false) {
@@ -223,11 +226,18 @@ final class ObjectFetcher
      * Fetch all results for an SQL query, optionally binding to entities.
      * @param string $sql SQL Statement to execute.
      * @param array|null $params Parameter values to bind.
+     * @param bool|null $bindToEntitiesOverride For backward compatibility only.
      * @return array Array of arrays of data or array of entities.
      * @throws MappingException|\Throwable
      */
-    public function fetchResults(string $sql, array $params = null): array
+    public function fetchResults(string $sql, array $params = null, ?string $keyProperty = null, ?bool $bindToEntitiesOverride = null): array
     {
+        if (!is_null($keyProperty)) {
+            $this->options->indexBy = $keyProperty;
+        }
+        if (!is_null($bindToEntitiesOverride)) {
+            $this->options->bindToEntities = $bindToEntitiesOverride;
+        }
         $this->storage->executeQuery($sql, $params ?: []);
         $rows = $this->storage->fetchResults();
         if ($rows && $this->options->bindToEntities ?? false) {
@@ -264,8 +274,11 @@ final class ObjectFetcher
      * @param array|null $params Parameter values to bind.
      * @return IterableResult A result that can be iterated with foreach.
      */
-    public function fetchIterableResult(string $sql, array $params = null): IterableResult
+    public function fetchIterableResult(string $sql, array $params = null, ?bool $bindToEntitiesOverride = null): IterableResult
     {
+        if (!is_null($bindToEntitiesOverride)) {
+            $this->options->bindToEntities = $bindToEntitiesOverride;
+        }
         $storage = clone($this->storage); //In case further queries happen before we iterate
         $storage->executeQuery($sql, $params ?: [], true);
         if ($this->options->bindToEntities ?? false) {
