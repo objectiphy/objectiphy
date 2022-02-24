@@ -735,9 +735,13 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     ): ?ObjectReferenceInterface {
         try {
             if (array_key_first($pkValues) === 0) { //Key property name(s) not specified - look them up
+                if (!isset($this->mappingCollection)) {
+                    $this->setClassName($className);
+                }
                 $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
                 $pkValues = array_combine($pkProperties, $pkValues);
             }
+            
             return $this->proxyFactory->createObjectReferenceProxy($className, $pkValues, $constructorParams);
         } catch (\Throwable $ex) {
             $this->throwException($ex);
