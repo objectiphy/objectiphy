@@ -99,7 +99,7 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
                 }
             }
         }
-        
+
         return is_scalar($value);
     }
 
@@ -119,13 +119,13 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
             case 'datetime':
             case 'date':
             case 'date_time':
-                $valueToSet = $value === null ? null : ($value instanceof \DateTimeInterface ? $value : new \DateTime($value));
+                $valueToSet = $value === null ? null : ($value instanceof \DateTimeInterface ? $value : new \DateTime($value ?? ''));
                 $valueSettable = true;
                 break;
             case 'datetimeimmutable':
             case 'datetime_immutable':
             case 'date_time_immutable':
-                $valueToSet = $value === null ? null : ($value instanceof \DateTimeInterface ? $value : new \DateTimeImmutable($value));
+                $valueToSet = $value === null ? null : ($value instanceof \DateTimeInterface ? $value : new \DateTimeImmutable($value ?? ''));
                 $valueSettable = true;
                 break;
             case 'datetimestring':
@@ -133,7 +133,7 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
             case 'datestring':
             case 'date_string':
                 $format = $format ?: 'Y-m-d H:i:s';
-                $dateValue =  ($value instanceof \DateTimeInterface ? $value : new \DateTime($value));
+                $dateValue =  ($value instanceof \DateTimeInterface ? $value : new \DateTime($value ?? ''));
                 $valueToSet = $dateValue ? $dateValue->format($format) : $value;
                 $valueSettable = true;
                 break;
@@ -155,7 +155,7 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
                 $valueSettable = true;
                 break;
             case 'string':
-                $valueToSet = $format ? sprintf($format, $value) : strval($value);
+                $valueToSet = $format ? sprintf($format, strval($value)) : strval($value);
                 $valueSettable = true;
                 break;
             default:
@@ -171,12 +171,12 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
                 }
                 break;
         }
-        
+
         if ($valueSettable && ($nullable || $value !== null)) {
             $value = $valueToSet;
             return true;
         }
-        
+
         return false;
     }
 
