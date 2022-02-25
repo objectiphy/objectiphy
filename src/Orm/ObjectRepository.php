@@ -85,6 +85,19 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     }
 
     /**
+     * This is not part of the public interface and is only here as a dirty hack for 
+     * backward compatibility purposes. 
+     * @param string $name
+     * @param array $arguments
+     */
+    public function __call(string $name, array $arguments)
+    {
+        if ($name == 'bcGetMappingCollection') {
+            return $this->mappingCollection;
+        }
+    }
+
+    /**
      * For you filthy animals who want access to the PDO object
      * @return StorageInterface
      */
