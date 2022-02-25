@@ -573,9 +573,7 @@ final class ObjectMapper
                     $childGroups
                 );
                 $mappingCollection->addMapping($propertyMapping);
-                if ($propertyMapping->relationship->isManyToMany()) {
-                    $this->nameResolver->resolveColumnName($propertyMapping); //Resolve any many-to-many join columns
-                }
+                $this->nameResolver->resolveColumnName($propertyMapping); //Resolve join columns
             } elseif (!$relationship->targetJoinColumn) {
                 //For lazy loading, we must have the primary key so we can load the child
                 $childPks = $mappingCollection->getPrimaryKeyProperties($relationship->childClassName);
