@@ -249,7 +249,7 @@ class PropertyMapping
             return $this->tableAlias;
         }
         if (empty($this->tableAlias)
-            && count($this->parents) > 0 //No need to alias scalar properties of main entity
+            && (count($this->parents) > 0 || $this->relationship->isScalarJoin()) //No need to alias scalar properties of main entity
             && (strpos($this->column->name, '.') === false || $this->relationship->isScalarJoin())) { //Already mapped to an alias manually, so don't mess
             //Embedded objects use the alias of their parent, anything else gets its own
             $parentPropertyMapping = $this->parentCollection->getPropertyMapping($this->getParentPath());
