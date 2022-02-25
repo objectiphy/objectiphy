@@ -67,8 +67,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         ExplanationInterface       $explanation,
         RepositoryFactoryInterface $repositoryFactory,
         ?ConfigOptions             $configOptions = null
-    )
-    {
+    ) {
         $this->objectMapper = $objectMapper;
         $this->objectFetcher = $objectFetcher;
         $this->storage = $this->objectFetcher->getStorage();
