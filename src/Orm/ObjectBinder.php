@@ -228,7 +228,11 @@ final class ObjectBinder
                 } elseif (!$valueFound && $propertyMapping->isLateBound(false, $row)) {
                     $knownValues = [];
                     if ($propertyMapping->relationship->mappedBy && !$propertyMapping->relationship->isManyToMany()) {
-                        $knownValues[$propertyMapping->relationship->mappedBy] = $entity;
+                        //Make sure the other side expects an object (not just the foreign key value)
+                        $otherSide = $this->mappingCollection->getPropertyMapping($propertyMapping->propertyName . '.' . $propertyMapping->relationship->mappedBy) ?? null;
+                        if ($otherSide && $otherSide->relationship->childClassName == $propertyMapping->className) {
+                            $knownValues[$propertyMapping->relationship->mappedBy] = $entity;
+                        }
                     } elseif (!$propertyMapping->relationship->mappedBy) {
                         $childProperties = $this->mappingCollection->getPropertyExamplesForClass($propertyMapping->getChildClassName());
                         foreach ($childProperties as $childProperty) {
