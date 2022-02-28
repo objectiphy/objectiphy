@@ -293,12 +293,18 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         Relationship &$relationship,
         bool &$wasMapped
     ): void {
+        if ($reflectionProperty->getName() == 'brokerDetails') {
+            $stop = true;
+        }
         if (class_exists('Doctrine\ORM\Mapping\Embedded')) {
             $doctrineEmbedded = $this->annotationReader->getPropertyAnnotation($reflectionProperty, Embedded::class);
             $wasMapped = $wasMapped || $doctrineEmbedded;
             $relationship->isEmbedded = boolval($doctrineEmbedded ?? $relationship->isEmbedded);
             $relationship->embeddedColumnPrefix = ($doctrineEmbedded->columnPrefix ?? false) ? strval($doctrineEmbedded->columnPrefix) : $relationship->embeddedColumnPrefix;
             $relationship->childClassName = $doctrineEmbedded->class ?? $relationship->childClassName;
+            if ($relationship->isEmbedded && $relationship->childClassName) {
+                $relationship->relationshipType = Relationship::ONE_TO_ONE;
+            }
         }
     }
 }
