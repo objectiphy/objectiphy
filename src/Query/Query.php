@@ -51,6 +51,7 @@ abstract class Query implements QueryInterface
     protected array $params = [];
     protected SqlStringReplacer $stringReplacer;
     protected array $pathsUsedInAggregateFunctions = [];
+    protected array $pathsUsedInCriteria = [];
 
     public function setFields(FieldExpression ...$fields): void
     {
@@ -130,7 +131,17 @@ abstract class Query implements QueryInterface
         }
         foreach (array_merge($this->where ?? [], $this->having ?? []) as $where) {
             if ($where instanceof PropertyPathConsumerInterface) {
-                $paths = array_merge($paths, $where->getPropertyPaths());
+                $wherePaths = $where->getPropertyPaths();
+                $paths = array_merge($paths, $wherePaths);
+                foreach ($wherePaths as $wherePath) {
+                    if (!in_array($wherePath, $this->pathsUsedInCriteria)) {
+                        $this->pathsUsedInCriteria[] = $wherePath;
+                        while (strpos($wherePath, '.') !== false) {
+                            $wherePath = substr($wherePath, 0, strrpos($wherePath, '.') ?: 0);
+                            $this->pathsUsedInCriteria[] = $wherePath;
+                        }
+                    }
+                }
             }
         }
 
@@ -188,7 +199,8 @@ abstract class Query implements QueryInterface
             $this->mappingCollection = $mappingCollection;
             $relationships = $this->getRelationshipsUsed();
             foreach ($relationships as $propertyMapping) {
-                if (in_array($propertyMapping->getPropertyPath(), $this->pathsUsedInAggregateFunctions)) {
+                if (in_array($propertyMapping->getPropertyPath(), $this->pathsUsedInCriteria) ||
+                    in_array($propertyMapping->getPropertyPath(), $this->pathsUsedInAggregateFunctions)) {
                     $propertyMapping->forceEarlyBindingForJoin();
                 }
                 $this->populateRelationshipJoin($propertyMapping);
