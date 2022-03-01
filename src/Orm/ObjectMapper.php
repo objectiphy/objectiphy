@@ -495,7 +495,7 @@ final class ObjectMapper
     {
         $classes = [];
         while ($reflectionClass) {
-            array_unshift($classes, $reflectionClass);
+            $classes[] = $reflectionClass;
             $reflectionClass = $reflectionClass->getParentClass();
         }
 
