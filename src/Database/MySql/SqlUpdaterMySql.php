@@ -122,7 +122,7 @@ class SqlUpdaterMySql implements SqlUpdaterInterface
             $dataType = $propertyMapping ? $propertyMapping->getDataType() : '';
             $format = $propertyMapping ? $propertyMapping->column->format : '';
             $this->stringReplacer->parseDelimiters = $parseDelimiters;
-            $assignmentString .= $this->stringReplacer->getPersistenceValueForField($query, $assignment->getValue(), $this->options->mappingCollection, $dataType, $format, $parseDelimiters);
+            $assignmentString .= $this->stringReplacer->getPersistenceValueForField($query, $assignment->getValue(), $this->options->mappingCollection, $dataType, $format);
             $this->stringReplacer->parseDelimiters = true; //Ready for the next call
             $assignments[] = $assignmentString;
         }
