@@ -393,8 +393,9 @@ abstract class Query implements QueryInterface
             } else {
                 $target = $this->stringReplacer->delimit($alias . '.' . trim($targetColumn));
             }
+            $fullColumn = (strpos($source, '.') === false ? $propertyMapping->getTableAlias(false, true, true) . '.' : '') . $source;
             $ons[] = new CriteriaExpression(
-                new FieldExpression($this->stringReplacer->delimit($propertyMapping->getTableAlias(false, true, true) . '.' . $source)),
+                new FieldExpression($this->stringReplacer->delimit($fullColumn)),
                 $propertyMapping->getAlias(),
                 QB::EQ,
                 $target

@@ -299,6 +299,11 @@ class PropertyMapping
             $column = $this->column->name;
         }
 
+        //if (strpos(str_replace('`', '', $column), str_replace('`', '', $table)) === 0) {
+        if (strpos($column, '.') !== false) { //Column is already prefixed with the table name
+            $table = '';
+        }
+
         return $column ? trim($table . '.' . $column, '.') : '';
     }
 

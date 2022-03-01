@@ -59,12 +59,13 @@ class SqlUpdaterMySql implements SqlUpdaterInterface
         $this->stringReplacer->prepareReplacements($query, $this->options->mappingCollection);
         $sql = "/* insert */\nINSERT INTO \n";
         $sql .= $this->stringReplacer->replaceNames($query->getInsert());
-        $columns = $this->extractColumns($query->getAssignments()[0], $query);
+        $excludedAssignments = [];
+        $columns = $this->extractColumns($query->getAssignments()[0], $query, $excludedAssignments);
         $sql .= " \n(" . implode(',', $columns) . ") \n/* insert values */\nVALUES \n";
         foreach ($query->getAssignments() as $index => $assignments) {
             $sql .= $index > 0 ? ", \n" : '';
             $this->stringReplacer->parseDelimiters = $parseDelimiters;
-            $sql .= "(" . implode(',', $this->extractValues($assignments, $query)) . ")";
+            $sql .= "(" . implode(',', $this->extractValues($assignments, $query, $excludedAssignments)) . ")";
             $this->stringReplacer->parseDelimiters = true; //Ready for the next call
         }
         if ($replaceExisting) {
@@ -115,50 +116,61 @@ class SqlUpdaterMySql implements SqlUpdaterInterface
     private function constructAssignmentSql(UpdateQueryInterface $query, bool $parseDelimiters = true)
     {
         $assignments = [];
+        $columns = [];
         foreach ($query->getAssignments() as $assignment) {
-            $assignmentString = $this->stringReplacer->getPersistenceValueForField($query, $assignment->getPropertyPath(), $this->options->mappingCollection);
-            $assignmentString .= ' = ';
-            $propertyMapping = $this->options->mappingCollection->getPropertyMapping($assignment->getPropertyPath());
-            $dataType = $propertyMapping ? $propertyMapping->getDataType() : '';
-            $format = $propertyMapping ? $propertyMapping->column->format : '';
-            $this->stringReplacer->parseDelimiters = $parseDelimiters;
-            $assignmentString .= $this->stringReplacer->getPersistenceValueForField($query, $assignment->getValue(), $this->options->mappingCollection, $dataType, $format);
-            $this->stringReplacer->parseDelimiters = true; //Ready for the next call
-            $assignments[] = $assignmentString;
+            $column = $this->stringReplacer->getPersistenceValueForField($query, $assignment->getPropertyPath(), $this->options->mappingCollection);
+            if (!isset($columns[$column])) { //Same column mapped by 2 different properties - first one wins
+                $columns[$column] = 1;
+                $assignmentString = $column . ' = ';
+                $propertyMapping = $this->options->mappingCollection->getPropertyMapping($assignment->getPropertyPath());
+                $dataType = $propertyMapping ? $propertyMapping->getDataType() : '';
+                $format = $propertyMapping ? $propertyMapping->column->format : '';
+                $this->stringReplacer->parseDelimiters = $parseDelimiters;
+                $assignmentString .= $this->stringReplacer->getPersistenceValueForField($query, $assignment->getValue(), $this->options->mappingCollection, $dataType, $format);
+                $this->stringReplacer->parseDelimiters = true; //Ready for the next call
+                $assignments[] = $assignmentString;
+            }
         }
 
         return "    " . $this->stringReplacer->replaceNames(implode(",\n    ", $assignments)) . "\n";
     }
 
-    private function extractColumns(array $assignments, InsertQueryInterface $query)
+    private function extractColumns(array $assignments, InsertQueryInterface $query, array &$excludedAssignments)
     {
         $columns = [];
-        foreach ($assignments as $assignment) {
-            $columns[] = $this->stringReplacer->getPersistenceValueForField(
+        foreach ($assignments as $index => $assignment) {
+            $column = $this->stringReplacer->getPersistenceValueForField(
                 $query,
                 $assignment->getPropertyPath(),
                 $this->options->mappingCollection
             );
+            if (in_array($column, $columns)) {
+                $excludedAssignments[] = $index;
+            } else {
+                $columns[] = $column;
+            }
         }
 
         return $columns;
     }
 
-    private function extractValues(array $assignments, InsertQueryInterface $query)
+    private function extractValues(array $assignments, InsertQueryInterface $query, array $excludedAssigments)
     {
         $values = [];
-        foreach ($assignments as $assignment) {
-            $propertyMapping = $this->options->mappingCollection->getPropertyMapping($assignment->getPropertyPath());
-            $dataType = $propertyMapping ? $propertyMapping->getDataType() : '';
-            $format = $propertyMapping ? $propertyMapping->column->format : '';
-            $assignmentString = $this->stringReplacer->getPersistenceValueForField(
-                $query,
-                $assignment->getValue(),
-                $this->options->mappingCollection,
-                $dataType,
-                $format
-            );
-            $values[] = $assignmentString;
+        foreach ($assignments as $index => $assignment) {
+            if (!in_array($index, $excludedAssigments)) {
+                $propertyMapping = $this->options->mappingCollection->getPropertyMapping($assignment->getPropertyPath());
+                $dataType = $propertyMapping ? $propertyMapping->getDataType() : '';
+                $format = $propertyMapping ? $propertyMapping->column->format : '';
+                $assignmentString = $this->stringReplacer->getPersistenceValueForField(
+                    $query,
+                    $assignment->getValue(),
+                    $this->options->mappingCollection,
+                    $dataType,
+                    $format
+                );
+                $values[] = $assignmentString;
+            }
         }
 
         return $values;
