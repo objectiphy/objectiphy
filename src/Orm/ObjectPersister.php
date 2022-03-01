@@ -189,13 +189,13 @@ final class ObjectPersister implements TransactionInterface
         $this->objectMapper->addExtraClassMappings($this->getClassName(), $query);
         $query->finalise($this->options->mappingCollection, $this->stringReplacer);
         if ($query instanceof UpdateQueryInterface) {
-            $sql = $this->sqlUpdater->getUpdateSql($query, $this->options->replaceExisting);
+            $sql = $this->sqlUpdater->getUpdateSql($query, $this->options->replaceExisting, $this->options->parseDelimiters);
             $this->explanation->addQuery($query, $sql, $this->options->mappingCollection, $this->config);
             if ($this->storage->executeQuery($sql, $query->getParams())) {
                 $updateCount += $this->storage->getAffectedRecordCount();
             }
         } elseif ($query instanceof InsertQueryInterface) {
-            $sql = $this->sqlUpdater->getInsertSql($query, $options->replaceExisting);
+            $sql = $this->sqlUpdater->getInsertSql($query, $options->replaceExisting, $this->options->parseDelimiters);
             $this->explanation->addQuery($query, $sql, $this->options->mappingCollection, $this->config);
             if ($this->storage->executeQuery($sql, $query->getParams())) {
                 $insertCount += $this->storage->getAffectedRecordCount();
@@ -305,7 +305,7 @@ final class ObjectPersister implements TransactionInterface
         //Even if there are no rows, still finalise in cases children need relationship mappings afterwards
         $updateQuery->finalise($this->options->mappingCollection, $this->stringReplacer, $className, $rows);
         if ($rows) {
-            $sql = $this->sqlUpdater->getUpdateSql($updateQuery, $this->options->replaceExisting);
+            $sql = $this->sqlUpdater->getUpdateSql($updateQuery, $this->options->replaceExisting, $this->options->parseDelimiters);
             $this->explanation->addQuery($updateQuery, $sql, $this->options->mappingCollection, $this->config);
             if ($this->storage->executeQuery($sql, $updateQuery->getParams())) {
                 $updateCount += $this->storage->getAffectedRecordCount();
@@ -350,7 +350,7 @@ final class ObjectPersister implements TransactionInterface
         //Even if there is no row, still finalise in cases children need relationship mappings afterwards
         $insertQuery->finalise($this->options->mappingCollection, $this->stringReplacer, $this->getClassName(), $row);
         if ($row) {
-            $sql = $this->sqlUpdater->getInsertSql($insertQuery, $this->options->replaceExisting);
+            $sql = $this->sqlUpdater->getInsertSql($insertQuery, $this->options->replaceExisting, $this->options->parseDelimiters);
             $this->explanation->addQuery($insertQuery, $sql, $this->options->mappingCollection, $this->config);
             if ($this->storage->executeQuery($sql, $insertQuery->getParams())) {
                 $lastInsertId = $this->storage->getLastInsertId();

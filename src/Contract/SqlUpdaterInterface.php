@@ -21,16 +21,18 @@ interface SqlUpdaterInterface
     /**
      * Get the SQL necessary to perform the insert.
      * @param InsertQueryInterface $query
-     * @param bool $replace Whether to update existing record if it already exists.
+     * @param bool $replaceExisting Whether to update existing record if it already exists.
+     * @param bool $parseDelimiters Whether or not to look for delimiters in values (if false, all values are literal).
      * @return string A query to execute for inserting the record.
      */
-    public function getInsertSql(InsertQueryInterface $query, bool $replace = false): string;
+    public function getInsertSql(InsertQueryInterface $query, bool $replaceExisting = false, bool $parseDelimiters = true): string;
 
     /**
      * Get the SQL necessary to perform the update.
      * @param UpdateQueryInterface $query
-     * @param bool $replaceExisting
+     * @param bool $replaceExisting Whether to update existing record if it already exists.
+     * @param bool $parseDelimiters Whether or not to look for delimiters in values (if false, all values are literal).
      * @return string A query to execute for updating the record(s).
      */
-    public function getUpdateSql(UpdateQueryInterface $query, bool $replaceExisting = false): string;
+    public function getUpdateSql(UpdateQueryInterface $query, bool $replaceExisting = false, bool $parseDelimiters = true): string;
 }

@@ -14,6 +14,7 @@ class SaveOptions
     public MappingCollection $mappingCollection;
     public bool $saveChildren = true;
     public bool $replaceExisting = false;
+    public bool $parseDelimiters = true;
     
     public function __construct(MappingCollection $mappingCollection)
     {

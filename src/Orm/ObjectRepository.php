@@ -545,7 +545,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $saveChildren = $saveChildren ?? $this->configOptions->saveChildrenByDefault;
             $saveOptions = SaveOptions::create($this->mappingCollection, [
                 'saveChildren' => $saveChildren,
-                'replaceExisting' => boolval($replace)
+                'replaceExisting' => boolval($replace),
+                'parseDelimiters' => false,
             ]);
             $this->beginTransaction();
             $return = $this->objectPersister->saveEntity($entity, $saveOptions, $insertCount, $updateCount, $deleteCount, true);
@@ -590,11 +591,13 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $this->setClassName(ObjectHelper::getObjectClassName(reset($entities)));
             $saveOptions = SaveOptions::create($this->mappingCollection, [
                 'saveChildren' => $saveChildren,
-                'replaceExisting' => $replace
+                'replaceExisting' => $replace,
+                'parseDelimiters' => false
             ]);
             $this->beginTransaction();
             $return = $this->objectPersister->saveEntities(
-                $entities, $saveOptions,
+                $entities,
+                $saveOptions,
                 $insertCount,
                 $updateCount,
                 $deleteCount
