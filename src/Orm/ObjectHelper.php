@@ -2,6 +2,7 @@
 
 namespace Objectiphy\Objectiphy\Orm;
 
+use Doctrine\Persistence\Proxy;
 use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
@@ -156,7 +157,11 @@ class ObjectHelper
     public static function getObjectClassName(?object $object): string
     {
         $className = '';
-        if ($object instanceof EntityProxyInterface || $object instanceof ObjectReferenceInterface) {
+        if ($object instanceof EntityProxyInterface
+            || $object instanceof ObjectReferenceInterface
+            || is_a($object, 'Doctrine\Persistence\Proxy', true)
+            || is_a($object, 'Doctrine\Common\Proxy\Proxy', true)
+        ) {
             $className = get_parent_class($object);
             if (!$className && $object instanceof ObjectReferenceInterface) {
                 $className = $object->getClassName();
