@@ -117,12 +117,23 @@ class SqlUpdaterMySql implements SqlUpdaterInterface
     {
         $assignments = [];
         $columns = [];
+        $keyColumns = [];
+        //In case two properties point to the same column, and one of them is the pk, ignore the non-pk one
+        foreach ($query->getWhere() as $criteriaExpression) {
+            if ($criteriaExpression instanceof \Objectiphy\Objectiphy\Query\CriteriaExpression) {
+                $keyColumns[] = $this->stringReplacer->getPersistenceValueForField($query, $criteriaExpression->property->getPropertyPath(), $this->options->mappingCollection);
+            }
+        }
+
         foreach ($query->getAssignments() as $assignment) {
             $column = $this->stringReplacer->getPersistenceValueForField($query, $assignment->getPropertyPath(), $this->options->mappingCollection);
             if (!isset($columns[$column])) { //Same column mapped by 2 different properties - first one wins
+                $propertyMapping = $this->options->mappingCollection->getPropertyMapping($assignment->getPropertyPath());
+                if ($propertyMapping && !$propertyMapping->column->isPrimaryKey && in_array($column, $keyColumns)) {
+                    continue;
+                }
                 $columns[$column] = 1;
                 $assignmentString = $column . ' = ';
-                $propertyMapping = $this->options->mappingCollection->getPropertyMapping($assignment->getPropertyPath());
                 $dataType = $propertyMapping ? $propertyMapping->getDataType() : '';
                 $format = $propertyMapping ? $propertyMapping->column->format : '';
                 $this->stringReplacer->parseDelimiters = $parseDelimiters;
