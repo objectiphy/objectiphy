@@ -43,14 +43,14 @@ class Explanation implements ExplanationInterface
      */
     private array $config = [];
 
-    private QueryInterceptorInterface $queryInterceptor;
+    private ?QueryInterceptorInterface $queryInterceptor = null;
 
     public function __construct(SqlStringReplacer $stringReplacer)
     {
         $this->stringReplacer = $stringReplacer;
     }
 
-    public function setInterceptor(QueryInterceptorInterface $queryInterceptor)
+    public function setInterceptor(?QueryInterceptorInterface $queryInterceptor = null)
     {
         $this->queryInterceptor = $queryInterceptor;
     }
