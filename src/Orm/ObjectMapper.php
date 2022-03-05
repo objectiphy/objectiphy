@@ -264,6 +264,7 @@ final class ObjectMapper
         $this->nameResolver->resolveTableName($reflectionClass, $table);
         if ($exceptionIfUnmapped && !$tableIsMapped) {
             $message = 'Cannot populate mapping collection for class %1$s as there is no table mapping specified. Did you forget to add a Table annotation to your entity class?';
+            $table = $this->mappingProvider->getTableMapping($reflectionClass, $tableIsMapped);
             throw new ObjectiphyException(sprintf($message, $reflectionClass->getName()));
         }
 
@@ -494,7 +495,7 @@ final class ObjectMapper
     {
         $classes = [];
         while ($reflectionClass) {
-            array_unshift($classes, $reflectionClass);
+            $classes[] = $reflectionClass;
             $reflectionClass = $reflectionClass->getParentClass();
         }
 
@@ -573,9 +574,7 @@ final class ObjectMapper
                     $childGroups
                 );
                 $mappingCollection->addMapping($propertyMapping);
-                if ($propertyMapping->relationship->isManyToMany()) {
-                    $this->nameResolver->resolveColumnName($propertyMapping); //Resolve any many-to-many join columns
-                }
+                $this->nameResolver->resolveColumnName($propertyMapping); //Resolve join columns
             } elseif (!$relationship->targetJoinColumn) {
                 //For lazy loading, we must have the primary key so we can load the child
                 $childPks = $mappingCollection->getPrimaryKeyProperties($relationship->childClassName);

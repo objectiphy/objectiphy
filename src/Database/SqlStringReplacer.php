@@ -20,6 +20,8 @@ use Objectiphy\Objectiphy\Orm\ObjectMapper;
  */
 class SqlStringReplacer
 {
+    public bool $parseDelimiters = true;
+
     private ObjectMapper $objectMapper;
     private DataTypeHandlerInterface $dataTypeHandler;
     private array $objectNames = [];

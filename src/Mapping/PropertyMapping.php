@@ -186,12 +186,12 @@ class PropertyMapping
     {
         return $this->getPropertyPath($separator, false);
     }
-    
+
     public function isScalarValue(): bool
     {
         return !$this->relationship->isDefined() || $this->relationship->isScalarJoin();
     }
-    
+
     public function getChildClassName(): string
     {
         return $this->relationship->childClassName;
@@ -211,8 +211,8 @@ class PropertyMapping
         $className = $this->className;
         $parentProperty = $this->parentCollection->getPropertyMapping($this->getParentPath());
         if ($parentProperty && (
-            $parentProperty->relationship->isEmbedded
-            || $this->relationship->isScalarJoin()
+                $parentProperty->relationship->isEmbedded
+                || $this->relationship->isScalarJoin()
             )
         ) {
             $className = $parentProperty->className . ':';
@@ -224,7 +224,7 @@ class PropertyMapping
 
         return $className . ':' . $this->propertyName;
     }
-    
+
     /**
      * Try to use a nice alias with underscores. If there are clashes (due to property names that already contain
      * underscores), we have to get ugly and use an alternative separator that is never likely to appear in a property
@@ -249,7 +249,7 @@ class PropertyMapping
             return $this->tableAlias;
         }
         if (empty($this->tableAlias)
-            && count($this->parents) > 0 //No need to alias scalar properties of main entity
+            && (count($this->parents) > 0 || $this->relationship->isScalarJoin()) //No need to alias scalar properties of main entity
             && (strpos($this->column->name, '.') === false || $this->relationship->isScalarJoin())) { //Already mapped to an alias manually, so don't mess
             //Embedded objects use the alias of their parent, anything else gets its own
             $parentPropertyMapping = $this->parentCollection->getPropertyMapping($this->getParentPath());
@@ -265,7 +265,7 @@ class PropertyMapping
             }
         }
         $tableAlias = $this->tableAlias;
-        
+
         if ($forJoin) {
             if (!$tableAlias && $this->relationship->childClassName && !$this->relationship->isScalarJoin()) {
                 $tableAlias = 'obj_alias_' . $this->propertyName;
@@ -297,6 +297,11 @@ class PropertyMapping
             $column = $this->getShortColumnName(false);
         } else {
             $column = $this->column->name;
+        }
+
+        //if (strpos(str_replace('`', '', $column), str_replace('`', '', $table)) === 0) {
+        if (strpos($column, '.') !== false) { //Column is already prefixed with the table name
+            $table = '';
         }
 
         return $column ? trim($table . '.' . $column, '.') : '';
@@ -386,7 +391,7 @@ class PropertyMapping
                     return true;
                 }
             }
-        } 
+        }
 
         return false;
     }
@@ -511,6 +516,8 @@ class PropertyMapping
         $parentProperty = $this->parentCollection->getPropertyMapping($this->getParentPath());
         if ($parentProperty && $parentProperty->relationship->isEmbedded) {
             $table = $parentProperty->getTableAlias() ?: $parentProperty->table->name;
+        } elseif ($this->relationship->isScalarJoin()) {
+            $table = $this->table->name;
         } else {
             $table = $this->getTableAlias() ?: $this->table->name;
         }

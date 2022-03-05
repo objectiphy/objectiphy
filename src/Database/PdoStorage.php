@@ -19,14 +19,14 @@ class PdoStorage implements StorageInterface, TransactionInterface
     private \PDOStatement $stm;
     private bool $transactionStarted = false;
     private int $transactionNestingLevel = 0;
-    private QueryInterceptorInterface $queryInterceptor;
+    private ?QueryInterceptorInterface $queryInterceptor;
 
     public function __construct(\PDO $pdo)
     {
         $this->pdo = $pdo;
     }
 
-    public function setInterceptor(QueryInterceptorInterface $queryInterceptor)
+    public function setInterceptor(?QueryInterceptorInterface $queryInterceptor = null)
     {
         $this->queryInterceptor = $queryInterceptor;
     }

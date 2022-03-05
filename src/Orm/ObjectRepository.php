@@ -67,8 +67,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         ExplanationInterface       $explanation,
         RepositoryFactoryInterface $repositoryFactory,
         ?ConfigOptions             $configOptions = null
-    )
-    {
+    ) {
         $this->objectMapper = $objectMapper;
         $this->objectFetcher = $objectFetcher;
         $this->storage = $this->objectFetcher->getStorage();
@@ -83,6 +82,19 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $configOptions = new ConfigOptions();
         }
         $this->setConfiguration($configOptions);
+    }
+
+    /**
+     * This is not part of the public interface and is only here as a dirty hack for 
+     * backward compatibility purposes. 
+     * @param string $name
+     * @param array $arguments
+     */
+    public function __call(string $name, array $arguments)
+    {
+        if ($name == 'bcGetMappingCollection') {
+            return $this->mappingCollection;
+        }
     }
 
     /**
@@ -533,7 +545,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $saveChildren = $saveChildren ?? $this->configOptions->saveChildrenByDefault;
             $saveOptions = SaveOptions::create($this->mappingCollection, [
                 'saveChildren' => $saveChildren,
-                'replaceExisting' => boolval($replace)
+                'replaceExisting' => boolval($replace),
+                'parseDelimiters' => false,
             ]);
             $this->beginTransaction();
             $return = $this->objectPersister->saveEntity($entity, $saveOptions, $insertCount, $updateCount, $deleteCount, true);
@@ -578,11 +591,13 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $this->setClassName(ObjectHelper::getObjectClassName(reset($entities)));
             $saveOptions = SaveOptions::create($this->mappingCollection, [
                 'saveChildren' => $saveChildren,
-                'replaceExisting' => $replace
+                'replaceExisting' => $replace,
+                'parseDelimiters' => false
             ]);
             $this->beginTransaction();
             $return = $this->objectPersister->saveEntities(
-                $entities, $saveOptions,
+                $entities,
+                $saveOptions,
                 $insertCount,
                 $updateCount,
                 $deleteCount
@@ -735,9 +750,13 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     ): ?ObjectReferenceInterface {
         try {
             if (array_key_first($pkValues) === 0) { //Key property name(s) not specified - look them up
+                if (!isset($this->mappingCollection)) {
+                    $this->setClassName($className);
+                }
                 $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
                 $pkValues = array_combine($pkProperties, $pkValues);
             }
+
             return $this->proxyFactory->createObjectReferenceProxy($className, $pkValues, $constructorParams);
         } catch (\Throwable $ex) {
             $this->throwException($ex);

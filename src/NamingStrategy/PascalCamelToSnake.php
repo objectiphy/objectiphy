@@ -34,6 +34,6 @@ class PascalCamelToSnake extends ExactMatch implements NamingStrategyInterface
             $converted .= substr($converted, -3) != "_$targetColumnName" ? "_$targetColumnName" : '';
         }
 
-        return $converted;
+        return trim($converted, '_');
     }
 }

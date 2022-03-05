@@ -85,7 +85,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $sql .= $this->getOffset();
 
         if ($this->options->count && strpos($sql, 'SELECT COUNT') === false) { //We have to select all to get the count :(
-            $sql = "/* select count */\nSELECT COUNT(*) FROM (\n$sql\n) subquery";
+            $sql = "/* count */\nSELECT COUNT(*) FROM (\n$sql\n) subquery";
         }
 
         if ($this->disableMySqlCache) {
@@ -217,7 +217,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $sql = '';
         if ($this->options->count && empty($this->queryOverrides)) { //See if we can do a more efficient count
             if (!$this->getGroupBy()) { //If grouping, count must happen using a subquery (see getSelectSql, above)
-                $sql .= "SELECT COUNT(*) ";
+                $sql = "/* count */\nSELECT COUNT(*) \n";
             }
         }
 

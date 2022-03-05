@@ -112,7 +112,14 @@ final class ObjectBinder
         $requiresProxy = $this->mappingCollection->parentHasLateBoundProperties($parents);
         $entity = $this->entityFactory->createEntity($entityClassName, $requiresProxy);
         foreach ($this->knownValues as $property => $value) {
-            ObjectHelper::setValueOnObject($entity, $property, $value);
+            try {
+                ObjectHelper::setValueOnObject($entity, $property, $value);
+            } catch (\Throwable $ex) {
+                //The entity can't accept our cached known value, perhaps due to expecting the foreign key
+                //value rather than the whole entity (although that should be rare, as we check for it in
+                //our known mapping definitions, so would only happen if we went passed maximum depth or
+                //something) so just ignore the error and hydrate the value as normal.
+            }
         }
         $propertiesMapped = $this->bindScalarProperties($entity, $row, $parents);
         if ($propertiesMapped && !$this->getEntityFromLocalCache($entityClassName, $entity)) {
@@ -228,7 +235,11 @@ final class ObjectBinder
                 } elseif (!$valueFound && $propertyMapping->isLateBound(false, $row)) {
                     $knownValues = [];
                     if ($propertyMapping->relationship->mappedBy && !$propertyMapping->relationship->isManyToMany()) {
-                        $knownValues[$propertyMapping->relationship->mappedBy] = $entity;
+                        //Make sure the other side expects an object (not just the foreign key value)
+                        $otherSide = $this->mappingCollection->getPropertyMapping($propertyMapping->propertyName . '.' . $propertyMapping->relationship->mappedBy) ?? null;
+                        if (!$otherSide || $otherSide->relationship->childClassName == $propertyMapping->className) {
+                            $knownValues[$propertyMapping->relationship->mappedBy] = $entity;
+                        }
                     } elseif (!$propertyMapping->relationship->mappedBy) {
                         $childProperties = $this->mappingCollection->getPropertyExamplesForClass($propertyMapping->getChildClassName());
                         foreach ($childProperties as $childProperty) {
