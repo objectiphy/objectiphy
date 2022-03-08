@@ -250,7 +250,7 @@ class PropertyMapping
         }
         if (empty($this->tableAlias)
             && (count($this->parents) > 0 || $this->relationship->isScalarJoin()) //No need to alias scalar properties of main entity
-            && (strpos($this->column->name, '.') === false || $this->relationship->isScalarJoin())) { //Already mapped to an alias manually, so don't mess
+            /*&& (strpos($this->column->name, '.') === false || $this->relationship->isScalarJoin())*/) { //Already mapped to an alias manually, so don't mess
             //Embedded objects use the alias of their parent, anything else gets its own
             $parentPropertyMapping = $this->parentCollection->getPropertyMapping($this->getParentPath());
             if ($this->relationship->isScalarJoin()) { //Each property with a scalar join is a separate join so needs a unique alias
@@ -299,9 +299,12 @@ class PropertyMapping
             $column = $this->column->name;
         }
 
-        //if (strpos(str_replace('`', '', $column), str_replace('`', '', $table)) === 0) {
         if (strpos($column, '.') !== false) { //Column is already prefixed with the table name
-            $table = '';
+            if ($overrideTableAlias) {
+                $column = substr($column, strrpos($column, '.') + 1);
+            } else {
+                $table = '';
+            }
         }
 
         return $column ? trim($table . '.' . $column, '.') : '';

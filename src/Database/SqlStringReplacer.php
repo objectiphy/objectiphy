@@ -119,6 +119,13 @@ class SqlStringReplacer
         foreach ($propertiesUsed as $propertyPath) {
             $alias = '';
             $this->objectNames[] = $this->delimit($propertyPath, $this->propertyPathDelimiter, '');
+if ($propertyPath == 'contact.userLogin') {
+    $stop = true;
+}
+//            $propertyMapping = $mappingCollection->getPropertyMapping($propertyPath);
+//            $table = $propertyMapping->table->name;
+//            $tableAlias = $propertyMapping->getTableAlias(false, true, true);
+
             $persistenceValue = $this->getPersistenceValueForField($query, $propertyPath, $mappingCollection, '', '', '', '', false, $alias, $this->aggregateGroupBys);
             $this->persistenceNames[] = $persistenceValue;
             $this->aliases[] = $alias ?: $persistenceValue;
@@ -399,6 +406,12 @@ class SqlStringReplacer
                 if ($propertyMapping->column->aggregateFunctionName) {
                     $fieldValue = 'AGGREGATE_FUNCTION'; //Populate it last when we have access to other properties
                 } else {
+                    //See if we need to replace the table name with an alias
+                    $table = $propertyMapping->table->name;
+                    $originalColumn = $propertyMapping->getFullColumnName();
+                    if (strpos($originalColumn, '.') === false || substr($originalColumn, 0, strlen($table)) == $table) {
+                        $explicitTable = $propertyMapping->getTableAlias(false, true, true);
+                    }
                     $fieldValue = $this->delimit($propertyMapping->getFullColumnName($explicitTable));
                 }
 
