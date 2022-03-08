@@ -119,13 +119,6 @@ class SqlStringReplacer
         foreach ($propertiesUsed as $propertyPath) {
             $alias = '';
             $this->objectNames[] = $this->delimit($propertyPath, $this->propertyPathDelimiter, '');
-if ($propertyPath == 'contact.userLogin') {
-    $stop = true;
-}
-//            $propertyMapping = $mappingCollection->getPropertyMapping($propertyPath);
-//            $table = $propertyMapping->table->name;
-//            $tableAlias = $propertyMapping->getTableAlias(false, true, true);
-
             $persistenceValue = $this->getPersistenceValueForField($query, $propertyPath, $mappingCollection, '', '', '', '', false, $alias, $this->aggregateGroupBys);
             $this->persistenceNames[] = $persistenceValue;
             $this->aliases[] = $alias ?: $persistenceValue;
