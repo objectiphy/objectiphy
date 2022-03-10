@@ -520,7 +520,7 @@ class PropertyMapping
         if ($parentProperty && $parentProperty->relationship->isEmbedded) {
             $table = $parentProperty->getTableAlias() ?: $parentProperty->table->name;
         } elseif ($this->relationship->isScalarJoin()) {
-            $table = $this->table->name;
+            $table = $parentProperty ? $parentProperty->getTableAlias(true) : $this->table->name;
         } else {
             $table = $this->getTableAlias() ?: $this->table->name;
         }

@@ -403,7 +403,7 @@ class SqlStringReplacer
                     $table = $propertyMapping->table->name;
                     $originalColumn = $propertyMapping->getFullColumnName();
                     if (strpos($originalColumn, '.') === false || substr($originalColumn, 0, strlen($table)) == $table) {
-                        $explicitTable = $propertyMapping->getTableAlias(false, true, true);
+                        $explicitTable = $propertyMapping->getTableAlias(strpos($originalColumn, '.') === false, true, true);
                     }
                     $fieldValue = $this->delimit($propertyMapping->getFullColumnName($explicitTable));
                 }

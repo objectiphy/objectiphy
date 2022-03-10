@@ -400,10 +400,12 @@ abstract class Query implements QueryInterface
             }
 
             //See if we need to replace the source join table with an alias
-            $sourceTable = $this->stringReplacer->delimit($propertyMapping->table->name);
+            $sourceTable = $this->stringReplacer->delimit($propertyMapping->parentCollection->getPrimaryTableMapping()->name);// $this->stringReplacer->delimit($propertyMapping->table->name);
             if (strpos($source, '.') === false || substr($source, 0, strlen($sourceTable)) == $sourceTable) {
                 $fullColumn = $this->stringReplacer->delimit($propertyMapping->getTableAlias(false, true, true));
                 $fullColumn .= '.' . substr($source, (strrpos($source, '.') ?: -1) + 1);
+            } else {
+                $fullColumn = $source;
             }
 
             $ons[] = new CriteriaExpression(
