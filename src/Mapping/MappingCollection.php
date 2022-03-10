@@ -139,6 +139,7 @@ class MappingCollection
         if ($propertyMapping->column->isPrimaryKey || $propertyMapping->relationship->isPrimaryKey) {
             $this->addPrimaryKeyMapping($propertyMapping->className, $propertyMapping->propertyName);
         }
+
         if ($propertyMapping->relationship->isDefined() && !$propertyMapping->relationship->isEmbedded) {
             $relationshipKey = $propertyMapping->getRelationshipKey();
             if (

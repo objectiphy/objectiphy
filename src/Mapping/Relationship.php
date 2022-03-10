@@ -137,6 +137,11 @@ class Relationship extends ObjectiphyAnnotation
      */
     public string $collectionClass = '';
 
+    /***
+     * @deprecated
+     */
+    public string $joinSql = '';
+
     /**
      * @var string 
      */

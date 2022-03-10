@@ -562,12 +562,20 @@ final class ObjectMapper
                 $childRelationship = $this->getRelationshipMapping($childReflectionProperty);
                 $childGroups = $this->mappingProvider->getSerializationGroups($childReflectionProperty);
                 $this->initialiseRelationship($childRelationship);
+
+                $grandchildTable = null;
+                if ($childRelationship->childClassName) {
+                    //We need the grandchild table too in case of joins
+                    $grandchildReflectionClass = new \ReflectionClass(($childRelationship->childClassName));
+                    $grandchildTable = $this->getTableMapping($grandchildReflectionClass) ?? null;
+                }
+
                 $childTable = $this->getTableMapping($childReflectionClass, true);
                 $propertyMapping = new PropertyMapping(
                     $relationship->childClassName,
                     $childReflectionProperty,
                     $childTable,
-                    null,
+                    $grandchildTable,
                     new Column(),
                     $childRelationship,
                     array_merge($parents, [$propertyName]),
@@ -578,7 +586,7 @@ final class ObjectMapper
             } elseif (!$relationship->targetJoinColumn) {
                 //For lazy loading, we must have the primary key so we can load the child
                 $childPks = $mappingCollection->getPrimaryKeyProperties($relationship->childClassName);
-                if (empty($childPks)) {
+                if (empty($childPks) && $relationship->childClassName) {
                     $this->populatePrimaryKeyMappings(
                         $mappingCollection,
                         $relationship->childClassName
