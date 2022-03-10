@@ -162,10 +162,18 @@ class JoinProviderMySql
         $this->sql .= implode("\n AND ", $joinSql) . "\n";
     }
 
+    /**
+     * Where reference has been made to a column on a table which is only ever loaded via an alias,
+     * use the alias (typically scalar joins and joinSql).
+     * @param $column
+     * @param QueryInterface $query
+     * @return mixed|string
+     * @throws ObjectiphyException
+     */
     private function replaceAliases($column, QueryInterface $query)
     {
         if (strpos($column, '.') !== false) {
-            $rootTable = $this->stringReplacer->replaceNames($query->getFrom());
+            $rootTable = $this->stringReplacer->replaceNames($query->getClassName());
             $columnParts = explode(' ', $column);
             foreach ($columnParts ?? [] as $index => $columnPart) {
                 $aliased = '';
