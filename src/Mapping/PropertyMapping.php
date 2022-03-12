@@ -250,15 +250,15 @@ class PropertyMapping
         }
         if (empty($this->tableAlias)
             && (count($this->parents) > 0 || $this->relationship->isScalarJoin()) //No need to alias scalar properties of main entity
-            && (strpos($this->column->name, '.') === false || $this->relationship->isScalarJoin())) { //Already mapped to an alias manually, so don't mess
+            /*&& (strpos($this->column->name, '.') === false || $this->relationship->isScalarJoin())*/) { //Already mapped to an alias manually, so don't mess
             //Embedded objects use the alias of their parent, anything else gets its own
             $parentPropertyMapping = $this->parentCollection->getPropertyMapping($this->getParentPath());
             if ($this->relationship->isScalarJoin()) { //Each property with a scalar join is a separate join so needs a unique alias
-                $this->tableAlias = rtrim('obj_alias_' . $this->getParentPath('_'), '_') . '_' . $this->propertyName;
+                $this->tableAlias = $this->relationship->joinSql ? $this->relationship->joinTable : rtrim('obj_alias_' . $this->getParentPath('_'), '_') . '_' . $this->propertyName;
             } elseif ($parentPropertyMapping && $parentPropertyMapping->relationship->isEmbedded) {
                 $this->tableAlias = $parentPropertyMapping->getTableAlias();
             } else {
-                $this->tableAlias = rtrim('obj_alias_' . $this->getParentPath('_'), '_');
+                $this->tableAlias = $this->relationship->joinSql ? $this->relationship->joinTable : rtrim('obj_alias_' . $this->getParentPath('_'), '_');
             }
             if ($this->relationship->isScalarJoin()) {
                 $this->parentCollection->populateOtherMatchingScalarJoinTableAliases($this);
@@ -299,9 +299,12 @@ class PropertyMapping
             $column = $this->column->name;
         }
 
-        //if (strpos(str_replace('`', '', $column), str_replace('`', '', $table)) === 0) {
         if (strpos($column, '.') !== false) { //Column is already prefixed with the table name
-            $table = '';
+            if ($overrideTableAlias) {
+                $column = substr($column, strrpos($column, '.') + 1);
+            } else {
+                $table = '';
+            }
         }
 
         return $column ? trim($table . '.' . $column, '.') : '';
@@ -517,7 +520,7 @@ class PropertyMapping
         if ($parentProperty && $parentProperty->relationship->isEmbedded) {
             $table = $parentProperty->getTableAlias() ?: $parentProperty->table->name;
         } elseif ($this->relationship->isScalarJoin()) {
-            $table = $this->table->name;
+            $table = $parentProperty ? $parentProperty->getTableAlias(true) : $this->table->name;
         } else {
             $table = $this->getTableAlias() ?: $this->table->name;
         }

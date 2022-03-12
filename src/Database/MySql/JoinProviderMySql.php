@@ -150,15 +150,52 @@ class JoinProviderMySql
 
         $joinSql = [];
         foreach ($sourceJoinColumns as $index => $sourceJoinColumn) {
-            $joinSqlString = $sourceJoinColumn . ' ' . $joinPart->operator . ' ';
+            $joinSqlString = $this->replaceAliases($sourceJoinColumn, $query) . ' ' . $joinPart->operator . ' ';
             if (strpos($joinPart->operator, QB::IN) !== false && is_array($targetJoinColumns[$index])) {
                 $joinSql[] = $joinSqlString . '(' . implode(',', $targetJoinColumns[$index]) . ')';
             } elseif (is_string($targetJoinColumns[$index])) {
-                $joinSql[] = $joinSqlString . $targetJoinColumns[$index];
+                $joinSql[] = $joinSqlString .$this->replaceAliases($targetJoinColumns[$index], $query);
             } else {
                 throw new QueryException('Could not resolve join SQL for ' . strval($joinPart));
             }
         }
         $this->sql .= implode("\n AND ", $joinSql) . "\n";
+    }
+
+    /**
+     * Where reference has been made to a column on a table which is only ever loaded via an alias,
+     * use the alias (typically scalar joins and joinSql).
+     * @param $column
+     * @param QueryInterface $query
+     * @return mixed|string
+     * @throws ObjectiphyException
+     */
+    private function replaceAliases($column, QueryInterface $query)
+    {
+        if (strpos($column, '.') !== false) {
+            $rootTable = $this->stringReplacer->replaceNames($query->getClassName());
+            $columnParts = explode(' ', $column);
+            foreach ($columnParts ?? [] as $index => $columnPart) {
+                $aliased = '';
+                if (strpos($columnPart, '.') !== false) {
+                    $delimitedColumn = $this->stringReplacer->delimit($columnPart);
+                    $searchString = substr($columnPart, 0, strrpos($columnPart, '.'));
+                    if ($rootTable != $searchString) {
+                        foreach ($query->getJoinAliases() as $alias => $realColumn) {
+                            $delimitedRealColumn = $this->stringReplacer->delimit($realColumn);
+                            $delimitedAlias = $this->stringReplacer->delimit($alias);
+                            if ($searchString == $delimitedRealColumn) {
+                                $aliased = $alias . '.' . substr($columnPart, strrpos($columnPart, '.') + 1);
+                                break;
+                            }
+                        }
+                    }
+                }
+                $columnParts[$index] = $aliased ?: $columnPart;
+            }
+            return implode(' ', $columnParts);
+        }
+
+        return $column;
     }
 }

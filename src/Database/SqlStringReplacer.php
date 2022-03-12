@@ -399,6 +399,12 @@ class SqlStringReplacer
                 if ($propertyMapping->column->aggregateFunctionName) {
                     $fieldValue = 'AGGREGATE_FUNCTION'; //Populate it last when we have access to other properties
                 } else {
+                    //See if we need to replace the table name with an alias
+                    $table = $propertyMapping->table->name;
+                    $originalColumn = $propertyMapping->getFullColumnName();
+                    if (strpos($originalColumn, '.') === false || substr($originalColumn, 0, strlen($table)) == $table) {
+                        $explicitTable = $propertyMapping->getTableAlias(strpos($originalColumn, '.') === false, true, true);
+                    }
                     $fieldValue = $this->delimit($propertyMapping->getFullColumnName($explicitTable));
                 }
 

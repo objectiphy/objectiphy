@@ -325,7 +325,9 @@ abstract class Query implements QueryInterface
         }
 
         $ons = [];
-        if ($propertyMapping->relationship->isScalarJoin()) {
+        if ($propertyMapping->relationship->joinSql) {
+            $join = $this->populateCustomJoinSql($propertyMapping, $ons);
+        } elseif ($propertyMapping->relationship->isScalarJoin()) {
             $join = $this->populateScalarJoin($propertyMapping, $ons);
         } elseif ($propertyMapping->relationship->targetJoinColumn) {
             $join = $this->populateMappedJoin($propertyMapping, $ons);
@@ -355,7 +357,8 @@ abstract class Query implements QueryInterface
         if ($target) {
             $join = new JoinExpression(
                 $this->stringReplacer->delimit($propertyMapping->relationship->joinTable),
-                'obj_alias_' . str_replace('.', '_', $propertyMapping->getPropertyPath())
+                'obj_alias_' . str_replace('.', '_', $propertyMapping->getPropertyPath()),
+                $propertyMapping->relationship->joinType
             );
             $ons[] = new CriteriaExpression(
                 new FieldExpression($propertyMapping->getPropertyPath()),
@@ -380,8 +383,10 @@ abstract class Query implements QueryInterface
         $alias = 'obj_alias_' . str_replace('.', '_', $propertyMapping->getPropertyPath());
         $join = new JoinExpression(
             $this->stringReplacer->delimit($propertyMapping->relationship->joinTable),
-            $alias
+            $alias,
+            $propertyMapping->relationship->joinType
         );
+
         $sourceColumns = explode(',', $propertyMapping->relationship->sourceJoinColumn);
         $targetColumns = explode(',', $propertyMapping->relationship->targetJoinColumn);
         foreach ($targetColumns as $index => $targetColumn) {
@@ -393,7 +398,16 @@ abstract class Query implements QueryInterface
             } else {
                 $target = $this->stringReplacer->delimit($alias . '.' . trim($targetColumn));
             }
-            $fullColumn = (strpos($source, '.') === false ? $propertyMapping->getTableAlias(false, true, true) . '.' : '') . $source;
+
+            //See if we need to replace the source join table with an alias
+            $sourceTable = $this->stringReplacer->delimit($propertyMapping->parentCollection->getPrimaryTableMapping()->name);// $this->stringReplacer->delimit($propertyMapping->table->name);
+            if (strpos($source, '.') === false || substr($source, 0, strlen($sourceTable)) == $sourceTable) {
+                $fullColumn = $this->stringReplacer->delimit($propertyMapping->getTableAlias(false, true, true));
+                $fullColumn .= '.' . substr($source, (strrpos($source, '.') ?: -1) + 1);
+            } else {
+                $fullColumn = $source;
+            }
+
             $ons[] = new CriteriaExpression(
                 new FieldExpression($this->stringReplacer->delimit($fullColumn)),
                 $propertyMapping->getAlias(),
@@ -405,6 +419,32 @@ abstract class Query implements QueryInterface
         return count($ons ?? []) > 0 ? $join : null;
     }
 
+    private function populateCustomJoinSql(PropertyMapping $propertyMapping, array &$ons)
+    {
+        $joinSql = $propertyMapping->relationship->joinSql;
+        $equalsPos = strpos($joinSql, '=');
+        if (!$equalsPos) {
+            throw new MappingException('If you must use custom join SQL, please make sure there is an = sign in it! Invalid join SQL on relationship ' . $propertyMapping->className . ':' . $propertyMapping->propertyName);
+        }
+        $dbDelimiter = $this->stringReplacer->getDelimiter();
+        $beforeEquals = substr($joinSql, 0, $equalsPos);
+        $afterEquals = substr($joinSql, $equalsPos + 1);
+
+        $join = new JoinExpression(
+            $this->stringReplacer->delimit($propertyMapping->relationship->joinTable),
+            '',
+            $propertyMapping->relationship->joinType
+        );
+        $ons[] = new CriteriaExpression(
+            new FieldExpression($beforeEquals),
+            $propertyMapping->getAlias(),
+            QB::EQ,
+            $afterEquals
+        );
+
+        return count($ons ?? []) > 0 ? $join : null;
+    }
+
     /**
      * @param PropertyMapping $propertyMapping
      * @param array $ons
@@ -412,25 +452,30 @@ abstract class Query implements QueryInterface
      */
     private function populatePkPropertyJoin(PropertyMapping $propertyMapping, array &$ons): ?JoinExpression
     {
-        $propertyDelimiter = $this->stringReplacer->getDelimiter('property');
-        $targetProperty = $propertyMapping->relationship->getTargetProperty();
-        if (!$targetProperty) { //Just joining to single primary key value
-            $pkProperties = $this->mappingCollection->getPrimaryKeyProperties($propertyMapping->getChildClassName());
-            $targetProperty = reset($pkProperties);
-        }
-        $join = new JoinExpression(
-            $propertyMapping->getChildClassName(),
-            'obj_alias_' . str_replace('.', '_', $propertyMapping->getPropertyPath())
-        );
-        $prefix = $propertyMapping->getParentPath() ? $propertyMapping->getParentPath() . '.' : '';
-        $target = $targetProperty ? $propertyDelimiter . $prefix . $targetProperty . $propertyDelimiter : '';
-        if ($target) {
-            $ons[] = new CriteriaExpression(
-                new FieldExpression($propertyMapping->getPropertyPath()),
-                $propertyMapping->getAlias(),
-                QB::EQ,
-                $target
+        if ($propertyMapping->relationship->joinSql) {
+            $ons[] = $this->populateCustomJoinSql($propertyMapping);
+        } else {
+            $propertyDelimiter = $this->stringReplacer->getDelimiter('property');
+            $targetProperty = $propertyMapping->relationship->getTargetProperty();
+            if (!$targetProperty) { //Just joining to single primary key value
+                $pkProperties = $this->mappingCollection->getPrimaryKeyProperties($propertyMapping->getChildClassName());
+                $targetProperty = reset($pkProperties);
+            }
+            $join = new JoinExpression(
+                $propertyMapping->getChildClassName(),
+                'obj_alias_' . str_replace('.', '_', $propertyMapping->getPropertyPath()),
+                $propertyMapping->relationship->joinType
             );
+            $prefix = $propertyMapping->getParentPath() ? $propertyMapping->getParentPath() . '.' : '';
+            $target = $targetProperty ? $propertyDelimiter . $prefix . $targetProperty . $propertyDelimiter : '';
+            if ($target) {
+                $ons[] = new CriteriaExpression(
+                    new FieldExpression($propertyMapping->getPropertyPath()),
+                    $propertyMapping->getAlias(),
+                    QB::EQ,
+                    $target
+                );
+            }
         }
 
         return count($ons ?? []) > 0 ? $join : null;

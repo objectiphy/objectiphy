@@ -57,7 +57,8 @@ class IterableResult implements \Iterator
      * @return mixed Can return any type.
      * @throws \Throwable
      */
-    public function current(): mixed
+    #[\ReturnTypeWillChange]
+    public function current()
     {
         if ($this->key < 0) {
             $this->next();

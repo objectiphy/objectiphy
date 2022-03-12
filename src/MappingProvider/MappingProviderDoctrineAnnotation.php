@@ -293,9 +293,6 @@ class MappingProviderDoctrineAnnotation implements MappingProviderInterface
         Relationship &$relationship,
         bool &$wasMapped
     ): void {
-        if ($reflectionProperty->getName() == 'brokerDetails') {
-            $stop = true;
-        }
         if (class_exists('Doctrine\ORM\Mapping\Embedded')) {
             $doctrineEmbedded = $this->annotationReader->getPropertyAnnotation($reflectionProperty, Embedded::class);
             $wasMapped = $wasMapped || $doctrineEmbedded;

@@ -139,6 +139,7 @@ class MappingCollection
         if ($propertyMapping->column->isPrimaryKey || $propertyMapping->relationship->isPrimaryKey) {
             $this->addPrimaryKeyMapping($propertyMapping->className, $propertyMapping->propertyName);
         }
+
         if ($propertyMapping->relationship->isDefined() && !$propertyMapping->relationship->isEmbedded) {
             $relationshipKey = $propertyMapping->getRelationshipKey();
             if (
@@ -592,7 +593,7 @@ class MappingCollection
                         //If empty, use primary key of $relationshipMapping's class
                         $relationship->sourceJoinColumn = $relationship->sourceJoinColumn ?: implode(
                             ',',
-                            $this->getPrimaryKeyProperties(
+                            $this->getPrimaryKeyColumns(
                                 $relationshipMapping->className
                             )
                         );
@@ -600,7 +601,7 @@ class MappingCollection
                         //If empty, use primary key of child class
                         $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: implode(
                             ',',
-                            $this->getPrimaryKeyProperties(
+                            $this->getPrimaryKeyColumns(
                                 $relationship->childClassName
                             )
                         );
@@ -612,8 +613,8 @@ class MappingCollection
                         }
                     }
                 } elseif (!$relationship->targetJoinColumn) {
-                    $pkPropertyNames = $this->getPrimaryKeyProperties($relationship->childClassName);
-                    $relationship->targetJoinColumn = implode(',', $pkPropertyNames);
+                    $pkColumns = $this->getPrimaryKeyColumns($relationship->childClassName);
+                    $relationship->targetJoinColumn = implode(',', $pkColumns);
                 }
                 $relationship->validate($relationshipMapping);
             }
@@ -621,5 +622,23 @@ class MappingCollection
         if (isset($relationship)) {
             $this->relationshipMappingDone = true;
         }
+    }
+
+    /**
+     * Return list of columns that are marked as being part of the primary key.
+     * @param string|null $className Optionally specify a child class name (defaults to parent entity).
+     * @return array
+     */
+    private function getPrimaryKeyColumns(?string $className = null): array
+    {
+        $pkColumns = [];
+        $pkProperties = $this->getPrimaryKeyProperties($className);
+        foreach ($pkProperties as $pkProperty) {
+            $propertyMapping = $this->getPropertyExample($className, $pkProperty);
+            $column = $propertyMapping ? $propertyMapping->getShortColumnName(false) : $pkProperty; //Defaults to 'id' for both property and column
+            $pkColumns[$column] = 1;
+        }
+
+        return array_keys($pkColumns);
     }
 }
