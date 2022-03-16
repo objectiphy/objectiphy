@@ -233,10 +233,11 @@ class SqlStringReplacer
             $persistenceValue = null;
             if (is_string($fieldValueItem)) {
                 //If already delimited, matches a property, or is recognised as a function or expression, use as is
-                if ($this->checkDelimited($fieldValueItem, $ignorePropertyPathDelimiter)
+                if ($this->parseDelimiters && (
+                    $this->checkDelimited($fieldValueItem, $ignorePropertyPathDelimiter)
                     || $this->checkPropertyPath($fieldValueItem, $alias, $query, $mappingCollection)
                     || $this->checkFunction($fieldValueItem)
-                ) {
+                )) {
                     $persistenceValue = strval($fieldValueItem);
                 }
             }
