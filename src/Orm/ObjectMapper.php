@@ -257,6 +257,7 @@ final class ObjectMapper
                 foreach ($overrides ?? [] as $overrideKey => $overrideValue) {
                     if (property_exists($table, $overrideKey)) {
                         $table->$overrideKey = $overrideValue;
+                        $tableIsMapped = true;
                     }
                 }
             }
@@ -294,6 +295,7 @@ final class ObjectMapper
             foreach ($overrides[$reflectionProperty->getName()] ?? [] as $overrideKey => $overrideValue) {
                 if (property_exists($relationship, $overrideKey)) {
                     $relationship->$overrideKey = $overrideValue;
+                    $relationshipIsMapped = true;
                 }
             }
         }
@@ -328,6 +330,7 @@ final class ObjectMapper
             foreach ($overrides[$reflectionProperty->getName()] ?? [] as $overrideKey => $overrideValue) {
                 if (property_exists($column, $overrideKey)) {
                     $column->$overrideKey = $overrideValue;
+                    $columnIsMapped = true;
                 }
             }
         }
