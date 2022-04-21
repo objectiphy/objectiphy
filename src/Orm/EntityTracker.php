@@ -156,7 +156,11 @@ class EntityTracker
         }
         $clone = $this->clones[$className][$pkIndex] ?? null;
         $reflectionClass = new \ReflectionClass($className);
-        foreach ($reflectionClass->getProperties() as $reflectionProperty) {
+        $reflectionProperties = $reflectionClass->getProperties();
+        while ($reflectionClass = $reflectionClass->getParentClass()) {
+            $reflectionProperties = array_merge($reflectionProperties, $reflectionClass->getProperties());
+        }
+        foreach ($reflectionProperties as $reflectionProperty) {
             $property = $reflectionProperty->getName();
             if (!$propertiesToCheck || in_array($property, $propertiesToCheck)) {
                 $entityValue = null;
@@ -165,7 +169,7 @@ class EntityTracker
                 }
             }
         }
-        
+
         return $changes;
     }
 
@@ -331,7 +335,9 @@ class EntityTracker
                     true,
                     true
                 ) : $notFound;
-                if (is_scalar($entityValue) || $entityValue instanceof \DateTimeInterface) {
+                if ($cloneValue == $notFound) {
+                    return true;
+                } elseif (is_scalar($entityValue) || $entityValue instanceof \DateTimeInterface) {
                     return $entityValue != $cloneValue;
                 } else {
                     return $entityValue !== $cloneValue;
