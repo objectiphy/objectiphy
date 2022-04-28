@@ -87,7 +87,7 @@ final class ProxyFactory
                 $classDefinition = str_replace('namespace Objectiphy\Objectiphy\Orm;',
                                                'use Objectiphy\Objectiphy\Orm\ObjectHelper;', $classDefinition);
                 $classDefinition = str_replace("class ObjectReference implements ObjectReferenceInterface",
-                                               "class $proxyClassName extends \\$className implements ObjectReferenceInterface",
+                                               "class $proxyClassName extends \\" . ltrim($className, '\\') . " implements ObjectReferenceInterface",
                                                $classDefinition);
                 $classDefinition = str_replace("public function __toString(): string\n    {",
                                                "public function __toString(): string\n    {if (is_callable('parent::__toString')) {return parent::__toString();}",
@@ -240,7 +240,7 @@ final class ProxyFactory
         $classDefinition = str_replace($namespace, $useStatement, $classDefinition);
 
         $classDeclaration = 'class EntityProxy implements EntityProxyInterface';
-        $newClassDeclaration = "class $proxyClassName extends \\" . $className . " implements " . EntityProxyInterface::class;
+        $newClassDeclaration = "class $proxyClassName extends \\" . ltrim($className, '\\') . " implements " . EntityProxyInterface::class;
         $classDefinition = str_replace($classDeclaration, $newClassDeclaration, $classDefinition);
         $classDefinition = $this->replaceCustomGetterMethods($reflectionClass, $classDefinition);
 
