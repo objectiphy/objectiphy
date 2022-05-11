@@ -752,8 +752,16 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             if (array_key_first($pkValues) === 0) { //Key property name(s) not specified - look them up
                 if (!isset($this->mappingCollection)) {
                     $this->setClassName($className);
+                } else {
+                    $currentClassName = $this->mappingCollection->getEntityClassName();
+                    if ($currentClassName != $className) {
+                        $this->setClassName($className);
+                    }
                 }
                 $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
+                if ($currentClassName != $className) {
+                    $this->setClassName($currentClassName);
+                }
                 $pkValues = array_combine($pkProperties, $pkValues);
             }
 
