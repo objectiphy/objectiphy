@@ -187,21 +187,27 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * @param string $className
      * @throws \ReflectionException
      */
-    public function setClassName(string $className): void
+    public function setClassName(string $className, bool $ignoreErrors = false): void
     {
-        if ($className) { //Query might not have one set, in which case, keep the one we've got
-            $oldClassName = $this->className;
-            $this->className = $className;
-            $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
-            if ($className != $oldClassName) {
-                $this->orderBy = [];
-                //In case of custom repository that does not pass along the find/save options, set defaults here
-                $findOptions = FindOptions::create($this->mappingCollection);
-                $this->objectFetcher->setFindOptions($findOptions);
-                $saveOptions = SaveOptions::create($this->mappingCollection);
-                $this->objectPersister->setSaveOptions($saveOptions);
-                $deleteOptions = DeleteOptions::create($this->mappingCollection);
-                $this->objectRemover->setDeleteOptions($deleteOptions);
+        try {
+            if ($className) { //Query might not have one set, in which case, keep the one we've got
+                $oldClassName = $this->className;
+                $this->className = $className;
+                $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
+                if ($className != $oldClassName) {
+                    $this->orderBy = [];
+                    //In case of custom repository that does not pass along the find/save options, set defaults here
+                    $findOptions = FindOptions::create($this->mappingCollection);
+                    $this->objectFetcher->setFindOptions($findOptions);
+                    $saveOptions = SaveOptions::create($this->mappingCollection);
+                    $this->objectPersister->setSaveOptions($saveOptions);
+                    $deleteOptions = DeleteOptions::create($this->mappingCollection);
+                    $this->objectRemover->setDeleteOptions($deleteOptions);
+                }
+            }
+        } catch (\Exception $ex) {
+            if (!$ignoreErrors) {
+                throw $ex;
             }
         }
     }
@@ -751,18 +757,23 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         try {
             if (array_key_first($pkValues) === 0) { //Key property name(s) not specified - look them up
                 if (!isset($this->mappingCollection)) {
-                    $this->setClassName($className);
+                    $this->setClassName($className, true);
                 } else {
                     $currentClassName = $this->mappingCollection->getEntityClassName();
                     if ($currentClassName != $className) {
-                        $this->setClassName($className);
+                        $this->setClassName($className, true);
                     }
                 }
                 $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
                 if ($currentClassName != $className) {
                     $this->setClassName($currentClassName);
                 }
-                $pkValues = array_combine($pkProperties, $pkValues);
+                if (!$pkProperties && count($pkValues == 1)) {
+                    $idValue = reset($pkValues);
+                    $pkValues = ['id' => $idValue]; //Not a mapped entity, so just assume id and hope for the best
+                } else {
+                    $pkValues = array_combine($pkProperties, $pkValues);
+                }
             }
 
             return $this->proxyFactory->createObjectReferenceProxy($className, $pkValues, $constructorParams);
