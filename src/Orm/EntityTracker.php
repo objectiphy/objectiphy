@@ -281,7 +281,7 @@ class EntityTracker
     public function removeEntity(object $entity): void
     {
         $key = $this->hasEntity($entity);
-        $this->removeByKey($key);
+        $this->removeByKey($entity, $key);
     }
 
     /**
@@ -292,7 +292,7 @@ class EntityTracker
     public function remove(string $className, array $pkValues)
     {
         $key = $this->hasEntity($className, $pkValues);
-        $this->removeByKey($key);
+        $this->removeByKey($className, $key);
     }
 
     /**
@@ -310,10 +310,10 @@ class EntityTracker
         }
     }
 
-    private function removeByKey(?string $key)
+    private function removeByKey($entityOrClass, ?string $key)
     {
         if ($key) {
-            $className = ObjectHelper::getObjectClassName($entity);
+            $className = is_string($entityOrClass) ? $entityOrClass : ObjectHelper::getObjectClassName($entityOrClass);
             unset($this->entities[$className][$key]);
             unset($this->clones[$className][$key]);
         }
@@ -321,6 +321,10 @@ class EntityTracker
 
     private function isPropertyDirty(object $entity, string $property, &$entityValue = null, ?object $clone = null): bool
     {
+        //If it is a Doctrine proxy that has never woken up, it won't be dirty
+        if (property_exists($entity, '__isInitialized__') && $entity->__isInitialized__ === false) {
+            return false;
+        }
         if (!($entity instanceof EntityProxyInterface) || !$entity->isChildAsleep($property)) { //Shh. Don't wake up the kids.
             $entityValue = ObjectHelper::getValueFromObject($entity, $property);
             if ($clone instanceof EntityProxyInterface && $clone->isChildAsleep($property)) {
