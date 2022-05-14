@@ -24,7 +24,7 @@ use Psr\SimpleCache\CacheInterface;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
- * Loads mapping information from the supplied mapping provider (typically annotations, but the mapping information 
+ * Loads mapping information from the supplied mapping provider (typically annotations, but the mapping information
  * could come from anywhere as long as there is a provider for it).
  */
 final class ObjectMapper
@@ -62,7 +62,7 @@ final class ObjectMapper
      * @param ConfigOptions $config
      * @throws ObjectiphyException
      */
-    public function setConfigOptions(ConfigOptions $config): void 
+    public function setConfigOptions(ConfigOptions $config): void
     {
         $this->mappingProvider->setThrowExceptions($config->devMode);
         $this->guessMappings = $config->guessMappings;
@@ -209,11 +209,12 @@ final class ObjectMapper
                 $existingParent = $mappingCollection->getPropertyMapping($property);
                 if ($parent && $parent->getChildClassName() && !$existingParent) {
                     //Add to $parent
-                    $reflectionProperty = new \ReflectionProperty($parent->getChildClassName(), $part);
-                    $table = $this->getTableMapping(new \ReflectionClass($parent->getChildClassName()));
+                    $reflectionClass = new \ReflectionClass($parent->getChildClassName());
+                    $reflectionProperty = new \ReflectionProperty($reflectionClass->getName(), $part);
+                    $table = $this->getTableMapping($reflectionClass);
                     $parents = array_merge($parent->parents, [$parent->propertyName]);
                     //Mark it as early bound...
-                    $parent = $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents, $parent->relationship, true);
+                    $parent = $this->mapProperty($mappingCollection, $reflectionClass, $reflectionProperty, $table, $parents, $parent->relationship, true);
                     $parent->forceEarlyBindingForJoin(); //We need to join even if it is to-many, so we can filter
                     if (!$parent->relationship->sourceJoinColumn && $parent->relationship->mappedBy) {
                         //If mapping is on the other side, we have to get that too
@@ -257,6 +258,7 @@ final class ObjectMapper
                 foreach ($overrides ?? [] as $overrideKey => $overrideValue) {
                     if (property_exists($table, $overrideKey)) {
                         $table->$overrideKey = $overrideValue;
+                        $tableIsMapped = true;
                     }
                 }
             }
@@ -294,6 +296,7 @@ final class ObjectMapper
             foreach ($overrides[$reflectionProperty->getName()] ?? [] as $overrideKey => $overrideValue) {
                 if (property_exists($relationship, $overrideKey)) {
                     $relationship->$overrideKey = $overrideValue;
+                    $relationshipIsMapped = true;
                 }
             }
         }
@@ -301,7 +304,7 @@ final class ObjectMapper
             $errorMessage = sprintf('Relationship defined without a child class name for property \'%1$s\' on class \'%2$s\'. Please specify a value for the childClassName attribute.', $reflectionProperty->getName(), $reflectionProperty->getDeclaringClass()->getName());
             throw new MappingException($errorMessage);
         }
-        
+
         return $relationship;
     }
 
@@ -328,13 +331,14 @@ final class ObjectMapper
             foreach ($overrides[$reflectionProperty->getName()] ?? [] as $overrideKey => $overrideValue) {
                 if (property_exists($column, $overrideKey)) {
                     $column->$overrideKey = $overrideValue;
+                    $columnIsMapped = true;
                 }
             }
         }
         if ($column->aggregateFunctionName) {
             $column->isReadOnly = true;
         }
-        
+
         return $column;
     }
 
@@ -388,7 +392,7 @@ final class ObjectMapper
         $classes = $this->getReflectionClassHierarchy($reflectionClass);
         foreach ($classes as $reflectionClass) {
             foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-                $propertyMapping = $this->mapProperty($mappingCollection, $reflectionProperty, $table, $parents, $parentRelationship);
+                $propertyMapping = $this->mapProperty($mappingCollection, $reflectionClass, $reflectionProperty, $table, $parents, $parentRelationship);
                 if ($propertyMapping && $propertyMapping->relationship->isDefined()) {
                     if ($propertyMapping->relationship->isEmbedded || $propertyMapping->relationship->isScalarJoin()) {
                         $childParents = array_merge($parents, [$propertyMapping->propertyName]);
@@ -415,6 +419,7 @@ final class ObjectMapper
      */
     private function mapProperty(
         MappingCollection $mappingCollection,
+        \ReflectionClass $reflectionClass,
         \ReflectionProperty $reflectionProperty,
         Table $table,
         array $parents,
@@ -452,7 +457,7 @@ final class ObjectMapper
                 $childTable = $childTable ?? $this->getTableMapping($childReflectionClass);
             }
             $propertyMapping = new PropertyMapping(
-                $reflectionProperty->getDeclaringClass()->getName(),
+                $reflectionClass->getName(),
                 $reflectionProperty,
                 $table,
                 $childTable,

@@ -409,7 +409,8 @@ final class ObjectPersister implements TransactionInterface
         $childProperties = $this->options->mappingCollection->getChildObjectProperties($ownedOnly);
 
         foreach ($childProperties as $childPropertyName) {
-            if ($entity instanceof EntityProxyInterface && $entity->isChildAsleep($childPropertyName)) {
+            if (($entity instanceof EntityProxyInterface && $entity->isChildAsleep($childPropertyName))
+                || (property_exists($entity, '__isInitialized__') && $entity->__isInitialized__ === false)) {
                 continue; //Don't wake it up
             }
             $childPropertyMapping = $this->options->mappingCollection->getPropertyMapping($childPropertyName);
