@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Mapping;
 
+use Objectiphy\Annotations\AttributeTrait;
+
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
  * Mapping information to describe how the value of a property is stored and retrieved from a database column.
@@ -11,9 +13,11 @@ namespace Objectiphy\Objectiphy\Mapping;
  * @Annotation
  * @Target("PROPERTY")
  */
-#[Attribute(\Attribute::TARGET_PROPERTY)]
+#[\Attribute(\Attribute::TARGET_PROPERTY)]
 class Column extends ObjectiphyAnnotation
 {
+    use AttributeTrait;
+
     /** @var string Name of column. */
     public string $name = '';
     

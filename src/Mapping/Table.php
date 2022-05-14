@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Mapping;
 
+use Objectiphy\Annotations\AttributeTrait;
+
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
  * Mapping information to describe which database table and/or custom repository class to use for storage of the data
@@ -12,9 +14,11 @@ namespace Objectiphy\Objectiphy\Mapping;
  * @Annotation
  * @Target("CLASS")
  */
-#[Attribute(\Attribute::TARGET_CLASS)]
+#[\Attribute(\Attribute::TARGET_CLASS)]
 class Table extends ObjectiphyAnnotation
 {
+    use AttributeTrait;
+
     /** @var string Name of database table */
     public string $name = '';
     

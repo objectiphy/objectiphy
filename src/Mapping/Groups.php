@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Mapping;
 
+use Objectiphy\Annotations\AttributeTrait;
+
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
  * An alternative to the Symfony or JMS serialization group annotation (if specified, this will take precedence over
@@ -12,9 +14,11 @@ namespace Objectiphy\Objectiphy\Mapping;
  * @Annotation
  * @Target("PROPERTY")
  */
-#[Attribute(\Attribute::TARGET_PROPERTY)]
+#[\Attribute(\Attribute::TARGET_PROPERTY)]
 class Groups
 {
+    use AttributeTrait;
+
     /** @var string[] Names of groups */
     public $groups = [];
 

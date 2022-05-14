@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy\Mapping;
 
+use Objectiphy\Annotations\AttributeTrait;
 use Objectiphy\Objectiphy\Exception\MappingException;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 
@@ -15,9 +16,11 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
  * @Annotation
  * @Target("PROPERTY")
  */
-#[Attribute(\Attribute::TARGET_PROPERTY)]
+#[\Attribute(\Attribute::TARGET_PROPERTY)]
 class Relationship extends ObjectiphyAnnotation
 {
+    //use AttributeTrait;
+
     public const UNDEFINED = 'undefined';
     public const SCALAR = 'scalar';
     public const ONE_TO_ONE = 'one_to_one';
@@ -25,7 +28,7 @@ class Relationship extends ObjectiphyAnnotation
     public const MANY_TO_ONE = 'many_to_one';
     public const MANY_TO_MANY = 'many_to_many';
 
-    /** 
+    /**
      * @var bool Whether this relationship is part of the primary key. 
      */
     public bool $isPrimaryKey = false;
@@ -165,9 +168,15 @@ class Relationship extends ObjectiphyAnnotation
      * relationshipType property at this point.
      * @throws ObjectiphyException
      */
-    public function __construct(array $values = [])
+    public function __construct(...$args)
     {
-        $relationshipType = $values['relationshipType'] ?? self::UNDEFINED;
+        foreach ($args ?? [] as $property => $value) {
+            if (property_exists($this, $property)) {
+                $this->$property = $value;
+            }
+        }
+
+        $relationshipType = $args['relationshipType'] ?? self::UNDEFINED;
         if (!in_array($relationshipType, self::getRelationshipTypes())) {
             $errorMessage = sprintf(
                 'Invalid relationship type: %1$s. Valid types are: %2$s',
@@ -176,7 +185,7 @@ class Relationship extends ObjectiphyAnnotation
             );
             throw new ObjectiphyException($errorMessage);
         }
-        
+
         $this->relationshipType = $relationshipType;
     }
 

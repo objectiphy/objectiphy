@@ -3,23 +3,19 @@
 namespace Objectiphy\Objectiphy\Tests\Entity;
 
 use Objectiphy\Objectiphy\Mapping;
+use Objectiphy\Objectiphy\Mapping\Groups;
 
-/**
- * @Mapping\Table(name="objectiphy_test.parent")
- */
+#[Mapping\Table(name: 'objectiphy_test.parent')]
 class TestParent
 {
-    /**
-     * @var int
-     * @Objectiphy\Objectiphy\Mapping\Groups({"Default"})
-     * @Mapping\Column(isPrimaryKey=true)
-     */
-    protected $id;
+    #[Groups(['Default'])]
+    #[Mapping\Column(isPrimaryKey: true)]
+    protected int $id;
     
     /**
      * @var TestUser
-     * @Mapping\Relationship(childClassName="TestUser", sourceJoinColumn="user_id", relationshipType="one_to_one", cascadeDeletes=true, orphanRemoval=true)
      */
+    #[Mapping\Relationship(childClassName: 'TestUser', sourceJoinColumn: 'user_id', relationshipType: 'one_to_one', cascadeDeletes: true, orphanRemoval: true)]
     protected $user;
     
     /**
