@@ -15,7 +15,7 @@ class TestParent
     /**
      * @var TestUser
      */
-    #[Mapping\Relationship(childClassName: 'TestUser', sourceJoinColumn: 'user_id', relationshipType: 'one_to_one', cascadeDeletes: true, orphanRemoval: true)]
+    #[Mapping\Relationship(childClassName: TestUser::class, sourceJoinColumn: 'user_id', relationshipType: 'one_to_one', cascadeDeletes: true, orphanRemoval: true)]
     protected $user;
     
     /**
