@@ -74,7 +74,7 @@ final class ObjectPersister implements TransactionInterface
      * @param ConfigOptions $config
      * @throws ObjectiphyException
      */
-    public function setConfigOptions(ConfigOptions $config): void 
+    public function setConfigOptions(ConfigOptions $config): void
     {
         $this->config = $config;
         $this->objectUnbinder->setConfigOptions($config);
@@ -106,12 +106,16 @@ final class ObjectPersister implements TransactionInterface
 
     /**
      * @param string $className
+     * @return string Original class name before it was changed
      * @throws ObjectiphyException|\ReflectionException
      */
-    public function setClassName(string $className): void
+    public function setClassName(string $className): string
     {
+        $origClassName = $this->options->mappingCollection->getEntityClassName();
         $this->options->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
         $this->setSaveOptions($this->options);
+
+        return $origClassName;
     }
 
     /**
@@ -229,7 +233,7 @@ final class ObjectPersister implements TransactionInterface
             $this->config->hydrateUngroupedProperties,
             ...$this->config->serializationGroups
         );
-        
+
         //Try to work out if we are inserting or updating
         $update = false;
         $pkValues = $this->options->mappingCollection->getPrimaryKeyValues($entity);
@@ -423,7 +427,9 @@ final class ObjectPersister implements TransactionInterface
                 $childEntities = is_iterable($child) ? $child : [$child];
                 foreach ($childEntities as $childEntity) {
                     if (!in_array($childEntity, $this->savedObjects)) {
+                        $origClass = $this->setClassName(ObjectHelper::getObjectClassName($childEntity));
                         $childEntityPkValues = $this->options->mappingCollection->getPrimaryKeyValues($childEntity);
+                        $this->setClassName($origClass);
                         if (!$childEntityPkValues) {
                             //If we have a pk, this is an insert - if we don't, we cannot do anything with it
                             $childPkProperties = $this->options->mappingCollection->getPrimaryKeyProperties(

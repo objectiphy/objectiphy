@@ -92,7 +92,7 @@ final class ObjectUnbinder
                 }
             }
         }
-        
+
         return $row;
     }
 
@@ -109,13 +109,14 @@ final class ObjectUnbinder
         $result = null;
         if (is_object($value) && !($value instanceof \DateTimeInterface)) {
             $valueClass = ObjectHelper::getObjectClassName($value);
-            $pkProperties = $this->mappingCollection->getPrimaryKeyProperties($valueClass);
+            $childMappingCollection = $this->objectMapper->getMappingCollectionForClass($valueClass);
+            $pkProperties = $childMappingCollection->getPrimaryKeyProperties($valueClass);
             if ($pkProperties && count($pkProperties) == 1) {
                 $pkProperty = reset($pkProperties);
                 $result = ObjectHelper::getValueFromObject($value, $pkProperty);
             } elseif ($targetJoinColumn) {
                 //Try to find a property that maps to the given column
-                $properties = $this->mappingCollection->getPropertyExamplesForClass(ObjectHelper::getObjectClassName($value));
+                $properties = $childMappingCollection->getPropertyExamplesForClass($valueClass);
                 foreach ($properties ?? [] as $propertyMapping) {
                     if ($propertyMapping->getShortColumnName(false) == $propertyMapping->getShortColumnName(false, $targetJoinColumn)) {
                         $pkProperty = $propertyMapping->propertyName;
