@@ -285,6 +285,7 @@ final class ProxyFactory
         $declaration .= $reflectionMethod->getName();
         $declaration .= '(';
         foreach ($reflectionMethod->getParameters() as $parameter) {
+            $allowNull = true;
             if ($parameter->hasType()) {
                 $paramType = ($parameter->getType() ? ObjectHelper::getTypeName($parameter->getType()) : '');
                 $allowNull = $paramType && $parameter->allowsNull() ? '?' : '';
