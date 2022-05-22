@@ -171,7 +171,7 @@ class Relationship extends ObjectiphyAnnotation
     public function __construct(...$args)
     {
         foreach ($args ?? [] as $property => $value) {
-            if (property_exists($this, $property)) {
+            if (is_string($property) && property_exists($this, $property)) {
                 $this->$property = $value;
             }
         }
