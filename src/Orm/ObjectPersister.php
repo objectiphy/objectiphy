@@ -427,9 +427,16 @@ final class ObjectPersister implements TransactionInterface
                 $childEntities = is_iterable($child) ? $child : [$child];
                 foreach ($childEntities as $childEntity) {
                     if (!in_array($childEntity, $this->savedObjects)) {
-                        $origClass = $this->setClassName(ObjectHelper::getObjectClassName($childEntity));
                         $childEntityPkValues = $this->options->mappingCollection->getPrimaryKeyValues($childEntity);
-                        $this->setClassName($origClass);
+                        if (!$childEntityPkValues) { //If we don't already have it, try to get it by loading the mapping for the child
+                            try {
+                                $origClass = $this->setClassName(ObjectHelper::getObjectClassName($childEntity));
+                                $childEntityPkValues = $this->options->mappingCollection->getPrimaryKeyValues($childEntity);
+                                $this->setClassName($origClass);
+                            } catch (\Exception $ex) {
+                                //Don't panic, assume pk of id, and if that fails we'll panic then.
+                            }
+                        }
                         if (!$childEntityPkValues) {
                             //If we have a pk, this is an insert - if we don't, we cannot do anything with it
                             $childPkProperties = $this->options->mappingCollection->getPrimaryKeyProperties(
