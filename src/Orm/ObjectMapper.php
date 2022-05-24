@@ -264,6 +264,13 @@ final class ObjectMapper
             }
         }
         $this->nameResolver->resolveTableName($reflectionClass, $table);
+
+        //If nothing on this class, check the inheritance hierarchy
+        $parentClass = $reflectionClass->getParentClass();
+        if ($parentClass && !$tableIsMapped) {
+            return $this->getTableMapping($parentClass, $exceptionIfUnmapped, $tableIsMapped);
+        }
+
         if ($exceptionIfUnmapped && !$tableIsMapped) {
             $message = 'Cannot populate mapping collection for class %1$s as there is no table mapping specified. Did you forget to add a Table annotation to your entity class?';
             $table = $this->mappingProvider->getTableMapping($reflectionClass, $tableIsMapped);
