@@ -110,7 +110,7 @@ final class ObjectUnbinder
         if (is_object($value) && !($value instanceof \DateTimeInterface)) {
             $valueClass = ObjectHelper::getObjectClassName($value);
             $childMappingCollection = $this->mappingCollection;
-            $pkProperties = $childmappingCollection->getPrimaryKeyProperties($valueClass);
+            $pkProperties = $childMappingCollection->getPrimaryKeyProperties($valueClass);
             if (!$pkProperties) {
                 try {
                     $childMappingCollection = $this->objectMapper->getMappingCollectionForClass($valueClass);
