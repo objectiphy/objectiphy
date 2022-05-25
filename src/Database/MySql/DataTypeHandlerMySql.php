@@ -115,61 +115,68 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
     public function toObjectValue(&$value, ?string $dataType = null, ?string $format = null, $nullable = true): bool
     {
         $valueSettable = false;
-        switch (strtolower(str_replace('\\', '', $dataType))) {
-            case 'datetime':
-            case 'date':
-            case 'date_time':
-                $valueToSet = $value === null ? null : ($value instanceof \DateTimeInterface ? $value : new \DateTime($value ?? ''));
-                $valueSettable = true;
-                break;
-            case 'datetimeimmutable':
-            case 'datetime_immutable':
-            case 'date_time_immutable':
-                $valueToSet = $value === null ? null : ($value instanceof \DateTimeInterface ? $value : new \DateTimeImmutable($value ?? ''));
-                $valueSettable = true;
-                break;
-            case 'datetimestring':
-            case 'date_time_string':
-            case 'datestring':
-            case 'date_string':
-                $format = $format ?: 'Y-m-d H:i:s';
-                $dateValue =  ($value instanceof \DateTimeInterface ? $value : new \DateTime($value ?? ''));
-                $valueToSet = $dateValue ? $dateValue->format($format) : $value;
-                $valueSettable = true;
-                break;
-            case 'int':
-            case 'integer':
-                $valueToSet = intval($value);
-                $valueSettable = true;
-                break;
-            case 'float':
-            case 'real':
-            case 'decimal':
-            case 'double':
-                $valueToSet = floatval($value);
-                $valueSettable = true;
-                break;
-            case 'bool':
-            case 'boolean':
-                $valueToSet = $value ? (in_array(strtolower(strval($value)), ['false', '0']) ? false : true) : false;
-                $valueSettable = true;
-                break;
-            case 'string':
-                $valueToSet = $format ? sprintf($format, strval($value)) : strval($value);
-                $valueSettable = true;
-                break;
-            default:
-                if ($dataType === null
-                    || in_array($dataType, ['\Traversable', 'array', '\iterable']) && (is_iterable($value) || is_null($value))
-                    || $value instanceof $dataType
-                    || ($value === null && class_exists($dataType))
-                    || ($dataType != 'array' && !class_exists($dataType) && !is_object($value))
-                    || ($value instanceof \Closure)
-                ) {
-                    $valueToSet = $value;
+        $origValue = $value;
+        try {
+            switch (strtolower(str_replace('\\', '', $dataType))) {
+                case 'datetime':
+                case 'date':
+                case 'date_time':
+                    $valueToSet = $value === null ? null : ($value instanceof \DateTimeInterface ? $value : new \DateTime($value ?? ''));
                     $valueSettable = true;
-                }
-                break;
+                    break;
+                case 'datetimeimmutable':
+                case 'datetime_immutable':
+                case 'date_time_immutable':
+                    $valueToSet = $value === null ? null : ($value instanceof \DateTimeInterface ? $value : new \DateTimeImmutable($value ?? ''));
+                    $valueSettable = true;
+                    break;
+                case 'datetimestring':
+                case 'date_time_string':
+                case 'datestring':
+                case 'date_string':
+                    $format = $format ?: 'Y-m-d H:i:s';
+                    $dateValue = ($value instanceof \DateTimeInterface ? $value : new \DateTime($value ?? ''));
+                    $valueToSet = $dateValue ? $dateValue->format($format) : $value;
+                    $valueSettable = true;
+                    break;
+                case 'int':
+                case 'integer':
+                    $valueToSet = intval($value);
+                    $valueSettable = true;
+                    break;
+                case 'float':
+                case 'real':
+                case 'decimal':
+                case 'double':
+                    $valueToSet = floatval($value);
+                    $valueSettable = true;
+                    break;
+                case 'bool':
+                case 'boolean':
+                    $valueToSet = $value ? (in_array(strtolower(strval($value)), ['false', '0']) ? false : true) : false;
+                    $valueSettable = true;
+                    break;
+                case 'string':
+                    $valueToSet = $format ? sprintf($format, strval($value)) : strval($value);
+                    $valueSettable = true;
+                    break;
+                default:
+                    if ($dataType === null
+                        || in_array($dataType, ['\Traversable', 'array', '\iterable']) && (is_iterable($value) || is_null($value))
+                        || $value instanceof $dataType
+                        || ($value === null && class_exists($dataType))
+                        || ($dataType != 'array' && !class_exists($dataType) && !is_object($value))
+                        || ($value instanceof \Closure)
+                    ) {
+                        $valueToSet = $value;
+                        $valueSettable = true;
+                    }
+                    break;
+            }
+        } catch (\Throwable $ex) {
+            //Could not convert to required or assumed data type
+            $value = $origValue;
+            $valueSettable = false;
         }
 
         if ($valueSettable && ($nullable || $value !== null)) {
