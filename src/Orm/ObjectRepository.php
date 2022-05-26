@@ -863,6 +863,9 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     protected function doFindBy(FindOptions $findOptions, $criteria)
     {
+        if (empty($findOptions->orderBy) && $this->orderBy) {
+            $findOptions->orderBy = $this->orderBy;
+        }
         $this->objectFetcher->setFindOptions($findOptions);
         $query = $this->normalizeCriteria($criteria);
         if (!$query->getOrderBy() && $findOptions->orderBy) {
