@@ -89,11 +89,10 @@ final class ObjectMapper
                 }
             }
             foreach ($unsets as $unset) {
-                $cacheKey = 'mc' . sha1($this->configHash . '_' . $unset);
                 if ($this->cache) {
-                    $this->cache->delete($cacheKey);
+                    $this->cache->delete($unset);
                 }
-                unset($this->mappingCollections[$cacheKey]);
+                unset($this->mappingCollections[$unset]);
             }
         } else {
             if ($this->cache) {

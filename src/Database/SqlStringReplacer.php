@@ -366,9 +366,7 @@ class SqlStringReplacer
      */
     private function checkPropertyPath(string &$fieldValue, &$alias, QueryInterface $query, MappingCollection $mappingCollection): bool
     {
-        if ($mappingCollection->getEntityClassName() == $query->getClassName()) {
-            $fieldValueMappingCollection = $mappingCollection;
-        } elseif ($this->delimit($mappingCollection->getPrimaryTableMapping()->name) != $query->getClassName()) {
+        if ($this->delimit($mappingCollection->getPrimaryTableMapping()->name) != $query->getClassName()) {
             $fieldValueMappingCollection = $this->getMappingCollectionForFieldValue($query, $fieldValue);
             $mappingCollection = $fieldValueMappingCollection ?? $mappingCollection; //In case of table override in query
         }

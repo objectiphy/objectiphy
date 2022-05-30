@@ -866,6 +866,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         if (empty($findOptions->orderBy) && $this->orderBy) {
             $findOptions->orderBy = $this->orderBy;
         }
+        $this->objectMapper->setConfigOptions($this->configOptions);
         $this->objectFetcher->setFindOptions($findOptions);
         $query = $this->normalizeCriteria($criteria);
         if (!$query->getOrderBy() && $findOptions->orderBy) {
