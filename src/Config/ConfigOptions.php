@@ -210,6 +210,13 @@ class ConfigOptions extends ConfigBase
         $this->setCacheDirectory($options['cacheDirectory'] ?? '');
     }
 
+    public function __clone()
+    {
+        foreach ($this->entityConfig ?? [] as $key => $entityConfig) {
+            $this->entityConfig[$key] = clone($entityConfig);
+        }
+    }
+
     /**
      * @param string $cacheDirectory
      * @throws ObjectiphyException

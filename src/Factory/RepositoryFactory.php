@@ -253,7 +253,8 @@ class RepositoryFactory implements RepositoryFactoryInterface
         if ($resetFirst) {
             $this->reset(); //When late binding, we will need new instances to prevent cross-pollination
         }
-        $configOptions ??= $this->configOptions;
+        $configOptions ??= clone($this->configOptions);
+
         $configHash = $configOptions->getHash($repositoryClassName ?: '');
         if (!isset($this->repositories[$entityClassName][$configHash])) {
             $repositoryClassName = $this->getRepositoryClassName($repositoryClassName, $entityClassName);
