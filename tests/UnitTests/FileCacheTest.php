@@ -54,7 +54,6 @@ class FileCacheTest extends TestCase
         $this->cache->set('null', null);
         $this->assertTrue($this->cache->has('null'));
         $this->assertNull($this->cache->get('null'));
-
     }
 
     public function testDeleteAndHas()

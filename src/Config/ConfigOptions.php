@@ -202,12 +202,14 @@ class ConfigOptions extends ConfigBase
      * @throws ObjectiphyException
      */
     public function __construct(
-        array $options = ['cacheDirectory' => '', 'devMode' => true],
+        array $options = [],
         string $configFile = ''
     ) {
-        $this->setInitialOptions($options);
+        $this->devMode = $options['devMode'] = boolval($options['devMode'] ?? true);
         $this->parseConfigFile($configFile);
-        $this->setCacheDirectory($options['cacheDirectory'] ?? '');
+        $options = $options ?: ['cacheDirectory' => '', 'devMode' => true];
+        $this->setInitialOptions($options);
+        $this->setCacheDirectory($options['cacheDirectory'] ?? $this->cacheDirectory ?? '');
     }
 
     public function __clone()

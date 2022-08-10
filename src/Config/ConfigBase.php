@@ -9,7 +9,7 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-class ConfigBase
+abstract class ConfigBase
 {
     /**
      * @var array Keep track of which options have changed from the default value so that we can cache mappings for a
