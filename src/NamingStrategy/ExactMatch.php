@@ -73,5 +73,7 @@ class ExactMatch implements NamingStrategyInterface
         } elseif (substr($name, -3) == 'aux') {
             return substr($name, 0, strlen($name) - 2) . 'l';
         }
+        
+        return $name;
     }
 }
