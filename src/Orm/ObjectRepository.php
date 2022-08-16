@@ -765,7 +765,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
                     }
                 }
                 $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
-                if (($currentClassName ?? '') != $className) {
+                if (($currentClassName ?? false) && $currentClassName != $className)
                     $this->setClassName($currentClassName);
                 }
                 if (!$pkProperties && count($pkValues == 1)) {
