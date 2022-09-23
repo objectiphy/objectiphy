@@ -322,8 +322,9 @@ interface ObjectRepositoryInterface
 
     /**
      * Convenience method to allow you to perform some action on each object in the hierarchy.
-     * If the closure returns false, the iteration will stop (allows you to stop going deeper
-     * than is necessary, although infinite recursion will be prevented automatically anyway)
+     * If the closure returns false, the traversal will stop (allows you to stop going deeper
+     * than is necessary, although infinite recursion will be prevented automatically anyway, 
+     * and you can also specify a maximum depth)
      */
-    public function iterateHierarchy(object $entity, \closure $closure, array $excludeProperties = []): void;
+    public function traverseHierarchy(object $entity, \closure $closure, array $excludeProperties = [], int $maxDepth = 5): void;
 }

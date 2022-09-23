@@ -174,11 +174,11 @@ class ObjectHelper
         return $className;
     }
     
-    public static function iterateHierarchy(object $entity, ObjectMapper $objectMapper, \closure $closure, array $excludeProperties = []): void
+    public static function traverseHierarchy(object $entity, ObjectMapper $objectMapper, \closure $closure, array $excludeProperties = [], int $maxDepth = 5): void
     {
         $success = $closure($entity);
         if ($success) { //Allow closure to bomb out if it wants to
-            self::executeClosureForChildren($entity, $objectMapper, $closure, [$entity], $excludeProperties);
+            self::executeClosureForChildren($entity, $objectMapper, $closure, [$entity], $excludeProperties, $maxDepth);
         }
     }
     
@@ -226,28 +226,42 @@ class ObjectHelper
         \closure $closure,
         array $entitiesProcessed,
         array $excludeProperties,
+        int $maxDepth = 5,
         array $parents = []
-    ) {
+    ): void {
+        static $depth = 0;
+        
+        if ($depth > $maxDepth) {
+            return;
+        }
+        $depth++;
         $mappingCollection = $objectMapper->getMappingCollectionForClass(self::getObjectClassName($entity));
-        foreach ($mappingCollection->getChildObjectProperties(false, $parents) as $childObjectProperty) {
+        foreach ($mappingCollection->getChildObjectProperties() as $childObjectProperty) {
             if (!in_array(ltrim(implode('.', $parents) . '.' . $childObjectProperty, '.'), $excludeProperties)
-                && ($childObject = self::getValueFromObject($entity, $childObjectProperty))
-                && !in_array($childObject, $entitiesProcessed) //Prevent infinite recursion
+                && ($child = self::getValueFromObject($entity, $childObjectProperty))
             ) {
-                $success = $closure($childObject);
-                if ($success) {
-                    $entitiesProcessed[] = $childObject;
-                    self::executeClosureForChildren(
-                        $childObject,
-                        $objectMapper,
-                        $closure,
-                        $entitiesProcessed,
-                        $excludeProperties,
-                        array_merge($parents, [$childObjectProperty])
-                    );
+                $children = is_iterable($child) ? $child : [$child];
+                foreach ($children as $childObject) {
+                    if (is_object($childObject) && !in_array($childObject, $entitiesProcessed)) { //Prevent infinite recursion
+                        $success = $closure($childObject);
+                        if ($success) {
+                            $entitiesProcessed[] = $childObject;
+                            self::executeClosureForChildren(
+                                $childObject,
+                                $objectMapper,
+                                $closure,
+                                $entitiesProcessed,
+                                $excludeProperties,
+                                $maxDepth,
+                                array_merge($parents, [$childObjectProperty])
+                            );
+                        }
+                    }
                 }
             }
         }
+        
+        $depth --;
     }
 
     private static function getTypeHacky($className, $propertyName): string
