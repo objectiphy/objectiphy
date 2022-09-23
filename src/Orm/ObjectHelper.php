@@ -182,13 +182,16 @@ class ObjectHelper
         }
     }
     
-    public static function clearPrimaryKey(object $entity, MappingCollection $mappingCollection): bool
+    public static function clearPrimaryKey(object $entity, MappingCollection $mappingCollection, bool $autoIncrementOnly = true): bool
     {
         $className = self::getObjectClassName($entity);
         $keyProperties = $mappingCollection->getPrimaryKeyProperties($className);
         $nonNullValueFound = false;
         foreach ($keyProperties as $keyProperty) {
-            if (self::getValueFromObject($entity, $keyProperty) !== null) {
+            if (
+                self::getValueFromObject($entity, $keyProperty) !== null
+                && (!$autoIncrementOnly || ($mappingCollection->getPropertyMapping($keyProperty)->column->autoIncrement ?? true))
+            ) {
                 $nonNullValueFound = true;
                 try {
                     self::setValueOnObject($entity, $keyProperty, null);
