@@ -308,4 +308,22 @@ interface ObjectRepositoryInterface
      * Delete all collected data (to free up memory for large and/or multiple queries).
      */
     public function clearQueryHistory(): void;
+
+    /**
+     * Set all primary keys to null so you can save a copy as a new record with
+     * all of its children (note, this will not set keys to null if there is an
+     * autoIncrement mapping definition set to false). This method does NOT
+     * clone the object, it UPDATES it to remove (set to null, or unset) all
+     * primary key property values (ie. on the parent and all child objects).
+     * You can then save it back to the database to create a copy with new
+     * autoincrement IDs.
+     */
+    public function clearAllPrimaryKeyValues(object $entity, array $excludeProperties = []): void;
+
+    /**
+     * Convenience method to allow you to perform some action on each object in the hierarchy.
+     * If the closure returns false, the iteration will stop (allows you to stop going deeper
+     * than is necessary, although infinite recursion will be prevented automatically anyway)
+     */
+    public function iterateHierarchy(object $entity, \closure $closure, array $excludeProperties = []): void;
 }

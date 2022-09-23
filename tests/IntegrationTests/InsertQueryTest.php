@@ -5,6 +5,7 @@ namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Query\QueryBuilder;
 use Objectiphy\Objectiphy\Tests\Entity\TestContact;
+use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
 use Objectiphy\Objectiphy\Tests\Entity\TestStudent;
 
 class InsertQueryTest extends IntegrationTestBase
@@ -85,6 +86,7 @@ class InsertQueryTest extends IntegrationTestBase
     {
         $this->doInsertQueryTests();
         $this->doMultipleInsertTests();
+        $this->doIterateInsertTests();
     }
 
     protected function doInsertQueryTests()
@@ -143,5 +145,30 @@ class InsertQueryTest extends IntegrationTestBase
 
         $count2 = intval($this->objectRepository->executeQuery($countQuery));
         $this->assertEquals(7, $count2);
+    }
+
+    protected function doIterateInsertTests()
+    {
+        //Test using clearAllPrimaryKeyValues to insert a copy of an existing record
+        $this->objectRepository->setClassName(TestPolicy::class);
+        $policy = $this->objectRepository->findOneBy(['id' => 19071974]);
+        $this->objectRepository->clearAllPrimaryKeyValues($policy, ['underwriter', 'contact.department']);
+        $this->assertNull($policy->id); return;
+        $this->assertNotNull($policy->underwriter->id);
+        $this->assertNull($policy->contact->id);
+        $this->assertNull($policy->contact->securityPass->id);
+        $this->assertNull($policy->contact->securityPass->employee->id);
+        $this->assertNotNull($policy->contact->nonPkChild->nebulousIdentifier);
+        $this->assertNotNull($policy->contact->department->id);
+        $this->assertSame($policy, $policy->vehicle->policy);
+        $this->objectRepository->saveEntity($policy);
+        $this->assertNotEquals(19071974, $policy->id);
+        $origPolicy = $this->objectRepository->findOneBy(['id' => 19071974]);
+        $this->assertEquals(19071974, $origPolicy->id);
+        $this->assertEquals($origPolicy->underwriter->id, $policy->underwriter->id);
+        $this->assertEquals($origPolicy->contact->department->id, $policy->contact->department->id);
+        $this->assertNotEquals($origPolicy->contact->id, $policy->contact->id);
+        $this->assertNotEquals($origPolicy->vehicle->id, $policy->vehicle->id);
+        $this->assertNotEquals($origPolicy->contact->securityPass->id, $policy->contact->securityPass->id);
     }
 }

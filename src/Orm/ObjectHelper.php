@@ -7,6 +7,7 @@ use Objectiphy\Objectiphy\Contract\DataTypeHandlerInterface;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Contract\ObjectReferenceInterface;
 use Objectiphy\Objectiphy\Exception\MappingException;
+use Objectiphy\Objectiphy\Mapping\MappingCollection;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
@@ -47,7 +48,7 @@ class ObjectHelper
                     if ($object instanceof EntityProxyInterface && $object->isChildAsleep($propertyName)) {
                         $object->triggerLazyLoad($propertyName);
                         if (!isset($object->$propertyName)) { //Won't be set if lazy loader didn't load anything
-                            $valueFound = true;
+                            $valueFound = self::getValueFromGetter($object, $propertyName, $value);
                         }
                     } elseif ($object instanceof ObjectReferenceInterface) {
                         if (in_array($propertyName, array_keys($object->getPkValues()))) {
@@ -172,6 +173,33 @@ class ObjectHelper
 
         return $className;
     }
+    
+    public static function iterateHierarchy(object $entity, ObjectMapper $objectMapper, \closure $closure, array $excludeProperties = []): void
+    {
+        $success = $closure($entity);
+        if ($success) { //Allow closure to bomb out if it wants to
+            self::executeClosureForChildren($entity, $objectMapper, $closure, [$entity], $excludeProperties);
+        }
+    }
+    
+    public static function clearPrimaryKey(object $entity, MappingCollection $mappingCollection): bool
+    {
+        $className = self::getObjectClassName($entity);
+        $keyProperties = $mappingCollection->getPrimaryKeyProperties($className);
+        $nonNullValueFound = false;
+        foreach ($keyProperties as $keyProperty) {
+            if (self::getValueFromObject($entity, $keyProperty) !== null) {
+                $nonNullValueFound = true;
+                try {
+                    self::setValueOnObject($entity, $keyProperty, null);
+                } catch (\Exception $ex) {
+                    unset($entity->$keyProperty); //If this errors too, just let it
+                }
+            }
+        }
+        
+        return $nonNullValueFound;
+    }
 
     public static function getTypeName(\ReflectionType $reflectionType, string $className = '', string $propertyName = '', $defaultToStdClass = false)
     {
@@ -190,6 +218,36 @@ class ObjectHelper
         }
 
         return $type ?: ($defaultToStdClass ? 'stdClass' : '');
+    }
+
+    private static function executeClosureForChildren(
+        object $entity,
+        ObjectMapper $objectMapper,
+        \closure $closure,
+        array $entitiesProcessed,
+        array $excludeProperties,
+        array $parents = []
+    ) {
+        $mappingCollection = $objectMapper->getMappingCollectionForClass(self::getObjectClassName($entity));
+        foreach ($mappingCollection->getChildObjectProperties(false, $parents) as $childObjectProperty) {
+            if (!in_array(ltrim(implode('.', $parents) . '.' . $childObjectProperty, '.'), $excludeProperties)
+                && ($childObject = self::getValueFromObject($entity, $childObjectProperty))
+                && !in_array($childObject, $entitiesProcessed) //Prevent infinite recursion
+            ) {
+                $success = $closure($childObject);
+                if ($success) {
+                    $entitiesProcessed[] = $childObject;
+                    self::executeClosureForChildren(
+                        $childObject,
+                        $objectMapper,
+                        $closure,
+                        $entitiesProcessed,
+                        $excludeProperties,
+                        array_merge($parents, [$childObjectProperty])
+                    );
+                }
+            }
+        }
     }
 
     private static function getTypeHacky($className, $propertyName): string
