@@ -276,6 +276,9 @@ class ConfigOptions extends ConfigBase
     private function setInitialOptions(array $options): void
     {
         foreach ($options ?? [] as $key => $value) {
+            if (!is_string($key)) {
+                throw new ObjectiphyException('Config option key must be a string - use a associative array for initial config options.');
+            }
             $this->setConfigOption($key, $value);
         }
         

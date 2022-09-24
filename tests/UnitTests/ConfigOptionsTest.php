@@ -4,9 +4,15 @@ declare(strict_types=1);
 
 namespace Objectiphy\Objectiphy;
 
+use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
+use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\NamingStrategy\PascalCamelToSnake;
 use Objectiphy\Objectiphy\NamingStrategy\Unseparated;
+use Objectiphy\Objectiphy\Tests\Entity\TestCollection;
+use Objectiphy\Objectiphy\Tests\Entity\TestContact;
+use Objectiphy\Objectiphy\Tests\Entity\TestPolicy;
+use Objectiphy\Objectiphy\Tests\Factory\TestVehicleFactory;
 use PHPUnit\Framework\TestCase;
 
 class ConfigOptionsTest extends TestCase
@@ -40,8 +46,60 @@ class ConfigOptionsTest extends TestCase
         $this->assertSame(true, $tempConfig2->getConfigOption(ConfigOptions::BIND_TO_ENTITIES));
     }
 
-//    public function testClone()
-//    {
-//
-//    }
+    public function testClone()
+    {
+        $tempConfig = new ConfigOptions();
+        $entityConfigs = $this->configOptions->getConfigOption(ConfigOptions::ENTITY_CONFIG);
+        $policyConfig = new ConfigEntity();
+        $policyConfig->setConfigOption(ConfigEntity::COLLECTION_CLASS, TestCollection::class);
+        $policyConfigObjectId = spl_object_id($policyConfig);
+        $vehicleConfig = new ConfigEntity();
+        $vehicleConfig->setConfigOption(ConfigEntity::ENTITY_FACTORY, new TestVehicleFactory());
+        $vehicleConfigObjectId = spl_object_id($vehicleConfig);
+        $entityConfigs[TestPolicy::class] = $policyConfig;
+        $entityConfigs[TestVehicle::class] = $vehicleConfig;
+        $tempConfig->setConfigOption(ConfigOptions::ENTITY_CONFIG, $entityConfigs);
+
+        $clone = clone($tempConfig);
+        $this->assertNotEquals($policyConfigObjectId, spl_object_id($clone->entityConfig[TestPolicy::class]));
+        $this->assertNotEquals($vehicleConfigObjectId, spl_object_id($clone->entityConfig[TestVehicle::class]));
+    }
+
+    public function testSetCacheDirectory()
+    {
+        $cacheDir = '/tmp/objectiphy/unit/tests';
+        if (file_exists($cacheDir)) {
+            rmdir($cacheDir);
+            $this->assertDirectoryDoesNotExist($cacheDir);
+        }
+
+        //Check using an indexed array gives you a nice error
+        try {
+            $tempConfig = new ConfigOptions([ConfigOptions::CACHE_DIRECTORY, $cacheDir]);
+        } catch (ObjectiphyException $ex) {
+            $this->assertStringContainsString('associative', $ex->getMessage());
+        }
+
+        $tempConfig = new ConfigOptions([ConfigOptions::CACHE_DIRECTORY => $cacheDir]);
+        $this->assertDirectoryExists($cacheDir);
+        $this->assertEquals($cacheDir, $tempConfig->getConfigOption(ConfigOptions::CACHE_DIRECTORY));
+
+        chmod($cacheDir, 0444);
+        try {
+            $tempConfig = new ConfigOptions([ConfigOptions::CACHE_DIRECTORY => $cacheDir]);
+            $this->assertEquals(false, true); //Should not reach this!
+        } catch (ObjectiphyException $ex) {
+            $this->assertStringContainsString('is not writable', $ex->getMessage());
+        }
+
+        try {
+            $tempConfig = new ConfigOptions([ConfigOptions::CACHE_DIRECTORY => $cacheDir . '/tmp']);
+            $this->assertEquals(false, true); //Should not reach this!
+        } catch (ObjectiphyException $ex) {
+            $this->assertStringContainsString('does not exist', $ex->getMessage());
+        }
+        
+        chmod($cacheDir, 0755);
+        rmdir($cacheDir);
+    }
 }
