@@ -39,6 +39,10 @@ class ConfigOptionsTest extends TestCase
         $this->assertSame(null, $tempConfig->getConfigOption(ConfigOptions::EAGER_LOAD_TO_ONE));
         $this->assertSame(true, $tempConfig->getConfigOption(ConfigOptions::BIND_TO_ENTITIES));
 
+        @mkdir('/var/cache', 0777,true);
+        if (!file_exists('/var/cache')) {
+            throw new \RuntimeException('Please ensure /var/cache directory exists before attempting to run these tests.');
+        }
         $configFile = __DIR__ . '/../../config.ini';
         $tempConfig2 = new ConfigOptions(configFile: $configFile);
         $this->assertSame('/var/cache', $tempConfig2->getConfigOption(ConfigOptions::CACHE_DIRECTORY));

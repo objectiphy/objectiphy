@@ -264,7 +264,7 @@ INSERT INTO `login` VALUES
 DROP TABLE IF EXISTS `order`;
 CREATE TABLE `order` (
                             `id` int(11) NOT NULL AUTO_INCREMENT,
-                            `customer_id` int(11) NOT NULL,
+                            `customer_id` int(11) NULL, /* need to test with and without orphan removal */
                             `product_name` varchar(100),
                             `price` decimal(10, 2) DEFAULT NULL,
                             `description` varchar(100) DEFAULT NULL,

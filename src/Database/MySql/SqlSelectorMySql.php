@@ -78,8 +78,9 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $sql .= $this->getFrom();
         $sql .= $this->joinProvider->getJoins($query);
         $sql .= $this->whereProvider->getWhere($query, $this->options->mappingCollection);
-        $sql .= $this->getGroupBy();
-        $sql .= $this->whereProvider->getHaving($query, $this->options->mappingCollection);
+        $having = $this->whereProvider->getHaving($query, $this->options->mappingCollection);
+        $sql .= $this->getGroupBy($having ? true : false);
+        $sql .= $having;
         $sql .= $this->getOrderBy();
         $sql .= $this->getLimit();
         $sql .= $this->getOffset();
@@ -136,10 +137,22 @@ class SqlSelectorMySql implements SqlSelectorInterface
      * @return string The SQL string for the GROUP BY clause, if applicable.
      * @throws ObjectiphyException
      */
-    public function getGroupBy(): string
+    public function getGroupBy(bool $usesHaving = false): string
     {
         $sql = '';
-        $groupBy = array_unique(array_filter(array_merge($this->query->getGroupBy(), $this->stringReplacer->getAggregateGroupBys())));
+        $queryGroupBy = $this->query->getGroupBy();
+        $aggregateGroupBy = $this->stringReplacer->getAggregateGroupBys();
+        $foreignKeyGroupBy = [];
+        if ($queryGroupBy || $aggregateGroupBy || $usesHaving) {
+            //As we are automatically adding groups, ensure all FKs are also grouped (MySQL strict mode)
+            foreach ($this->query->getFields() as $field) {
+                $propertyMapping = $this->options->mappingCollection->getPropertyMapping($field->getPropertyPath());
+                if ($propertyMapping && ($propertyMapping->isForeignKey || $propertyMapping->column->isPrimaryKey)) {
+                    $foreignKeyGroupBy[] = $propertyMapping->getFullColumnName();
+                }
+            }
+        }
+        $groupBy = array_unique(array_filter(array_merge($queryGroupBy, $aggregateGroupBy, $foreignKeyGroupBy)));
         if ($groupBy) {
             $sql = "\n/* groupBy */\nGROUP BY ";
             foreach ($groupBy as $index => $groupItem) {
