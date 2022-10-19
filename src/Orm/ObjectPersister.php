@@ -242,7 +242,7 @@ final class ObjectPersister implements TransactionInterface
         if ($this->entityTracker->hasEntity($entity, $pkValues)) {
             //We are tracking it, so it is definitely an update, but if we don't have a hydrated pk, throw up
             if (!$pkValues) {
-                throw new QueryException('Cannot save a partially hydrated object if there is no primary key.');
+                throw new QueryException('Cannot save a tracked object if there is no primary key. If you load an entity, unset its primary key value, and then try to save it (to create a copy), please clear the Objectiphy cache before the save - ie. call $repository->clearCache().');
             }
             $update = true;
         } elseif ($pkValues) { //We have values for the primary key so probably an update
