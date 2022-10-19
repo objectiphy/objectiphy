@@ -55,7 +55,13 @@ class TestEmployee
      * @Mapping\Relationship(childClassName="TestPosition",relationshipType="one_to_one",isEmbedded=true)
      */
     protected $position;
-    
+
+    /**
+     * For testing unidirectional relationship with an integer on the owning side and an entity on the inverse side.
+     * In this case, the inverse side is TestContact.
+     * @Mapping\Column(type="integer", name="contact_id")
+     */
+    protected $contactId;
 
     /**
      * This is a dirty bodge, just for unit test purposes - not recommended

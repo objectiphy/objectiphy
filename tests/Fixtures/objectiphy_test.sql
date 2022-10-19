@@ -209,6 +209,7 @@ CREATE TABLE `employee` (
                             `mentee_id` int(11) DEFAULT NULL,
                             `union_rep_id` int(11) DEFAULT NULL,
                             `position_code` varchar(2) DEFAULT NULL,
+                            `contact_id` int(11) DEFAULT NULL,
                             PRIMARY KEY (`id`),
                             CONSTRAINT `mentor` FOREIGN KEY (`mentor_id`) REFERENCES `employee` (`id`) ON DELETE SET NULL,
                             CONSTRAINT `mentee` FOREIGN KEY (`mentee_id`) REFERENCES `employee` (`id`) ON DELETE SET NULL,
@@ -219,17 +220,17 @@ CREATE TABLE `employee` (
 --  Records of `employee`
 -- ----------------------------
 
-INSERT INTO `employee` (`id`, `name`, `mentor_id`, `mentee_id`, `union_rep_id`, `position_code`)
+INSERT INTO `employee` (`id`, `name`, `mentor_id`, `mentee_id`, `union_rep_id`, `position_code`, `contact_id`)
         VALUES
-               (1, 'Steve', 3, 5, 2, 'GD'),
-               (2, 'Rob', 4, 3, 3, 'DD'),
-               (3, 'Becky', 2, 1, 3, 'SB'),
-               (4, 'Jack', 5, 2, 3, 'DD'),
-               (5, 'Tim', 1, 4, 2, 'VP'),
-               (6, 'Ben', 5, 2, 3, 'MD'),
-               (7, 'Olivia', 1, 0, 2, 'DD'),
-               (8, 'Carmen', 1, 0, 7, 'DD'),
-               (9, 'Carruthers', 1, 0, 7, 'DD');
+               (1, 'Steve', 3, 5, 2, 'GD', 123),
+               (2, 'Rob', 4, 3, 3, 'DD', null),
+               (3, 'Becky', 2, 1, 3, 'SB', 124),
+               (4, 'Jack', 5, 2, 3, 'DD', 125),
+               (5, 'Tim', 1, 4, 2, 'VP', null),
+               (6, 'Ben', 5, 2, 3, 'MD', 130),
+               (7, 'Olivia', 1, 0, 2, 'DD', 134),
+               (8, 'Carmen', 1, 0, 7, 'DD', 135),
+               (9, 'Carruthers', 1, 0, 7, 'DD', 136);
 
 -- ----------------------------
 --  Table structure for `login`

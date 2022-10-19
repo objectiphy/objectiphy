@@ -30,6 +30,8 @@ final class ObjectPersister implements TransactionInterface
 {
     use TransactionTrait;
 
+    private const VALUE_NOT_FOUND = '**OBJECTIPHY_VALUE_NOT_FOUND**';
+    
     private SqlUpdaterInterface $sqlUpdater;
     private ObjectMapper $objectMapper;
     private ObjectUnbinder $objectUnbinder;
@@ -448,8 +450,9 @@ final class ObjectPersister implements TransactionInterface
                             && $this->entityTracker->isEntityDirty($childEntity, $childEntityPkValues)
                         ) {
                             //Populate parent
-                            if ($childParentProperty && !$childPropertyMapping->relationship->isManyToMany()) {
-                                ObjectHelper::setValueOnObject($childEntity, $childParentProperty, $entity);
+                            $parentValue = $this->getParentValue($childParentProperty, $entity, $childEntity, $childPropertyMapping);
+                            if ($parentValue !== self::VALUE_NOT_FOUND) {
+                                ObjectHelper::setValueOnObject($childEntity, $childParentProperty, $parentValue);
                             }
                             $this->doSaveEntity($childEntity, $insertCount, $updateCount, $deleteCount);
                         }
@@ -463,6 +466,28 @@ final class ObjectPersister implements TransactionInterface
         }
 
         $depth--;
+    }
+
+    private function getParentValue(string $childParentProperty, object $entity, object $childEntity, PropertyMapping $childPropertyMapping)
+    {
+        if ($childParentProperty) {
+            $childClassName = ObjectHelper::getObjectClassName($childEntity);
+            $childClassMappingCollection = $this->objectMapper->getMappingCollectionForClass($childClassName);
+            $childParentPropertyMapping = $childClassMappingCollection->getPropertyMapping($childParentProperty);
+            if ($childParentProperty && !$childPropertyMapping->relationship->isManyToMany()) {
+                if (!$childParentPropertyMapping || !$childParentPropertyMapping->isScalarValue()) {
+                    //Set instance of parent object
+                    return $entity;
+                } elseif ($childParentPropertyMapping && $childParentPropertyMapping->isScalarValue()) {
+                    if ($pkValues = $childClassMappingCollection->getPrimaryKeyValues($entity)) {
+                        //Set scalar value of parent object primary key
+                        return reset($pkValues);
+                    }
+                }
+            }
+        }
+
+        return self::VALUE_NOT_FOUND;
     }
 
     private function saveManyToMany(

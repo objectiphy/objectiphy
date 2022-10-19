@@ -11,7 +11,9 @@ use Objectiphy\Objectiphy\Orm\ObjectReference;
 use Objectiphy\Objectiphy\Query\QB;
 use Objectiphy\Objectiphy\Tests\Entity\TestAddress;
 use Objectiphy\Objectiphy\Tests\Entity\TestChild;
+use Objectiphy\Objectiphy\Tests\Entity\TestEmployee;
 use Objectiphy\Objectiphy\Tests\Entity\TestPet;
+use Objectiphy\Objectiphy\Tests\Entity\TestSecurityPass;
 use Objectiphy\Objectiphy\Tests\Entity\TestSuppliedPk;
 use Objectiphy\Objectiphy\Tests\Entity\TestUnderwriter;
 use Objectiphy\Objectiphy\Tests\Entity\TestParent;
@@ -116,6 +118,7 @@ class BasicWritingTest extends IntegrationTestBase
         $this->doScalarJoinTests();
         $this->doEmbeddedValueObjectTests();
         $this->doSerializationGroupTests();
+        $this->doUnidirectionalScalarRelationshipTests();
     }
     
     protected function doUpdateTests()
@@ -721,5 +724,26 @@ class BasicWritingTest extends IntegrationTestBase
         $this->assertEquals('Updated Parent Name!', $updatedParent->getName()); //Parent name update successful
         $this->assertNotEquals(null, $updatedParent->getChild()); //Child was not lost
         $this->assertEquals('Penfold', $updatedParent->getChild()->getName()); //Child name was not lost
+    }
+
+    protected function doUnidirectionalScalarRelationshipTests()
+    {
+        $this->objectRepository->clearCache();
+        $this->objectRepository->setClassName(TestPolicy::class);
+        $policy = $this->objectRepository->find(19071974);
+        $this->assertEquals(1, $policy->contact->employee->id);
+        $this->assertEquals(123, $policy->contact->employee->contactId);
+
+        $newEmployee = new TestEmployee();
+        $newEmployee->name = 'Carruthers';
+        $newEmployee->contactId = $policy->contact->id;
+        $policy->contact->employee = $newEmployee;
+
+        //TODO: Consider whether we should try to save grandchildren if children have not changed (ie. save $policy here)
+        $this->objectRepository->saveEntity($policy->contact);
+        $this->objectRepository->clearCache();
+        $updatedPolicy = $this->objectRepository->find(19071974);
+        $this->assertGreaterThan(1, $policy->contact->employee->id);
+        $this->assertEquals(123, $policy->contact->employee->contactId);
     }
 }

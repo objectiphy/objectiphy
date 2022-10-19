@@ -53,10 +53,16 @@ class TestContact
     protected $titleText;
     
     /**
-     * Unidirectional relationship (TODO: allow for other side of unidirectional relationship to have a scalar ID that stays scalar)
+     * Unidirectional relationship
      * @Relationship(relationshipType="one_to_one", childClassName="TestSecurityPass", sourceJoinColumn="security_pass_id")
      */
     protected $securityPass;
+
+    /**
+     * Unidirectional relationship with a scalar value on the owning side
+     * @Relationship(relationshipType="one_to_one", childClassName="TestEmployee", mappedBy="contactId")
+     */
+    protected $employee;
     
     /**
      * Unidirectional relationship on non PK column

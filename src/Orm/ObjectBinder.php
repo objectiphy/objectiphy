@@ -317,7 +317,7 @@ final class ObjectBinder
     {
         //TODO: Use the query helper to build the queries instead of doing it here.
         //TODO: Handle multi-column joins and composite primary keys.
-
+            
         $mappingCollection = $this->mappingCollection;
         $configOptions = clone($this->configOptions);
         return function() use ($mappingCollection, $configOptions, $propertyMapping, $row, $knownValues) {

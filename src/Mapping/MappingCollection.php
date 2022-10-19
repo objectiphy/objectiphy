@@ -598,6 +598,9 @@ class MappingCollection
                             )
                         );
                         $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: $otherSideMapping->relationship->sourceJoinColumn;
+                        if (!$otherSideMapping->relationship->isDefined()) { //Unidirectional, with scalar value at other end
+                            $relationship->targetJoinColumn = $otherSideMapping->column->name;
+                        }
                         //If empty, use primary key of child class
                         $relationship->targetJoinColumn = $relationship->targetJoinColumn ?: implode(
                             ',',
