@@ -9,17 +9,11 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-class SaveOptions
+class SaveOptions extends AbstractOptions
 {
-    public MappingCollection $mappingCollection;
     public bool $saveChildren = true;
     public bool $replaceExisting = false;
     public bool $parseDelimiters = true;
-    
-    public function __construct(MappingCollection $mappingCollection)
-    {
-        $this->mappingCollection = $mappingCollection;
-    }
 
     /**
      * Create and initialise save options.
@@ -30,19 +24,8 @@ class SaveOptions
     public static function create(MappingCollection $mappingCollection, array $settings = []): SaveOptions
     {
         $saveOptions = new SaveOptions($mappingCollection);
-        foreach ($settings as $key => $value) {
-            if (method_exists($saveOptions, 'set' . ucfirst($key))) {
-                $saveOptions->{'set' . ucfirst($key)}($value);
-            } elseif (property_exists($saveOptions, $key)) {
-                $saveOptions->$key = $value;
-            }
-        }
+        parent::initialise($saveOptions, $settings);
         
         return $saveOptions;
-    }
-    
-    public function getClassName(): string
-    {
-        return $this->mappingCollection->getEntityClassName();
     }
 }

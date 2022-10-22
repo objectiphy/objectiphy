@@ -11,9 +11,8 @@ use Objectiphy\Objectiphy\Mapping\MappingCollection;
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
  */
-class FindOptions implements PropertyPathConsumerInterface
+class FindOptions extends AbstractOptions implements PropertyPathConsumerInterface
 {
-    public MappingCollection $mappingCollection;
     public ?PaginationInterface $pagination = null;
     public bool $multiple = true;
     public bool $latest = false;
@@ -29,12 +28,7 @@ class FindOptions implements PropertyPathConsumerInterface
      * gets added to the query.
      */
     public array $orderBy = [];
-
-    public function __construct(MappingCollection $mappingCollection)
-    {
-        $this->mappingCollection = $mappingCollection;
-    }
-
+    
     /**
      * Create and initialise find options.
      * @param MappingCollection $mappingCollection
@@ -44,20 +38,9 @@ class FindOptions implements PropertyPathConsumerInterface
     public static function create(MappingCollection $mappingCollection, array $settings = []): FindOptions
     {
         $findOptions = new FindOptions($mappingCollection);
-        foreach ($settings as $key => $value) {
-            if (method_exists($findOptions, 'set' . ucfirst($key))) {
-                $findOptions->{'set' . ucfirst($key)}($value);
-            } elseif (property_exists($findOptions, $key)) {
-                $findOptions->$key = $value;
-            }
-        }
+        parent::initialise($findOptions, $settings);
         
         return $findOptions;
-    }
-    
-    public function getClassName(): string
-    {
-        return $this->mappingCollection->getEntityClassName();
     }
 
     public function getPropertyPaths(): array
