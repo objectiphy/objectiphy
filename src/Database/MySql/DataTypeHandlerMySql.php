@@ -61,7 +61,8 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
                     $value = $value->format('Y-m-d H:i:s');
                     break;
                 case $value instanceof ObjectReferenceInterface:
-                    $value = $value->getPrimaryKeyValue();
+                    $pkValues = $value->getPkValues();
+                    $value = reset($pkValues);
                     break;
                 default:
                     if (substr(ObjectHelper::getObjectClassName($value), -8) == 'DateTime' && method_exists($value, 'format')) {
@@ -80,6 +81,8 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
         switch (strtolower($dataType ?? '')) {
             case 'bool':
             case 'boolean':
+                $value = $value === null ? $value : boolval($value);
+                //Fall through to convert from boolean to integer as required by MySQL
             case 'int':
             case 'integer':
                 $value = $value === null ? $value : intval($value);
@@ -130,10 +133,12 @@ class DataTypeHandlerMySql implements DataTypeHandlerInterface
                     $valueToSet = $value === null ? null : ($value instanceof \DateTimeInterface ? $value : new \DateTimeImmutable($value ?? ''));
                     $valueSettable = true;
                     break;
-                case 'datetimestring':
-                case 'date_time_string':
                 case 'datestring':
                 case 'date_string':
+                    $format = 'Y-m-d';
+                    //Fall through
+                case 'datetimestring':
+                case 'date_time_string':
                     $format = $format ?: 'Y-m-d H:i:s';
                     $dateValue = ($value instanceof \DateTimeInterface ? $value : new \DateTime($value ?? ''));
                     $valueToSet = $dateValue ? $dateValue->format($format) : $value;

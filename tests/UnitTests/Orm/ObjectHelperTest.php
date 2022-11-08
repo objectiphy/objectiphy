@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy;
+namespace Objectiphy\Objectiphy\Tests\UnitTests\Orm;
 
 use Objectiphy\Objectiphy\Factory\ProxyFactory;
 use Objectiphy\Objectiphy\Tests\Entity\TestChild;

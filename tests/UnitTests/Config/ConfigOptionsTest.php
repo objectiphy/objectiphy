@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy;
+namespace Objectiphy\Objectiphy\Tests\UnitTests\Config;
 
 use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
@@ -43,7 +43,7 @@ class ConfigOptionsTest extends TestCase
         if (!file_exists('/var/cache')) {
             throw new \RuntimeException('Please ensure /var/cache directory exists before attempting to run these tests.');
         }
-        $configFile = __DIR__ . '/../../config.ini';
+        $configFile = __DIR__ . '/../../../config.ini';
         $tempConfig2 = new ConfigOptions(configFile: $configFile);
         $this->assertSame('/var/cache', $tempConfig2->getConfigOption(ConfigOptions::CACHE_DIRECTORY));
         $this->assertSame('array', $tempConfig2->getConfigOption(ConfigOptions::DEFAULT_COLLECTION_CLASS));

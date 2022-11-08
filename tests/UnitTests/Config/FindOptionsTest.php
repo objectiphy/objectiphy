@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy;
+namespace Objectiphy\Objectiphy\Tests\UnitTests\Config;
 
 use Objectiphy\Objectiphy\Config\FindOptions;
 use Objectiphy\Objectiphy\Mapping\MappingCollection;
