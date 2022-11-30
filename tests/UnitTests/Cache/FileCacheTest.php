@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Objectiphy\Objectiphy;
+namespace Objectiphy\Objectiphy\Tests\UnitTests\Cache;
 
 use Objectiphy\Objectiphy\Tests\Entity\TestAddress;
 use Psr\SimpleCache\CacheInterface;
