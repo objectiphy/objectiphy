@@ -99,7 +99,7 @@ class SqlUpdaterMySql implements SqlUpdaterInterface
         $sql = "/* update */\nUPDATE \n";
         $sql .= $this->stringReplacer->replaceNames($query->getUpdate());
         $sql .= $this->joinProvider->getJoins($query);
-        $sql .= " /* update set */\n SET \n";
+        $sql .= "\n/* update set */\n SET \n";
         $sql .= $this->constructAssignmentSql($query, $parseDelimiters);
         $sql = trim($sql) . $this->whereProvider->getWhere($query, $this->options->mappingCollection);
         $sql .= $this->whereProvider->getHaving($query, $this->options->mappingCollection);
@@ -121,7 +121,10 @@ class SqlUpdaterMySql implements SqlUpdaterInterface
         //In case two properties point to the same column, and one of them is the pk, ignore the non-pk one
         foreach ($query->getWhere() as $criteriaExpression) {
             if ($criteriaExpression instanceof \Objectiphy\Objectiphy\Query\CriteriaExpression) {
-                $keyColumns[] = $this->stringReplacer->getPersistenceValueForField($query, $criteriaExpression->property->getPropertyPath(), $this->options->mappingCollection);
+                $wherePropertyMapping = $this->options->mappingCollection->getPropertyMapping($criteriaExpression->property->getPropertyPath());
+                if ($wherePropertyMapping && $wherePropertyMapping->column->isPrimaryKey) {
+                    $keyColumns[] = $this->stringReplacer->getPersistenceValueForField($query, $criteriaExpression->property->getPropertyPath(), $this->options->mappingCollection);
+                }
             }
         }
 
