@@ -156,10 +156,28 @@ class SelectQuery extends Query implements SelectQueryInterface
      * @throws MappingException
      * @throws QueryException
      */
+//    public function finalise(MappingCollection $mappingCollection, SqlStringReplacer $stringReplacer, ?string $className = null): void
+//    {
+//        if (!$this->isFinalised) {
+//            if (!$this->getSelect()) {
+//                $fetchables = $mappingCollection->getFetchableProperties();
+//                $selects = [];
+//                foreach ($fetchables as $fetchable) {
+//                    if ($fetchable->getFullColumnName()) {
+//                        $selects[] = new FieldExpression($fetchable->getPropertyPath());
+//                    }
+//                }
+//                $this->setSelect(...$selects);
+//            }
+//            parent::finalise($mappingCollection, $stringReplacer, $className);
+//        }
+//    }
+
     public function finalise(MappingCollection $mappingCollection, SqlStringReplacer $stringReplacer, ?string $className = null): void
     {
         if (!$this->isFinalised) {
-            if (!$this->getSelect()) {
+            $specifiedSelects = $this->getSelect() ?: [];
+            if (!$specifiedSelects) {
                 $fetchables = $mappingCollection->getFetchableProperties();
                 $selects = [];
                 foreach ($fetchables as $fetchable) {
@@ -167,8 +185,16 @@ class SelectQuery extends Query implements SelectQueryInterface
                         $selects[] = new FieldExpression($fetchable->getPropertyPath());
                     }
                 }
-                $this->setSelect(...$selects);
+            } else {
+                //If non-fetchable fields are explicitly requested, do not comply - they have to be late bound
+                foreach ($specifiedSelects as $fieldExpression) {
+                    $propertyMapping = $mappingCollection->getPropertyMapping($fieldExpression->getPropertyPath());
+                    if (!$propertyMapping || $propertyMapping->isFetchable) {
+                        $selects[] = $fieldExpression;
+                    }
+                }
             }
+            $this->setSelect(...$selects);
             parent::finalise($mappingCollection, $stringReplacer, $className);
         }
     }
