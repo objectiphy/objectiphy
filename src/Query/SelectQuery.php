@@ -156,23 +156,6 @@ class SelectQuery extends Query implements SelectQueryInterface
      * @throws MappingException
      * @throws QueryException
      */
-//    public function finalise(MappingCollection $mappingCollection, SqlStringReplacer $stringReplacer, ?string $className = null): void
-//    {
-//        if (!$this->isFinalised) {
-//            if (!$this->getSelect()) {
-//                $fetchables = $mappingCollection->getFetchableProperties();
-//                $selects = [];
-//                foreach ($fetchables as $fetchable) {
-//                    if ($fetchable->getFullColumnName()) {
-//                        $selects[] = new FieldExpression($fetchable->getPropertyPath());
-//                    }
-//                }
-//                $this->setSelect(...$selects);
-//            }
-//            parent::finalise($mappingCollection, $stringReplacer, $className);
-//        }
-//    }
-
     public function finalise(MappingCollection $mappingCollection, SqlStringReplacer $stringReplacer, ?string $className = null): void
     {
         if (!$this->isFinalised) {
