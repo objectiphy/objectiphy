@@ -720,24 +720,28 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     ) {
         //TODO: Use command bus pattern to send queries of different types to different handlers
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
-        $query->setClassName($query->getClassName() ?: $this->getClassName());
+        $originalClassName = $this->getClassName();
+        $query->setClassName($query->getClassName() ?: $originalClassName);
         $this->setClassName($query->getClassName(), strpos($query->getClassName(), '`') !== false); //Ignore errors in case of explicit table name
         $this->mappingCollection->setGroups(...$this->configOptions->serializationGroups);
         if ($query instanceof SelectQueryInterface) {
             $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
             $this->assertClassNameSet();
             $findOptions = $this->objectFetcher->inferFindOptionsFromQuery($query, $this->mappingCollection);
-            return $this->doFindBy($findOptions, $query);
+            $result = $this->doFindBy($findOptions, $query);
         } elseif ($query instanceof InsertQueryInterface || $query instanceof UpdateQueryInterface) {
             $saveOptions = SaveOptions::create($this->mappingCollection);
-            return $this->objectPersister->executeSave($query, $saveOptions, $insertCount, $updateCount, $lastInsertId);
+            $result = $this->objectPersister->executeSave($query, $saveOptions, $insertCount, $updateCount, $lastInsertId);
         } elseif ($query instanceof DeleteQueryInterface) {
             $deleteOptions = DeleteOptions::create($this->mappingCollection);
             $deleteCount = $this->objectRemover->executeDelete($query, $deleteOptions);
-            return $deleteCount;
+            $result = $deleteCount;
         } else {
             throw new QueryException('Unrecognised query type: ' . ObjectHelper::getObjectClassName($query));
         }
+        $this->setClassName($originalClassName);
+
+        return $result;
     }
     
     /**
