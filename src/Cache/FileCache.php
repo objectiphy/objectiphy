@@ -73,7 +73,7 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
     {
         $fileName = $this->getFileName($key);
         try {
-            if (file_exists($fileName)) {
+            if (is_file($fileName)) {
                 return unlink($fileName);
             }
             return true;
@@ -88,7 +88,7 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
             // Delete all files starting with $this->cacheDirectory . '/obj_cache_' . $this->fileNamePrefix;
             $pattern = $this->getFileName('*');
             $cacheFiles = glob($pattern);
-            array_walk($cacheFiles, fn($file) => unlink($file));
+            array_walk($cacheFiles, fn($file) => is_file($file) && unlink($file));
             return true;
         } catch (\Throwable $ex) {
             return false;
