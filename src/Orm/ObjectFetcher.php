@@ -396,10 +396,10 @@ final class ObjectFetcher
     private function doFetch(SelectQueryInterface $query)
     {
         if (empty($query->getFields())) {
-            //If we are lazy loading, just return null (or empty array) - otherwise throw up
+            //If we are late binding, just return null (or empty array) - otherwise throw up
             $backtrace = debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS, 10);
             $functions = array_column($backtrace, 'function');
-            if (in_array('triggerLazyLoad', $functions)) {
+            if (in_array('bindRowToEntity', $functions) || in_array('triggerLazyLoad', $functions)) {
                 return $this->options->multiple ? [] : null;
             }
             throw new QueryException('There are no fields to select! Did you use the wrong Serialization Group name?');
