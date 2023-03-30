@@ -328,6 +328,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => false,
             'bindToEntities' => $this->configOptions->bindToEntities,
+            'allowDuplicates' => $this->configOptions->allowDuplicates
         ]);
 
         return $this->doFindBy($findOptions, $criteria);
@@ -376,6 +377,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             'onDemand' => $fetchOnDemand,
             'pagination' => $this->pagination ?? null,
             'bindToEntities' => $this->configOptions->bindToEntities,
+            'allowDuplicates' => $this->configOptions->allowDuplicates
         ]);
 
         $result = $this->doFindBy($findOptions, $criteria);
@@ -410,7 +412,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => false,
             'bindToEntities' => false,
-            'scalarProperty' => $valueProperty
+            'scalarProperty' => $valueProperty,
+            'allowDuplicates' => $this->configOptions->allowDuplicates
         ]);
 
         $result = $this->doFindBy($findOptions, $criteria);
@@ -447,7 +450,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             'onDemand' => $fetchOnDemand,
             'pagination' => $this->pagination ?? null,
             'bindToEntities' => false,
-            'scalarProperty' => $valueProperty
+            'scalarProperty' => $valueProperty,
+            'allowDuplicates' => $this->configOptions->allowDuplicates
         ]);
         $result = $this->doFindBy($findOptions, $criteria);
         if (is_iterable($result)) {
@@ -483,7 +487,8 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             'onDemand' => true,
             'pagination' => $this->pagination ?? null,
             'bindToEntities' => false,
-            'scalarProperty' => $valueProperty
+            'scalarProperty' => $valueProperty,
+            'allowDuplicates' => $this->configOptions->allowDuplicates
         ]);
         $result = $this->doFindBy($findOptions, $criteria);
 

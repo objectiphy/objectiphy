@@ -143,12 +143,13 @@ class SqlSelectorMySql implements SqlSelectorInterface
         $queryGroupBy = $this->query->getGroupBy();
         $aggregateGroupBy = $this->stringReplacer->getAggregateGroupBys();
         $foreignKeyGroupBy = [];
-        if ($queryGroupBy || $aggregateGroupBy || $usesHaving) {
+        if (($queryGroupBy && !$this->options->allowDuplicates) || $aggregateGroupBy || $usesHaving) {
             //As we are automatically adding groups, ensure all FKs are also grouped (MySQL strict mode)
             foreach ($this->query->getFields() as $field) {
                 $propertyMapping = $this->options->mappingCollection->getPropertyMapping($field->getPropertyPath());
                 if ($propertyMapping && ($propertyMapping->isForeignKey || $propertyMapping->column->isPrimaryKey)) {
-                    $foreignKeyGroupBy[] = $propertyMapping->getFullColumnName();
+                    //Must use table alias for children, or we risk grouping by a column that is not in the query
+                    $foreignKeyGroupBy[] = $propertyMapping->getFullColumnName($propertyMapping->parents ? $propertyMapping->getTableAlias() : '');
                 }
             }
         }
