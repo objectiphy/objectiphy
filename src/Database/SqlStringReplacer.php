@@ -91,7 +91,7 @@ class SqlStringReplacer
                     $this->tokenPrefix . $key . $this->tokenSuffix,
                     (in_array($value, [null, true, false], true)
                         ? var_export($value, true)
-                        : ($value === '' ? "''" : $this->delimit($value, $this->valueDelimiter, '', $this->escapeCharacter))
+                        : ($value === '' ? "''" : $this->delimit($value, $this->valueDelimiter, '', false, $this->escapeCharacter))
                     ),
                     $queryString
                 );
@@ -160,14 +160,14 @@ class SqlStringReplacer
         if (strlen($value) > 0) {
             if ($escapeChar) {
                 //Replace escaped characters with something unique so we can reinstate them after stripping existing delimiters
-                $value = str_replace($escapeChar . $delimiter, '!!!!DELIMITED!!!!', $value);
-                $value = str_replace($escapeChar . $separator, '||||DELIMITED||||', $value);
+                $value = str_replace($escapeChar . $delimiter, '!!!!ESCAPED!!!!', $value);
+                $value = str_replace($escapeChar . $separator, '||||ESCAPED||||', $value);
             }
             $value = str_replace($delimiter, '', $value); //Don't double-up
             if ($escapeChar) {
                 //Restore escaped characters
-                $value = str_replace('!!!!DELIMITED!!!!', $escapeChar . $delimiter, $value);
-                $value = str_replace('||||DELIMITED||||', $escapeChar . $separator, $value);
+                $value = str_replace('!!!!ESCAPED!!!!', $escapeChar . $delimiter, $value);
+                $value = str_replace('||||ESCAPED||||', $escapeChar . $separator, $value);
             }
 
             if ($separator) {
