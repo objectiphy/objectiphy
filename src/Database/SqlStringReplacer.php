@@ -91,7 +91,7 @@ class SqlStringReplacer
                     $this->tokenPrefix . $key . $this->tokenSuffix,
                     (in_array($value, [null, true, false], true)
                         ? var_export($value, true)
-                        : ($value === '' ? "''" : $this->delimit($value, $this->valueDelimiter, ''))
+                        : ($value === '' ? "''" : $this->delimit($value, $this->valueDelimiter, '', $this->escapeCharacter))
                     ),
                     $queryString
                 );
@@ -153,12 +153,23 @@ class SqlStringReplacer
      * @param bool $delimitEmptyString
      * @return string Delimited string.
      */
-    public function delimit(string $value, ?string $delimiter = null, string $separator = '.', bool $delimitEmptyString = false): string
+    public function delimit(string $value, ?string $delimiter = null, string $separator = '.', bool $delimitEmptyString = false, string $escapeChar = ''): string
     {
         $delimiter ??= $this->databaseDelimiter;
         $delimited = '';
         if (strlen($value) > 0) {
+            if ($escapeChar) {
+                //Replace escaped characters with something unique so we can reinstate them after stripping existing delimiters
+                $value = str_replace($escapeChar . $delimiter, '!!!!DELIMITED!!!!', $value);
+                $value = str_replace($escapeChar . $separator, '||||DELIMITED||||', $value);
+            }
             $value = str_replace($delimiter, '', $value); //Don't double-up
+            if ($escapeChar) {
+                //Restore escaped characters
+                $value = str_replace('!!!!DELIMITED!!!!', $escapeChar . $delimiter, $value);
+                $value = str_replace('||||DELIMITED||||', $escapeChar . $separator, $value);
+            }
+
             if ($separator) {
                 $delimited = $delimiter . implode($delimiter . $separator . $delimiter, explode($separator, $value)) . $delimiter;
             } else {
@@ -332,7 +343,9 @@ class SqlStringReplacer
         preg_match_all("/'((?:\\" . $this->escapeCharacter . "'|[^'])*)'/", $fieldValue, $matches);
         if (isset($matches[1])) { //$matches[0] includes the quotes, $matches[1] does not
             foreach ($matches[1] ?? [] as $index => $match) {
-                $paramName = $query->addParam($match);
+                //For escaped quotes, remove the escape character, as we don't want to save that
+                $paramValue = str_replace($this->escapeCharacter . "'", "'", $match);
+                $paramName = $query->addParam($paramValue);
                 $search[] = $matches[0][$index];
                 $replace[] = $this->tokenPrefix . $paramName . $this->tokenSuffix;
             }
@@ -471,11 +484,11 @@ class SqlStringReplacer
                 $fieldValue = "null";
             } elseif (is_scalar($fieldValue)) {
                 $fieldValue = strval($fieldValue);
-                $escapedChar = $this->escapeCharacter . $this->valueDelimiter;
-                if (strpos($fieldValue, $escapedChar) !== false) {
+                if (strpos($fieldValue, $this->valueDelimiter) !== false) {
+                    $escapedChar = $this->escapeCharacter . $this->valueDelimiter;
                     $fieldValue = str_replace($this->valueDelimiter, $escapedChar, $fieldValue);
                 }
-                $fieldValue = $this->delimit($fieldValue, $this->valueDelimiter, '', true);
+                $fieldValue = $this->delimit($fieldValue, $this->valueDelimiter, '', true, $this->escapeCharacter);
             }
         }
 

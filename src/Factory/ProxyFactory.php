@@ -158,7 +158,7 @@ final class ProxyFactory
         if (file_exists($this->cacheDirectory)) {
             $proxies = array_diff(scandir($this->cacheDirectory), ['.', '..']);
             foreach ($proxies as $proxy) {
-                if (substr($proxy, 0, 11) == 'Objectiphy_') {
+                if (substr($proxy, 0, 11) == 'Objectiphy_' && is_file($this->cacheDirectory . DIRECTORY_SEPARATOR . $proxy)) {
                     unlink($this->cacheDirectory . DIRECTORY_SEPARATOR . $proxy);
                 }
             }
