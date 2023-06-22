@@ -54,10 +54,10 @@ class ConfigOptionsTest extends TestCase
     {
         $tempConfig = new ConfigOptions();
         $entityConfigs = $this->configOptions->getConfigOption(ConfigOptions::ENTITY_CONFIG);
-        $policyConfig = new ConfigEntity();
+        $policyConfig = new ConfigEntity(TestPolicy::class);
         $policyConfig->setConfigOption(ConfigEntity::COLLECTION_CLASS, TestCollection::class);
         $policyConfigObjectId = spl_object_id($policyConfig);
-        $vehicleConfig = new ConfigEntity();
+        $vehicleConfig = new ConfigEntity(TestVehicle::class);
         $vehicleConfig->setConfigOption(ConfigEntity::ENTITY_FACTORY, new TestVehicleFactory());
         $vehicleConfigObjectId = spl_object_id($vehicleConfig);
         $entityConfigs[TestPolicy::class] = $policyConfig;

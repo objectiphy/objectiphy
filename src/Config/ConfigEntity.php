@@ -6,6 +6,7 @@ namespace Objectiphy\Objectiphy\Config;
 
 use Objectiphy\Objectiphy\Contract\CollectionFactoryInterface;
 use Objectiphy\Objectiphy\Contract\EntityFactoryInterface;
+use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 
 /**
  * @author Russell Walker <rwalker.php@gmail.com>
@@ -23,6 +24,7 @@ class ConfigEntity extends ConfigBase
     public const RELATIONSHIP_OVERRIDES = 'relationshipOverrides';
     public const COLLECTION_CLASS = 'collectionClass';
     public const ENTITY_FACTORY = 'entityFactory';
+    public const MAPPING_FILE = 'mappingFile';
 
     /**
      * @var string Class name of entity to which these settings relate
@@ -58,4 +60,32 @@ class ConfigEntity extends ConfigBase
      * created directly using the new keyword with no arguments passed to the constructor.
      */
     protected EntityFactoryInterface $entityFactory;
+
+    /**
+     * @var string Name of a JSON file to override entity mapping information.
+     */
+    protected string $mappingFile;
+
+    public function __construct(string $className)
+    {
+        $this->className = $className;
+    }
+    
+    public function setMappingFile(string $value): void
+    {
+        if (!is_file($value)) {
+            throw new ObjectiphyException("Mapping file does not exist ($value)");
+        }
+        try {
+            $contents = json_decode(file_get_contents($value), true);
+            if (isset($contents['className']) && $contents['className'] == $this->className) {
+                $tableOverrides = $contents['table'] ?? [];
+                $columnOverrides = $contents['columns'] ?? [];
+                $relationshipOverrides = $contents['relationships'] ?? [];
+                $this->setConfigOption(self::TABLE_OVERRIDES, $tableOverrides);
+                $this->setConfigOption(self::COLUMN_OVERRIDES, $columnOverrides);
+                $this->setConfigOption(self::RELATIONSHIP_OVERRIDES, $relationshipOverrides);
+            }
+        } catch (\Throwable $ex) {}
+    }
 }

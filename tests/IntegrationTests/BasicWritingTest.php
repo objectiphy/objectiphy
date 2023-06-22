@@ -116,6 +116,7 @@ class BasicWritingTest extends IntegrationTestBase
         $this->doEmbeddedUpdateTests();
         $this->doReadOnlyTests();
         $this->doScalarJoinTests();
+        $this->doMappingOverrideTests();
         $this->doEmbeddedValueObjectTests();
         $this->doSerializationGroupTests();
         $this->doUnidirectionalScalarRelationshipTests();
@@ -686,7 +687,33 @@ class BasicWritingTest extends IntegrationTestBase
         $altParent = $this->objectRepository->find(1);
         $this->assertEquals('alternative2@example.com', $altParent->getChild()->getUser()->getEmail());
     }
-    
+
+    protected function doMappingOverrideTests()
+    {
+        $this->objectRepository->resetConfiguration();
+        $this->objectRepository->setClassName(TestParent::class);
+        $parent = $this->objectRepository->find(1);
+        $this->assertEquals('Penfold', $parent->getChild()->name);
+        $this->assertEquals(12, $parent->getChild()->height);
+        $this->assertEquals('penfold.hamster@example.com', $parent->getChild()->getUser()->getEmail());
+        $parent->getChild()->height = 14;
+        $this->objectRepository->saveEntity($parent);
+        $refreshedParent = $this->objectRepository->find(1);
+        $this->assertEquals('penfold.hamster@example.com', $refreshedParent->getChild()->getUser()->getEmail());
+        $this->assertEquals(14, $refreshedParent->getChild()->height);
+
+        $this->objectRepository->setConfigOption(ConfigOptions::MAPPING_DIRECTORY, __DIR__ . '/../MappingFiles');
+        $refreshedParent2 = $this->objectRepository->find(1);
+        $this->assertEquals(14, $refreshedParent2->getChild()->height);
+        $this->assertEquals('alternative2@example.com', $refreshedParent2->getChild()->getUser()->getEmail());
+        $refreshedParent2->getChild()->height = 13;
+        $this->objectRepository->saveEntity($refreshedParent2);
+        $this->objectRepository->clearCache();
+        $refreshedParent3 = $this->objectRepository->find(1);
+        $this->assertEquals(14, $refreshedParent3->getChild()->height);
+        $this->assertEquals('alternative2@example.com', $refreshedParent3->getChild()->getUser()->getEmail());
+    }
+
     protected function doEmbeddedValueObjectTests()
     {
         $this->objectRepository->setClassName(TestParent::class);

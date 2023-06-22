@@ -48,8 +48,14 @@ abstract class ConfigBase
      */
     public function setConfigOption(string $optionName, $value)
     {
-        if (property_exists($this, $optionName)) {
-            $previousValue = $this->{$optionName} ?? null;
+        if (is_callable([$this, 'set' . ucfirst($optionName)])) {
+            $previousValue = $this->getConfigOption($optionName);
+            $this->{'set' . ucfirst($optionName)}($value);
+            $this->nonDefaults[$optionName] = $value;
+
+            return $previousValue;
+        } elseif (property_exists($this, $optionName)) {
+            $previousValue = $this->getConfigOption($optionName);
             $this->{$optionName} = $value;
             $this->nonDefaults[$optionName] = $value;
 
@@ -67,7 +73,9 @@ abstract class ConfigBase
      */
     public function getConfigOption(string $optionName)
     {
-        if (property_exists($this, $optionName)) {
+        if (is_callable([$this, 'get' . ucfirst($optionName)])) {
+            return $this->{'get' . ucfirst($optionName)}() ?? null;
+        } elseif (property_exists($this, $optionName)) {
             return $this->{$optionName} ?? null;
         } else {
             $this->throwNotExists($optionName);

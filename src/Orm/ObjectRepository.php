@@ -124,7 +124,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * Reset config options to their default values.
      * @param string $configFile Optionally specify a config file to load the defaults from.
      */
-    public function resetConfiguration(string $configFile = ''): void
+    public function resetConfiguration(string $configFile = '', bool $clearCache = true): void
     {
         $defaultConfig = new ConfigOptions(
             [
@@ -134,6 +134,9 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $configFile
         );
         $this->setConfiguration($defaultConfig);
+        if ($clearCache) {
+            $this->clearCache(null, true);
+        }
     }
 
     /**
@@ -150,10 +153,11 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $this->updateConfig();
         if (in_array($optionName, [
                 ConfigOptions::SERIALIZATION_GROUPS,
-                ConfigOptions::HYDRATE_UNGROUPED_PROPERTIES
+                ConfigOptions::HYDRATE_UNGROUPED_PROPERTIES,
+                ConfigOptions::MAPPING_DIRECTORY,
             ]) && $value !== $previousValue) {
             //We cannot return a cached entity as the property hydration might be wrong
-            $this->clearCache();
+            $this->clearCache(null, true);
         }
         $this->setClassName($this->getClassName()); //Ensure we have the right mapping collection for the updated config
 
@@ -171,7 +175,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     public function setEntityConfigOption(string $entityClassName, string $optionName, $value): void
     {
         $entityConfigs = $this->configOptions->getConfigOption(ConfigOptions::ENTITY_CONFIG);
-        $entityConfig = $entityConfigs[$entityClassName] ?? new ConfigEntity();
+        $entityConfig = $entityConfigs[$entityClassName] ?? new ConfigEntity($entityClassName);
         if (is_array($value)) {
             $existingValue = $entityConfig->getConfigOption($optionName);
             $value = array_merge($existingValue, $value);
@@ -179,7 +183,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $entityConfig->setConfigOption($optionName, $value);
         $entityConfigs[$entityClassName] = $entityConfig;
         $this->setConfigOption(ConfigOptions::ENTITY_CONFIG, $entityConfigs);
-        $this->clearCache($entityClassName);
+        $this->clearCache($entityClassName, true);
     }
 
     /**

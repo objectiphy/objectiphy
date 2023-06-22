@@ -55,6 +55,7 @@ class ConfigOptions extends ConfigBase
     public const SAVE_CHILDREN_BY_DEFAULT = 'saveChildrenByDefault';
     public const DISABLE_ENTITY_CACHE = 'disableEntityCache';
     public const MAX_DEPTH = 'maxDepth';
+    public const MAPPING_DIRECTORY = 'mappingDirectory';
     
     /**
      * @var bool Whether or not we are running in debug mode (proxy classes get rebuilt on each run).
@@ -196,6 +197,16 @@ class ConfigOptions extends ConfigBase
     protected int $maxDepth = 3;
 
     /**
+     * @var string Directory to scan for mapping files which can override or apply mapping information to entities.
+     * All valid mapping files in the given directory will be loaded - one file per entity (this is a convenience
+     * setting to allow multiple mapping override files to be applied at once rather than having to set them for each
+     * entity individually). Any .json file with a property named 'class' will be processed. Any other files will be
+     * ignored. Sub-directories will be traversed so you can organise mapping files as you wish, but avoid using a
+     * parent directory which has other unrelated directories beneath it or it will slow things down.
+     */
+    protected string $mappingDirectory = '';
+
+    /**
      * Initialise config options.
      * @param array $options Array of config options to set
      * @param string $configFile Location of config file that contains the default options
@@ -219,6 +230,26 @@ class ConfigOptions extends ConfigBase
         }
     }
 
+    public function setMappingDirectory(string $value)
+    {
+        if (!is_dir($value)) {
+            throw new ObjectiphyException('Mapping directory does not exist' . (!$this->devMode ? '.' : ' (' . $cacheDirectory . ').'));
+        }
+
+        $rii = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($value, \FilesystemIterator::SKIP_DOTS));
+        /** @var \SplFileInfo $file */
+        foreach ($rii as $file) {
+            if ($file->isFile() && $file->getExtension() == 'json') {
+                $contents = json_decode(file_get_contents($file->getPathname()), true);
+                if ($entityClassName = $contents['className'] ?? false) {
+                    $entityConfig = $this->entityConfig[$entityClassName] ?? new ConfigEntity($entityClassName);
+                    $entityConfig->setConfigOption(ConfigEntity::MAPPING_FILE, $file->getPathname());
+                    $this->entityConfig[$entityClassName] = $entityConfig;
+                }
+            }
+        }
+    }
+
     /**
      * @param string $cacheDirectory
      * @throws ObjectiphyException
@@ -227,12 +258,12 @@ class ConfigOptions extends ConfigBase
     {
         if ($cacheDirectory) {
             $usedCacheDir = (!$this->devMode ? '.' : ' (' . $cacheDirectory . ').');
-            if (!file_exists($cacheDirectory)) {
+            if (!is_dir($cacheDirectory)) {
                 try {
                     mkdir($cacheDirectory, 0777, true);
                 } catch (\Throwable $ex) {}
             }
-            if (!file_exists($cacheDirectory)) {
+            if (!is_dir($cacheDirectory)) {
                 throw new ObjectiphyException('Objectiphy cache directory does not exist' . $usedCacheDir);
             } elseif (!is_writable($cacheDirectory)) {
                 throw new ObjectiphyException('Objectiphy cache directory is not writable' . $usedCacheDir);

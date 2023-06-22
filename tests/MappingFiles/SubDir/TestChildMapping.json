@@ -1,0 +1,15 @@
+{
+  "className": "Objectiphy\\Objectiphy\\Tests\\Entity\\TestChild",
+  "relationships": {
+    "user": {
+      "joinTable": "objectiphy_test.user_alternative",
+      "sourceJoinColumn": "user_id",
+      "targetJoinColumn": "id"
+    }
+  },
+  "columns": {
+      "height": {
+          "isReadOnly": true
+        }
+    }
+}
