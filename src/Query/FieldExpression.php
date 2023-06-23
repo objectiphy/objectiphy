@@ -33,9 +33,16 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
      */
     private string $alias = '';
 
-    public function __construct($expression = null)
+    /**
+     * @var array Array of key values pairs, which, if specified will translate data values (typically 
+     * using a CASE WHEN statement).
+     */
+    private array $dataMap = [];
+
+    public function __construct($expression = null, array $dataMap = [])
     {
         $this->setExpression($expression);
+        $this->dataMap = $dataMap;
     }
 
     public function __toString(): string
@@ -57,6 +64,11 @@ class FieldExpression implements QueryPartInterface, PropertyPathConsumerInterfa
         return $this->isPropertyPath ? str_replace('%', '', $this->expression) : '';
     }
 
+    public function getDataMap(): array
+    {
+        return $this->dataMap;
+    }
+    
     public function getExpression()
     {
         return $this->expression;

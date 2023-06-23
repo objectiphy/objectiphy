@@ -2,6 +2,7 @@
 
 namespace Objectiphy\Objectiphy\Tests\IntegrationTests;
 
+use Objectiphy\Objectiphy\Config\ConfigEntity;
 use Objectiphy\Objectiphy\Contract\EntityProxyInterface;
 use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 use Objectiphy\Objectiphy\Exception\QueryException;
@@ -113,6 +114,7 @@ class BasicReadingTest extends IntegrationTestBase
         $this->doAssumedPkTests();
         $this->doNonPkTests();
         $this->doUnboundTests();
+        $this->doDataMapTests();
         $this->doAdvancedTests();
     }
 
@@ -287,6 +289,30 @@ class BasicReadingTest extends IntegrationTestBase
         $policies = $this->objectRepository->findBy(['policyNo' => ['operator' => 'LIKE', 'value' => 'P1234%']]);
         $this->assertEquals(38, count($policies));
         $this->assertEquals(19071973, $policies[0]['id']);
+    }
+
+    protected function doDataMapTests()
+    {
+        $this->objectRepository->resetConfiguration();
+        $this->objectRepository->setEntityConfigOption(
+            TestPolicy::class,
+            ConfigEntity::COLUMN_OVERRIDES, [
+                "policyNo" => [
+                    "dataMap" => [
+                        "P123456" => "Overridden Policy Number 1",
+                        "P123458" => "Overridden Policy Number 2",
+                        "ELSE" => "Still overridden!"
+                    ]
+                ]
+            ]
+        );
+        $this->objectRepository->setClassName(TestPolicy::class);
+        $policy = $this->objectRepository->find(19071974);
+        $this->assertEquals('Overridden Policy Number 1', $policy->policyNo);
+        $policy = $this->objectRepository->find(19071975);
+        $this->assertEquals('Overridden Policy Number 2', $policy->policyNo);
+        $policy = $this->objectRepository->find(19071976);
+        $this->assertEquals('Still overridden!', $policy->policyNo);
     }
 
     protected function doAdvancedTests()

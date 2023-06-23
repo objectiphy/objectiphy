@@ -109,8 +109,25 @@ class SqlSelectorMySql implements SqlSelectorInterface
             foreach ($this->query->getSelect() as $fieldExpression) {
                 $fieldSql = trim((string) $fieldExpression);
                 $usePreparedAlias = $fieldExpression->isPropertyPath() && !$fieldExpression->getAlias();
-                $sql .= "    " . $this->stringReplacer->replaceNames($fieldSql, $usePreparedAlias);
-                $sql .= $fieldExpression->getAlias() ? ' AS ' . $fieldExpression->getAlias() : '';
+                $columnNameWithoutAlias = $this->stringReplacer->replaceNames($fieldSql);
+                $fieldExpressionAlias = (!$usePreparedAlias && $fieldExpression->getAlias()) ? ' AS ' . $fieldExpression->getAlias() : '';
+                $aliasSuffix = $fieldExpressionAlias ?: $this->stringReplacer->replaceNames($fieldSql, $usePreparedAlias, true);
+                if ($fieldExpression->getDataMap()) {
+                    $sql .= "    CASE\n";
+                    foreach ($fieldExpression->getDataMap() as $key => $value) {
+                        if (!$key || strtoupper($key) == 'ELSE') {
+                            $sql .= "        ELSE ";
+                        } else {
+                            $sql .= "        WHEN $columnNameWithoutAlias ";
+                            $sql .= ($value['operator'] ?? '=') . " '$key'";
+                            $sql .= " THEN ";
+                        }
+                        $sql .= "'" . ($value['value'] ?? $value) . "'\n";
+                    }
+                    $sql .= "    END $aliasSuffix\n";
+                } else {
+                    $sql .= "    " . $columnNameWithoutAlias . $aliasSuffix;
+                }
                 $sql .= ", \n";
             }
             $sql = rtrim($sql, ", \n");

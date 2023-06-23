@@ -44,7 +44,7 @@ abstract class Query implements QueryInterface
     /**
      * @var CriteriaExpression[]
      */
-    private array $having = [];
+    protected array $having = [];
 
     protected MappingCollection $mappingCollection;
     protected bool $isFinalised = false;

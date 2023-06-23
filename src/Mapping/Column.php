@@ -66,4 +66,21 @@ class Column extends ObjectiphyAnnotation
      * @var string Name of property or properties to group by (comma separated) 
      */
     public string $aggregateGroupBy = '';
+
+    /**
+     * @var array Key value pairs - for cases where you have a limited number of possible values in the database,
+     * and you want to map those to different values when returning the results (for example to use a human readable
+     * description instead of a code) - effectively a mini lookup table defined on the property. This can be a simple 
+     * key/value pair associative array, or a key: operator/value array, with optional default condition. For example:
+     * [
+     *     "50" => "Exactly 50"
+     *     "100" => [
+     *         "operator" => ">"
+     *         "value" => "Greater than 100"
+     *     ]
+     *     "ELSE" => "Something else"
+     * ]
+     * In this example, if the value in the field is 125, the value returned in the results would be "Greater than 100"
+     */
+    public array $dataMap = [];
 }

@@ -189,7 +189,7 @@ class SqlStringReplacer
      * @return string
      * @throws ObjectiphyException
      */
-    public function replaceNames(string $subject, bool $useAliases = false, string $aliasJoiner = ' AS '): string
+    public function replaceNames(string $subject, bool $useAliases = false, bool $aliasOnly = false, string $aliasJoiner = ' AS '): string
     {
         if (!isset($this->objectNames)) {
             throw new ObjectiphyException('Please call prepareReplacements method before attempting to replace.');
@@ -197,11 +197,13 @@ class SqlStringReplacer
 
         if ($useAliases) {
             $aliasedPersistence = array_map(
-                function ($persistence, $alias) use ($aliasJoiner) {
-                    return $persistence . ($alias ? $aliasJoiner . $alias : '');
+                function ($persistence, $alias) use ($aliasOnly, $aliasJoiner) {
+                    return ($aliasOnly ? '' : $persistence) . ($alias ? $aliasJoiner . $alias : '');
                 }, $this->persistenceNames, $this->aliases
             );
             $replaced = str_replace($this->objectNames, $aliasedPersistence, $subject);
+        } elseif ($aliasOnly) {
+            return '';
         } else {
             $replaced = str_replace($this->objectNames, $this->persistenceNames, $subject);
         }
