@@ -117,6 +117,7 @@ class BasicWritingTest extends IntegrationTestBase
         $this->doReadOnlyTests();
         $this->doScalarJoinTests();
         $this->doMappingOverrideTests();
+        $this->doDataMapTests();
         $this->doEmbeddedValueObjectTests();
         $this->doSerializationGroupTests();
         $this->doUnidirectionalScalarRelationshipTests();
@@ -712,6 +713,42 @@ class BasicWritingTest extends IntegrationTestBase
         $refreshedParent3 = $this->objectRepository->find(1);
         $this->assertEquals(14, $refreshedParent3->getChild()->height);
         $this->assertEquals('alternative2@example.com', $refreshedParent3->getChild()->getUser()->getEmail());
+    }
+
+    protected function doDataMapTests()
+    {
+        $this->objectRepository->resetConfiguration();
+        $this->objectRepository->setClassName(TestPolicy::class);
+        $this->objectRepository->setEntityConfigOption(
+            TestPolicy::class,
+            ConfigEntity::COLUMN_OVERRIDES, [
+                "policyNo" => [
+                    "dataMap" => [
+                        "P123456" => "Overridden Policy Number 1",
+                        "P123458" => ["operator" => "=", "value" => "Overridden Policy Number 2"],
+                        "ELSE" => "Still overridden!"
+                    ]
+                ]
+            ]
+        );
+
+        $policy = $this->objectRepository->find(19071974);
+        $policy->policyNo = 'Overridden Policy Number 2';
+        $this->objectRepository->saveEntity($policy);
+        $policy2 = $this->objectRepository->find(19071975);
+        $policy2->policyNo = 'Overridden Policy Number 1';
+        $this->objectRepository->saveEntity($policy2);
+        $policy3 = $this->objectRepository->find(19071978);
+        $policy3->policyNo = 'Still overridden!';
+        $this->objectRepository->saveEntity($policy3); //Treated as read-only, because we are in an ELSE clause
+
+        $this->objectRepository->resetConfiguration();
+        $refreshedPolicy = $this->objectRepository->find(19071974);
+        $this->assertEquals('P123458', $refreshedPolicy->policyNo);
+        $refreshedPolicy2 = $this->objectRepository->find(19071975);
+        $this->assertEquals('P123456', $refreshedPolicy2->policyNo);
+        $refreshedPolicy3 = $this->objectRepository->find(19071978);
+        $this->assertEquals('P123461', $refreshedPolicy3->policyNo);
     }
 
     protected function doEmbeddedValueObjectTests()

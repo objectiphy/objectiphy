@@ -79,6 +79,24 @@ final class ObjectUnbinder
                 } else {
                     $columnName = $propertyMapping->getFullColumnName();
                     if ($columnName && !$propertyMapping->relationship->isManyToMany()) {
+                        if ($dataMap = $propertyMapping->column->dataMap) {
+                            $dataMapIndex = is_string($value) ? array_search($value, $dataMap) : false;
+                            if ($dataMapIndex && strtoupper($dataMapIndex) == 'ELSE') {
+                                continue; //We cannot tell what the value should be, so treat it as read-only
+                            }
+                            if ($dataMapIndex === false) {
+                                foreach ($dataMap as $dataKey => $dataValue) {
+                                    if (isset($dataValue['value']) && $dataValue['value'] == $value) {
+                                        if (($dataValue['operator'] ?? '=') != '=') {
+                                            continue; //We still can't tell what the value should be
+                                        }
+                                        $dataMapIndex = $dataKey;
+                                        break;
+                                    }
+                                }
+                            }
+                            $value = $dataMapIndex !== false ? $dataMapIndex : $value;
+                        }
                         $pkProperty = '';
                         $unboundValue = $this->unbindValue($value, $propertyMapping->relationship->targetJoinColumn, $pkProperty);
                         if ($pkProperty) {
@@ -94,6 +112,11 @@ final class ObjectUnbinder
         }
 
         return $row;
+    }
+
+    private function extractValueFromDataMap(PropertyMapping $propertyMapping, $value)
+    {
+
     }
 
     /**

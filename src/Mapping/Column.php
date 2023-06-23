@@ -80,7 +80,11 @@ class Column extends ObjectiphyAnnotation
      *     ]
      *     "ELSE" => "Something else"
      * ]
-     * In this example, if the value in the field is 125, the value returned in the results would be "Greater than 100"
+     * In this example, if the value in the field is 125, the value returned in the results would be "Greater than 100".
+     * For any values that are directly mapped (ie. operator is unspecified or '='), the translation of values is 
+     * reversed when you save the entity. However, PLEASE NOTE: if you use any operator other than =, or use the 'ELSE' 
+     * clause, it will not be possible to update the field to hold that value - the property will be treated as 
+     * read-only (because it will be impossible to tell what the actual database value should be).
      */
     public array $dataMap = [];
 }
