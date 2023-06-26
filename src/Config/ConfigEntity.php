@@ -70,6 +70,38 @@ class ConfigEntity extends ConfigBase
     {
         $this->className = $className;
     }
+
+    public function __serialize(): array
+    {
+        $array = [];
+        foreach (get_object_vars($this) as $property => $value) {
+            //Entity factories might not be serializable, so just use the class name
+            //(this is just to generate a hash, not to be unserialized)
+            if ($property == 'entityFactory' && !empty($value)) {
+                try {
+                    $stringified = $this->serialize($value);
+                    //All ok, so carry on
+                    $array[$property] = $value;
+                } catch (\Throwable $ex) {
+                    $array[$property] = get_class($value);
+                }
+            } else  {
+                $array[$property] = $value;
+            }
+        }
+
+        return $array;
+    }
+
+    public function __unserialize(array $data): void
+    {
+        foreach ($data as $key => $value) {
+            if ($key == 'entityFactory' && is_string($value)) {
+                throw new \RuntimeException('Cannot deserialize config object with an unserializable entity factory.');
+            }
+            $this->setConfigOption($key, $value);
+        }
+    }
     
     public function setMappingFile(string $value): void
     {

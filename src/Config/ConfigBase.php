@@ -119,6 +119,11 @@ abstract class ConfigBase
     public function getHash(string $suffix = ''): string
     {
         ksort($this->nonDefaults);
+        try {
+            $stringified = serialize($this->nonDefaults);
+        } catch (\Throwable $ex) {
+            return ''; //Not cacheable, sorry!
+        }
         return sha1(serialize($this->nonDefaults) . $suffix);
     }
 
