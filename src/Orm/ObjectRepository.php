@@ -220,13 +220,16 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      * Getter for the parent entity class name.
      * @return string
      */
-    public function getClassName(): string
+    public function getClassName($criteria = []): string
     {
         if ($this->className) {
             return $this->className;
         } elseif (isset($this->mappingCollection)) {
             $this->className = $this->mappingCollection->getEntityClassName();
             return $this->mappingCollection->getEntityClassName();
+        } elseif ($criteria && $criteria instanceof QueryInterface) {
+            $this->className = $criteria->getClassName();
+            return $this->className;
         }
 
         return '';
@@ -328,7 +331,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     public function findOneBy($criteria = [])
     {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
-        $this->assertClassNameSet();
+        $this->assertClassNameSet($criteria);
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => false,
             'bindToEntities' => $this->configOptions->bindToEntities,
@@ -365,7 +368,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         bool $fetchOnDemand = false
     ): ?iterable {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
-        $this->assertClassNameSet();
+        $this->assertClassNameSet($criteria);
         $eagerLoadToOneSetting = $this->getConfiguration()->eagerLoadToOne;
         if ($fetchOnDemand) { //Try to eager load to avoid nested queries
             $this->setConfigOption(ConfigOptions::EAGER_LOAD_TO_ONE, true);
@@ -412,7 +415,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     public function findOneValueBy($criteria = [], string $valueProperty = '')
     {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
-        $this->assertClassNameSet();
+        $this->assertClassNameSet($criteria);
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => false,
             'bindToEntities' => false,
@@ -445,7 +448,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         bool $fetchOnDemand = false
     ) {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
-        $this->assertClassNameSet();
+        $this->assertClassNameSet($criteria);
         $this->setOrderBy(array_filter($orderBy ?? $this->orderBy ?? []));
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => true,
@@ -483,7 +486,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         ?array $orderBy = null
     ): IterableResult {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
-        $this->assertClassNameSet();
+        $this->assertClassNameSet($criteria);
         $this->setOrderBy(array_filter($orderBy ?? $this->orderBy ?? []));
         $findOptions = FindOptions::create($this->mappingCollection, [
             'multiple' => true,
@@ -524,7 +527,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     public function count($criteria = []): int
     {
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
-        $this->assertClassNameSet();
+        $this->assertClassNameSet($criteria);
         $count = intval($this->findOneValueBy($criteria, 'COUNT(*)'));
 
         return $count;
@@ -1021,9 +1024,9 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     /**
      * @throws ObjectiphyException|\ReflectionException
      */
-    protected function assertClassNameSet(): void
+    protected function assertClassNameSet($criteria = []): void
     {
-        $className = $this->getClassName();
+        $className = $this->getClassName($criteria);
         if (!$className) {
             $callingMethod = debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['function'] ?? 'Unknown method';
             $message = sprintf('Please call setClassName before calling %1$s.', $callingMethod);
