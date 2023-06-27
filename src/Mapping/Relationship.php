@@ -19,8 +19,6 @@ use Objectiphy\Objectiphy\Exception\ObjectiphyException;
 #[\Attribute(\Attribute::TARGET_PROPERTY)]
 class Relationship extends ObjectiphyAnnotation
 {
-    //use AttributeTrait;
-
     public const UNDEFINED = 'undefined';
     public const SCALAR = 'scalar';
     public const ONE_TO_ONE = 'one_to_one';
@@ -185,7 +183,6 @@ class Relationship extends ObjectiphyAnnotation
             );
             throw new ObjectiphyException($errorMessage);
         }
-
         $this->relationshipType = $relationshipType;
     }
 

@@ -214,6 +214,9 @@ final class ObjectMapper
                     $parents = array_merge($parent->parents, [$parent->propertyName]);
                     //Mark it as early bound...
                     $parent = $this->mapProperty($mappingCollection, $reflectionClass, $reflectionProperty, $table, $parents, $parent->relationship, true);
+                    if (!$parent) {
+                        throw new MappingException('No relationship has been defined for ' . $reflectionClass->getName() . '::' . $reflectionProperty->getName() . ', but this relationship is required by the query being executed.');
+                    }
                     $parent->forceEarlyBindingForJoin(); //We need to join even if it is to-many, so we can filter
                     if (!$parent->relationship->sourceJoinColumn && $parent->relationship->mappedBy) {
                         //If mapping is on the other side, we have to get that too
@@ -481,7 +484,7 @@ final class ObjectMapper
             $mappingCollection->addMapping($propertyMapping, $suppressFetch);
             //Resolve name *after* adding to collection so that naming strategies have access to the collection.
             $this->nameResolver->resolveColumnName($propertyMapping);
-
+            
             return $propertyMapping;
         }
 
@@ -541,6 +544,8 @@ final class ObjectMapper
                     $this->initialiseRelationship($relationship);
                     $propertyName = $reflectionProperty->getName();
                     $this->mapRelationship($mappingCollection, $propertyName, $relationship, $innerReflectionClass, $parents, $drillDown);
+                } elseif ($relationship->childClassName || $relationship->sourceJoinColumn || $relationship->bridgeJoinTable) {
+                    throw new MappingException(sprintf('Relationship mapping information has been provided for %1$s but no relationshipType has been set.', $innerReflectionClass->getName() . '::' . $reflectionProperty->getName()));
                 }
             }
         }

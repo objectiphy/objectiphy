@@ -148,7 +148,7 @@ final class ObjectFetcher
         }
         $this->doCount($query);
         $result = $this->doFetch($query);
-        if (isset($originalClass)) {
+        if (isset($originalClass) && $originalClass != $this->getClassName()) {
             $this->setClassName($originalClass);
         }
 
