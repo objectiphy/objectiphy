@@ -286,10 +286,13 @@ final class ObjectMapper
      * @return Relationship
      * @throws ObjectiphyException
      */
-    private function getRelationshipMapping(\ReflectionProperty $reflectionProperty, bool &$relationshipIsMapped = false): Relationship
-    {
+    private function getRelationshipMapping(
+        \ReflectionClass $reflectionClass,
+        \ReflectionProperty $reflectionProperty,
+        bool &$relationshipIsMapped = false
+    ): Relationship {
         $relationship = $this->mappingProvider->getRelationshipMapping($reflectionProperty, $relationshipIsMapped);
-        $entityConfig = $this->entityConfig[$reflectionProperty->class] ?? null;
+        $entityConfig = $this->entityConfig[$reflectionClass->getName()] ?? null;
         if ($entityConfig) {
             $overrides = $entityConfig->getConfigOption(ConfigEntity::RELATIONSHIP_OVERRIDES);
         }
@@ -321,10 +324,13 @@ final class ObjectMapper
      * @return Column
      * @throws ObjectiphyException
      */
-    private function getColumnMapping(\ReflectionProperty $reflectionProperty, bool &$columnIsMapped = false): Column
-    {
+    private function getColumnMapping(
+        \ReflectionClass $reflectionClass,
+        \ReflectionProperty $reflectionProperty,
+        bool &$columnIsMapped = false
+    ): Column {
         $column = $this->mappingProvider->getColumnMapping($reflectionProperty, $columnIsMapped);
-        $entityConfig = $this->entityConfig[$reflectionProperty->class] ?? null;
+        $entityConfig = $this->entityConfig[$reflectionClass->getName()] ?? null;
         if ($entityConfig) {
             $overrides = $entityConfig->getConfigOption(ConfigEntity::COLUMN_OVERRIDES);
         }
@@ -440,8 +446,8 @@ final class ObjectMapper
 
         $columnIsMapped = false;
         $relationshipIsMapped = false;
-        $relationship = $this->getRelationshipMapping($reflectionProperty, $relationshipIsMapped);
-        $column = $this->getColumnMapping($reflectionProperty, $columnIsMapped);
+        $relationship = $this->getRelationshipMapping($reflectionClass, $reflectionProperty, $relationshipIsMapped);
+        $column = $this->getColumnMapping($reflectionClass, $reflectionProperty, $columnIsMapped);
         $groups = $this->mappingProvider->getSerializationGroups($reflectionProperty);
         if ($parentRelationship && $parentRelationship->isEmbedded) {
             $column = clone($column);
@@ -492,11 +498,11 @@ final class ObjectMapper
     {
         $reflectionClass = new \ReflectionClass($className);
         $classes = $this->getReflectionClassHierarchy($reflectionClass);
-        foreach ($classes as $reflectionClass) {
-            foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-                $column = $this->getColumnMapping($reflectionProperty);
+        foreach ($classes as $innerReflectionClass) {
+            foreach ($innerReflectionClass->getProperties() as $reflectionProperty) {
+                $column = $this->getColumnMapping($reflectionClass, $reflectionProperty);
                 if ($column->isPrimaryKey) {
-                    $mappingCollection->addPrimaryKeyMapping($reflectionClass->getName(), $reflectionProperty->getName());
+                    $mappingCollection->addPrimaryKeyMapping($innerReflectionClass->getName(), $reflectionProperty->getName());
                 }
             }
         }
@@ -528,13 +534,13 @@ final class ObjectMapper
         bool $drillDown = false
     ): void {
         $classes = $this->getReflectionClassHierarchy($reflectionClass);
-        foreach ($classes as $reflectionClass) {
-            foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-                $relationship = $this->getRelationshipMapping($reflectionProperty);
+        foreach ($classes as $innerReflectionClass) {
+            foreach ($innerReflectionClass->getProperties() as $reflectionProperty) {
+                $relationship = $this->getRelationshipMapping($reflectionClass, $reflectionProperty);
                 if ($relationship->isDefined()) {
                     $this->initialiseRelationship($relationship);
                     $propertyName = $reflectionProperty->getName();
-                    $this->mapRelationship($mappingCollection, $propertyName, $relationship, $reflectionClass, $parents, $drillDown);
+                    $this->mapRelationship($mappingCollection, $propertyName, $relationship, $innerReflectionClass, $parents, $drillDown);
                 }
             }
         }
@@ -570,7 +576,7 @@ final class ObjectMapper
                 }
                 $childReflectionClass = new \ReflectionClass($relationship->childClassName);
                 $childReflectionProperty = $childReflectionClass->getProperty($relationship->mappedBy);
-                $childRelationship = $this->getRelationshipMapping($childReflectionProperty);
+                $childRelationship = $this->getRelationshipMapping($childReflectionClass, $childReflectionProperty);
                 $childGroups = $this->mappingProvider->getSerializationGroups($childReflectionProperty);
                 $this->initialiseRelationship($childRelationship);
 
@@ -657,9 +663,9 @@ final class ObjectMapper
         $reflectionClass = new \ReflectionClass($relationship->childClassName);
         $targetColumns = explode(',', $relationship->targetJoinColumn);
         $classes = $this->getReflectionClassHierarchy($reflectionClass);
-        foreach ($classes as $reflectionClass) {
-            foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-                $columnMapping = $this->getColumnMapping($reflectionProperty);
+        foreach ($classes as $innerReflectionClass) {
+            foreach ($innerReflectionClass->getProperties() as $reflectionProperty) {
+                $columnMapping = $this->getColumnMapping($reflectionClass, $reflectionProperty);
                 //If name not specified, guess mapping if applicable...
                 $columnMapping->name = $columnMapping->name ?: $this->nameResolver->convertName($reflectionProperty->getName(), NamingStrategyInterface::TYPE_SCALAR_PROPERTY);
                 foreach ($targetColumns as $targetColumn) {

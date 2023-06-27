@@ -115,14 +115,14 @@ class SqlSelectorMySql implements SqlSelectorInterface
                 if ($fieldExpression->getDataMap()) {
                     $sql .= "    CASE\n";
                     foreach ($fieldExpression->getDataMap() as $key => $value) {
-                        if (!$key || strtoupper($key) == 'ELSE') {
+                        if (!$key || strtoupper(strval($key)) == 'ELSE') {
                             $sql .= "        ELSE ";
                         } else {
                             $sql .= "        WHEN $columnNameWithoutAlias ";
-                            $sql .= ($value['operator'] ?? '=') . " '$key'";
+                            $sql .= ($value['operator'] ?? '=') . " '" . strval($key) . "'";
                             $sql .= " THEN ";
                         }
-                        $sql .= "'" . ($value['value'] ?? $value) . "'\n";
+                        $sql .= "'" . strval(($value['value'] ?? $value)) . "'\n";
                     }
                     $sql .= "    END $aliasSuffix\n";
                 } else {
