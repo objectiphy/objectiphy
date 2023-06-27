@@ -270,7 +270,8 @@ final class ObjectMapper
         //If nothing on this class, check the inheritance hierarchy
         $parentClass = $reflectionClass->getParentClass();
         if ($parentClass && !$tableIsMapped) {
-            return $this->getTableMapping($parentClass, $exceptionIfUnmapped, $tableIsMapped);
+            //Throw exceptions from outer method, so the error message includes the correct concrete class name
+            $table = $this->getTableMapping($parentClass, false, $tableIsMapped);
         }
 
         if ($exceptionIfUnmapped && !$tableIsMapped) {
