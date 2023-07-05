@@ -164,7 +164,11 @@ class SelectQuery extends Query implements SelectQueryInterface
                 $fetchables = $mappingCollection->getFetchableProperties();
                 $selects = [];
                 foreach ($fetchables as $fetchable) {
-                    if ($fetchable->getFullColumnName()) {
+                    if ($fetchable->column->function) {
+                        $select = new FieldExpression($fetchable->column->function, $fetchable->column->dataMap);
+                        $select->setAlias($fetchable->getAlias());
+                        $selects[] = $select;
+                    } elseif ($fetchable->getFullColumnName()) {
                         $selects[] = new FieldExpression($fetchable->getPropertyPath(), $fetchable->column->dataMap);
                     }
                 }

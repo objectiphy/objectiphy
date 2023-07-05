@@ -123,7 +123,7 @@ final class ObjectFetcher
         $queryClass = $query->getFrom();
         if ($queryClass && strpos($queryClass, '`') === false) { //No explicit table specified
             $originalClass = $this->getClassName();
-            $this->setClassName($query->getFrom());
+            $this->setClassName($queryClass);
         }
         if ($this->options->scalarProperty) {
             $query->setSelect(new FieldExpression($this->options->scalarProperty));

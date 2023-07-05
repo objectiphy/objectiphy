@@ -87,4 +87,13 @@ class Column extends ObjectiphyAnnotation
      * read-only (because it will be impossible to tell what the actual database value should be).
      */
     public array $dataMap = [];
+
+    /**
+     * @var string SQL function to use instead of directly loading the value from a specific column.
+     * Can use %entity.propertyPath% or `table`.`column` syntax to inject dynamic values. However,
+     * please bear in mind that if this is used on a child object, any paths used must be relative
+     * to the parent (or use unambiguous column names), which makes this of limited use. If a function
+     * is defined here, the value automatically becomes read-only.
+     */
+    public string $function = '';
 }
