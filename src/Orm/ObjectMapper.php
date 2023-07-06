@@ -47,6 +47,7 @@ final class ObjectMapper
     private string $defaultCollectionClass = '';
     private string $configHash = '';
     private ?CacheInterface $cache = null;
+    private array $ignoredProperties = [];
 
     public function __construct(
         MappingProviderInterface $mappingProvider,
@@ -405,16 +406,19 @@ final class ObjectMapper
             $mappingCollection->setPrimaryTableMapping($table);
         }
 
+        $this->ignoredProperties = [];
         $classes = $this->getReflectionClassHierarchy($reflectionClass);
         foreach ($classes as $reflectionClass) {
             foreach ($reflectionClass->getProperties() as $reflectionProperty) {
-                $propertyMapping = $this->mapProperty($mappingCollection, $reflectionClass, $reflectionProperty, $table, $parents, $parentRelationship);
-                if ($propertyMapping && $propertyMapping->relationship->isDefined()) {
-                    if ($propertyMapping->relationship->isEmbedded || $propertyMapping->relationship->isScalarJoin()) {
-                        $childParents = array_merge($parents, [$propertyMapping->propertyName]);
-                        if ($propertyMapping->relationship->isEmbedded) {
-                            $childReflectionClass = new \ReflectionClass($propertyMapping->getChildClassName());
-                            $this->populateScalarMappings($mappingCollection, $childReflectionClass, $childParents, $propertyMapping->relationship);
+                if (!in_array($reflectionProperty->getName(), $this->ignoredProperties)) {
+                    $propertyMapping = $this->mapProperty($mappingCollection, $reflectionClass, $reflectionProperty, $table, $parents, $parentRelationship);
+                    if ($propertyMapping && $propertyMapping->relationship->isDefined()) {
+                        if ($propertyMapping->relationship->isEmbedded || $propertyMapping->relationship->isScalarJoin()) {
+                            $childParents = array_merge($parents, [$propertyMapping->propertyName]);
+                            if ($propertyMapping->relationship->isEmbedded) {
+                                $childReflectionClass = new \ReflectionClass($propertyMapping->getChildClassName());
+                                $this->populateScalarMappings($mappingCollection, $childReflectionClass, $childParents, $propertyMapping->relationship);
+                            }
                         }
                     }
                 }
@@ -465,6 +469,9 @@ final class ObjectMapper
             $column->name = $relationship->targetScalarValueColumn;
         }
         $this->initialiseRelationship($relationship);
+        if ($column->name == 'IGNORE') {
+            $this->ignoredProperties[] = $reflectionProperty->getName();
+        }
         if ((($columnIsMapped || $relationshipIsMapped) && $column->name != 'IGNORE')) {
             $childTable = null;
             if ($relationship->childClassName) {
@@ -485,7 +492,7 @@ final class ObjectMapper
             $mappingCollection->addMapping($propertyMapping, $suppressFetch);
             //Resolve name *after* adding to collection so that naming strategies have access to the collection.
             $this->nameResolver->resolveColumnName($propertyMapping);
-            
+
             return $propertyMapping;
         }
 
