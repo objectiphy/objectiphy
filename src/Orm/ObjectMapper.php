@@ -340,9 +340,15 @@ final class ObjectMapper
             $overrides = $entityConfig->getConfigOption(ConfigEntity::COLUMN_OVERRIDES);
         }
         if (!empty($overrides)) {
+            $errorPrefix = 'You have attempted to override a column mapping for ' . $reflectionClass->getName() . '::' . $reflectionProperty->getName();
             if (!is_array($overrides) || !is_array(reset($overrides))) {
-                throw new ObjectiphyException(
-                    'You have attempted to override a column mapping but have not supplied all of the necessary information. Format is [$propertyName => [$attribute => $value]].'
+                throw new MappingException(
+                    $errorPrefix . ' but have not supplied all of the necessary information. Format is [$propertyName => [$attribute => $value]].'
+                );
+            }
+            if (!is_array($overrides[$reflectionProperty->getName()] ?? [])) {
+                throw new MappingException(
+                    $errorPrefix . ' but the value supplied is not an array, which it should be! Format is [$propertyName => [$attribute => $value]].'
                 );
             }
             foreach ($overrides[$reflectionProperty->getName()] ?? [] as $overrideKey => $overrideValue) {
