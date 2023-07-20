@@ -113,8 +113,10 @@ class SqlStringReplacer
         $this->objectNames = [];
         $this->persistenceNames = [];
         $this->aliases = [];
-        $mappingCollection = $mappingCollection ?? $this->getMappingCollection($query->getClassName());
-
+        if ($className = $query->getClassName()) {
+            $mappingCollection = $this->getMappingCollection($className) ?? $mappingCollection;
+        }
+        
         $propertiesUsed = $query->getPropertyPaths(false);
         foreach ($propertiesUsed as $propertyPath) {
             $alias = '';
