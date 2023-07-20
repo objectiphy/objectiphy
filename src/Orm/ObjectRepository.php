@@ -93,6 +93,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     public function __call(string $name, array $arguments)
     {
         if ($name == 'bcGetMappingCollection') {
+            if (!isset($this->mappingCollection)) {
+                $this->setClassName($this->getClassName());
+            }
+
             return $this->mappingCollection;
         }
     }
