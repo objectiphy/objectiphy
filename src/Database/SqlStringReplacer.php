@@ -346,6 +346,11 @@ class SqlStringReplacer
         $replace = [];
         preg_match_all("/'((?:\\" . $this->escapeCharacter . "'|[^'])*)'/", $fieldValue, $matches);
         if (isset($matches[1])) { //$matches[0] includes the quotes, $matches[1] does not
+            if (!$matches[1] && str_starts_with($fieldValue, "'") && str_ends_with($fieldValue, "'") && !str_ends_with($fieldValue, "\'")) {
+                //Regex failed - could be binary data or too large - assume everything between the quotes is what we want
+                $matches[0][0] = $fieldValue;
+                $matches[1][0] = substr($fieldValue, 1, strlen($fieldValue) - 2);
+            }
             foreach ($matches[1] ?? [] as $index => $match) {
                 //For escaped quotes, remove the escape character, as we don't want to save that
                 $paramValue = str_replace($this->escapeCharacter . "'", "'", $match);
