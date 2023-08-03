@@ -114,7 +114,9 @@ class SqlStringReplacer
         $this->persistenceNames = [];
         $this->aliases = [];
         if ($className = $query->getClassName()) {
-            $mappingCollection = $this->getMappingCollection($className) ?? $mappingCollection;
+            if ($mappingCollection->getEntityClassName() != $className) {
+                $mappingCollection = $this->getMappingCollection($className) ?? $mappingCollection;
+            }
         }
         
         $propertiesUsed = $query->getPropertyPaths(false);
