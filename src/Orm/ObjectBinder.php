@@ -31,7 +31,7 @@ final class ObjectBinder
     private EntityTracker $entityTracker;
     private DataTypeHandlerInterface $dataTypeHandler;
     private CollectionFactoryInterface $collectionFactory;
-    private SqlStringReplacer $stringReplacer;
+    private SqlStringReplacer $sqlStringReplacer;
     private InternalQueryHelper $queryHelper;
     private array $knownValues = [];
 
