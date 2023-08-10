@@ -209,6 +209,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             if ($className) { //Query might not have one set, in which case, keep the one we've got
                 $oldClassName = $this->className;
                 $this->className = $className;
+                $this->objectMapper->setConfigOptions($this->configOptions); //Ensure we get the correct mappings for this config
                 $this->mappingCollection = $this->objectMapper->getMappingCollectionForClass($className);
                 if ($className != $oldClassName) {
                     $this->orderBy = [];
