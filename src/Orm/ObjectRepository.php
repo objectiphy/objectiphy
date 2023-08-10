@@ -82,8 +82,16 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $configOptions = new ConfigOptions();
         }
         $this->setConfiguration($configOptions);
+        $this->initialise();
     }
 
+    public function initialise(): void
+    {
+        // This is just here so that custom repos can override it to carry out
+        // any initialisation they want without having to worry about having a
+        // massive constructor.
+    }
+    
     /**
      * This is not part of the public interface and is only here as a dirty hack for 
      * backward compatibility purposes. 
