@@ -59,7 +59,7 @@ class EntityProxy implements EntityProxyInterface
         $value = null;
         if (property_exists($this, $objectiphyGetPropertyName) && isset($this->$objectiphyGetPropertyName)) {
             $value =& $this->$objectiphyGetPropertyName;
-        } elseif (is_callable('parent::__get')) {
+        } elseif (is_callable(parent::class . '::__get')) {
             $reflectionMethod = (new \ReflectionClass($this))->getParentClass()->getMethod('__get');
             if ($reflectionMethod->returnsReference()) {
                 $value =& parent::__get($objectiphyGetPropertyName);

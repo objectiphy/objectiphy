@@ -85,13 +85,6 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $this->initialise();
     }
 
-    public function initialise(): void
-    {
-        // This is just here so that custom repos can override it to carry out
-        // any initialisation they want without having to worry about having a
-        // massive constructor.
-    }
-    
     /**
      * This is not part of the public interface and is only here as a dirty hack for 
      * backward compatibility purposes. 
@@ -300,12 +293,15 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     public function find($id)
     {
+        $this->beforeQuery(__METHOD__);
         if ($id instanceof QueryInterface) {
+            $this->afterQuery(__METHOD__);
             throw new QueryException('The find method should only be used with a primary key value. To execute a query, use findBy instead.');
         } elseif (is_object($id)) {
             //Try to find primary key value, otherwise throw up
             $id = $this->mappingCollection->getPrimaryKeyValues($id);
             if (!$id) {
+                $this->afterQuery(__METHOD__);
                 throw new QueryException('The find method should only be used with a primary key value. Cannot resolve the given object to a value.');
             }
         }
@@ -314,6 +310,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $this->assertClassNameSet();
         $existingEntity = $this->objectFetcher->getExistingEntity($this->getClassName(), $id);
         if ($existingEntity) {
+            $this->afterQuery(__METHOD__);
             return $existingEntity;
         }
         $pkProperties = $this->mappingCollection->getPrimaryKeyProperties();
@@ -322,15 +319,20 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
                 'The current entity (`%1$s`) does not have a primary key, so you cannot use the find method. Either specify a primary key in the mapping information, or use findOneBy instead.',
                 $this->getClassName()
             );
+            $this->afterQuery(__METHOD__);
             $this->throwException(new ObjectiphyException($errorMessage));
         }
 
         $idArray = is_array($id) ? $id : [$id];
         if (count($idArray) != count($pkProperties)) {
+            $this->afterQuery(__METHOD__);
             throw new QueryException('Number of primary key properties does not match number of values given.');
         }
-        
-        return $this->findOneBy(array_combine($pkProperties, $idArray));
+
+        $result = $this->findOneBy(array_combine($pkProperties, $idArray));
+        $this->afterQuery(__METHOD__);
+
+        return $result;
     }
 
     /**
@@ -343,6 +345,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     public function findOneBy($criteria = [])
     {
+        $this->beforeQuery(__METHOD__);
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $this->assertClassNameSet($criteria);
         $findOptions = FindOptions::create($this->mappingCollection, [
@@ -351,7 +354,10 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             'allowDuplicates' => $this->configOptions->allowDuplicates
         ]);
 
-        return $this->doFindBy($findOptions, $criteria);
+        $result = $this->doFindBy($findOptions, $criteria);
+        $this->afterQuery(__METHOD__);
+
+        return $result;
     }
 
     /**
@@ -380,6 +386,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         ?string $indexBy = null,
         bool $fetchOnDemand = false
     ): ?iterable {
+        $this->beforeQuery(__METHOD__);
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $this->assertClassNameSet($criteria);
         $eagerLoadToOneSetting = $this->getConfiguration()->eagerLoadToOne;
@@ -405,6 +412,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         if ($orderBy) { //Don't hang onto it if it was just passed in for this query
             $this->setOrderBy([]);
         }
+        $this->afterQuery(__METHOD__);
 
         return $result;
     }
@@ -427,6 +435,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
 
     public function findOneValueBy($criteria = [], string $valueProperty = '')
     {
+        $this->beforeQuery(__METHOD__);
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $this->assertClassNameSet($criteria);
         $findOptions = FindOptions::create($this->mappingCollection, [
@@ -440,6 +449,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         if (is_array($result)) {
             $result = reset($result);
         }
+        $this->afterQuery(__METHOD__);
 
         return $result;
     }
@@ -460,6 +470,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         ?string $indexBy = null,
         bool $fetchOnDemand = false
     ) {
+        $this->beforeQuery(__METHOD__);
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $this->assertClassNameSet($criteria);
         $this->setOrderBy(array_filter($orderBy ?? $this->orderBy ?? []));
@@ -477,11 +488,14 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         if (is_iterable($result)) {
             if (is_array($result) && is_array(reset($result))) {
                 $key = array_key_first(reset($result));
+                $this->afterQuery(__METHOD__);
                 return array_column($result, $key);
             } else {
+                $this->afterQuery(__METHOD__);
                 return $result;
             }
         }
+        $this->afterQuery(__METHOD__);
 
         return [];
     }
@@ -498,6 +512,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         string $valueProperty = '',
         ?array $orderBy = null
     ): IterableResult {
+        $this->beforeQuery(__METHOD__);
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $this->assertClassNameSet($criteria);
         $this->setOrderBy(array_filter($orderBy ?? $this->orderBy ?? []));
@@ -511,6 +526,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             'allowDuplicates' => $this->configOptions->allowDuplicates
         ]);
         $result = $this->doFindBy($findOptions, $criteria);
+        $this->afterQuery(__METHOD__);
 
         return $result;
     }
@@ -539,9 +555,11 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     public function count($criteria = []): int
     {
+        $this->beforeQuery(__METHOD__);
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $this->assertClassNameSet($criteria);
         $count = intval($this->findOneValueBy($criteria, 'COUNT(*)'));
+        $this->afterQuery(__METHOD__);
 
         return $count;
     }
@@ -567,6 +585,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         int &$updateCount = 0,
         int &$deleteCount = 0
     ): int {
+        $this->beforeQuery(__METHOD__);
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $originalClassName = $this->getClassName();
         try {
@@ -589,6 +608,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $this->throwException($ex);
         } finally {
             $this->setClassName($originalClassName);
+            $this->afterQuery(__METHOD__);
         }
         
         return $insertCount + $updateCount;
@@ -612,6 +632,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         int &$updateCount = 0,
         int &$deleteCount = 0
     ): int {
+        $this->beforeQuery(__METHOD__);
         if (!$entities) {
             return 0;
         }
@@ -641,6 +662,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $this->throwException($ex);
         } finally {
             $this->setClassName($originalClassName);
+            $this->afterQuery(__METHOD__);
         }
     }
 
@@ -663,6 +685,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
      */
     public function deleteEntity(object $entity, $disableCascade = false, $exceptionIfDisabled = true, int &$updateCount = 0): int
     {
+        $this->beforeQuery(__METHOD__);
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         if (!$this->validateDeletable($exceptionIfDisabled)) {
             return 0;
@@ -682,6 +705,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $this->throwException($ex);
         } finally {
             $this->setClassName($originalClassName);
+            $this->afterQuery(__METHOD__);
         }
     }
 
@@ -703,6 +727,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         bool $exceptionIfDisabled = true,
         int $updateCount = 0
     ): int {
+        $this->beforeQuery(__METHOD__);
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         if (!$this->validateDeletable($exceptionIfDisabled) || !$entities) {
             return 0;
@@ -723,6 +748,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $this->throwException($ex);
         } finally {
             $this->setClassName($originalClassName);
+            $this->afterQuery(__METHOD__);
         }
     }
 
@@ -744,6 +770,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         ?int &$lastInsertId = null
     ) {
         //TODO: Use command bus pattern to send queries of different types to different handlers
+        $this->beforeQuery(__METHOD__);
         $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
         $originalClassName = $this->getClassName();
         $query->setClassName($query->getClassName() ?: $originalClassName);
@@ -765,6 +792,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             throw new QueryException('Unrecognised query type: ' . ObjectHelper::getObjectClassName($query));
         }
         $this->setClassName($originalClassName);
+        $this->afterQuery(__METHOD__);
 
         return $result;
     }
@@ -915,38 +943,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
     }
 
     /**
-     * @param FindOptions $findOptions
-     * @param array | SelectQueryInterface $criteria
-     * @return mixed
-     * @throws ObjectiphyException
-     * @throws QueryException|\ReflectionException|\Throwable
-     */
-    protected function doFindBy(FindOptions $findOptions, $criteria)
-    {
-        if (empty($findOptions->orderBy) && $this->orderBy) {
-            $findOptions->orderBy = $this->orderBy;
-        }
-        $this->objectMapper->setConfigOptions($this->configOptions);
-        $this->objectFetcher->setFindOptions($findOptions);
-        $query = $this->normalizeCriteria($criteria);
-        if (!$query->getOrderBy() && $findOptions->orderBy) {
-            $tempQuery = QB::create()->orderBy($findOptions->orderBy)->buildSelectQuery();
-            $query->setOrderBy(...$tempQuery->getOrderBy());
-            $query->setOrderByDirections(...$tempQuery->getOrderByDirections());
-        }
-        if (!$this->getClassName() && $query) {
-            $this->setClassName($query->getClassName());
-        }
-        $this->assertClassNameSet();
-        if (isset($this->queryInterceptor)) {
-            $this->queryInterceptor->setCriteria($query);
-        }
-        
-        return $this->objectFetcher->executeFind($query);
-    }
-
-    /**
-     * Converts an array of criteria into a query if applicable. You do not normally need to call this directly as it 
+     * Converts an array of criteria into a query if applicable. You do not normally need to call this directly as it
      * gets called automatically whenever you call a find method. It is only public for backward compatibility purposes.
      * @param $criteria
      * @param string $queryType
@@ -977,6 +974,38 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         }
 
         return $query;
+    }
+
+    /**
+     * @param FindOptions $findOptions
+     * @param array | SelectQueryInterface $criteria
+     * @return mixed
+     * @throws ObjectiphyException
+     * @throws QueryException|\ReflectionException|\Throwable
+     */
+    protected function doFindBy(FindOptions $findOptions, $criteria)
+    {
+        if (empty($findOptions->orderBy) && $this->orderBy) {
+            $findOptions->orderBy = $this->orderBy;
+        }
+        $this->objectMapper->setConfigOptions($this->configOptions);
+        $this->objectFetcher->setFindOptions($findOptions);
+        $query = $this->normalizeCriteria($criteria);
+        if (!$query->getOrderBy() && $findOptions->orderBy) {
+            $tempQuery = QB::create()->orderBy($findOptions->orderBy)->buildSelectQuery();
+            $query->setOrderBy(...$tempQuery->getOrderBy());
+            $query->setOrderByDirections(...$tempQuery->getOrderByDirections());
+        }
+        if (!$this->getClassName() && $query) {
+            $this->setClassName($query->getClassName());
+        }
+        $this->assertClassNameSet();
+        if (isset($this->queryInterceptor)) {
+            $this->queryInterceptor->setCriteria($query);
+        }
+        $value = $this->objectFetcher->executeFind($query);
+
+        return $value;
     }
 
     /**
@@ -1078,6 +1107,29 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $this->objectFetcher->setConfigOptions($this->configOptions);
         $this->objectPersister->setConfigOptions($this->configOptions);
         $this->objectRemover->setConfigOptions($this->configOptions);
+    }
+
+    protected function initialise(): void
+    {
+        // This is just here so that custom repos can override it to carry out
+        // any initialisation they want without having to worry about having a
+        // massive constructor.
+    }
+
+    protected function beforeQuery(string $methodName): void
+    {
+        // This is here so that custom repos can override it to carry out any
+        // processing necessary immediately before any queries are run (eg.
+        // setting config options for an entity that is also used by other
+        // repositories)
+    }
+
+    protected function afterQuery(string $methodName): void
+    {
+        // This is here so that custom repos can override it to carry out any
+        // processing necessary immediately after any queries are run (eg.
+        // clearing config options for an entity that is also used by other
+        // repositories)
     }
 
     /**

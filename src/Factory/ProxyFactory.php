@@ -90,7 +90,7 @@ final class ProxyFactory
                                                "class $proxyClassName extends \\" . ltrim($className, '\\') . " implements ObjectReferenceInterface",
                                                $classDefinition);
                 $classDefinition = str_replace("public function __toString(): string\n    {",
-                                               "public function __toString(): string\n    {if (is_callable('parent::__toString')) {return parent::__toString();}",
+                                               "public function __toString(): string\n    {if (is_callable(parent::class . '::__toString')) {return parent::__toString();}",
                                                $classDefinition);
 
                 //Remove the constructor (we don't want to override the real object's constructor)
