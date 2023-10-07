@@ -8,6 +8,7 @@ use Objectiphy\Objectiphy\Exception\CacheException;
 use Objectiphy\Annotations\PsrSimpleCacheInterface;
 use Objectiphy\Objectiphy\Exception\CacheInvalidArgumentException;
 use Psr\SimpleCache\CacheInterface;
+use Traversable;
 
 if (!interface_exists('\Psr\SimpleCache\CacheInterface')) {
     class_alias(PsrSimpleCacheInterface::class, '\Psr\SimpleCache\CacheInterface');
@@ -41,7 +42,7 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
         }
     }
 
-    public function get($key, $default = null)
+    public function get(string $key, mixed $default = null): mixed
     {
         $fileName = $this->getFileName($key);
         try {
@@ -53,7 +54,7 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
         return $value ?? $default;
     }
 
-    public function set($key, $value, $ttl = null)
+    public function set(string $key, mixed $value, \DateInterval|int|null $ttl = null): bool
     {
         $fileName = $this->getFileName($key);
         try {
@@ -69,7 +70,7 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
         }
     }
 
-    public function delete($key)
+    public function delete(string $key): bool
     {
         $fileName = $this->getFileName($key);
         try {
@@ -82,7 +83,7 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
         }
     }
 
-    public function clear()
+    public function clear(): bool
     {
         try {
             // Delete all files starting with $this->cacheDirectory . '/obj_cache_' . $this->fileNamePrefix;
@@ -95,7 +96,7 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
         }
     }
 
-    public function getMultiple($keys, $default = null)
+    public function getMultiple(\Traversable|array $keys, mixed $default = null): \Traversable|array
     {
         if (!is_array($keys) && !($keys instanceof \Traversable)) {
             throw new CacheInvalidArgumentException(
@@ -110,7 +111,7 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
         return $results;
     }
 
-    public function setMultiple($values, $ttl = null)
+    public function setMultiple(iterable $values, \DateInterval|int|null $ttl = null): bool
     {
         if (!is_array($values) && !($values instanceof \Traversable)) {
             throw new CacheInvalidArgumentException(
@@ -126,7 +127,7 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
         return $success;
     }
 
-    public function deleteMultiple($keys)
+    public function deleteMultiple(iterable $keys): bool
     {
         if (!is_array($keys)) {
             throw new CacheInvalidArgumentException('Must supply an array of keys when calling getMultiple.');
@@ -140,7 +141,7 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
         return $success;
     }
 
-    public function has($key)
+    public function has(string $key): bool
     {
         $fileName = $this->getFileName($key);
         return file_exists($fileName);
@@ -159,12 +160,12 @@ class FileCache implements \Psr\SimpleCache\CacheInterface
         return $this->cacheDirectory . '/obj_cache_' . $this->fileNamePrefix . $fileSuffix . '.txt';
     }
 
-    private function serialize($value): string
+    private function serialize(mixed $value): string
     {
         return $this->useIgBinary ? igbinary_serialize($value) : serialize($value);
     }
 
-    private function unserialize(string $value)
+    private function unserialize(string $value): mixed
     {
         return $this->useIgBinary ? igbinary_unserialize($value) : unserialize($value);
     }
