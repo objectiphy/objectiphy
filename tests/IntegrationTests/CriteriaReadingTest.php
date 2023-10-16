@@ -107,6 +107,11 @@ class CriteriaReadingTest extends IntegrationTestBase
     protected function doReadingTests()
     {
         $this->objectRepository->setClassName(TestPolicy::class);
+        if (self::$devMode) {
+            //Just so the SQL history tests work regardless of whether we run multiple tests or just this class
+            $policy = $this->objectRepository->find(19071974);
+        }
+
         //Ordering, pagination, and more complex criteria are possible. You can even order
         //by properties on child objects (not possible in Doctrine).
         $this->objectRepository->setOrderBy(['contact.lastName' => 'DESC', 'policyNo']);

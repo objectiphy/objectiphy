@@ -825,7 +825,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
                 if (($currentClassName ?? false) && $currentClassName != $className) {
                     $this->setClassName($currentClassName);
                 }
-                if (!$pkProperties && count($pkValues == 1)) {
+                if (!$pkProperties && count($pkValues) == 1) {
                     $idValue = reset($pkValues);
                     $pkValues = ['id' => $idValue]; //Not a mapped entity, so just assume id and hope for the best
                 } else {
@@ -990,6 +990,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         }
         $this->objectMapper->setConfigOptions($this->configOptions);
         $this->objectFetcher->setFindOptions($findOptions);
+        /** @var SelectQueryInterface $query (normalize process does type checking) */
         $query = $this->normalizeCriteria($criteria);
         if (!$query->getOrderBy() && $findOptions->orderBy) {
             $tempQuery = QB::create()->orderBy($findOptions->orderBy)->buildSelectQuery();
@@ -1056,7 +1057,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             } elseif (!in_array(strtoupper($direction), ['ASC', 'DESC'])) {
                 $direction = 'ASC';
             }
-            $field = new FieldExpression('%' . $property . '% ' . $direction, false);
+            $field = new FieldExpression('%' . $property . '% ' . $direction);
             $normalisedOrderBy[] = $field;
         }
 
