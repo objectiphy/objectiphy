@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace Objectiphy\Objectiphy\Factory;
 
 use Objectiphy\Annotations\AnnotationReader;
+use Objectiphy\Annotations\AnnotationReaderInterface;
 use Objectiphy\Annotations\CachedAnnotationReader;
 use Objectiphy\Objectiphy\Cache\FileCache;
 use Objectiphy\Objectiphy\Config\ConfigOptions;
@@ -75,26 +76,31 @@ class RepositoryFactory implements RepositoryFactoryInterface
     private WhereProviderMySql $whereProvider;
     private SqlStringReplacer $stringReplacer;
     private ObjectRemover $objectRemover;
-    private AnnotationReader $annotationReader;
+    private AnnotationReaderInterface $annotationReader;
     private ?ExplanationInterface $explanation = null;
     /**
      * @var ObjectRepositoryInterface[]
      */
     private array $repositories = [];
     private CollectionFactoryInterface $collectionFactory;
-    private $useCacheForMappingProvider = false; //Default file cache just slows things down, but an in-memory cache might speed things up
+    private $useCacheForMappingProvider;
 
     /**
      * @param \PDO $pdo A PDO database connection
      * @param string $cacheDirectory Where to store proxy class definition files and cache files
      * @param bool $devMode Whether to rebuild the proxies on each call or not (performance penalty)
+     * @param bool $useCacheForMappingProvider Whether to cache mapping information. Set this to true
+     * only if you do not override mapping definitions, change config options at runtime, or clear
+     * the cache in your code - as rebuilding the cache after it is cleared will take longer than just
+     * not using the cache at all.
      * @throws ObjectiphyException
      */
     public function __construct(
         \PDO $pdo, 
         string $cacheDirectory = '', 
         bool $devMode = true, 
-        string $configIniFile = ''
+        string $configIniFile = '',
+        bool $useCacheForMappingProvider = false
     ) {
         $this->pdo = $pdo;
         if ($configIniFile !== null) {
@@ -111,6 +117,7 @@ class RepositoryFactory implements RepositoryFactoryInterface
             $proxyFactory->clearProxyCache();
             $this->getObjectMapper()->clearMappingCache();
         }
+        $this->useCacheForMappingProvider = $useCacheForMappingProvider;
     }
 
     /**

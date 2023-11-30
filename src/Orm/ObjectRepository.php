@@ -868,14 +868,14 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $this->repositoryFactory->clearCache($className, $clearMappings);
         }
         if ($clearMappings) {
-            $this->clearLocalMappingCache();
+            $this->clearLocalMappingCache($className);
         }
     }
 
     public function clearLocalMappingCache(?string $className = null)
     {
         $this->objectMapper->clearMappingCache($className);
-        if (!$className || $this->mappingCollection->usesClass($className)) {
+        if (!$className || (isset($this->mappingCollection) && $this->mappingCollection->usesClass($className))) {
             unset($this->mappingCollection);
         }
     }
