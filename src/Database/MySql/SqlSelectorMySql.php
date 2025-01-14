@@ -72,6 +72,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
             throw new ObjectiphyException('SQL Selector has not been initialised. There is no mapping information!');
         }
         $this->query = $query;
+        $this->stringReplacer->parseDelimiters = $this->options->parseDelimiters;
         $this->stringReplacer->prepareReplacements($query, $this->options->mappingCollection);
 
         $sql = $this->getSelect();
@@ -92,7 +93,8 @@ class SqlSelectorMySql implements SqlSelectorInterface
         if ($this->disableMySqlCache) {
             $sql = str_replace('SELECT ', 'SELECT SQL_NO_CACHE ', $sql);
         }
-
+        $this->stringReplacer->resetParseDelimitersValue();
+        
         return $sql;
     }
 
