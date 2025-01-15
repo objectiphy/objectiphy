@@ -56,11 +56,6 @@ class SqlStringReplacer
         $this->tokenPrefix = $tokenPrefix;
         $this->tokenSuffix = $tokenSuffix;
     }
-
-    public function resetParseDelimitersValue(): void
-    {
-        $this->parseDelimiters = true;
-    }
     
     public function getDelimiter(string $type = 'database'): string
     {
