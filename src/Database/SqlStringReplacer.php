@@ -56,7 +56,7 @@ class SqlStringReplacer
         $this->tokenPrefix = $tokenPrefix;
         $this->tokenSuffix = $tokenSuffix;
     }
-
+    
     public function getDelimiter(string $type = 'database'): string
     {
         if (property_exists($this, $type . 'Delimiter')) {

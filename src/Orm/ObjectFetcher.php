@@ -340,6 +340,7 @@ final class ObjectFetcher
             'multiple' => !($query->getLimit() == 1 || ($pkWithEquals && !$orsPresent)),
             'bindToEntities' => !$selectCount || $hasPureProperties,
             'scalarProperty' => $scalarProperty,
+            'parseDelimiters' => true,
         ]);
 
         return $findOptions;

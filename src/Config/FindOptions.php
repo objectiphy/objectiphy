@@ -22,6 +22,7 @@ class FindOptions extends AbstractOptions implements PropertyPathConsumerInterfa
     public string $indexBy = '';
     public string $scalarProperty = '';
     public bool $allowDuplicates = false;
+    public bool $parseDelimiters = false;
     
     /**
      * @var array As per Doctrine, but with properties of children also allowed, eg.
