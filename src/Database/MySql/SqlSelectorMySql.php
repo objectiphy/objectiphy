@@ -72,9 +72,9 @@ class SqlSelectorMySql implements SqlSelectorInterface
             throw new ObjectiphyException('SQL Selector has not been initialised. There is no mapping information!');
         }
         $this->query = $query;
-        $originalParseDelimeterValue = $this->stringReplacer->parseDelimiters;
-        $this->stringReplacer->parseDelimiters = $this->options->parseDelimiters;
         $this->stringReplacer->prepareReplacements($query, $this->options->mappingCollection);
+        $originalParseDelimeterValue = $this->stringReplacer->parseDelimiters;
+        $this->stringReplacer->parseDelimiters = $this->options->parseDelimiters;        
 
         $sql = $this->getSelect();
         $sql .= $this->getFrom();
