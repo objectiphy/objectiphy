@@ -129,11 +129,14 @@ class WhereProviderMySql
         QueryInterface $query,
         MappingCollection $mappingCollection
     ): string {
+        $originalParseDelimeterValue = $this->stringReplacer->parseDelimiters;
+        $this->stringReplacer->parseDelimiters = $this->options->parseDelimiters;
         $sql = $this->stringReplacer->getPersistenceValueForField(
             $query,
             $criteriaExpression->property->getExpression(),
             $mappingCollection
         );
+        $this->stringReplacer->parseDelimiters = $originalParseDelimeterValue;
         if (!trim($sql)) {
             throw new QueryException(sprintf('Could not convert criteria expression \'%1$s\' into SQL - please check for syntax and typos.', $criteriaExpression->property->getExpression()));
         }
