@@ -130,14 +130,14 @@ class WhereProviderMySql
         MappingCollection $mappingCollection
     ): string {
         // always parse property, if needed for a custom query the developer should ensure safety
-        $originalParseDelimeterValue = $this->stringReplacer->parseDelimiters;
+        $originalParseDelimiterValue = $this->stringReplacer->parseDelimiters;
         $this->stringReplacer->parseDelimiters = true;
         $sql = $this->stringReplacer->getPersistenceValueForField(
             $query,
             $criteriaExpression->property->getExpression(),
             $mappingCollection
         );
-        $this->stringReplacer->parseDelimiters = $originalParseDelimeterValue;
+        $this->stringReplacer->parseDelimiters = $originalParseDelimiterValue;
         if (!trim($sql)) {
             throw new QueryException(sprintf('Could not convert criteria expression \'%1$s\' into SQL - please check for syntax and typos.', $criteriaExpression->property->getExpression()));
         }
