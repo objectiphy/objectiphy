@@ -129,8 +129,9 @@ class WhereProviderMySql
         QueryInterface $query,
         MappingCollection $mappingCollection
     ): string {
+        // always parse property, if needed for a custom query the developer should ensure safety
         $originalParseDelimeterValue = $this->stringReplacer->parseDelimiters;
-        $this->stringReplacer->parseDelimiters = $this->options->parseDelimiters;
+        $this->stringReplacer->parseDelimiters = true;
         $sql = $this->stringReplacer->getPersistenceValueForField(
             $query,
             $criteriaExpression->property->getExpression(),
