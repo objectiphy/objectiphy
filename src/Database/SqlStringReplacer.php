@@ -240,7 +240,8 @@ class SqlStringReplacer
         string $valueSuffix = '' ,
         bool $ignorePropertyPathDelimiter = false,
         ?string &$alias = null,
-        array &$groupBy = []
+        array &$groupBy = [],
+        bool $forceParseDelimiter = false
     ) {
         $replaced = [];
         $isArray = is_array($fieldValue);
@@ -250,7 +251,7 @@ class SqlStringReplacer
             $persistenceValue = null;
             if (is_string($fieldValueItem)) {
                 //If already delimited, matches a property, or is recognised as a function or expression, use as is
-                if ($this->parseDelimiters && (
+                if (($this->parseDelimiters || $forceParseDelimiter) && (
                     $this->checkDelimited($fieldValueItem, $ignorePropertyPathDelimiter)
                     || $this->checkPropertyPath($fieldValueItem, $alias, $query, $mappingCollection)
                     || $this->checkFunction($fieldValueItem)
