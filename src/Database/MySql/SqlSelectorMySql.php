@@ -72,14 +72,16 @@ class SqlSelectorMySql implements SqlSelectorInterface
             throw new ObjectiphyException('SQL Selector has not been initialised. There is no mapping information!');
         }
         $this->query = $query;
-        $this->stringReplacer->prepareReplacements($query, $this->options->mappingCollection);
-        $originalParseDelimeterValue = $this->stringReplacer->parseDelimiters;
-        $this->stringReplacer->parseDelimiters = $this->options->parseDelimiters;        
+        $this->stringReplacer->prepareReplacements($query, $this->options->mappingCollection);    
 
         $sql = $this->getSelect();
         $sql .= $this->getFrom();
         $sql .= $this->joinProvider->getJoins($query);
+        $originalParseDelimeterValue = $this->stringReplacer->parseDelimiters;
+        $this->stringReplacer->parseDelimiters = $this->options->parseDelimiters;  
         $sql .= $this->whereProvider->getWhere($query, $this->options->mappingCollection);
+        // leave stringReplacer how we found it to prevent possible side effects
+        $this->stringReplacer->parseDelimiters = $originalParseDelimeterValue;
         $having = $this->whereProvider->getHaving($query, $this->options->mappingCollection);
         $sql .= $this->getGroupBy($having ? true : false);
         $sql .= $having;
@@ -94,9 +96,7 @@ class SqlSelectorMySql implements SqlSelectorInterface
         if ($this->disableMySqlCache) {
             $sql = str_replace('SELECT ', 'SELECT SQL_NO_CACHE ', $sql);
         }
-        // leave stringReplacer how we found it to prevent possible side effects
-        $this->stringReplacer->parseDelimiters = $originalParseDelimeterValue;
-        
+                
         return $sql;
     }
 
