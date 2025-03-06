@@ -132,7 +132,8 @@ class WhereProviderMySql
         $sql = $this->stringReplacer->getPersistenceValueForField(
             $query,
             $criteriaExpression->property->getExpression(),
-            $mappingCollection
+            $mappingCollection,
+            forceParseDelimiter: true
         );
         if (!trim($sql)) {
             throw new QueryException(sprintf('Could not convert criteria expression \'%1$s\' into SQL - please check for syntax and typos.', $criteriaExpression->property->getExpression()));
