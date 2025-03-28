@@ -780,6 +780,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
             $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
             $this->assertClassNameSet();
             $findOptions = $this->objectFetcher->inferFindOptionsFromQuery($query, $this->mappingCollection);
+            $findOptions->pagination = $this->pagination ?? null;
             $result = $this->doFindBy($findOptions, $query);
         } elseif ($query instanceof InsertQueryInterface || $query instanceof UpdateQueryInterface) {
             $saveOptions = SaveOptions::create($this->mappingCollection);
