@@ -775,7 +775,7 @@ class ObjectRepository implements ObjectRepositoryInterface, TransactionInterfac
         $originalClassName = $this->getClassName();
         $query->setClassName($query->getClassName() ?: $originalClassName);
         $this->setClassName($query->getClassName(), strpos($query->getClassName(), '`') !== false); //Ignore errors in case of explicit table name
-        $this->mappingCollection->setGroups(...$this->configOptions->serializationGroups);
+        $this->mappingCollection->setGroups($this->configOptions->hydrateUngroupedProperties, ...$this->configOptions->serializationGroups);
         if ($query instanceof SelectQueryInterface) {
             $this->getConfiguration()->disableEntityCache ? $this->clearCache() : false;
             $this->assertClassNameSet();
